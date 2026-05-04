@@ -79,6 +79,9 @@ dist/
 *.log
 .vite/
 coverage/
+*.tsbuildinfo
+src/**/*.js
+tests/**/*.js
 ```
 
 - [ ] **Step 1.2: Create `package.json`**
@@ -91,7 +94,8 @@ coverage/
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -124,6 +128,7 @@ coverage/
     "isolatedModules": true,
     "esModuleInterop": true,
     "verbatimModuleSyntax": false,
+    "noEmit": true,
     "types": ["vite/client", "vitest/globals"]
   },
   "include": ["src/**/*", "tests/**/*"],
