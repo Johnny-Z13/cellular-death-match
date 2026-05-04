@@ -39,6 +39,7 @@ canvas.focus();
 window.addEventListener('keydown', () => canvas.focus());
 
 screens.onTitleStart(() => {
+  run.start();
   startNewFight();
 });
 screens.onEndRestart(() => {
