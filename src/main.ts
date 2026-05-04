@@ -85,13 +85,13 @@ function showPhase() {
 
 function startNewFight() {
   const playerCfg = run.getPlayerConfig();
-  const enemyCfg = run.getEnemyConfig();
+  const enemies = run.getFightSpawnList();
   arena = createArena({
     LX,
     LY,
     seed: (Date.now() & 0xffffffff) ^ (run.getState().fightIndex * 2654435761),
     player: playerCfg,
-    enemies: [{ archetype: 'bruiser' as const, ...enemyCfg }],
+    enemies,
     wrap: true,
   });
   renderer = createRenderer(canvas, 2);

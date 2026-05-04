@@ -114,7 +114,7 @@ describe('restart', () => {
   });
 });
 
-describe('getPlayerConfig / getEnemyConfig', () => {
+describe('getPlayerConfig', () => {
   it('player config reflects accumulated upgrades', () => {
     const run = createRun(42);
     run.start();
@@ -127,20 +127,31 @@ describe('getPlayerConfig / getEnemyConfig', () => {
     if (volChoice === 'vol_1') {
       expect(cfg.targetVol).toBe(350);   // 300 + 50
     } else {
-      // Any other valid choice should produce a different valid config.
       expect(cfg.targetVol).toBeGreaterThanOrEqual(300);
     }
   });
+});
 
-  it('enemy config scales with fightIndex (+10% per fight)', () => {
+describe('getFightSpawnList', () => {
+  it('returns the schedule entry for fight 0 (single bruiser)', () => {
     const run = createRun(42);
     run.start();
-    const fight1 = run.getEnemyConfig();
-    expect(fight1.targetVol).toBe(450);
-    // Advance to fight 1 (after one win + pick).
-    run.winFight();
-    run.pickUpgrade(run.getState().pendingPickChoices[0]!);
-    const fight2 = run.getEnemyConfig();
-    expect(fight2.targetVol).toBeCloseTo(450 * 1.1, 5);
+    const list = run.getFightSpawnList();
+    expect(list.length).toBe(1);
+    expect(list[0]!.archetype).toBe('bruiser');
+  });
+
+  it('returns the schedule entry for fight 4 (4 swarmlets)', () => {
+    const run = createRun(42);
+    run.start();
+    // Advance to fight 4.
+    for (let i = 0; i < 4; i++) {
+      run.winFight();
+      run.pickUpgrade(run.getState().pendingPickChoices[0]!);
+    }
+    expect(run.getState().fightIndex).toBe(4);
+    const list = run.getFightSpawnList();
+    expect(list.length).toBe(4);
+    for (const e of list) expect(e.archetype).toBe('swarmlet');
   });
 });

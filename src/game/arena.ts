@@ -43,13 +43,6 @@ export interface CreateArenaOpts {
   wrapBullets?: boolean;
 }
 
-// Legacy type kept for run.ts compatibility (Task 8 removes the dep).
-export interface EnemyArenaConfig {
-  targetVol: number;
-  speed: number;
-  engulfMultiplier: number;
-}
-
 const PLAYER_ID = 1;
 const ENGULF_DECAY_PER_FRAME = 1 / 60;
 const MC_STEPS_PER_TICK = 1000;
