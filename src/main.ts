@@ -91,7 +91,7 @@ function startNewFight() {
     LY,
     seed: (Date.now() & 0xffffffff) ^ (run.getState().fightIndex * 2654435761),
     player: playerCfg,
-    enemy: enemyCfg,
+    enemies: [{ archetype: 'bruiser' as const, ...enemyCfg }],
     wrap: true,
   });
   renderer = createRenderer(canvas, 2);
