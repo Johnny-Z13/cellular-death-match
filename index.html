@@ -7,7 +7,47 @@
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
-    <canvas id="game" width="500" height="500"></canvas>
+    <main class="layout">
+      <canvas id="game" width="500" height="500"></canvas>
+      <aside id="debug" class="debug">
+        <h2 class="debug-title">DEBUG</h2>
+        <section class="debug-block">
+          <div class="debug-row"><span class="debug-key">FPS</span><span id="dbg-fps" class="debug-val">—</span></div>
+          <div class="debug-row"><span class="debug-key">tick</span><span id="dbg-tick" class="debug-val">0</span></div>
+          <div class="debug-row"><span class="debug-key">status</span><span id="dbg-status" class="debug-val">running</span></div>
+          <div class="debug-row"><span class="debug-key">bullets</span><span id="dbg-bullets" class="debug-val">0</span></div>
+          <div class="debug-row"><span class="debug-key">boundary</span><span id="dbg-boundary" class="debug-val">0</span></div>
+        </section>
+        <section class="debug-block">
+          <h3 class="debug-subtitle"><span class="debug-swatch" id="dbg-p-swatch"></span> player (id=1)</h3>
+          <div class="debug-row"><span class="debug-key">archetype</span><span class="debug-val">human</span></div>
+          <div class="debug-row"><span class="debug-key">vol</span><span id="dbg-p-vol" class="debug-val">—</span></div>
+          <div class="debug-row"><span class="debug-key">targetVol</span><span id="dbg-p-tvol" class="debug-val">—</span></div>
+          <div class="debug-row"><span class="debug-key">center</span><span id="dbg-p-center" class="debug-val">—</span></div>
+          <div class="debug-row"><span class="debug-key">intent.vec</span><span id="dbg-p-vec" class="debug-val">—</span></div>
+          <div class="debug-row"><span class="debug-key">engulf×</span><span id="dbg-p-engulf" class="debug-val">—</span></div>
+          <div class="debug-row"><span class="debug-key">canFire</span><span id="dbg-p-canfire" class="debug-val">—</span></div>
+          <div class="debug-row"><span class="debug-key">cooldown</span><span id="dbg-p-cooldown" class="debug-val">—</span></div>
+        </section>
+        <section class="debug-block">
+          <h3 class="debug-subtitle"><span class="debug-swatch" id="dbg-e-swatch"></span> enemy (id=2)</h3>
+          <div class="debug-row"><span class="debug-key">archetype</span><span class="debug-val">bruiser</span></div>
+          <div class="debug-row"><span class="debug-key">vol</span><span id="dbg-e-vol" class="debug-val">—</span></div>
+          <div class="debug-row"><span class="debug-key">targetVol</span><span id="dbg-e-tvol" class="debug-val">—</span></div>
+          <div class="debug-row"><span class="debug-key">center</span><span id="dbg-e-center" class="debug-val">—</span></div>
+          <div class="debug-row"><span class="debug-key">intent.vec</span><span id="dbg-e-vec" class="debug-val">—</span></div>
+          <div class="debug-row"><span class="debug-key">engulf×</span><span id="dbg-e-engulf" class="debug-val">—</span></div>
+          <div class="debug-row"><span class="debug-key">distToPlayer</span><span id="dbg-e-dist" class="debug-val">—</span></div>
+        </section>
+        <section class="debug-block">
+          <h3 class="debug-subtitle">controls</h3>
+          <div class="debug-help">WASD / arrows: move</div>
+          <div class="debug-help">space: shoot</div>
+          <div class="debug-help">shift / e: engulf</div>
+          <div class="debug-help">R: restart (after end)</div>
+        </section>
+      </aside>
+    </main>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

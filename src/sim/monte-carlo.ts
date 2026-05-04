@@ -39,8 +39,8 @@ export function mcStep(state: SimState): boolean {
   const dH =
     state.betaIsing * isingTerm(state, xT, yT, sourceVal, targetVal) +
     state.betaVol * volumeTerm(state, sourceVal, targetVal) +
-    state.betaMov * movementTerm(state, sourceVal, dir);
-  // engulfTerm intentionally omitted in M1 — added in M3.
+    state.betaMov * movementTerm(state, sourceVal, dir) +
+    engulfTerm(state, sourceVal, targetVal);
 
   if (rng.random() > Math.exp(-dH)) return false;
 
@@ -94,6 +94,27 @@ function movementTerm(
   const dvx = c.intent.vec[0] * c.intent.speed;
   const dvy = c.intent.vec[1] * c.intent.speed;
   return -(dir[0] * dvx + dir[1] * dvy);
+}
+
+// Engulf term. When source has engulfMultiplier > 1 and target is a different
+// non-zero cell (i.e. an enemy), bias the transfer toward acceptance.
+//
+//   dH_engulf = -(engulfMultiplier - 1)
+//
+// engulfMultiplier of 5 contributes dH = -4, making this transfer e^4 (~55x)
+// more likely than the same transfer would be under the volume/Ising terms
+// alone. The volume term still pushes back as the engulfer grows.
+function engulfTerm(
+  state: SimState,
+  sourceVal: CellId,
+  targetVal: CellId,
+): number {
+  if (sourceVal === 0 || targetVal === 0 || sourceVal === targetVal) return 0;
+  const source = state.cells.get(sourceVal);
+  if (!source) return 0;
+  const m = source.intent.engulfMultiplier;
+  if (m <= 1) return 0;
+  return -(m - 1);
 }
 
 // Apply the accepted pixel transfer: update grid, vol, center, boundary.

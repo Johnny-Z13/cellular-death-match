@@ -87,4 +87,25 @@ describe('createInput', () => {
     expect(s.moveVec).toEqual([0, 0]);
     expect(s.lastFireDir).toEqual([0, 1]);
   });
+
+  it('shift sets shouldEngulf', () => {
+    const input = createInput(target as unknown as EventTarget);
+    target.dispatch('keydown', 'Shift');
+    const s = input.poll();
+    expect(s.shouldEngulf).toBe(true);
+  });
+
+  it('e sets shouldEngulf', () => {
+    const input = createInput(target as unknown as EventTarget);
+    target.dispatch('keydown', 'e');
+    const s = input.poll();
+    expect(s.shouldEngulf).toBe(true);
+  });
+
+  it('shouldEngulf is false when no engulf key held', () => {
+    const input = createInput(target as unknown as EventTarget);
+    target.dispatch('keydown', 'd');
+    const s = input.poll();
+    expect(s.shouldEngulf).toBe(false);
+  });
 });

@@ -1,6 +1,7 @@
 export interface InputState {
   moveVec: [number, number];      // normalized (length 0 or 1)
   shouldFire: boolean;
+  shouldEngulf: boolean;
   lastFireDir: [number, number];  // last non-zero moveVec (or [1, 0] initial)
 }
 
@@ -22,6 +23,7 @@ const KEY_DIRS: Record<string, [number, number]> = {
 };
 
 const FIRE_KEYS = new Set([' ', 'Spacebar']);
+const ENGULF_KEYS = new Set(['Shift', 'e', 'E']);
 
 function normalize(v: [number, number]): [number, number] {
   const len = Math.hypot(v[0], v[1]);
@@ -51,10 +53,12 @@ export function createInput(target: EventTarget): Input {
         lastFireDir = moveVec;
       }
       let shouldFire = false;
+      let shouldEngulf = false;
       for (const k of held) {
-        if (FIRE_KEYS.has(k)) { shouldFire = true; break; }
+        if (FIRE_KEYS.has(k)) shouldFire = true;
+        if (ENGULF_KEYS.has(k)) shouldEngulf = true;
       }
-      return { moveVec, shouldFire, lastFireDir };
+      return { moveVec, shouldFire, shouldEngulf, lastFireDir };
     },
     destroy() {
       target.removeEventListener('keydown', onDown as unknown as EventListener);
