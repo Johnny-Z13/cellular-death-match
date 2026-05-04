@@ -98,6 +98,24 @@ export function createRenderer(
       // Scale up to display canvas.
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(offscreen!, 0, 0, canvas.width, canvas.height);
+
+      // Draw bullets on top, in display coordinates.
+      const sx = canvas.width / LX;
+      const sy = canvas.height / LY;
+      for (const b of state.bullets) {
+        const palette = base[b.ownerId] ?? base[0]!;
+        // Lighten by 0.5 for the bullet color (slightly brighter than boundary).
+        const r = 255 * 0.5 + palette[0]! * 0.5;
+        const g = 255 * 0.5 + palette[1]! * 0.5;
+        const bl = 255 * 0.5 + palette[2]! * 0.5;
+        ctx.fillStyle = `rgb(${r | 0}, ${g | 0}, ${bl | 0})`;
+        ctx.beginPath();
+        const cx = (b.pos[1] + 0.5) * sx;     // note: grid is [x][y] → display y is grid x
+        const cy = (b.pos[0] + 0.5) * sy;
+        const radius = Math.max(b.size * sx * 0.5, 2);
+        ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+        ctx.fill();
+      }
     },
   };
 }
