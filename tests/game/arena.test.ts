@@ -7,8 +7,8 @@ describe('createArena — initial state', () => {
       LX: 50,
       LY: 50,
       seed: 1,
-      playerTargetVol: 100,
-      bruiserTargetVol: 150,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemy: { targetVol: 150, speed: 8, engulfMultiplier: 6.5 },
       wrap: true,
     });
     expect(arena.getStatus()).toBe('running');
@@ -19,8 +19,8 @@ describe('createArena — initial state', () => {
       LX: 50,
       LY: 50,
       seed: 1,
-      playerTargetVol: 100,
-      bruiserTargetVol: 150,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemy: { targetVol: 150, speed: 8, engulfMultiplier: 6.5 },
       wrap: true,
     });
     expect(arena.state.cells.size).toBe(2);
@@ -33,8 +33,8 @@ describe('arena.getStatus — win/loss', () => {
       LX: 50,
       LY: 50,
       seed: 1,
-      playerTargetVol: 100,
-      bruiserTargetVol: 150,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemy: { targetVol: 150, speed: 8, engulfMultiplier: 6.5 },
       wrap: true,
     });
     // Force the bruiser to vol 0.
@@ -48,8 +48,8 @@ describe('arena.getStatus — win/loss', () => {
       LX: 50,
       LY: 50,
       seed: 1,
-      playerTargetVol: 100,
-      bruiserTargetVol: 150,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemy: { targetVol: 150, speed: 8, engulfMultiplier: 6.5 },
       wrap: true,
     });
     const player = arena.state.cells.get(1)!;
@@ -62,8 +62,8 @@ describe('arena.getStatus — win/loss', () => {
       LX: 50,
       LY: 50,
       seed: 1,
-      playerTargetVol: 100,
-      bruiserTargetVol: 150,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemy: { targetVol: 150, speed: 8, engulfMultiplier: 6.5 },
       wrap: true,
     });
     arena.state.cells.get(1)!.vol = 0;
@@ -78,8 +78,8 @@ describe('arena.tick — applies input', () => {
       LX: 50,
       LY: 50,
       seed: 1,
-      playerTargetVol: 100,
-      bruiserTargetVol: 150,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemy: { targetVol: 150, speed: 8, engulfMultiplier: 6.5 },
       wrap: true,
     });
     arena.tick({
@@ -96,8 +96,8 @@ describe('arena.tick — applies input', () => {
       LX: 50,
       LY: 50,
       seed: 1,
-      playerTargetVol: 100,
-      bruiserTargetVol: 150,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemy: { targetVol: 150, speed: 8, engulfMultiplier: 6.5 },
       wrap: true,
     });
     arena.tick({
@@ -114,8 +114,8 @@ describe('arena.tick — applies input', () => {
       LX: 50,
       LY: 50,
       seed: 1,
-      playerTargetVol: 100,
-      bruiserTargetVol: 150,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemy: { targetVol: 150, speed: 8, engulfMultiplier: 6.5 },
       wrap: true,
     });
     const before = arena.state.cells.get(1)!.targetVol;
@@ -129,8 +129,8 @@ describe('arena.tick — applies input', () => {
       LX: 50,
       LY: 50,
       seed: 1,
-      playerTargetVol: 100,
-      bruiserTargetVol: 150,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemy: { targetVol: 150, speed: 8, engulfMultiplier: 6.5 },
       wrap: true,
     });
     const before = arena.state.cells.get(1)!.targetVol;
@@ -144,8 +144,8 @@ describe('arena.tick — applies input', () => {
       LX: 50,
       LY: 50,
       seed: 1,
-      playerTargetVol: 100,
-      bruiserTargetVol: 150,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemy: { targetVol: 150, speed: 8, engulfMultiplier: 6.5 },
       wrap: true,
     });
     arena.state.cells.get(2)!.vol = 0;        // forces "won"

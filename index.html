@@ -47,6 +47,38 @@
           <div class="debug-help">R: restart (after end)</div>
         </section>
       </aside>
+
+      <!-- Overlay screens. Hidden by default; shown by .visible. -->
+      <div id="screen-title" class="screen visible">
+        <div class="screen-card">
+          <h1 class="screen-title">Cellular Death Match</h1>
+          <p class="screen-sub">Survive 8 fights. Pick an upgrade between each.</p>
+          <button id="title-start" class="screen-button">Start Run</button>
+        </div>
+      </div>
+
+      <div id="screen-pick" class="screen">
+        <div class="screen-card">
+          <h2 class="screen-title">Pick an upgrade</h2>
+          <div id="pick-choices" class="pick-choices">
+            <!-- 3 buttons inserted at runtime -->
+          </div>
+        </div>
+      </div>
+
+      <div id="screen-end" class="screen">
+        <div class="screen-card">
+          <h2 id="end-title" class="screen-title">—</h2>
+          <p id="end-summary" class="screen-sub">—</p>
+          <button id="end-restart" class="screen-button">Back to Title</button>
+        </div>
+      </div>
+
+      <div id="hud" class="hud">
+        <div class="hud-row"><span class="hud-key">Fight</span><span id="hud-fight" class="hud-val">1 / 8</span></div>
+        <div class="hud-row"><span class="hud-key">Vol</span><span id="hud-vol" class="hud-val">— / —</span></div>
+        <div class="hud-row" id="hud-upgrades-row"><span class="hud-key">Build</span><span id="hud-upgrades" class="hud-val">none</span></div>
+      </div>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>
