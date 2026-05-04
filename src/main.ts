@@ -23,8 +23,17 @@ const arena = createArena({
   LX,
   LY,
   seed: Date.now() & 0xffffffff,
-  playerTargetVol: PLAYER_TARGET_VOL,
-  bruiserTargetVol: BRUISER_TARGET_VOL,
+  player: {
+    targetVol: PLAYER_TARGET_VOL,
+    speed: 10,
+    engulfMultiplier: 5,
+    bulletSize: BULLET_SIZE,
+  },
+  enemy: {
+    targetVol: BRUISER_TARGET_VOL,
+    speed: 8,
+    engulfMultiplier: 6.5,
+  },
   wrap: true,
 });
 
