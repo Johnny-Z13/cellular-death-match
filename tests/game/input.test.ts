@@ -35,18 +35,18 @@ describe('createInput', () => {
     expect(s.shouldFire).toBe(false);
   });
 
-  it('arrow up sets moveVec to [-1, 0] (negative grid x)', () => {
+  it('arrow up sets moveVec to [0, -1] (negative y, upward on screen)', () => {
     const input = createInput(target as unknown as EventTarget);
     target.dispatch('keydown', 'ArrowUp');
     const s = input.poll();
-    expect(s.moveVec).toEqual([-1, 0]);
+    expect(s.moveVec).toEqual([0, -1]);
   });
 
   it('WASD also works as movement', () => {
     const input = createInput(target as unknown as EventTarget);
-    target.dispatch('keydown', 'd');
+    target.dispatch('keydown', 'd');           // d = right
     const s = input.poll();
-    expect(s.moveVec).toEqual([0, 1]);
+    expect(s.moveVec).toEqual([1, 0]);
   });
 
   it('combined keys produce normalized diagonal', () => {
@@ -54,10 +54,10 @@ describe('createInput', () => {
     target.dispatch('keydown', 'ArrowUp');
     target.dispatch('keydown', 'ArrowRight');
     const s = input.poll();
-    // Up = [-1, 0], Right = [0, 1]; combined raw [-1, 1], normalized.
+    // Up = [0, -1], Right = [1, 0]; combined raw [1, -1], normalized.
     const inv = 1 / Math.sqrt(2);
-    expect(s.moveVec[0]).toBeCloseTo(-inv, 5);
-    expect(s.moveVec[1]).toBeCloseTo(inv, 5);
+    expect(s.moveVec[0]).toBeCloseTo(inv, 5);
+    expect(s.moveVec[1]).toBeCloseTo(-inv, 5);
   });
 
   it('keyup removes a key from movement', () => {
@@ -81,10 +81,10 @@ describe('createInput', () => {
   it('lastFireDir remembers last non-zero movement when current is zero', () => {
     const input = createInput(target as unknown as EventTarget);
     target.dispatch('keydown', 'ArrowDown');
-    input.poll(); // moveVec = [1, 0]; lastFireDir captured
+    input.poll(); // moveVec = [0, 1]; lastFireDir captured
     target.dispatch('keyup', 'ArrowDown');
     const s = input.poll();
     expect(s.moveVec).toEqual([0, 0]);
-    expect(s.lastFireDir).toEqual([1, 0]);
+    expect(s.lastFireDir).toEqual([0, 1]);
   });
 });

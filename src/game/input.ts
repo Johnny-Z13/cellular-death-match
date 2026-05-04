@@ -9,16 +9,16 @@ export interface Input {
   destroy(): void;
 }
 
-// Maps a KeyboardEvent.key value to a [dx, dy] grid-direction contribution.
+// Maps a KeyboardEvent.key value to a [dx, dy] direction contribution.
 //
-// Convention: grid coordinates are (row, col) = (x, y). "Up" on screen means
-// "toward smaller grid x" (negative x). Right = +y. This matches the way
-// `ui/render.ts` already maps grid-x → display-y.
+// Convention: x = horizontal (right is +x), y = vertical (down is +y).
+// This matches both the on-screen display and the `ui/render.ts` grid blit
+// (which writes grid pixel (x, y) to ImageData column x, row y).
 const KEY_DIRS: Record<string, [number, number]> = {
-  ArrowUp: [-1, 0], w: [-1, 0], W: [-1, 0],
-  ArrowDown: [1, 0], s: [1, 0], S: [1, 0],
-  ArrowLeft: [0, -1], a: [0, -1], A: [0, -1],
-  ArrowRight: [0, 1], d: [0, 1], D: [0, 1],
+  ArrowUp: [0, -1], w: [0, -1], W: [0, -1],
+  ArrowDown: [0, 1], s: [0, 1], S: [0, 1],
+  ArrowLeft: [-1, 0], a: [-1, 0], A: [-1, 0],
+  ArrowRight: [1, 0], d: [1, 0], D: [1, 0],
 };
 
 const FIRE_KEYS = new Set([' ', 'Spacebar']);
@@ -31,7 +31,7 @@ function normalize(v: [number, number]): [number, number] {
 
 export function createInput(target: EventTarget): Input {
   const held = new Set<string>();
-  let lastFireDir: [number, number] = [1, 0];
+  let lastFireDir: [number, number] = [1, 0];   // initial: rightward
 
   const onDown = (e: { key: string }) => { held.add(e.key); };
   const onUp = (e: { key: string }) => { held.delete(e.key); };
