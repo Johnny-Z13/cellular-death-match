@@ -1,5 +1,6 @@
 import type { Cell, SimState } from '../../sim/types';
 import type { EnemySpawn } from '../../content/enemies';
+import { shortestVec } from '../geometry';
 import { addBullet } from '../../sim/bullets';
 
 export interface SniperState {
@@ -17,23 +18,23 @@ export function sniperStep(
   spawn: EnemySpawn,
   internal: SniperState,
 ): void {
-  const dx = target.center[0] - self.center[0];
-  const dy = target.center[1] - self.center[1];
-  const dist = Math.hypot(dx, dy);
+  const { LX, LY } = state.grid;
+  const v = shortestVec(self.center, target.center, LX, LY);
+  const dist = Math.hypot(v[0], v[1]);
 
   // Movement.
   if (dist === 0) {
     self.intent.vec = [0, 0];
   } else if (dist < FLEE_RANGE) {
-    self.intent.vec = [-dx / dist, -dy / dist];   // flee
+    self.intent.vec = [-v[0] / dist, -v[1] / dist];   // flee
   } else if (dist > APPROACH_RANGE) {
-    self.intent.vec = [dx / dist, dy / dist];     // approach
+    self.intent.vec = [v[0] / dist, v[1] / dist];     // approach
   } else {
-    self.intent.vec = [0, 0];                      // hold
+    self.intent.vec = [0, 0];                          // hold
   }
 
   self.intent.speed = spawn.speed;
-  self.intent.engulfMultiplier = 1;                // never engulfs
+  self.intent.engulfMultiplier = 1;                    // never engulfs
 
   // Shoot.
   if (internal.shootTimer > 0) {
@@ -42,8 +43,8 @@ export function sniperStep(
   }
   // Fire toward target.
   if (dist > 0 && spawn.bulletSpeed !== undefined && spawn.bulletSize !== undefined) {
-    const dirX = dx / dist;
-    const dirY = dy / dist;
+    const dirX = v[0] / dist;
+    const dirY = v[1] / dist;
     addBullet(state, {
       pos: [self.center[0], self.center[1]],
       v: [dirX * spawn.bulletSpeed, dirY * spawn.bulletSpeed],

@@ -26,12 +26,19 @@ describe('sniperStep — distance keeping', () => {
     const state = fixture();
     const self = state.cells.get(2)!;
     const target = state.cells.get(1)!;
-    self.center = [10, 10];
-    target.center = [80, 10];
+    // Direct distance: dy = 65 (south). Wrap distance: dy = -35 (north). Wrap is shorter.
+    // shortestVec returns [0, -35], dist=35, which is BETWEEN FLEE_RANGE (25) and
+    // APPROACH_RANGE (60) — sniper holds. To force the "too far" branch, we use
+    // positions where shortestVec produces |dist| > 60. With a 100×100 wrapped grid,
+    // max |distance on one axis| is 50, max |dist 2D| is sqrt(50^2 + 50^2) ≈ 70.7.
+    // Self at center, target at corner gives the maximum.
+    self.center = [50, 50];
+    target.center = [99, 99];   // shortestVec returns ≈ [49, 49], dist ≈ 69.3
     const sniperState: SniperState = { shootTimer: 0 };
     sniperStep(self, target, state, ARCHETYPE_DEFAULTS.sniper, sniperState);
-    // Far away — should move TOWARD target.
+    // Should approach: vec points toward target (+x, +y direction).
     expect(self.intent.vec[0]).toBeGreaterThan(0);
+    expect(self.intent.vec[1]).toBeGreaterThan(0);
   });
 
   it('engulfMultiplier is always 1 (sniper does not engulf)', () => {
