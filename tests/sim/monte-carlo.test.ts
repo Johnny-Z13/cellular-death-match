@@ -90,3 +90,90 @@ describe('mcStep', () => {
     expect(Array.from(state.grid.cells)).toEqual(before);
   });
 });
+
+describe('mcStep — engulf term', () => {
+  it('with engulfMultiplier=5 on cell 1, cell 1 absorbs cell 2 pixels much faster', () => {
+    // Run two parallel sims from the same seed. In sim A, cell 1 has engulfMultiplier=1 (off).
+    // In sim B, cell 1 has engulfMultiplier=5 (engulf on). After many steps, sim B should
+    // have cell 1 with significantly more volume.
+    const seed = 99;
+    const baseline = makeStateWithTwoBlobsAt((s) => {
+      s.cells.get(1)!.intent.engulfMultiplier = 1;
+    }, seed);
+    const engulfing = makeStateWithTwoBlobsAt((s) => {
+      s.cells.get(1)!.intent.engulfMultiplier = 5;
+    }, seed);
+    for (let i = 0; i < 5000; i++) {
+      mcStep(baseline);
+      mcStep(engulfing);
+    }
+    const v1Baseline = baseline.cells.get(1)!.vol;
+    const v1Engulf = engulfing.cells.get(1)!.vol;
+    expect(v1Engulf).toBeGreaterThan(v1Baseline);
+  });
+
+  it('engulfMultiplier=1 produces identical behavior to baseline (no-op when off)', () => {
+    const seed = 42;
+    const a = makeStateWithTwoBlobsAt(() => { /* default */ }, seed);
+    const b = makeStateWithTwoBlobsAt((s) => {
+      s.cells.get(1)!.intent.engulfMultiplier = 1;
+    }, seed);
+    for (let i = 0; i < 1000; i++) {
+      mcStep(a);
+      mcStep(b);
+    }
+    expect(Array.from(a.grid.cells)).toEqual(Array.from(b.grid.cells));
+  });
+});
+
+// Helper used by the engulf-term tests above. Builds a fresh two-blob state
+// where the two cells are adjacent so that engulf interactions can occur
+// immediately. Both cells start at vol=9 but have a large targetVol (50),
+// giving them room to grow. betaVol is reduced so the volume term does not
+// dominate the engulf term. The RNG is re-seeded so both parallel sims start
+// from the same random sequence after construction.
+function makeStateWithTwoBlobsAt(
+  mutate: (s: ReturnType<typeof makeStateWithTwoBlobs>) => void,
+  seed: number,
+): ReturnType<typeof makeStateWithTwoBlobs> {
+  // Use a small grid (10×10) fully tiled: cell 1 on the left half (x<5),
+  // cell 2 on the right half (x>=5). No background. The only possible pixel
+  // transfers are between cell 1 and cell 2, so the engulf bias is directly
+  // observable as a net volume shift.
+  const LX = 10;
+  const LY = 10;
+  const grid = createGrid(LX, LY, true);
+  const cells = new Map<number, ReturnType<typeof createCell>>();
+  // targetVol = half the grid; betaVol low so volume term does not fight engulf
+  const c1 = createCell(1, LX * LY / 2);
+  const c2 = createCell(2, LX * LY / 2);
+  cells.set(1, c1);
+  cells.set(2, c2);
+
+  for (let x = 0; x < LX; x++) {
+    for (let y = 0; y < LY; y++) {
+      if (x < LX / 2) {
+        setCell(grid, x, y, 1);
+        addPixel(c1, x, y, LX, LY);
+      } else {
+        setCell(grid, x, y, 2);
+        addPixel(c2, x, y, LX, LY);
+      }
+    }
+  }
+  recomputeBoundary(grid);
+
+  const state: ReturnType<typeof makeStateWithTwoBlobs> = {
+    grid,
+    cells,
+    bullets: [],
+    betaIsing: 0,   // no surface tension — engulf is the only directional force
+    betaVol: 0.1,   // mild volume penalty so cells don't vanish
+    betaMov: 1,
+    events: [],
+    rng: createRng(seed),
+    wrapBullets: true,
+  };
+  mutate(state);
+  return state;
+}
