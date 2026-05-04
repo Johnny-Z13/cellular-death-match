@@ -1,65 +1,113 @@
-import { createArena } from './game/arena';
+import { createRun, FIGHTS_PER_RUN } from './game/run';
+import { createArena, type Arena } from './game/arena';
 import { addBullet } from './sim/bullets';
-import { createRenderer } from './ui/render';
+import { createRenderer, type Renderer } from './ui/render';
 import { createDebugPanel } from './ui/debug';
 import { createInput } from './game/input';
+import { createScreens } from './ui/screens';
+import { getUpgradeDef } from './content/upgrades';
 
 const LX = 100;
 const LY = 100;
-const PLAYER_TARGET_VOL = 300;
-const BRUISER_TARGET_VOL = 450;        // +50% per Bruiser archetype spec
 const PLAYER_ID = 1;
 const BULLET_COST = 5;
 const BULLET_MIN_VOL = 20;
 const BULLET_SPEED = 2;
-const BULLET_SIZE = 3;
 const FIRE_COOLDOWN_TICKS = 5;
 
 const canvasMaybe = document.getElementById('game') as HTMLCanvasElement | null;
 if (!canvasMaybe) throw new Error('Missing #game canvas');
 const canvas: HTMLCanvasElement = canvasMaybe;
 
-const arena = createArena({
-  LX,
-  LY,
-  seed: Date.now() & 0xffffffff,
-  player: {
-    targetVol: PLAYER_TARGET_VOL,
-    speed: 10,
-    engulfMultiplier: 5,
-    bulletSize: BULLET_SIZE,
-  },
-  enemy: {
-    targetVol: BRUISER_TARGET_VOL,
-    speed: 8,
-    engulfMultiplier: 6.5,
-  },
-  wrap: true,
-});
-
-const renderer = createRenderer(canvas, 2);
-const input = createInput(window);
+const run = createRun(Date.now() & 0xffffffff);
+const screens = createScreens();
 const debug = createDebugPanel();
 debug.setSwatch(1, cellColorCss(0, 2));   // player: hue 0 (red)
 debug.setSwatch(2, cellColorCss(1, 2));   // enemy: hue 0.5 (cyan)
+const input = createInput(window);
+
+let arena: Arena | null = null;
+let renderer: Renderer | null = null;
+let cooldown = 0;
+let displayedFps = 0;
+let framesSinceTick = 0;
+let lastFpsTick = performance.now();
+let tickCount = 0;
 
 canvas.tabIndex = 0;
 canvas.focus();
 window.addEventListener('keydown', () => canvas.focus());
 
-let cooldown = 0;
-let lastFpsTick = performance.now();
-let framesSinceTick = 0;
-let displayedFps = 0;
-let tickCount = 0;
-let running = true;
+screens.onTitleStart(() => {
+  startNewFight();
+});
+screens.onEndRestart(() => {
+  run.restart();
+  showPhase();
+});
+
+showPhase();
+
+function showPhase() {
+  // Hide every overlay; show the one for the current phase.
+  screens.hide('title');
+  screens.hide('pick');
+  screens.hide('end');
+  screens.hide('hud');
+  const state = run.getState();
+  if (state.phase === 'title') {
+    screens.show('title');
+  } else if (state.phase === 'arena') {
+    screens.show('hud');
+    // arena was started by startNewFight(); HUD updates in loop.
+  } else if (state.phase === 'upgrade_pick') {
+    const choices = state.pendingPickChoices.map((id) => ({ id, def: getUpgradeDef(id)! }));
+    screens.setPickChoices(choices, (id) => {
+      run.pickUpgrade(id);
+      startNewFight();
+    });
+    screens.show('pick');
+  } else if (state.phase === 'run_end') {
+    screens.updateEnd({
+      outcome: state.outcome ?? 'lost',
+      fightReached: state.fightIndex + 1,
+      totalFights: FIGHTS_PER_RUN,
+      upgrades: state.upgrades.map((u) => {
+        const def = getUpgradeDef(u.id);
+        if (!def) return u.id;
+        return u.stacks > 1 ? `${def.name} x${u.stacks}` : def.name;
+      }),
+    });
+    screens.show('end');
+  }
+}
+
+function startNewFight() {
+  const playerCfg = run.getPlayerConfig();
+  const enemyCfg = run.getEnemyConfig();
+  arena = createArena({
+    LX,
+    LY,
+    seed: (Date.now() & 0xffffffff) ^ (run.getState().fightIndex * 2654435761),
+    player: playerCfg,
+    enemy: enemyCfg,
+    wrap: true,
+  });
+  renderer = createRenderer(canvas, 2);
+  cooldown = 0;
+  tickCount = 0;
+  showPhase();
+  requestAnimationFrame(loop);
+}
 
 function loop() {
-  if (!running) return;
+  if (!arena || !renderer) return;
+  const phase = run.getState().phase;
+  if (phase !== 'arena') return;            // stop the loop on any non-arena phase
 
   const inp = input.poll();
 
-  // Fire bullets only when not engulfing (engulf disables shooting per spec).
+  // Fire bullets only when not engulfing.
   if (cooldown > 0) cooldown -= 1;
   const player = arena.state.cells.get(PLAYER_ID);
   if (
@@ -76,7 +124,7 @@ function loop() {
         pos: [player.center[0], player.center[1]],
         v,
         ownerId: PLAYER_ID,
-        size: BULLET_SIZE,
+        size: arena.player.bulletSize,
       });
       player.targetVol -= BULLET_COST;
       cooldown = FIRE_COOLDOWN_TICKS;
@@ -100,35 +148,53 @@ function loop() {
     lastFpsTick = now;
   }
 
-  const status = arena.getStatus();
+  // HUD update.
+  if (player) {
+    const runState = run.getState();
+    screens.updateHud({
+      fightIndex: runState.fightIndex,
+      totalFights: FIGHTS_PER_RUN,
+      vol: player.vol,
+      targetVol: player.targetVol,
+      upgrades: runState.upgrades.map((u) => {
+        const def = getUpgradeDef(u.id);
+        if (!def) return u.id;
+        return u.stacks > 1 ? `${def.name} x${u.stacks}` : def.name;
+      }),
+    });
+  }
 
-  // Update debug panel each frame.
-  const playerCell = arena.state.cells.get(PLAYER_ID);
+  // Debug panel.
   const canFire =
     !inp.shouldEngulf &&
     cooldown === 0 &&
-    !!playerCell &&
-    playerCell.targetVol >= BULLET_MIN_VOL;
+    !!player &&
+    player.targetVol >= BULLET_MIN_VOL;
   debug.update(arena.state, {
     fps: displayedFps,
     tick: tickCount,
-    status,
+    status: arena.getStatus(),
     cooldown,
     canFire,
   });
 
-  if (status !== 'running') {
-    running = false;
-    drawEndOverlay(status);
+  // Status check: did this tick end the fight?
+  const status = arena.getStatus();
+  if (status === 'won') {
+    run.winFight();
+    showPhase();
+    return;
+  }
+  if (status === 'lost') {
+    run.loseFight();
+    showPhase();
     return;
   }
 
   requestAnimationFrame(loop);
 }
 
-// HSV→RGB matches src/ui/render.ts. We duplicate it here rather than export it
-// because the renderer treats palette construction as an internal detail.
-// Same formula, same input convention: hue index `i` over `nCells`.
+// HSV→RGB matches src/ui/render.ts.
 function cellColorCss(i: number, nCells: number): string {
   const h = i / nCells;
   const s = 1, v = 0.7;
@@ -148,29 +214,3 @@ function cellColorCss(i: number, nCells: number): string {
   }
   return `rgb(${(r * 255) | 0}, ${(g * 255) | 0}, ${(b * 255) | 0})`;
 }
-
-function drawEndOverlay(status: 'won' | 'lost'): void {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  // Dim the field.
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  // Title.
-  ctx.fillStyle = status === 'won' ? '#7cf07c' : '#f06464';
-  ctx.font = 'bold 64px monospace';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(status === 'won' ? 'WIN' : 'LOSE', canvas.width / 2, canvas.height / 2 - 16);
-  // Hint.
-  ctx.fillStyle = '#dddddd';
-  ctx.font = '20px monospace';
-  ctx.fillText('press R to restart', canvas.width / 2, canvas.height / 2 + 36);
-}
-
-window.addEventListener('keydown', (e) => {
-  if (!running && (e.key === 'r' || e.key === 'R')) {
-    location.reload();
-  }
-});
-
-requestAnimationFrame(loop);
