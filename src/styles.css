@@ -1,0 +1,16 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #0a0a0a;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: system-ui, sans-serif;
+}
+
+canvas {
+  image-rendering: pixelated;
+  background: #000;
+  border: 1px solid #222;
+}
