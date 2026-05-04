@@ -10,6 +10,7 @@ export interface SniperState {
 const FLEE_RANGE = 25;          // if target closer than this, flee
 const APPROACH_RANGE = 60;      // if target farther than this, approach
 // Between FLEE_RANGE and APPROACH_RANGE: hold position.
+const SNIPER_BULLET_COST = 3;   // targetVol cost per shot — symmetric with player's BULLET_COST
 
 export function sniperStep(
   self: Cell,
@@ -41,7 +42,8 @@ export function sniperStep(
     internal.shootTimer -= 1;
     return;
   }
-  // Fire toward target.
+  // Fire toward target. Costs the sniper targetVol — without this, snipers
+  // outpace any reasonable player budget.
   if (dist > 0 && spawn.bulletSpeed !== undefined && spawn.bulletSize !== undefined) {
     const dirX = v[0] / dist;
     const dirY = v[1] / dist;
@@ -51,6 +53,7 @@ export function sniperStep(
       ownerId: self.id,
       size: spawn.bulletSize,
     });
+    self.targetVol -= SNIPER_BULLET_COST;
     internal.shootTimer = spawn.shootCooldown ?? 30;
   }
 }

@@ -25,8 +25,8 @@ export const ARCHETYPE_DEFAULTS: Record<EnemyArchetype, EnemySpawn> = {
     targetVol: 240,                // -20% per spec
     speed: 12,                     // +20% per spec
     engulfMultiplier: 1,           // snipers don't engulf
-    shootCooldown: 30,             // shoots ~2x per second
-    bulletSize: 4,                 // +50% per spec (3 * 1.5)
+    shootCooldown: 45,             // ~1.3 shots/sec (was 30 — too punishing)
+    bulletSize: 3,                 // same as player (was 4 — oversized hit area)
     bulletSpeed: 2,
   },
   splitter: {
