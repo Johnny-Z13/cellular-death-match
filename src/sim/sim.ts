@@ -12,6 +12,7 @@ export interface CreateSimOpts {
   targetVol: number;
   seed: number;
   wrap: boolean;
+  wrapBullets?: boolean;       // default true
   betaIsing?: number;
   betaVol?: number;
   betaMov?: number;
@@ -46,11 +47,13 @@ export function createSim(opts: CreateSimOpts): SimState {
   return {
     grid,
     cells,
+    bullets: [],
     betaIsing: opts.betaIsing ?? 1,
     betaVol: opts.betaVol ?? 1,
     betaMov: opts.betaMov ?? 1,
     events: [],
     rng: createRng(opts.seed),
+    wrapBullets: opts.wrapBullets ?? true,
   };
 }
 
