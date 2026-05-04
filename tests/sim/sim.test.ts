@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createSim, tick } from '../../src/sim/sim';
+import { createSim, tick, addCell } from '../../src/sim/sim';
 
 describe('createSim', () => {
   it('creates a sim with N cells at distinct positions', () => {
@@ -50,5 +50,48 @@ describe('tick', () => {
     }
     expect(state.cells.get(1)!.vol).toBe(count1);
     expect(state.cells.get(2)!.vol).toBe(count2);
+  });
+});
+
+describe('addCell', () => {
+  it('adds a new cell with given id at given position', () => {
+    const state = createSim({
+      LX: 30, LY: 30, nCells: 2, targetVol: 50, seed: 1, wrap: true,
+    });
+    const newId = addCell(state, {
+      id: 5,
+      targetVol: 80,
+      pos: [15, 15],
+    });
+    expect(newId).toBe(5);
+    expect(state.cells.has(5)).toBe(true);
+    const cell = state.cells.get(5)!;
+    expect(cell.id).toBe(5);
+    expect(cell.targetVol).toBe(80);
+    expect(cell.vol).toBeGreaterThan(0);
+    // Center should be near (15, 15) since pixels were seeded around that point.
+    expect(cell.center[0]).toBeCloseTo(15, 0);
+    expect(cell.center[1]).toBeCloseTo(15, 0);
+  });
+
+  it('boundary set is updated to include new cell pixels', () => {
+    const state = createSim({
+      LX: 30, LY: 30, nCells: 2, targetVol: 50, seed: 1, wrap: true,
+    });
+    const before = state.grid.boundary.size;
+    addCell(state, { id: 7, targetVol: 50, pos: [5, 5] });
+    expect(state.grid.boundary.size).toBeGreaterThan(before);
+  });
+
+  it('does not overwrite existing cell pixels', () => {
+    const state = createSim({
+      LX: 30, LY: 30, nCells: 2, targetVol: 50, seed: 1, wrap: true,
+    });
+    const cell1 = state.cells.get(1)!;
+    const volBefore = cell1.vol;
+    // Place a new cell INSIDE cell 1's territory — pixels owned by cell 1 are skipped.
+    addCell(state, { id: 9, targetVol: 30, pos: [Math.round(cell1.center[0]), Math.round(cell1.center[1])] });
+    // Cell 1's volume should be unchanged.
+    expect(cell1.vol).toBe(volBefore);
   });
 });

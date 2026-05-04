@@ -1,5 +1,5 @@
-import { type SimState, NEIGHBOR_DIRS } from './types';
-import { createGrid, idx, setCell, recomputeBoundary } from './grid';
+import { type SimState, type CellId, NEIGHBOR_DIRS } from './types';
+import { createGrid, idx, setCell, recomputeBoundary, updateBoundaryAround } from './grid';
 import { createCell, addPixel } from './cell';
 import { createRng } from './rng';
 import { mcStep } from './monte-carlo';
@@ -62,4 +62,56 @@ export function tick(state: SimState, mcStepsPerTick: number): void {
   state.events.length = 0;
   for (let i = 0; i < mcStepsPerTick; i++) mcStep(state);
   stepBullets(state);
+}
+
+export interface AddCellOpts {
+  id: CellId;
+  targetVol: number;
+  pos: [number, number];   // grid position to seed pixels around
+}
+
+// Add a new cell to the sim mid-tick. Seeds pixels in the 3x3 around `pos`,
+// skipping any pixels already owned by another cell. The boundary set is
+// updated to reflect the new cell.
+export function addCell(state: SimState, opts: AddCellOpts): CellId {
+  const cell = createCell(opts.id, opts.targetVol);
+  state.cells.set(opts.id, cell);
+
+  const { LX, LY, wrap } = state.grid;
+  const cx = Math.round(opts.pos[0]);
+  const cy = Math.round(opts.pos[1]);
+
+  // Seed the 3×3 around (cx, cy). Skip pixels that already belong to another cell.
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -1; dy <= 1; dy++) {
+      let nx = cx + dx;
+      let ny = cy + dy;
+      if (wrap) {
+        nx = ((nx % LX) + LX) % LX;
+        ny = ((ny % LY) + LY) % LY;
+      } else {
+        if (nx < 0 || nx >= LX || ny < 0 || ny >= LY) continue;
+      }
+      if ((state.grid.cells[idx(state.grid, nx, ny)] ?? 0) !== 0) continue;
+      setCell(state.grid, nx, ny, opts.id);
+      addPixel(cell, nx, ny, LX, LY);
+    }
+  }
+
+  // Update boundary around the new pixels (and their neighbors).
+  for (let dx = -2; dx <= 2; dx++) {
+    for (let dy = -2; dy <= 2; dy++) {
+      let nx = cx + dx;
+      let ny = cy + dy;
+      if (wrap) {
+        nx = ((nx % LX) + LX) % LX;
+        ny = ((ny % LY) + LY) % LY;
+      } else {
+        if (nx < 0 || nx >= LX || ny < 0 || ny >= LY) continue;
+      }
+      updateBoundaryAround(state.grid, nx, ny);
+    }
+  }
+
+  return opts.id;
 }
