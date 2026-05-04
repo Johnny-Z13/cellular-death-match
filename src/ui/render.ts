@@ -76,7 +76,9 @@ export function createRenderer(
       }
 
       const data = imageData.data;
-      // The grid is indexed [x*LY + y]. ImageData is row-major: [y*LX + x] * 4.
+      // Convention: grid (x, y) = (column, row) where x is horizontal, y is
+      // vertical. Storage is x-major: cells[x * LY + y]. ImageData is row-major,
+      // so pixel (x, y) lives at byte index (y * LX + x) * 4.
       for (let x = 0; x < LX; x++) {
         for (let y = 0; y < LY; y++) {
           const cellIdx = x * LY + y;
@@ -98,6 +100,25 @@ export function createRenderer(
       // Scale up to display canvas.
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(offscreen!, 0, 0, canvas.width, canvas.height);
+
+      // Draw bullets on top, in display coordinates.
+      const sx = canvas.width / LX;
+      const sy = canvas.height / LY;
+      for (const b of state.bullets) {
+        const palette = base[b.ownerId] ?? base[0]!;
+        // Lighten by 0.5 for the bullet color (slightly brighter than boundary).
+        const r = 255 * 0.5 + palette[0]! * 0.5;
+        const g = 255 * 0.5 + palette[1]! * 0.5;
+        const bl = 255 * 0.5 + palette[2]! * 0.5;
+        ctx.fillStyle = `rgb(${r | 0}, ${g | 0}, ${bl | 0})`;
+        ctx.beginPath();
+        // Display (x, y) maps directly to grid (x, y). Bullet pos is in grid coords.
+        const cx = (b.pos[0] + 0.5) * sx;
+        const cy = (b.pos[1] + 0.5) * sy;
+        const radius = Math.max(b.size * sx * 0.5, 2);
+        ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+        ctx.fill();
+      }
     },
   };
 }

@@ -27,17 +27,30 @@ export interface Cell {
   intent: Intent;
 }
 
+export interface Bullet {
+  pos: [number, number];        // grid coordinates, fractional
+  v: [number, number];          // velocity in grid-pixels per tick
+  ownerId: CellId;              // which cell fired this bullet (collisions ignored vs owner during grace period)
+  size: number;                 // bullet width/height in pixels (square footprint)
+  age: number;                  // ticks since spawn
+  wraps: number;                // count of grid-edge wraps; despawn at >=2
+}
+
 export type SimEvent =
-  | { type: 'pixelTransferred'; from: CellId; to: CellId; pos: [number, number] };
+  | { type: 'pixelTransferred'; from: CellId; to: CellId; pos: [number, number] }
+  | { type: 'bulletFired';      ownerId: CellId; pos: [number, number]; v: [number, number] }
+  | { type: 'bulletHit';        ownerId: CellId; victimId: CellId; pos: [number, number] };
 
 export interface SimState {
   grid: Grid;
   cells: Map<CellId, Cell>;
+  bullets: Bullet[];
   betaIsing: number;
   betaVol: number;
   betaMov: number;
   events: SimEvent[];
   rng: import('./rng').Rng;
+  wrapBullets: boolean;        // true: bullets wrap on grid edges (matches Python wrap_bullets=True)
 }
 
 // 8-connectivity neighbor directions (matches Python neighbor_dirs).
