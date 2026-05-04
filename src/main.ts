@@ -98,11 +98,10 @@ function startNewFight() {
   renderer = createRenderer(canvas, PALETTE_SIZE);
   cooldown = 0;
   tickCount = 0;
-  // Update debug panel swatches to match this fight's cell count.
-  // Player (cell id 1) gets palette index 0; enemies follow.
-  debug.setSwatch(1, cellColorCss(0, PALETTE_SIZE));
+  // Update debug panel swatches to match the renderer's palette.
+  debug.setSwatch(1, swatchForCellId(1, PALETTE_SIZE));
   for (let i = 0; i < enemies.length; i++) {
-    debug.setSwatch(2 + i, cellColorCss(1 + i, PALETTE_SIZE));
+    debug.setSwatch(2 + i, swatchForCellId(2 + i, PALETTE_SIZE));
   }
   showPhase();
   requestAnimationFrame(loop);
@@ -202,9 +201,20 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-// HSV→RGB matches src/ui/render.ts.
-function cellColorCss(i: number, nCells: number): string {
-  const h = i / nCells;
+// Mirrors the renderer's palette logic so debug swatches match on-canvas colors.
+//   cell id 1 (player) = red (hue 0).
+//   cell ids 2+ = spread across cool half of the wheel.
+function swatchForCellId(cellId: number, paletteSize: number): string {
+  if (cellId === 1) return hsvCss(0);
+  const enemyIdx = cellId - 2;
+  const enemyCount = Math.max(1, paletteSize - 1);
+  const HUE_LO = 0.42;
+  const HUE_HI = 0.95;
+  const hue = enemyCount === 1 ? 0.55 : HUE_LO + (HUE_HI - HUE_LO) * (enemyIdx / (enemyCount - 1));
+  return hsvCss(hue);
+}
+
+function hsvCss(h: number): string {
   const s = 1, v = 0.7;
   const idx = Math.floor(h * 6);
   const f = h * 6 - idx;
