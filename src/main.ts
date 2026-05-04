@@ -14,8 +14,9 @@ const BULLET_SPEED = 2;
 const BULLET_SIZE = 3;
 const FIRE_COOLDOWN_TICKS = 5;
 
-const canvas = document.getElementById('game') as HTMLCanvasElement | null;
-if (!canvas) throw new Error('Missing #game canvas');
+const canvasMaybe = document.getElementById('game') as HTMLCanvasElement | null;
+if (!canvasMaybe) throw new Error('Missing #game canvas');
+const canvas: HTMLCanvasElement = canvasMaybe;
 
 const arena = createArena({
   LX,
@@ -89,12 +90,35 @@ function loop() {
     running = false;
     // eslint-disable-next-line no-console
     console.log(status === 'won' ? 'WIN' : 'LOSE');
-    // One final render to show the final state.
-    renderer.render(arena.state);
+    drawEndOverlay(status);
     return;
   }
 
   requestAnimationFrame(loop);
 }
+
+function drawEndOverlay(status: 'won' | 'lost'): void {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  // Dim the field.
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Title.
+  ctx.fillStyle = status === 'won' ? '#7cf07c' : '#f06464';
+  ctx.font = 'bold 64px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(status === 'won' ? 'WIN' : 'LOSE', canvas.width / 2, canvas.height / 2 - 16);
+  // Hint.
+  ctx.fillStyle = '#dddddd';
+  ctx.font = '20px monospace';
+  ctx.fillText('press R to restart', canvas.width / 2, canvas.height / 2 + 36);
+}
+
+window.addEventListener('keydown', (e) => {
+  if (!running && (e.key === 'r' || e.key === 'R')) {
+    location.reload();
+  }
+});
 
 requestAnimationFrame(loop);
