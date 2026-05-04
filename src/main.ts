@@ -1,6 +1,7 @@
 import { createArena } from './game/arena';
 import { addBullet } from './sim/bullets';
 import { createRenderer } from './ui/render';
+import { createDebugPanel } from './ui/debug';
 import { createInput } from './game/input';
 
 const LX = 100;
@@ -29,14 +30,19 @@ const arena = createArena({
 
 const renderer = createRenderer(canvas, 2);
 const input = createInput(window);
+const debug = createDebugPanel();
+debug.setSwatch(1, cellColorCss(0, 2));   // player: hue 0 (red)
+debug.setSwatch(2, cellColorCss(1, 2));   // enemy: hue 0.5 (cyan)
 
 canvas.tabIndex = 0;
 canvas.focus();
 window.addEventListener('keydown', () => canvas.focus());
 
 let cooldown = 0;
-let lastFpsLog = performance.now();
-let framesSinceLog = 0;
+let lastFpsTick = performance.now();
+let framesSinceTick = 0;
+let displayedFps = 0;
+let tickCount = 0;
 let running = true;
 
 function loop() {
@@ -73,28 +79,65 @@ function loop() {
     shouldFire: inp.shouldFire,
     shouldEngulf: inp.shouldEngulf,
   });
+  tickCount++;
 
   renderer.render(arena.state);
 
-  framesSinceLog++;
+  framesSinceTick++;
   const now = performance.now();
-  if (now - lastFpsLog > 1000) {
-    // eslint-disable-next-line no-console
-    console.log(`FPS: ${framesSinceLog}`);
-    framesSinceLog = 0;
-    lastFpsLog = now;
+  if (now - lastFpsTick > 1000) {
+    displayedFps = framesSinceTick;
+    framesSinceTick = 0;
+    lastFpsTick = now;
   }
 
   const status = arena.getStatus();
+
+  // Update debug panel each frame.
+  const playerCell = arena.state.cells.get(PLAYER_ID);
+  const canFire =
+    !inp.shouldEngulf &&
+    cooldown === 0 &&
+    !!playerCell &&
+    playerCell.targetVol >= BULLET_MIN_VOL;
+  debug.update(arena.state, {
+    fps: displayedFps,
+    tick: tickCount,
+    status,
+    cooldown,
+    canFire,
+  });
+
   if (status !== 'running') {
     running = false;
-    // eslint-disable-next-line no-console
-    console.log(status === 'won' ? 'WIN' : 'LOSE');
     drawEndOverlay(status);
     return;
   }
 
   requestAnimationFrame(loop);
+}
+
+// HSV→RGB matches src/ui/render.ts. We duplicate it here rather than export it
+// because the renderer treats palette construction as an internal detail.
+// Same formula, same input convention: hue index `i` over `nCells`.
+function cellColorCss(i: number, nCells: number): string {
+  const h = i / nCells;
+  const s = 1, v = 0.7;
+  const idx = Math.floor(h * 6);
+  const f = h * 6 - idx;
+  const p = v * (1 - s);
+  const q = v * (1 - f * s);
+  const t = v * (1 - (1 - f) * s);
+  let r = 0, g = 0, b = 0;
+  switch (idx % 6) {
+    case 0: r = v; g = t; b = p; break;
+    case 1: r = q; g = v; b = p; break;
+    case 2: r = p; g = v; b = t; break;
+    case 3: r = p; g = q; b = v; break;
+    case 4: r = t; g = p; b = v; break;
+    case 5: r = v; g = p; b = q; break;
+  }
+  return `rgb(${(r * 255) | 0}, ${(g * 255) | 0}, ${(b * 255) | 0})`;
 }
 
 function drawEndOverlay(status: 'won' | 'lost'): void {
