@@ -11,7 +11,7 @@ const LX = 100;
 const LY = 100;
 const PLAYER_ID = 1;
 const BULLET_COST = 5;
-const BULLET_MIN_VOL = 20;
+const BULLET_MIN_VOL = 10;          // lowered from 20 to prevent stalemates when both cells are tiny
 const BULLET_SPEED = 2;
 const FIRE_COOLDOWN_TICKS = 5;
 
