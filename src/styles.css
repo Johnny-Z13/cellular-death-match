@@ -98,3 +98,129 @@ canvas {
   color: #999;
   font-size: 11px;
 }
+
+/* Overlay screens */
+.screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 10;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.screen.visible {
+  display: flex;
+}
+
+.screen-card {
+  background: #111;
+  border: 1px solid #222;
+  padding: 32px 36px;
+  min-width: 380px;
+  text-align: center;
+  color: #ddd;
+}
+
+.screen-title {
+  margin: 0 0 12px 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.screen-sub {
+  margin: 0 0 20px 0;
+  color: #999;
+  font-size: 14px;
+}
+
+.screen-button {
+  font: inherit;
+  font-size: 14px;
+  padding: 10px 20px;
+  background: #222;
+  color: #ddd;
+  border: 1px solid #444;
+  cursor: pointer;
+  transition: background 100ms ease, border-color 100ms ease;
+}
+
+.screen-button:hover {
+  background: #2a2a2a;
+  border-color: #666;
+}
+
+.pick-choices {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.pick-card {
+  font: inherit;
+  text-align: left;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #ddd;
+  padding: 14px 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: background 100ms, border-color 100ms;
+}
+
+.pick-card:hover {
+  background: #232323;
+  border-color: #777;
+}
+
+.pick-card-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pick-card-desc {
+  font-size: 12px;
+  color: #999;
+}
+
+/* HUD: small in-fight overlay, top of canvas */
+.hud {
+  display: none;
+  position: fixed;
+  left: 24px;
+  top: 24px;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid #222;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #ddd;
+  pointer-events: none;
+  z-index: 5;
+  min-width: 200px;
+}
+
+.hud.visible {
+  display: block;
+}
+
+.hud-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hud-key {
+  color: #888;
+}
+
+.hud-val {
+  color: #e6e6e6;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
