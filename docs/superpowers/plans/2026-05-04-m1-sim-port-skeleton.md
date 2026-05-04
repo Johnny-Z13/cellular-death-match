@@ -79,6 +79,8 @@ dist/
 *.log
 .vite/
 coverage/
+*.tsbuildinfo
+src/**/*.js
 ```
 
 - [ ] **Step 1.2: Create `package.json`**
