@@ -22,9 +22,10 @@ const canvas: HTMLCanvasElement = canvasMaybe;
 const run = createRun(Date.now() & 0xffffffff);
 const screens = createScreens();
 const debug = createDebugPanel();
-debug.setSwatch(1, cellColorCss(0, 2));   // player: hue 0 (red)
-debug.setSwatch(2, cellColorCss(1, 2));   // enemy: hue 0.5 (cyan)
 const input = createInput(window);
+// Allow up to PALETTE_SIZE total cell colors. Larger than any expected fight
+// (boss phase 2 = boss + 3 mediums = 4 enemies + spawned mediums; far below 16).
+const PALETTE_SIZE = 16;
 
 let arena: Arena | null = null;
 let renderer: Renderer | null = null;
@@ -94,9 +95,15 @@ function startNewFight() {
     enemies,
     wrap: true,
   });
-  renderer = createRenderer(canvas, 2);
+  renderer = createRenderer(canvas, PALETTE_SIZE);
   cooldown = 0;
   tickCount = 0;
+  // Update debug panel swatches to match this fight's cell count.
+  // Player (cell id 1) gets palette index 0; enemies follow.
+  debug.setSwatch(1, cellColorCss(0, PALETTE_SIZE));
+  for (let i = 0; i < enemies.length; i++) {
+    debug.setSwatch(2 + i, cellColorCss(1 + i, PALETTE_SIZE));
+  }
   showPhase();
   requestAnimationFrame(loop);
 }
