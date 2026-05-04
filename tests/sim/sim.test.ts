@@ -35,7 +35,7 @@ describe('tick', () => {
     tick(state, 100);
     // events array should have been cleared at start of tick, then repopulated.
     // Just check that the lingering manual event is gone:
-    const stale = state.events.find((e) => e.pos[0] === 0 && e.pos[1] === 0 && e.from === 1 && e.to === 2);
+    const stale = state.events.find((e) => e.type === 'pixelTransferred' && e.pos[0] === 0 && e.pos[1] === 0 && e.from === 1 && e.to === 2);
     expect(stale).toBeUndefined();
   });
 

@@ -32,11 +32,13 @@ function makeStateWithTwoBlobs(): SimState {
   return {
     grid,
     cells,
+    bullets: [],
     betaIsing: 1,
     betaVol: 1,
     betaMov: 1,
     events: [],
     rng: createRng(42),
+    wrapBullets: true,
   };
 }
 
