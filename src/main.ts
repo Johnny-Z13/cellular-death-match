@@ -5,6 +5,7 @@ import { createRenderer, type Renderer } from './ui/render';
 import { createDebugPanel } from './ui/debug';
 import { createInput } from './game/input';
 import { createScreens } from './ui/screens';
+import { createEngulfTone } from './audio/engulfTone';
 import { getUpgradeDef } from './content/upgrades';
 
 const LX = 100;
@@ -13,7 +14,7 @@ const PLAYER_ID = 1;
 const BULLET_COST = 12;             // raised from 5 — bullets felt too cheap vs engulf
 const BULLET_MIN_VOL = 10;
 const BULLET_SPEED = 2;
-const FIRE_COOLDOWN_TICKS = 5;
+const FIRE_COOLDOWN_TICKS = 15;     // raised from 5 — fights ended too fast at 12 shots/sec
 
 const canvasMaybe = document.getElementById('game') as HTMLCanvasElement | null;
 if (!canvasMaybe) throw new Error('Missing #game canvas');
@@ -23,6 +24,8 @@ const run = createRun(Date.now() & 0xffffffff);
 const screens = createScreens();
 const debug = createDebugPanel();
 const input = createInput(window);
+const engulfTone = createEngulfTone();
+let engulfActive = false;
 // Allow up to PALETTE_SIZE total cell colors. Larger than any expected fight
 // (boss phase 2 = boss + 3 mediums = 4 enemies + spawned mediums; far below 16).
 const PALETTE_SIZE = 16;
@@ -145,6 +148,20 @@ function loop() {
   });
   tickCount++;
 
+  // Engulf audio cue. Edge-trigger start/stop; intensity tracks player vol
+  // so the tone rises as you successfully absorb mass.
+  if (inp.shouldEngulf && !engulfActive) {
+    engulfTone.start();
+    engulfActive = true;
+  } else if (!inp.shouldEngulf && engulfActive) {
+    engulfTone.stop();
+    engulfActive = false;
+  }
+  if (engulfActive && player) {
+    const t = Math.max(0, Math.min(1, player.vol / Math.max(player.targetVol, 1)));
+    engulfTone.setIntensity(t);
+  }
+
   renderer.render(arena.state);
 
   framesSinceTick++;
@@ -188,11 +205,13 @@ function loop() {
   // Status check: did this tick end the fight?
   const status = arena.getStatus();
   if (status === 'won') {
+    if (engulfActive) { engulfTone.stop(); engulfActive = false; }
     run.winFight();
     showPhase();
     return;
   }
   if (status === 'lost') {
+    if (engulfActive) { engulfTone.stop(); engulfActive = false; }
     run.loseFight();
     showPhase();
     return;
