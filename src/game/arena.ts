@@ -1,17 +1,15 @@
-import { type SimState } from '../sim/types';
-import { createSim, tick as simTick } from '../sim/sim';
-import { bruiserStep } from './enemies/bruiser';
+import { type SimState, type CellId, type Cell } from '../sim/types';
+import { createSim, tick as simTick, addCell } from '../sim/sim';
 import { type PlayerConfig } from '../content/upgrades';
+import { type EnemySpawn, ARCHETYPE_DEFAULTS } from '../content/enemies';
+import { bruiserStep } from './enemies/bruiser';
+import { sniperStep, type SniperState } from './enemies/sniper';
+import { splitterStep } from './enemies/splitter';
+import { swarmletStep } from './enemies/swarmlet';
+import { mirrorStep } from './enemies/mirror';
+import { bossStep, type BossState } from './enemies/boss';
 
-// Player config flowing into the arena = the upgrade-applied PlayerConfig.
-// We re-export so consumers don't need to know it lives in content/.
 export type { PlayerConfig } from '../content/upgrades';
-
-export interface EnemyArenaConfig {
-  targetVol: number;
-  speed: number;
-  engulfMultiplier: number;        // value used when in engulf range
-}
 
 export interface ArenaInput {
   moveVec: [number, number];
@@ -24,9 +22,15 @@ export type ArenaStatus = 'running' | 'won' | 'lost';
 export interface Arena {
   state: SimState;
   player: PlayerConfig;
-  enemy: EnemyArenaConfig;
+  archetypes: Map<CellId, EnemySpawn>;
   getStatus(): ArenaStatus;
   tick(input: ArenaInput): void;
+  spawnEnemy(opts: SpawnEnemyOpts): CellId;
+}
+
+export interface SpawnEnemyOpts {
+  spawn: EnemySpawn;
+  pos: [number, number];
 }
 
 export interface CreateArenaOpts {
@@ -34,43 +38,82 @@ export interface CreateArenaOpts {
   LY: number;
   seed: number;
   player: PlayerConfig;
-  enemy: EnemyArenaConfig;
+  enemies: EnemySpawn[];
   wrap: boolean;
   wrapBullets?: boolean;
 }
 
 const PLAYER_ID = 1;
-const BRUISER_ID = 2;
 const ENGULF_DECAY_PER_FRAME = 1 / 60;
 const MC_STEPS_PER_TICK = 1000;
 
+interface AiState {
+  sniper?: SniperState;
+  boss?: BossState;
+  splitter?: { didSpawn: boolean };
+}
+
 export function createArena(opts: CreateArenaOpts): Arena {
+  const nEnemies = opts.enemies.length;
   const state = createSim({
     LX: opts.LX,
     LY: opts.LY,
-    nCells: 2,
+    nCells: 1 + nEnemies,
     targetVol: opts.player.targetVol,
     seed: opts.seed,
     wrap: opts.wrap,
     wrapBullets: opts.wrapBullets ?? true,
   });
 
-  // Override the bruiser's targetVol post-creation. (createSim takes a single
-  // targetVol; per-archetype stats are applied here.)
-  const bruiser = state.cells.get(BRUISER_ID);
-  if (bruiser) bruiser.targetVol = opts.enemy.targetVol;
+  const archetypes = new Map<CellId, EnemySpawn>();
+  const aiStates = new Map<CellId, AiState>();
+  let nextCellId = 2 + nEnemies;          // ids beyond initial spawns
 
-  const player = state.cells.get(PLAYER_ID);
-  if (player) {
-    // Initial intent is zero-speed but with the player's configured speed
-    // multiplier so the *intent vector* on first poll uses the right magnitude.
-    player.intent.speed = opts.player.speed;
+  for (let i = 0; i < nEnemies; i++) {
+    const cellId = 2 + i;
+    let spawn = opts.enemies[i]!;
+    // Mirror adopts the player's stats.
+    if (spawn.archetype === 'mirror') {
+      spawn = {
+        ...spawn,
+        targetVol: opts.player.targetVol,
+        speed: opts.player.speed,
+        engulfMultiplier: opts.player.engulfMultiplier,
+      };
+    }
+    archetypes.set(cellId, spawn);
+    const cell = state.cells.get(cellId);
+    if (cell) cell.targetVol = spawn.targetVol;
+
+    const aiState: AiState = {};
+    if (spawn.archetype === 'sniper')   aiState.sniper = { shootTimer: spawn.shootCooldown ?? 30 };
+    if (spawn.archetype === 'boss')     aiState.boss = { phase: 1, didSpawnP2: false };
+    if (spawn.archetype === 'splitter') aiState.splitter = { didSpawn: false };
+    aiStates.set(cellId, aiState);
   }
 
-  return {
+  const player = state.cells.get(PLAYER_ID);
+  if (player) player.intent.speed = opts.player.speed;
+
+  function dispatchAi(self: Cell, target: Cell, ar: Arena): void {
+    const spawn = archetypes.get(self.id);
+    if (!spawn) return;
+    const ai = aiStates.get(self.id);
+    if (!ai) return;
+    switch (spawn.archetype) {
+      case 'bruiser':  bruiserStep(self, target, state); return;
+      case 'sniper':   sniperStep(self, target, state, spawn, ai.sniper!); return;
+      case 'splitter': splitterStep(self, target, state, spawn); return;
+      case 'swarmlet': swarmletStep(self, target, state, spawn); return;
+      case 'mirror':   mirrorStep(self, target, state, spawn); return;
+      case 'boss':     bossStep(self, target, state, spawn, ai.boss!, ar); return;
+    }
+  }
+
+  const arena: Arena = {
     state,
     player: opts.player,
-    enemy: opts.enemy,
+    archetypes,
     getStatus(): ArenaStatus {
       const p = state.cells.get(PLAYER_ID);
       if (!p || p.vol === 0) return 'lost';
@@ -95,20 +138,48 @@ export function createArena(opts: CreateArenaOpts): Arena {
         }
       }
 
-      // Enemy AI. M4 has only Bruiser; M5 will dispatch by archetype.
+      // Enemy AIs.
       const target = state.cells.get(PLAYER_ID);
-      const b = state.cells.get(BRUISER_ID);
-      if (b && target && b.vol > 0) {
-        bruiserStep(b, target, state);
-        // Override Bruiser's intent fields with this fight's config.
-        // bruiserStep sets these from its own constants; we apply per-fight scaling.
-        b.intent.speed = opts.enemy.speed;
-        if (b.intent.engulfMultiplier > 1) {
-          b.intent.engulfMultiplier = opts.enemy.engulfMultiplier;
+      if (target) {
+        for (const [id] of archetypes) {
+          const cell = state.cells.get(id);
+          if (!cell || cell.vol === 0) continue;
+          dispatchAi(cell, target, this);
         }
+      }
+
+      // On-death handlers.
+      for (const [id, spawn] of archetypes) {
+        if (spawn.archetype !== 'splitter') continue;
+        const ai = aiStates.get(id);
+        if (!ai?.splitter || ai.splitter.didSpawn) continue;
+        const cell = state.cells.get(id);
+        if (!cell || cell.vol > 0) continue;
+        // Splitter died — spawn 2 swarmlets at its last known center.
+        ai.splitter.didSpawn = true;
+        const pos = cell.center;
+        const swarmletSpawn = { ...ARCHETYPE_DEFAULTS.swarmlet };
+        this.spawnEnemy({ spawn: swarmletSpawn, pos: [pos[0] - 3, pos[1]] });
+        this.spawnEnemy({ spawn: swarmletSpawn, pos: [pos[0] + 3, pos[1]] });
       }
 
       simTick(state, MC_STEPS_PER_TICK);
     },
+    spawnEnemy(spawnOpts: SpawnEnemyOpts): CellId {
+      const id = nextCellId++;
+      addCell(state, {
+        id,
+        targetVol: spawnOpts.spawn.targetVol,
+        pos: spawnOpts.pos,
+      });
+      archetypes.set(id, spawnOpts.spawn);
+      const ai: AiState = {};
+      if (spawnOpts.spawn.archetype === 'sniper')   ai.sniper = { shootTimer: spawnOpts.spawn.shootCooldown ?? 30 };
+      if (spawnOpts.spawn.archetype === 'boss')     ai.boss = { phase: 1, didSpawnP2: false };
+      if (spawnOpts.spawn.archetype === 'splitter') ai.splitter = { didSpawn: false };
+      aiStates.set(id, ai);
+      return id;
+    },
   };
+  return arena;
 }

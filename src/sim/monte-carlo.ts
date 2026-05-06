@@ -137,6 +137,19 @@ function applyPixelTransfer(
     if (c) removePixel(c, xT, yT, grid.LX, grid.LY);
   }
 
+  // Metabolism: when source is actively engulfing AND consuming a non-empty
+  // target, source's targetVol grows and target's shrinks. This lets engulf
+  // outpace the volume term's pushback and rewards aggressive absorption.
+  // (Mirrors Python target_cell_vols updates in cell_MC_step.)
+  if (sourceVal !== 0 && targetVal !== 0) {
+    const source = state.cells.get(sourceVal);
+    if (source && source.intent.engulfMultiplier > 1) {
+      source.targetVol += 0.5;
+      const victim = state.cells.get(targetVal);
+      if (victim) victim.targetVol -= 0.6;
+    }
+  }
+
   updateBoundaryAround(grid, xT, yT);
   state.events.push({
     type: 'pixelTransferred',

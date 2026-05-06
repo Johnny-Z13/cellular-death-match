@@ -5,15 +5,16 @@ import { createRenderer, type Renderer } from './ui/render';
 import { createDebugPanel } from './ui/debug';
 import { createInput } from './game/input';
 import { createScreens } from './ui/screens';
+import { createEngulfTone } from './audio/engulfTone';
 import { getUpgradeDef } from './content/upgrades';
 
 const LX = 100;
 const LY = 100;
 const PLAYER_ID = 1;
-const BULLET_COST = 5;
-const BULLET_MIN_VOL = 10;          // lowered from 20 to prevent stalemates when both cells are tiny
+const BULLET_COST = 12;             // raised from 5 — bullets felt too cheap vs engulf
+const BULLET_MIN_VOL = 10;
 const BULLET_SPEED = 2;
-const FIRE_COOLDOWN_TICKS = 5;
+const FIRE_COOLDOWN_TICKS = 15;     // raised from 5 — fights ended too fast at 12 shots/sec
 
 const canvasMaybe = document.getElementById('game') as HTMLCanvasElement | null;
 if (!canvasMaybe) throw new Error('Missing #game canvas');
@@ -22,9 +23,12 @@ const canvas: HTMLCanvasElement = canvasMaybe;
 const run = createRun(Date.now() & 0xffffffff);
 const screens = createScreens();
 const debug = createDebugPanel();
-debug.setSwatch(1, cellColorCss(0, 2));   // player: hue 0 (red)
-debug.setSwatch(2, cellColorCss(1, 2));   // enemy: hue 0.5 (cyan)
 const input = createInput(window);
+const engulfTone = createEngulfTone();
+let engulfActive = false;
+// Allow up to PALETTE_SIZE total cell colors. Larger than any expected fight
+// (boss phase 2 = boss + 3 mediums = 4 enemies + spawned mediums; far below 16).
+const PALETTE_SIZE = 16;
 
 let arena: Arena | null = null;
 let renderer: Renderer | null = null;
@@ -85,18 +89,23 @@ function showPhase() {
 
 function startNewFight() {
   const playerCfg = run.getPlayerConfig();
-  const enemyCfg = run.getEnemyConfig();
+  const enemies = run.getFightSpawnList();
   arena = createArena({
     LX,
     LY,
     seed: (Date.now() & 0xffffffff) ^ (run.getState().fightIndex * 2654435761),
     player: playerCfg,
-    enemy: enemyCfg,
+    enemies,
     wrap: true,
   });
-  renderer = createRenderer(canvas, 2);
+  renderer = createRenderer(canvas, PALETTE_SIZE);
   cooldown = 0;
   tickCount = 0;
+  // Update debug panel swatches to match the renderer's palette.
+  debug.setSwatch(1, swatchForCellId(1, PALETTE_SIZE));
+  for (let i = 0; i < enemies.length; i++) {
+    debug.setSwatch(2 + i, swatchForCellId(2 + i, PALETTE_SIZE));
+  }
   showPhase();
   requestAnimationFrame(loop);
 }
@@ -138,6 +147,20 @@ function loop() {
     shouldEngulf: inp.shouldEngulf,
   });
   tickCount++;
+
+  // Engulf audio cue. Edge-trigger start/stop; intensity tracks player vol
+  // so the tone rises as you successfully absorb mass.
+  if (inp.shouldEngulf && !engulfActive) {
+    engulfTone.start();
+    engulfActive = true;
+  } else if (!inp.shouldEngulf && engulfActive) {
+    engulfTone.stop();
+    engulfActive = false;
+  }
+  if (engulfActive && player) {
+    const t = Math.max(0, Math.min(1, player.vol / Math.max(player.targetVol, 1)));
+    engulfTone.setIntensity(t);
+  }
 
   renderer.render(arena.state);
 
@@ -182,11 +205,13 @@ function loop() {
   // Status check: did this tick end the fight?
   const status = arena.getStatus();
   if (status === 'won') {
+    if (engulfActive) { engulfTone.stop(); engulfActive = false; }
     run.winFight();
     showPhase();
     return;
   }
   if (status === 'lost') {
+    if (engulfActive) { engulfTone.stop(); engulfActive = false; }
     run.loseFight();
     showPhase();
     return;
@@ -195,9 +220,20 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-// HSV→RGB matches src/ui/render.ts.
-function cellColorCss(i: number, nCells: number): string {
-  const h = i / nCells;
+// Mirrors the renderer's palette logic so debug swatches match on-canvas colors.
+//   cell id 1 (player) = red (hue 0).
+//   cell ids 2+ = spread across cool half of the wheel.
+function swatchForCellId(cellId: number, paletteSize: number): string {
+  if (cellId === 1) return hsvCss(0);
+  const enemyIdx = cellId - 2;
+  const enemyCount = Math.max(1, paletteSize - 1);
+  const HUE_LO = 0.42;
+  const HUE_HI = 0.95;
+  const hue = enemyCount === 1 ? 0.55 : HUE_LO + (HUE_HI - HUE_LO) * (enemyIdx / (enemyCount - 1));
+  return hsvCss(hue);
+}
+
+function hsvCss(h: number): string {
   const s = 1, v = 0.7;
   const idx = Math.floor(h * 6);
   const f = h * 6 - idx;

@@ -5,7 +5,7 @@ import {
   applyUpgrades,
 } from '../content/upgrades';
 import { createRng, type Rng } from '../sim/rng';
-import { type EnemyArenaConfig } from './arena';
+import { FIGHT_SCHEDULE, type EnemySpawn } from '../content/enemies';
 
 export const FIGHTS_PER_RUN = 8;
 export const UPGRADES_PER_PICK = 3;
@@ -29,7 +29,7 @@ export interface Run {
   pickUpgrade(id: string): void;
   restart(): void;
   getPlayerConfig(): PlayerConfig;
-  getEnemyConfig(): EnemyArenaConfig;
+  getFightSpawnList(): EnemySpawn[];
 }
 
 const PLAYER_BASE: PlayerConfig = {
@@ -38,14 +38,6 @@ const PLAYER_BASE: PlayerConfig = {
   engulfMultiplier: 5,
   bulletSize: 3,
 };
-
-const BRUISER_BASE: EnemyArenaConfig = {
-  targetVol: 450,
-  speed: 8,
-  engulfMultiplier: 6.5,
-};
-
-const FIGHT_DIFFICULTY_SCALE = 0.10;
 
 export function createRun(seed: number): Run {
   let phase: RunPhase = 'title';
@@ -127,13 +119,11 @@ export function createRun(seed: number): Run {
     getPlayerConfig() {
       return applyUpgrades(PLAYER_BASE, upgrades);
     },
-    getEnemyConfig() {
-      const scale = 1 + fightIndex * FIGHT_DIFFICULTY_SCALE;
-      return {
-        targetVol: BRUISER_BASE.targetVol * scale,
-        speed: BRUISER_BASE.speed,
-        engulfMultiplier: BRUISER_BASE.engulfMultiplier,
-      };
+    getFightSpawnList() {
+      // Return a deep copy so callers can't mutate the schedule.
+      const fight = FIGHT_SCHEDULE[fightIndex];
+      if (!fight) return [];
+      return fight.map((e) => ({ ...e }));
     },
   };
 }

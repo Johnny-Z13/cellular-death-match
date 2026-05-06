@@ -4,16 +4,28 @@ export interface Renderer {
   render(state: SimState): void;
 }
 
-// Cached HSL → RGB lookup, indexed by CellId. cells[0] (empty) is black.
+// Cached palette indexed by CellId.
+// - cells[0] (empty) = black.
+// - cells[1] (player) = always red (hue 0), the fixed visual anchor.
+// - cells[2+] (enemies) spread across the cool half of the wheel
+//   (hue 0.42..1.0, i.e. green→cyan→blue→magenta) so they never collide
+//   visually with the red player.
 function buildPalette(nCells: number): Uint8ClampedArray[] {
   const out: Uint8ClampedArray[] = [];
-  out.push(new Uint8ClampedArray([0, 0, 0, 255])); // empty
-  for (let i = 0; i < nCells; i++) {
-    const hue = i / nCells;            // 0..1
-    const [r, g, b] = hsvToRgb(hue, 1, 0.7);
-    out.push(new Uint8ClampedArray([r, g, b, 255]));
+  out.push(new Uint8ClampedArray([0, 0, 0, 255]));        // empty
+  out.push(rgba(hsvToRgb(0, 1, 0.7)));                    // player = red
+  const enemyCount = Math.max(1, nCells - 1);
+  const HUE_LO = 0.42;                                    // ~150° green
+  const HUE_HI = 0.95;                                    // ~342° magenta-red
+  for (let i = 0; i < enemyCount; i++) {
+    const hue = enemyCount === 1 ? 0.55 : HUE_LO + (HUE_HI - HUE_LO) * (i / (enemyCount - 1));
+    out.push(rgba(hsvToRgb(hue, 1, 0.7)));
   }
   return out;
+}
+
+function rgba([r, g, b]: [number, number, number]): Uint8ClampedArray {
+  return new Uint8ClampedArray([r, g, b, 255]);
 }
 
 function hsvToRgb(h: number, s: number, v: number): [number, number, number] {
