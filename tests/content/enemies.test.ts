@@ -1,39 +1,45 @@
 import { describe, it, expect } from 'vitest';
 import {
+  ECOSYSTEM_SCHEDULE,
   FIGHT_SCHEDULE,
   ARCHETYPE_DEFAULTS,
+  ARCHETYPE_INFO,
   type EnemyArchetype,
 } from '../../src/content/enemies';
 
-describe('FIGHT_SCHEDULE', () => {
-  it('has exactly 8 fights', () => {
-    expect(FIGHT_SCHEDULE.length).toBe(8);
+describe('ECOSYSTEM_SCHEDULE', () => {
+  it('has exactly 5 longer ecosystems', () => {
+    expect(ECOSYSTEM_SCHEDULE.length).toBe(5);
   });
 
-  it('every fight has at least one enemy', () => {
-    for (const fight of FIGHT_SCHEDULE) {
-      expect(fight.length).toBeGreaterThan(0);
+  it('keeps the old export as a compatibility alias', () => {
+    expect(FIGHT_SCHEDULE).toBe(ECOSYSTEM_SCHEDULE);
+  });
+
+  it('every ecosystem starts with a mixed population', () => {
+    for (const epoch of ECOSYSTEM_SCHEDULE) {
+      expect(epoch.length).toBeGreaterThan(1);
     }
   });
 
-  it('matches the spec schedule', () => {
-    // Spec section 7.1 fight schedule:
-    expect(FIGHT_SCHEDULE[0]!.map((e) => e.archetype)).toEqual(['bruiser']);
-    expect(FIGHT_SCHEDULE[1]!.map((e) => e.archetype)).toEqual(['sniper']);
-    expect(FIGHT_SCHEDULE[2]!.map((e) => e.archetype).sort()).toEqual(['bruiser', 'sniper']);
-    expect(FIGHT_SCHEDULE[3]!.map((e) => e.archetype)).toEqual(['splitter']);
-    expect(FIGHT_SCHEDULE[4]!.length).toBe(4);
-    for (const e of FIGHT_SCHEDULE[4]!) expect(e.archetype).toBe('swarmlet');
-    expect(FIGHT_SCHEDULE[5]!.map((e) => e.archetype)).toEqual(['mirror']);
-    expect(FIGHT_SCHEDULE[6]!.map((e) => e.archetype).sort()).toEqual(['sniper', 'splitter']);
-    expect(FIGHT_SCHEDULE[7]!.map((e) => e.archetype)).toEqual(['boss']);
+  it('ramps toward a boss ecology', () => {
+    expect(ECOSYSTEM_SCHEDULE[0]!.map((e) => e.archetype)).toEqual([
+      'bruiser',
+      'swarmlet',
+      'swarmlet',
+      'swarmlet',
+    ]);
+    expect(ECOSYSTEM_SCHEDULE[4]!.map((e) => e.archetype).sort()).toEqual([
+      'boss',
+      'sniper',
+      'splitter',
+    ]);
   });
 
-  it('fight 7 spawns are elite (+20% stats vs base)', () => {
-    const elite = FIGHT_SCHEDULE[6]!;
+  it('later ecosystems include elite cells', () => {
+    const elite = ECOSYSTEM_SCHEDULE[3]!.filter((e) => e.archetype === 'splitter');
     for (const e of elite) {
       const base = ARCHETYPE_DEFAULTS[e.archetype];
-      // +20% targetVol applied.
       expect(e.targetVol).toBeCloseTo(base.targetVol * 1.2, 5);
     }
   });
@@ -57,5 +63,17 @@ describe('ARCHETYPE_DEFAULTS', () => {
     expect(sniper.shootCooldown).toBeDefined();
     expect(sniper.bulletSize).toBeDefined();
     expect(sniper.bulletSpeed).toBeDefined();
+  });
+});
+
+describe('ARCHETYPE_INFO', () => {
+  it('has guide copy and colors for every archetype', () => {
+    const required: EnemyArchetype[] = ['bruiser', 'sniper', 'splitter', 'swarmlet', 'mirror', 'boss'];
+    for (const archetype of required) {
+      const info = ARCHETYPE_INFO[archetype];
+      expect(info.name.length).toBeGreaterThan(0);
+      expect(info.summary.length).toBeGreaterThan(0);
+      expect(info.color).toHaveLength(3);
+    }
   });
 });

@@ -4,46 +4,65 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cellular Death Match</title>
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
     <main class="layout">
-      <canvas id="game" width="500" height="500"></canvas>
+      <canvas id="game" width="800" height="800"></canvas>
+      <aside id="toolbox" class="toolbox" aria-label="Petri dish tools">
+        <button class="tool-button selected" type="button" data-tool="egg">
+          <span class="tool-icon egg-icon"></span>
+          <span>
+            <strong>Egg</strong>
+            <small>seed new life</small>
+          </span>
+          <b data-tool-count>8/8</b>
+        </button>
+        <button class="tool-button" type="button" data-tool="nutrient">
+          <span class="tool-icon nutrient-icon"></span>
+          <span>
+            <strong>Nutrient</strong>
+            <small>attract and feed</small>
+          </span>
+          <b data-tool-count>5/5</b>
+        </button>
+        <button class="tool-button" type="button" data-tool="toxin">
+          <span class="tool-icon toxin-icon"></span>
+          <span>
+            <strong>Toxin</strong>
+            <small>repel and thin</small>
+          </span>
+          <b data-tool-count>4/4</b>
+        </button>
+      </aside>
       <aside id="debug" class="debug">
-        <h2 class="debug-title">DEBUG</h2>
+        <h2 class="debug-title">DISH INSPECTOR</h2>
         <section class="debug-block">
           <div class="debug-row"><span class="debug-key">FPS</span><span id="dbg-fps" class="debug-val">—</span></div>
           <div class="debug-row"><span class="debug-key">tick</span><span id="dbg-tick" class="debug-val">0</span></div>
           <div class="debug-row"><span class="debug-key">status</span><span id="dbg-status" class="debug-val">running</span></div>
-          <div class="debug-row"><span class="debug-key">bullets</span><span id="dbg-bullets" class="debug-val">0</span></div>
           <div class="debug-row"><span class="debug-key">boundary</span><span id="dbg-boundary" class="debug-val">0</span></div>
         </section>
         <section class="debug-block">
-          <h3 class="debug-subtitle"><span class="debug-swatch" id="dbg-p-swatch"></span> player (id=1)</h3>
-          <div class="debug-row"><span class="debug-key">archetype</span><span class="debug-val">human</span></div>
+          <h3 class="debug-subtitle"><span class="debug-swatch" id="dbg-p-swatch"></span> red lineage</h3>
+          <div class="debug-row"><span class="debug-key">role</span><span class="debug-val">objective lineage</span></div>
           <div class="debug-row"><span class="debug-key">vol</span><span id="dbg-p-vol" class="debug-val">—</span></div>
           <div class="debug-row"><span class="debug-key">targetVol</span><span id="dbg-p-tvol" class="debug-val">—</span></div>
           <div class="debug-row"><span class="debug-key">center</span><span id="dbg-p-center" class="debug-val">—</span></div>
-          <div class="debug-row"><span class="debug-key">intent.vec</span><span id="dbg-p-vec" class="debug-val">—</span></div>
-          <div class="debug-row"><span class="debug-key">engulf×</span><span id="dbg-p-engulf" class="debug-val">—</span></div>
-          <div class="debug-row"><span class="debug-key">canFire</span><span id="dbg-p-canfire" class="debug-val">—</span></div>
-          <div class="debug-row"><span class="debug-key">cooldown</span><span id="dbg-p-cooldown" class="debug-val">—</span></div>
         </section>
         <section class="debug-block">
-          <h3 class="debug-subtitle"><span class="debug-swatch" id="dbg-e-swatch"></span> enemy (id=2)</h3>
-          <div class="debug-row"><span class="debug-key">archetype</span><span class="debug-val">bruiser</span></div>
+          <h3 class="debug-subtitle"><span class="debug-swatch" id="dbg-e-swatch"></span> blue lineage sample</h3>
+          <div class="debug-row"><span class="debug-key">role</span><span class="debug-val">preserve / cultivate</span></div>
           <div class="debug-row"><span class="debug-key">vol</span><span id="dbg-e-vol" class="debug-val">—</span></div>
           <div class="debug-row"><span class="debug-key">targetVol</span><span id="dbg-e-tvol" class="debug-val">—</span></div>
           <div class="debug-row"><span class="debug-key">center</span><span id="dbg-e-center" class="debug-val">—</span></div>
-          <div class="debug-row"><span class="debug-key">intent.vec</span><span id="dbg-e-vec" class="debug-val">—</span></div>
-          <div class="debug-row"><span class="debug-key">engulf×</span><span id="dbg-e-engulf" class="debug-val">—</span></div>
-          <div class="debug-row"><span class="debug-key">distToPlayer</span><span id="dbg-e-dist" class="debug-val">—</span></div>
         </section>
         <section class="debug-block">
           <h3 class="debug-subtitle">controls</h3>
-          <div class="debug-help">WASD / arrows: move</div>
-          <div class="debug-help">space: shoot</div>
-          <div class="debug-help">shift / e: engulf</div>
+          <div class="debug-help">select a lab tool</div>
+          <div class="debug-help">click dish: apply tool</div>
+          <div class="debug-help">complete objective: unlock research</div>
           <div class="debug-help">R: restart (after end)</div>
         </section>
       </aside>
@@ -52,14 +71,14 @@
       <div id="screen-title" class="screen visible">
         <div class="screen-card">
           <h1 class="screen-title">Cellular Death Match</h1>
-          <p class="screen-sub">Survive 8 fights. Pick an upgrade between each.</p>
-          <button id="title-start" class="screen-button">Start Run</button>
+          <p class="screen-sub">Cultivate tense ecosystem trials. Drop eggs, nutrients, and toxins before the dish clock expires.</p>
+          <button id="title-start" class="screen-button">Enter Ecosystem</button>
         </div>
       </div>
 
       <div id="screen-pick" class="screen">
         <div class="screen-card">
-          <h2 class="screen-title">Pick an upgrade</h2>
+          <h2 class="screen-title">Adapt the lineage</h2>
           <div id="pick-choices" class="pick-choices">
             <!-- 3 buttons inserted at runtime -->
           </div>
@@ -70,15 +89,32 @@
         <div class="screen-card">
           <h2 id="end-title" class="screen-title">—</h2>
           <p id="end-summary" class="screen-sub">—</p>
-          <button id="end-restart" class="screen-button">Back to Title</button>
+          <button id="end-restart" class="screen-button">Begin Again</button>
         </div>
       </div>
 
       <div id="hud" class="hud">
-        <div class="hud-row"><span class="hud-key">Fight</span><span id="hud-fight" class="hud-val">1 / 8</span></div>
+        <div class="hud-row"><span class="hud-key">Epoch</span><span id="hud-fight" class="hud-val">1 / 5</span></div>
+        <div class="hud-row"><span class="hud-key">Deadline</span><span id="hud-progress" class="hud-val">55s</span></div>
+        <div class="hud-row hud-eco-row"><span class="hud-key">Objective</span><span id="hud-objective" class="hud-val">—</span></div>
         <div class="hud-row"><span class="hud-key">Vol</span><span id="hud-vol" class="hud-val">— / —</span></div>
+        <div class="hud-row hud-eco-row"><span class="hud-key">Ecology</span><span id="hud-eco" class="hud-val">—</span></div>
         <div class="hud-row" id="hud-upgrades-row"><span class="hud-key">Build</span><span id="hud-upgrades" class="hud-val">none</span></div>
       </div>
+
+      <aside id="life-panel" class="life-panel" aria-label="Lifeform guide">
+        <div class="life-panel-head">
+          <h2 class="life-panel-title">Lifeforms</h2>
+          <p id="life-summary" class="life-summary">Pick an egg strain to seed the dish.</p>
+        </div>
+        <div id="egg-options" class="egg-options" aria-label="Egg strains"></div>
+        <div id="life-list" class="life-list"></div>
+      </aside>
+
+      <aside id="ticker" class="ticker" aria-live="polite">
+        <div class="ticker-title">DISH LOG</div>
+        <div id="ticker-lines" class="ticker-lines"></div>
+      </aside>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

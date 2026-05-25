@@ -4,9 +4,8 @@ import { shortestVec } from '../geometry';
 
 const ENGULF_RANGE = 6;
 
-// Mirror plays like the player. For M5 stub, this means bruiser-like behavior.
-// The "use player's stats" trick lives in the arena (it overrides the spawn
-// config at fight start with the run's current player config).
+// Mirror plays like the current red lineage profile. The stat-copying happens
+// in the arena when a mirror spawn is initialized.
 export function mirrorStep(
   self: Cell,
   target: Cell,

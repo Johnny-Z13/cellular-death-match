@@ -67,7 +67,7 @@ describe('winFight — final fight ends the run', () => {
   it(`winFight on fight ${FIGHTS_PER_RUN - 1} transitions arena → run_end (won)`, () => {
     const run = createRun(42);
     run.start();
-    // Win and pick through fights 0..6, then on fight 7 (the 8th, final) winFight should end the run.
+    // Win and pick through every non-final epoch, then the final win ends the run.
     for (let i = 0; i < FIGHTS_PER_RUN - 1; i++) {
       run.winFight();
       const choice = run.getState().pendingPickChoices[0]!;
@@ -119,39 +119,46 @@ describe('getPlayerConfig', () => {
     const run = createRun(42);
     run.start();
     run.winFight();
-    // Force pick of "vol_1" if available; else any.
+    // Force pick of a known lab research option if available; else any.
     const choices = run.getState().pendingPickChoices;
-    const volChoice = choices.find((c) => c === 'vol_1') ?? choices[0]!;
-    run.pickUpgrade(volChoice);
+    const researchChoice = choices.find((c) => c === 'egg_1') ?? choices[0]!;
+    run.pickUpgrade(researchChoice);
     const cfg = run.getPlayerConfig();
-    if (volChoice === 'vol_1') {
-      expect(cfg.targetVol).toBe(350);   // 300 + 50
+    if (researchChoice === 'egg_1') {
+      expect(cfg.eggCharges).toBe(10);   // 8 + 2
     } else {
-      expect(cfg.targetVol).toBeGreaterThanOrEqual(300);
+      expect(cfg.targetVol).toBeGreaterThanOrEqual(420);
     }
   });
 });
 
 describe('getFightSpawnList', () => {
-  it('returns the schedule entry for fight 0 (single bruiser)', () => {
+  it('returns the schedule entry for epoch 0 (bruiser ecology)', () => {
     const run = createRun(42);
     run.start();
     const list = run.getFightSpawnList();
-    expect(list.length).toBe(1);
+    expect(list.length).toBe(4);
     expect(list[0]!.archetype).toBe('bruiser');
   });
 
-  it('returns the schedule entry for fight 4 (4 swarmlets)', () => {
+  it('returns the schedule entry for epoch 4 (boss ecology)', () => {
     const run = createRun(42);
     run.start();
-    // Advance to fight 4.
+    // Advance to epoch 4.
     for (let i = 0; i < 4; i++) {
       run.winFight();
       run.pickUpgrade(run.getState().pendingPickChoices[0]!);
     }
     expect(run.getState().fightIndex).toBe(4);
     const list = run.getFightSpawnList();
-    expect(list.length).toBe(4);
-    for (const e of list) expect(e.archetype).toBe('swarmlet');
+    expect(list.map((e) => e.archetype).sort()).toEqual(['boss', 'sniper', 'splitter']);
+  });
+
+  it('getEpochSpawnList returns defensive copies', () => {
+    const run = createRun(42);
+    run.start();
+    const first = run.getEpochSpawnList();
+    first[0]!.targetVol = 1;
+    expect(run.getEpochSpawnList()[0]!.targetVol).not.toBe(1);
   });
 });

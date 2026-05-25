@@ -1,5 +1,7 @@
 # M5 — Full Enemy Roster Implementation Plan
 
+> Current-status note, 2026-05-25: this plan is retained as historical implementation context. The current app is documented in `README.md`, `AGENTS.md`, `CLAUDE.md`, `cloud.md`, and `docs/current-state.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the M4 single-Bruiser-per-fight arena with the full V1 enemy roster: Sniper, Splitter, Swarm, Mirror, Boss. Fight schedule data lives in `src/content/enemies.ts`. The arena supports an arbitrary number of enemies per fight, mid-fight cell spawning (for Splitter on-death), and per-archetype AI dispatch. By end of M5, the 8-fight gauntlet from spec section 7.1 runs end-to-end with each fight feeling distinct.

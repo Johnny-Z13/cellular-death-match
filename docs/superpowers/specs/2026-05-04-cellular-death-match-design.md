@@ -1,7 +1,9 @@
 # Cellular Death Match — V1 Design Spec
 
+> Current-status note, 2026-05-25: this is a historical design spec for the original 8-fight keyboard shooter direction. The current app has shifted to a mobile-first Petri dish ecosystem game with selectable egg strains, nutrient/toxin tools, five objective epochs, and responsive phone/desktop layouts. For current project state, see `README.md`, `AGENTS.md`, `CLAUDE.md`, `cloud.md`, and `docs/current-state.md`.
+
 **Date:** 2026-05-04
-**Status:** Draft for review
+**Status:** Historical draft, superseded by current ecosystem direction
 **Author:** Johnny + Claude (brainstorming session)
 
 ---

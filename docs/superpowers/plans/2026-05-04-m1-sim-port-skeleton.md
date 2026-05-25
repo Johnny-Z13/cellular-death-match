@@ -1,5 +1,7 @@
 # M1 — Sim Port Skeleton Implementation Plan
 
+> Current-status note, 2026-05-25: this plan is retained as historical implementation context. The current app is documented in `README.md`, `AGENTS.md`, `CLAUDE.md`, `cloud.md`, and `docs/current-state.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Scaffold the project (Vite + TypeScript + Vitest) and port enough of the cellular Potts model from Python (cell-fight) to render two static colored blobs on a canvas at 60 FPS, with the boundary tracking and Monte Carlo step infrastructure in place — but no movement intent, no bullets, no input.

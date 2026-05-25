@@ -11,7 +11,7 @@ export interface BossState {
 
 const ENGULF_RANGE = 6;
 
-// Boss has 2 phases (M5):
+// Boss has 2 phases:
 //   P1: bruiser-like behavior at 3× targetVol.
 //   P2: when vol drops below 50% of starting targetVol, it splits into
 //       3 medium-sized cells. Spawn happens once.

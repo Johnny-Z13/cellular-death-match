@@ -9,8 +9,8 @@ const BASE: PlayerConfig = {
 };
 
 describe('UPGRADES catalogue', () => {
-  it('contains exactly three stub upgrades', () => {
-    expect(UPGRADES.length).toBe(3);
+  it('contains a broader adaptation pool', () => {
+    expect(UPGRADES.length).toBeGreaterThanOrEqual(6);
   });
 
   it('every upgrade has a unique id and a modifier block', () => {
@@ -29,39 +29,45 @@ describe('applyUpgrades', () => {
     expect(result).not.toBe(BASE);
   });
 
-  it('applies +50 targetVol from "vol_1"', () => {
-    const result = applyUpgrades(BASE, [{ id: 'vol_1', stacks: 1 }]);
-    expect(result.targetVol).toBe(350);
+  it('applies +80 targetVol from "red_buffer_1"', () => {
+    const result = applyUpgrades(BASE, [{ id: 'red_buffer_1', stacks: 1 }]);
+    expect(result.targetVol).toBe(380);
     expect(result.speed).toBe(BASE.speed);
   });
 
   it('stacks multiply per ref.stacks', () => {
-    const result = applyUpgrades(BASE, [{ id: 'vol_1', stacks: 3 }]);
-    expect(result.targetVol).toBe(BASE.targetVol + 50 * 3);
+    const result = applyUpgrades(BASE, [{ id: 'egg_1', stacks: 3 }]);
+    expect(result.eggCharges).toBe(6);
   });
 
-  it('applies +15% engulfMultiplier from "engulf_1"', () => {
-    const result = applyUpgrades(BASE, [{ id: 'engulf_1', stacks: 1 }]);
-    // 5 * 1.15 = 5.75
-    expect(result.engulfMultiplier).toBeCloseTo(5.75, 5);
+  it('adds nutrient charges from "food_1"', () => {
+    const result = applyUpgrades(BASE, [{ id: 'food_1', stacks: 1 }]);
+    expect(result.nutrientCharges).toBe(1);
   });
 
-  it('applies +25% bulletSize from "bullet_1"', () => {
-    const result = applyUpgrades(BASE, [{ id: 'bullet_1', stacks: 1 }]);
-    // 3 * 1.25 = 3.75
-    expect(result.bulletSize).toBeCloseTo(3.75, 5);
+  it('adds toxin charges from "toxin_1"', () => {
+    const result = applyUpgrades(BASE, [{ id: 'toxin_1', stacks: 1 }]);
+    expect(result.toxinCharges).toBe(1);
+  });
+
+  it('applies tool radius research', () => {
+    const result = applyUpgrades({ ...BASE, nutrientRadius: 20, toxinRadius: 24 }, [
+      { id: 'food_radius_1', stacks: 1 },
+      { id: 'toxin_radius_1', stacks: 1 },
+    ]);
+    expect(result.nutrientRadius).toBeCloseTo(23.6, 5);
+    expect(result.toxinRadius).toBeCloseTo(28.32, 5);
   });
 
   it('multiple different upgrades compose correctly', () => {
     const result = applyUpgrades(BASE, [
-      { id: 'vol_1', stacks: 1 },
-      { id: 'engulf_1', stacks: 2 },
-      { id: 'bullet_1', stacks: 1 },
+      { id: 'red_buffer_1', stacks: 1 },
+      { id: 'egg_1', stacks: 1 },
+      { id: 'food_1', stacks: 1 },
     ]);
-    expect(result.targetVol).toBe(350);
-    // Additive percent stacking: 5 * (1 + 0.15 + 0.15) = 5 * 1.30 = 6.5.
-    expect(result.engulfMultiplier).toBeCloseTo(6.5, 5);
-    expect(result.bulletSize).toBeCloseTo(3.75, 5);
+    expect(result.targetVol).toBe(380);
+    expect(result.eggCharges).toBe(2);
+    expect(result.nutrientCharges).toBe(1);
   });
 
   it('unknown upgrade ids are silently ignored', () => {

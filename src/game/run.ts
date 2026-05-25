@@ -5,9 +5,11 @@ import {
   applyUpgrades,
 } from '../content/upgrades';
 import { createRng, type Rng } from '../sim/rng';
-import { FIGHT_SCHEDULE, type EnemySpawn } from '../content/enemies';
+import { ECOSYSTEM_SCHEDULE, type EnemySpawn } from '../content/enemies';
+import { objectiveForEpoch, type ObjectiveDef } from '../content/objectives';
 
-export const FIGHTS_PER_RUN = 8;
+export const EPOCHS_PER_RUN = 5;
+export const FIGHTS_PER_RUN = EPOCHS_PER_RUN;
 export const UPGRADES_PER_PICK = 3;
 
 export type RunPhase = 'title' | 'arena' | 'upgrade_pick' | 'run_end';
@@ -24,19 +26,28 @@ export interface RunState {
 export interface Run {
   getState(): RunState;
   start(): void;
+  completeEpoch(): void;
+  failEpoch(): void;
   winFight(): void;
   loseFight(): void;
   pickUpgrade(id: string): void;
   restart(): void;
   getPlayerConfig(): PlayerConfig;
   getFightSpawnList(): EnemySpawn[];
+  getEpochSpawnList(): EnemySpawn[];
+  getObjective(): ObjectiveDef;
 }
 
 const PLAYER_BASE: PlayerConfig = {
-  targetVol: 300,
-  speed: 10,
-  engulfMultiplier: 5,
+  targetVol: 420,
+  speed: 8,
+  engulfMultiplier: 4.8,
   bulletSize: 3,
+  eggCharges: 8,
+  nutrientCharges: 5,
+  toxinCharges: 4,
+  nutrientRadius: 20,
+  toxinRadius: 24,
 };
 
 export function createRun(seed: number): Run {
@@ -48,8 +59,6 @@ export function createRun(seed: number): Run {
   const rng: Rng = createRng(seed);
 
   function pickThreeChoices(): string[] {
-    // Stub-pool size is 3 — all three appear every time. M6 will introduce
-    // rarity weighting and stack limits.
     if (UPGRADES.length <= UPGRADES_PER_PICK) {
       return UPGRADES.map((u) => u.id);
     }
@@ -82,9 +91,9 @@ export function createRun(seed: number): Run {
       outcome = null;
       pendingPickChoices = [];
     },
-    winFight() {
+    completeEpoch() {
       if (phase !== 'arena') return;
-      if (fightIndex >= FIGHTS_PER_RUN - 1) {
+      if (fightIndex >= EPOCHS_PER_RUN - 1) {
         phase = 'run_end';
         outcome = 'won';
         return;
@@ -92,9 +101,15 @@ export function createRun(seed: number): Run {
       pendingPickChoices = pickThreeChoices();
       phase = 'upgrade_pick';
     },
-    loseFight() {
+    failEpoch() {
       phase = 'run_end';
       outcome = 'lost';
+    },
+    winFight() {
+      this.completeEpoch();
+    },
+    loseFight() {
+      this.failEpoch();
     },
     pickUpgrade(id: string) {
       if (phase !== 'upgrade_pick') return;
@@ -121,9 +136,17 @@ export function createRun(seed: number): Run {
     },
     getFightSpawnList() {
       // Return a deep copy so callers can't mutate the schedule.
-      const fight = FIGHT_SCHEDULE[fightIndex];
+      const fight = ECOSYSTEM_SCHEDULE[fightIndex];
       if (!fight) return [];
       return fight.map((e) => ({ ...e }));
+    },
+    getEpochSpawnList() {
+      const epoch = ECOSYSTEM_SCHEDULE[fightIndex];
+      if (!epoch) return [];
+      return epoch.map((e) => ({ ...e }));
+    },
+    getObjective() {
+      return objectiveForEpoch(fightIndex);
     },
   };
 }

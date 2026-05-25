@@ -1,50 +1,37 @@
 import type { SimState, CellId } from '../sim/types';
+import { ARCHETYPE_INFO, type EnemySpawn } from '../content/enemies';
 
 export interface Renderer {
-  render(state: SimState): void;
+  render(state: SimState, archetypes?: ReadonlyMap<CellId, EnemySpawn>): void;
 }
 
 // Cached palette indexed by CellId.
 // - cells[0] (empty) = black.
-// - cells[1] (player) = always red (hue 0), the fixed visual anchor.
-// - cells[2+] (enemies) spread across the cool half of the wheel
-//   (hue 0.42..1.0, i.e. green→cyan→blue→magenta) so they never collide
-//   visually with the red player.
+// - cells[1] = red lineage, the fixed objective anchor.
+// - cells[2+] (lifeforms) stay in blue/cyan/teal families. Tool effects own
+//   green-gold (nutrient) and purple (toxin), so those hues stay readable.
 function buildPalette(nCells: number): Uint8ClampedArray[] {
   const out: Uint8ClampedArray[] = [];
   out.push(new Uint8ClampedArray([0, 0, 0, 255]));        // empty
-  out.push(rgba(hsvToRgb(0, 1, 0.7)));                    // player = red
-  const enemyCount = Math.max(1, nCells - 1);
-  const HUE_LO = 0.42;                                    // ~150° green
-  const HUE_HI = 0.95;                                    // ~342° magenta-red
-  for (let i = 0; i < enemyCount; i++) {
-    const hue = enemyCount === 1 ? 0.55 : HUE_LO + (HUE_HI - HUE_LO) * (i / (enemyCount - 1));
-    out.push(rgba(hsvToRgb(hue, 1, 0.7)));
+  out.push(new Uint8ClampedArray([186, 32, 42, 255]));    // red invasive lineage
+  const lifeColors: Array<[number, number, number]> = [
+    [42, 150, 214],
+    [62, 202, 218],
+    [48, 176, 156],
+    [73, 118, 214],
+    [105, 205, 192],
+    [39, 93, 174],
+    [91, 180, 224],
+    [54, 139, 164],
+  ];
+  for (let i = 0; i < Math.max(1, nCells - 1); i++) {
+    out.push(rgba(lifeColors[i % lifeColors.length]!));
   }
   return out;
 }
 
 function rgba([r, g, b]: [number, number, number]): Uint8ClampedArray {
   return new Uint8ClampedArray([r, g, b, 255]);
-}
-
-function hsvToRgb(h: number, s: number, v: number): [number, number, number] {
-  // Standard HSV → RGB conversion.
-  const i = Math.floor(h * 6);
-  const f = h * 6 - i;
-  const p = v * (1 - s);
-  const q = v * (1 - f * s);
-  const t = v * (1 - (1 - f) * s);
-  let r = 0, g = 0, b = 0;
-  switch (i % 6) {
-    case 0: r = v; g = t; b = p; break;
-    case 1: r = q; g = v; b = p; break;
-    case 2: r = p; g = v; b = t; break;
-    case 3: r = p; g = q; b = v; break;
-    case 4: r = t; g = p; b = v; break;
-    case 5: r = v; g = p; b = q; break;
-  }
-  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 }
 
 // Lighten an RGB color by `factor` toward white (0..1).
@@ -66,16 +53,17 @@ export function createRenderer(
   ctx.imageSmoothingEnabled = false;
 
   // Build palette: base color + boundary-lightened color.
-  const base = buildPalette(nCells);
-  const boundaryColors = base.map((c) => lighten(c, 0.3));
+  const fallbackBase = buildPalette(nCells);
 
   let imageData: ImageData | null = null;
   let offscreen: HTMLCanvasElement | null = null;
   let offCtx: CanvasRenderingContext2D | null = null;
 
   return {
-    render(state: SimState) {
+    render(state: SimState, archetypes?: ReadonlyMap<CellId, EnemySpawn>) {
       const { LX, LY, cells, boundary } = state.grid;
+      const base = buildRenderPalette(nCells, state.cells, archetypes, fallbackBase);
+      const boundaryColors = base.map((c) => lighten(c, 0.3));
       // Lazy init when we know the grid size.
       if (!imageData || imageData.width !== LX || imageData.height !== LY) {
         offscreen = document.createElement('canvas');
@@ -133,4 +121,22 @@ export function createRenderer(
       }
     },
   };
+}
+
+function buildRenderPalette(
+  nCells: number,
+  cells: ReadonlyMap<CellId, unknown>,
+  archetypes: ReadonlyMap<CellId, EnemySpawn> | undefined,
+  fallbackBase: Uint8ClampedArray[],
+): Uint8ClampedArray[] {
+  const size = Math.max(nCells, Math.max(0, ...cells.keys()) + 1);
+  const out: Uint8ClampedArray[] = [];
+  for (let id = 0; id < size; id++) {
+    const fallback = fallbackBase[id] ?? fallbackBase[0]!;
+    const archetype = archetypes?.get(id)?.archetype;
+    out[id] = archetype ? rgba(ARCHETYPE_INFO[archetype].color) : fallback;
+  }
+  out[0] = fallbackBase[0]!;
+  out[1] = fallbackBase[1]!;
+  return out;
 }

@@ -1,12 +1,24 @@
+import type { ToolState } from '../game/arena';
 import type { UpgradeDef } from '../content/upgrades';
+import type { EnemyArchetype } from '../content/enemies';
 
 type ScreenName = 'title' | 'pick' | 'end' | 'hud';
+export type ToolId = 'egg' | 'nutrient' | 'toxin';
 
 export interface HudInfo {
   fightIndex: number;          // 0-based; HUD shows fightIndex+1
   totalFights: number;
   vol: number;
   targetVol: number;
+  progress: number;
+  secondsRemaining: number;
+  livingEnemies: number;
+  mutations: number;
+  births: number;
+  supplyDrops: number;
+  dominant: string;
+  objectiveName: string;
+  objectiveSummary: string;
   upgrades: string[];          // upgrade names, e.g. ["Bigger Cell", "Faster Engulf x2"]
 }
 
@@ -22,9 +34,24 @@ export interface PickChoice {
   def: UpgradeDef;
 }
 
+export interface EggOption {
+  archetype: EnemyArchetype;
+  name: string;
+  summary: string;
+  color: [number, number, number];
+}
+
 export interface Screens {
   show(name: ScreenName): void;
   hide(name: ScreenName): void;
+  addTicker(message: string): void;
+  clearTicker(): void;
+  setTool(tool: ToolId): void;
+  updateToolCharges(charges: Record<ToolId, ToolState>): void;
+  onToolSelect(handler: (tool: ToolId) => void): void;
+  setEggOptions(options: EggOption[]): void;
+  setEggArchetype(archetype: EnemyArchetype): void;
+  onEggSelect(handler: (archetype: EnemyArchetype) => void): void;
   updateHud(info: HudInfo): void;
   setPickChoices(choices: PickChoice[], onPick: (id: string) => void): void;
   updateEnd(info: EndInfo): void;
@@ -50,7 +77,19 @@ export function createScreens(): Screens {
   const endRestart   = get('end-restart');
   const hudFight     = get('hud-fight');
   const hudVol       = get('hud-vol');
+  const hudProgress  = get('hud-progress');
+  const hudEco       = get('hud-eco');
+  const hudObjective = get('hud-objective');
   const hudUpgrades  = get('hud-upgrades');
+  const eggOptions   = get('egg-options');
+  const lifeSummary  = get('life-summary');
+  const lifeList     = get('life-list');
+  const tickerLines  = get('ticker-lines');
+  const toolButtons  = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-tool]'));
+  const eggTool      = toolButtons.find((btn) => btn.dataset.tool === 'egg');
+  let eggButtons: HTMLButtonElement[] = [];
+  let eggSelectHandler: ((archetype: EnemyArchetype) => void) | null = null;
+  const optionByArchetype = new Map<EnemyArchetype, EggOption>();
 
   const elFor: Record<ScreenName, HTMLElement> = {
     title: screenTitle,
@@ -62,9 +101,94 @@ export function createScreens(): Screens {
   return {
     show(name) { elFor[name].classList.add('visible'); },
     hide(name) { elFor[name].classList.remove('visible'); },
+    addTicker(message) {
+      const line = document.createElement('div');
+      line.className = 'ticker-line';
+      line.textContent = message;
+      tickerLines.prepend(line);
+      while (tickerLines.children.length > 4) {
+        tickerLines.lastElementChild?.remove();
+      }
+    },
+    clearTicker() {
+      tickerLines.replaceChildren();
+    },
+    setTool(tool) {
+      for (const btn of toolButtons) {
+        btn.classList.toggle('selected', btn.dataset.tool === tool);
+      }
+    },
+    updateToolCharges(charges) {
+      for (const btn of toolButtons) {
+        const tool = btn.dataset.tool;
+        if (tool !== 'egg' && tool !== 'nutrient' && tool !== 'toxin') continue;
+        const count = btn.querySelector<HTMLElement>('[data-tool-count]');
+        const state = charges[tool];
+        btn.disabled = state.charges <= 0;
+        if (count) count.textContent = `${state.charges}/${state.maxCharges}`;
+      }
+    },
+    onToolSelect(handler) {
+      for (const btn of toolButtons) {
+        const tool = btn.dataset.tool;
+        if (tool === 'egg' || tool === 'nutrient' || tool === 'toxin') {
+          btn.addEventListener('click', () => handler(tool));
+        }
+      }
+    },
+    setEggOptions(options) {
+      optionByArchetype.clear();
+      eggButtons = [];
+      eggOptions.replaceChildren();
+      lifeList.replaceChildren();
+      for (const option of options) {
+        optionByArchetype.set(option.archetype, option);
+        const button = document.createElement('button');
+        button.className = 'egg-choice';
+        button.type = 'button';
+        button.dataset.eggArchetype = option.archetype;
+        button.setAttribute('aria-label', `${option.name} egg`);
+        button.style.setProperty('--life-color', rgb(option.color));
+
+        const swatch = document.createElement('span');
+        swatch.className = 'egg-choice-swatch';
+        const label = document.createElement('span');
+        label.className = 'egg-choice-label';
+        label.textContent = option.name;
+        button.append(swatch, label);
+        button.addEventListener('click', () => eggSelectHandler?.(option.archetype));
+        eggButtons.push(button);
+        eggOptions.append(button);
+
+        const item = document.createElement('div');
+        item.className = 'life-item';
+        const itemSwatch = document.createElement('span');
+        itemSwatch.className = 'life-swatch';
+        itemSwatch.style.background = rgb(option.color);
+        const itemText = document.createElement('span');
+        itemText.textContent = `${option.name}: ${option.summary}`;
+        item.append(itemSwatch, itemText);
+        lifeList.append(item);
+      }
+    },
+    setEggArchetype(archetype) {
+      const option = optionByArchetype.get(archetype);
+      for (const btn of eggButtons) {
+        btn.classList.toggle('selected', btn.dataset.eggArchetype === archetype);
+      }
+      if (!option) return;
+      lifeSummary.textContent = `${option.name} egg: ${option.summary}`;
+      eggTool?.style.setProperty('--egg-color', rgb(option.color));
+    },
+    onEggSelect(handler) {
+      eggSelectHandler = handler;
+    },
     updateHud(info) {
       hudFight.textContent = `${info.fightIndex + 1} / ${info.totalFights}`;
       hudVol.textContent = `${info.vol} / ${Math.round(info.targetVol)}`;
+      hudProgress.textContent = `${info.secondsRemaining}s`;
+      hudEco.textContent = `${info.livingEnemies} lifeforms, ${info.mutations} mutations, ${info.births} births, ${info.supplyDrops} drops, ${info.dominant} dominant`;
+      hudObjective.textContent = `${info.objectiveName}: ${info.objectiveSummary}`;
       hudUpgrades.textContent = info.upgrades.length === 0 ? 'none' : info.upgrades.join(', ');
     },
     setPickChoices(choices, onPick) {
@@ -85,10 +209,10 @@ export function createScreens(): Screens {
       }
     },
     updateEnd(info) {
-      endTitle.textContent = info.outcome === 'won' ? 'Run Complete' : 'Defeated';
+      endTitle.textContent = info.outcome === 'won' ? 'Lineage Stabilized' : 'Colony Collapsed';
       const fightStr = info.outcome === 'won'
-        ? `Won all ${info.totalFights} fights.`
-        : `Defeated on Fight ${info.fightReached} / ${info.totalFights}.`;
+        ? `Completed all ${info.totalFights} ecosystems.`
+        : `Collapsed during ecosystem ${info.fightReached} / ${info.totalFights}.`;
       const buildStr = info.upgrades.length === 0
         ? 'No upgrades picked.'
         : `Build: ${info.upgrades.join(', ')}.`;
@@ -101,4 +225,8 @@ export function createScreens(): Screens {
       endRestart.addEventListener('click', handler);
     },
   };
+}
+
+function rgb(color: [number, number, number]): string {
+  return `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
 }

@@ -7,3 +7,8 @@ coverage/
 *.tsbuildinfo
 src/**/*.js
 tests/**/*.js
+.claude/
+.playwright-cli/
+.superpowers/
+test-results/
+playwright-report/

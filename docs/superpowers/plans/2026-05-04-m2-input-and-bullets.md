@@ -1,5 +1,7 @@
 # M2 — Input & Bullets Implementation Plan
 
+> Current-status note, 2026-05-25: this plan is retained as historical implementation context. The current app is documented in `README.md`, `AGENTS.md`, `CLAUDE.md`, `cloud.md`, and `docs/current-state.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Drive the player cell with WASD and fire bullets with the space bar. Bullets travel across the grid, chip pixels off non-owner cells on overlap, and despawn after wrapping ≥2 times. The player cell visibly moves where pointed; bullets visibly chip the static target cell.

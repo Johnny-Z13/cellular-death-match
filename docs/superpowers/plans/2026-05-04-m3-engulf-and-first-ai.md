@@ -1,5 +1,7 @@
 # M3 — Engulf & First AI Implementation Plan
 
+> Current-status note, 2026-05-25: this plan is retained as historical implementation context. The current app is documented in `README.md`, `AGENTS.md`, `CLAUDE.md`, `cloud.md`, and `docs/current-state.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add the engulf mechanic (the signature verb) and the first enemy AI (Bruiser) so that one full fight is playable end-to-end. Holding the engulf key (Shift or `e`) makes the player rapidly absorb adjacent enemy pixels — but disables shooting and decays `targetVol` while held. The Bruiser AI seeks the player and attempts to engulf on contact. Win = all enemy cells reach `vol === 0`. Loss = player cell reaches `vol === 0`. Both end the fight cleanly with a console log (no menus yet — those are M4).
