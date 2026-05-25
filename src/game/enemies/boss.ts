@@ -1,7 +1,7 @@
 import type { Cell, SimState } from '../../sim/types';
 import type { EnemySpawn } from '../../content/enemies';
 import type { Arena } from '../arena';
-import { shortestVec } from '../geometry';
+import { displacementVec } from '../geometry';
 import { ARCHETYPE_DEFAULTS } from '../../content/enemies';
 
 export interface BossState {
@@ -24,7 +24,7 @@ export function bossStep(
   arena: Arena,
 ): void {
   const { LX, LY } = state.grid;
-  const v = shortestVec(self.center, target.center, LX, LY);
+  const v = displacementVec(self.center, target.center, LX, LY, state.grid.wrap);
   const dist = Math.hypot(v[0], v[1]);
 
   // Movement (bruiser-like).

@@ -1,6 +1,6 @@
 import type { Cell, SimState } from '../../sim/types';
 import type { EnemySpawn } from '../../content/enemies';
-import { shortestVec } from '../geometry';
+import { displacementVec } from '../geometry';
 
 const ENGULF_RANGE = 6;
 
@@ -13,7 +13,7 @@ export function mirrorStep(
   spawn: EnemySpawn,
 ): void {
   const { LX, LY } = state.grid;
-  const v = shortestVec(self.center, target.center, LX, LY);
+  const v = displacementVec(self.center, target.center, LX, LY, state.grid.wrap);
   const dist = Math.hypot(v[0], v[1]);
 
   if (dist === 0) {

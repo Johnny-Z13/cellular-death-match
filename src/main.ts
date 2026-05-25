@@ -138,7 +138,7 @@ function startNewFight() {
     seed: (Date.now() & 0xffffffff) ^ (run.getState().fightIndex * 2654435761),
     player: playerCfg,
     enemies,
-    wrap: true,
+    wrap: false,
     mode: 'ecosystem',
     epochTicks: EPOCH_TICKS,
     objective: run.getObjective(),

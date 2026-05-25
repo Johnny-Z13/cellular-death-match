@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { shortestVec } from '../../src/game/geometry';
+import { displacementVec, shortestVec } from '../../src/game/geometry';
 
 describe('shortestVec', () => {
   it('returns the direct vector when no wrap is shorter', () => {
@@ -42,5 +42,19 @@ describe('shortestVec', () => {
     const v = shortestVec([10.5, 10.5], [11.5, 12.5], 100, 100);
     expect(v[0]).toBeCloseTo(1, 5);
     expect(v[1]).toBeCloseTo(2, 5);
+  });
+});
+
+describe('displacementVec', () => {
+  it('uses direct distance when wrap is disabled', () => {
+    const v = displacementVec([5, 50], [95, 50], 100, 100, false);
+    expect(v[0]).toBeCloseTo(90, 5);
+    expect(v[1]).toBeCloseTo(0, 5);
+  });
+
+  it('uses toroidal distance when wrap is enabled', () => {
+    const v = displacementVec([5, 50], [95, 50], 100, 100, true);
+    expect(v[0]).toBeCloseTo(-10, 5);
+    expect(v[1]).toBeCloseTo(0, 5);
   });
 });

@@ -11,7 +11,7 @@ import { splitterStep } from './enemies/splitter';
 import { swarmletStep } from './enemies/swarmlet';
 import { mirrorStep } from './enemies/mirror';
 import { bossStep, type BossState } from './enemies/boss';
-import { shortestVec } from './geometry';
+import { displacementVec } from './geometry';
 
 export type { PlayerConfig } from '../content/upgrades';
 
@@ -115,9 +115,9 @@ const ECOSYSTEM_MAX_POPULATION = 22;
 const PLAYER_THREAT_RANGE = 16;
 const MAX_TOOL_EFFECTS = 10;
 const AGITATE_CHARGES = 2;
-const AGITATION_DURATION_TICKS = 60;
-const AGITATION_MIN_SPEED = 6;
-const AGITATION_EXTRA_SPEED = 7;
+const AGITATION_DURATION_TICKS = 90;
+const AGITATION_MIN_SPEED = 10;
+const AGITATION_EXTRA_SPEED = 14;
 const NUTRIENT_PULSE_GROWTH = 80;
 const NUTRIENT_GROWTH_PER_TICK = 1.8;
 const NUTRIENT_PULL_SPEED = 5.5;
@@ -541,7 +541,7 @@ function mutateEcology(state: SimState, archetypes: Map<CellId, EnemySpawn>): nu
 
 function chooseEcosystemTarget(self: Cell, player: Cell, state: SimState): Cell {
   const { LX, LY } = state.grid;
-  const playerVec = shortestVec(self.center, player.center, LX, LY);
+  const playerVec = displacementVec(self.center, player.center, LX, LY, state.grid.wrap);
   const playerDist = Math.hypot(playerVec[0], playerVec[1]);
   if (playerDist <= PLAYER_THREAT_RANGE) return player;
 
@@ -549,7 +549,7 @@ function chooseEcosystemTarget(self: Cell, player: Cell, state: SimState): Cell 
   let bestDist = Infinity;
   for (const [id, candidate] of state.cells) {
     if (id === self.id || id === PLAYER_ID || candidate.vol <= 0) continue;
-    const v = shortestVec(self.center, candidate.center, LX, LY);
+    const v = displacementVec(self.center, candidate.center, LX, LY, state.grid.wrap);
     const dist = Math.hypot(v[0], v[1]);
     if (dist < bestDist) {
       best = candidate;
@@ -609,7 +609,7 @@ function pulseToolEffect(state: SimState, effect: ToolEffect): void {
   const { LX, LY } = state.grid;
   for (const [, cell] of state.cells) {
     if (cell.vol <= 0) continue;
-    const v = shortestVec(cell.center, effect.pos, LX, LY);
+    const v = displacementVec(cell.center, effect.pos, LX, LY, state.grid.wrap);
     const dist = Math.hypot(v[0], v[1]);
     if (dist > effect.radius) continue;
     const strength = 1 - dist / effect.radius;
@@ -665,7 +665,7 @@ function applyToolEffects(state: SimState, effects: ToolEffect[]): void {
     let vy = 0;
     let speedBoost = 0;
     for (const effect of effects) {
-      const v = shortestVec(cell.center, effect.pos, LX, LY);
+      const v = displacementVec(cell.center, effect.pos, LX, LY, state.grid.wrap);
       const dist = Math.hypot(v[0], v[1]);
       if (dist > effect.radius) continue;
       const strength = (1 - dist / effect.radius) * (effect.ttl / effect.maxTtl);

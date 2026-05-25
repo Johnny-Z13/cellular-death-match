@@ -1,6 +1,6 @@
 import type { Cell, SimState } from '../../sim/types';
 import type { EnemySpawn } from '../../content/enemies';
-import { shortestVec } from '../geometry';
+import { displacementVec } from '../geometry';
 import { addBullet } from '../../sim/bullets';
 
 export interface SniperState {
@@ -20,7 +20,7 @@ export function sniperStep(
   internal: SniperState,
 ): void {
   const { LX, LY } = state.grid;
-  const v = shortestVec(self.center, target.center, LX, LY);
+  const v = displacementVec(self.center, target.center, LX, LY, state.grid.wrap);
   const dist = Math.hypot(v[0], v[1]);
 
   // Movement.

@@ -15,6 +15,17 @@ export function shortestVec(
   ];
 }
 
+export function displacementVec(
+  from: readonly [number, number],
+  to: readonly [number, number],
+  LX: number,
+  LY: number,
+  wrap: boolean,
+): [number, number] {
+  if (wrap) return shortestVec(from, to, LX, LY);
+  return [to[0] - from[0], to[1] - from[1]];
+}
+
 function shortestAxis(delta: number, L: number): number {
   // Normalize delta into (-L/2, L/2].
   let d = delta % L;

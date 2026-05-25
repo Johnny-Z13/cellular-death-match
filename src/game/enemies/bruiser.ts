@@ -1,5 +1,5 @@
 import type { Cell, SimState } from '../../sim/types';
-import { shortestVec } from '../geometry';
+import { displacementVec } from '../geometry';
 
 // Engulf range: if center-to-center distance ≤ this, Bruiser engulfs.
 // (Cells are blobs ~10-20 px wide, so 6 means "edges are touching or close".)
@@ -15,7 +15,7 @@ const BRUISER_SPEED = 8;
 
 export function bruiserStep(self: Cell, target: Cell, state: SimState): void {
   const { LX, LY } = state.grid;
-  const v = shortestVec(self.center, target.center, LX, LY);
+  const v = displacementVec(self.center, target.center, LX, LY, state.grid.wrap);
   const dist = Math.hypot(v[0], v[1]);
 
   // Direction toward target (zero if coincident, to avoid NaN).

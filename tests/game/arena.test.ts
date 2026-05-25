@@ -313,10 +313,10 @@ describe('arena ecosystem mode', () => {
     const movedCells = Array.from(arena.state.cells.values()).filter((cell) => (
       cell.vol > 0
       && Math.hypot(cell.intent.vec[0], cell.intent.vec[1]) > 0.9
-      && cell.intent.speed >= 6
+      && cell.intent.speed >= 18
     ));
     expect(movedCells.length).toBeGreaterThanOrEqual(2);
-    expect(arena.getAgitationState().activeTicks).toBeGreaterThan(0);
+    expect(arena.getAgitationState().activeTicks).toBe(89);
   });
 
   it('seeds an egg near the click when the clicked cell is occupied', () => {
@@ -420,6 +420,32 @@ describe('arena ecosystem mode', () => {
     expect(cell.intent.vec[0]).toBeLessThan(-0.8);
     expect(Math.abs(cell.intent.vec[1])).toBeLessThan(0.25);
     expect(cell.intent.speed).toBeGreaterThan(9);
+  });
+
+  it('does not apply tool pressure across dish edges when wrapping is disabled', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 9,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        toxinCharges: 1,
+      },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 120, speed: 8, engulfMultiplier: 4 }],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+    cell.center = [78, 40];
+    cell.targetVol = 120;
+
+    expect(arena.applyTool('toxin', [1, 40])).toBe(true);
+
+    expect(cell.targetVol).toBe(120);
   });
 
   it('lets focused toxin pressure satisfy the cull objective before the deadline', () => {
