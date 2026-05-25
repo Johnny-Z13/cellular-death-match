@@ -7,6 +7,8 @@ import { getUpgradeDef } from './content/upgrades';
 import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/enemies';
 import { createEcologyAudio } from './audio/ecologyAudio';
 
+declare const __COMMIT_MESSAGE__: string;
+
 const LX = 160;
 const LY = 160;
 const PLAYER_ID = 1;
@@ -15,6 +17,8 @@ const EPOCH_TICKS = 60 * 55;
 const canvasMaybe = document.getElementById('game') as HTMLCanvasElement | null;
 if (!canvasMaybe) throw new Error('Missing #game canvas');
 const canvas: HTMLCanvasElement = canvasMaybe;
+const commitDebug = document.getElementById('commit-debug');
+if (commitDebug) commitDebug.textContent = `commit: ${__COMMIT_MESSAGE__}`;
 
 const run = createRun(Date.now() & 0xffffffff);
 const screens = createScreens();
