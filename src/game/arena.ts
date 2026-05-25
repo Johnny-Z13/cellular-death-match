@@ -33,8 +33,11 @@ export interface Arena {
   getEcology(): EcologyInfo;
   getObjectiveProgress(): ObjectiveProgress;
   getToolStates(): Record<LabTool, ToolState>;
+  getAgitationState(): AgitationState;
   getToolEffects(): ToolEffect[];
   applyTool(tool: LabTool, pos: [number, number], opts?: ApplyToolOpts): boolean;
+  agitate(): boolean;
+  endEpochNow(): ArenaStatus;
   tick(input: ArenaInput): void;
   spawnEnemy(opts: SpawnEnemyOpts): CellId;
 }
@@ -61,6 +64,10 @@ export interface ObjectiveProgress {
 export interface ToolState {
   charges: number;
   maxCharges: number;
+}
+
+export interface AgitationState extends ToolState {
+  activeTicks: number;
 }
 
 export interface ToolEffect {
@@ -101,10 +108,16 @@ const DEFAULT_EPOCH_TICKS = 60 * 75;
 const MUTATION_INTERVAL_TICKS = 60 * 10;
 const RESEED_INTERVAL_TICKS = 60 * 5;
 const RESUPPLY_INTERVAL_TICKS = 60 * 11;
+const EMERGENCY_EGG_REFILL_TICKS = 60 * 8;
 const ECOSYSTEM_MIN_POPULATION = 5;
+const QUIET_EGG_REFILL_POPULATION = 2;
 const ECOSYSTEM_MAX_POPULATION = 22;
 const PLAYER_THREAT_RANGE = 16;
 const MAX_TOOL_EFFECTS = 10;
+const AGITATE_CHARGES = 2;
+const AGITATION_DURATION_TICKS = 60;
+const AGITATION_MIN_SPEED = 6;
+const AGITATION_EXTRA_SPEED = 7;
 const NUTRIENT_PULSE_GROWTH = 80;
 const NUTRIENT_GROWTH_PER_TICK = 1.8;
 const NUTRIENT_PULL_SPEED = 5.5;
@@ -147,6 +160,10 @@ export function createArena(opts: CreateArenaOpts): Arena {
   let mutationCount = 0;
   let birthCount = 0;
   let supplyDropCount = 0;
+  let forcedStatus: ArenaStatus | null = null;
+  let agitationCharges = AGITATE_CHARGES;
+  let agitationTicksRemaining = 0;
+  let lastEmergencyEggTick = 0;
   const toolEffects: ToolEffect[] = [];
   const toolStates: Record<LabTool, ToolState> = toolLoadoutFor(opts.player);
 
@@ -196,6 +213,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
     player: opts.player,
     archetypes,
     getStatus(): ArenaStatus {
+      if (forcedStatus) return forcedStatus;
       const p = state.cells.get(PLAYER_ID);
       if (!p || p.vol === 0) return mode === 'ecosystem' ? 'running' : 'lost';
       if (mode === 'ecosystem') {
@@ -244,6 +262,13 @@ export function createArena(opts: CreateArenaOpts): Arena {
         toxin: { ...toolStates.toxin },
       };
     },
+    getAgitationState(): AgitationState {
+      return {
+        charges: agitationCharges,
+        maxCharges: AGITATE_CHARGES,
+        activeTicks: agitationTicksRemaining,
+      };
+    },
     getToolEffects(): ToolEffect[] {
       return toolEffects.map((effect) => ({
         ...effect,
@@ -279,6 +304,21 @@ export function createArena(opts: CreateArenaOpts): Arena {
       while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
       return true;
     },
+    agitate(): boolean {
+      if (this.getStatus() !== 'running' || agitationCharges <= 0) return false;
+      agitationCharges -= 1;
+      agitationTicksRemaining = AGITATION_DURATION_TICKS;
+      return true;
+    },
+    endEpochNow(): ArenaStatus {
+      const current = this.getStatus();
+      if (current !== 'running') return current;
+      if (mode !== 'ecosystem') return current;
+      const status = evaluateObjective(state, objective, epochTicks, epochTicks).status;
+      forcedStatus = status === 'satisfied' ? 'won' : 'lost';
+      tickNo = Math.max(tickNo, epochTicks);
+      return forcedStatus;
+    },
     tick(input: ArenaInput): void {
       if (this.getStatus() !== 'running') return;
       tickNo += 1;
@@ -313,6 +353,10 @@ export function createArena(opts: CreateArenaOpts): Arena {
 
       if (mode === 'ecosystem') {
         applyToolEffects(state, toolEffects);
+        if (agitationTicksRemaining > 0) {
+          applyAgitation(state, agitationTicksRemaining / AGITATION_DURATION_TICKS);
+          agitationTicksRemaining -= 1;
+        }
         for (const effect of toolEffects) effect.ttl -= 1;
         for (let i = toolEffects.length - 1; i >= 0; i--) {
           if (toolEffects[i]!.ttl <= 0) toolEffects.splice(i, 1);
@@ -322,6 +366,10 @@ export function createArena(opts: CreateArenaOpts): Arena {
         }
         if (tickNo % RESEED_INTERVAL_TICKS === 0) {
           birthCount += reseedEcology(this, state, archetypes);
+        }
+        if (tickNo - lastEmergencyEggTick >= EMERGENCY_EGG_REFILL_TICKS) {
+          supplyDropCount += refillEggIfQuiet(toolStates, state);
+          if (toolStates.egg.charges > 0) lastEmergencyEggTick = tickNo;
         }
         if (tickNo % RESUPPLY_INTERVAL_TICKS === 0) {
           supplyDropCount += resupplyLab(toolStates, objective);
@@ -646,6 +694,17 @@ function applyToolEffects(state: SimState, effects: ToolEffect[]): void {
   }
 }
 
+function applyAgitation(state: SimState, intensity: number): void {
+  const speed = AGITATION_MIN_SPEED + AGITATION_EXTRA_SPEED * clamp(intensity, 0, 1);
+  for (const [, cell] of state.cells) {
+    if (cell.vol <= 0) continue;
+    const angle = state.rng.random() * Math.PI * 2;
+    cell.intent.vec = [Math.cos(angle), Math.sin(angle)];
+    cell.intent.speed = Math.max(cell.intent.speed, speed);
+    if (cell.intent.engulfMultiplier <= 1) cell.intent.engulfMultiplier = 1;
+  }
+}
+
 function resupplyLab(toolStates: Record<LabTool, ToolState>, objective: ObjectiveDef): number {
   const preference: LabTool[] = objective.kind === 'bloom' || objective.kind === 'preserve'
     ? ['nutrient', 'egg', 'toxin']
@@ -655,6 +714,15 @@ function resupplyLab(toolStates: Record<LabTool, ToolState>, objective: Objectiv
   const refill = preference.find((tool) => toolStates[tool].charges < toolStates[tool].maxCharges);
   if (!refill) return 0;
   toolStates[refill].charges += 1;
+  return 1;
+}
+
+function refillEggIfQuiet(toolStates: Record<LabTool, ToolState>, state: SimState): number {
+  if (toolStates.egg.charges > 0 || toolStates.egg.maxCharges <= 0) return 0;
+  const livingEnemies = Array.from(state.cells)
+    .filter(([id, cell]) => id !== PLAYER_ID && cell.vol > 0).length;
+  if (livingEnemies >= QUIET_EGG_REFILL_POPULATION) return 0;
+  toolStates.egg.charges = 1;
   return 1;
 }
 

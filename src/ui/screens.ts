@@ -1,4 +1,4 @@
-import type { ToolState } from '../game/arena';
+import type { AgitationState, ToolState } from '../game/arena';
 import type { UpgradeDef } from '../content/upgrades';
 import type { EnemyArchetype } from '../content/enemies';
 
@@ -48,7 +48,10 @@ export interface Screens {
   clearTicker(): void;
   setTool(tool: ToolId): void;
   updateToolCharges(charges: Record<ToolId, ToolState>): void;
+  updateAgitation(state: AgitationState): void;
   onToolSelect(handler: (tool: ToolId) => void): void;
+  onAgitate(handler: () => void): void;
+  onEndEpoch(handler: () => void): void;
   setEggOptions(options: EggOption[]): void;
   setEggArchetype(archetype: EnemyArchetype): void;
   onEggSelect(handler: (archetype: EnemyArchetype) => void): void;
@@ -85,6 +88,9 @@ export function createScreens(): Screens {
   const lifeSummary  = get('life-summary');
   const lifeList     = get('life-list');
   const tickerLines  = get('ticker-lines');
+  const agitateButton = get('agitate-button') as HTMLButtonElement;
+  const agitateCount = get('agitate-count');
+  const endEpochButton = get('end-epoch-button') as HTMLButtonElement;
   const toolButtons  = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-tool]'));
   const eggTool      = toolButtons.find((btn) => btn.dataset.tool === 'egg');
   let eggButtons: HTMLButtonElement[] = [];
@@ -128,6 +134,11 @@ export function createScreens(): Screens {
         if (count) count.textContent = `${state.charges}/${state.maxCharges}`;
       }
     },
+    updateAgitation(state) {
+      agitateButton.disabled = state.charges <= 0;
+      agitateButton.classList.toggle('selected', state.activeTicks > 0);
+      agitateCount.textContent = `${state.charges}/${state.maxCharges}`;
+    },
     onToolSelect(handler) {
       for (const btn of toolButtons) {
         const tool = btn.dataset.tool;
@@ -135,6 +146,12 @@ export function createScreens(): Screens {
           btn.addEventListener('click', () => handler(tool));
         }
       }
+    },
+    onAgitate(handler) {
+      agitateButton.addEventListener('click', handler);
+    },
+    onEndEpoch(handler) {
+      endEpochButton.addEventListener('click', handler);
     },
     setEggOptions(options) {
       optionByArchetype.clear();

@@ -173,6 +173,152 @@ describe('arena ecosystem mode', () => {
     expect(arena.getEcology().supplyDrops).toBe(1);
   });
 
+  it('replenishes one egg early when eggs are empty and the dish is quiet', () => {
+    const arena = createArena({
+      LX: 60,
+      LY: 60,
+      seed: 2,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        eggCharges: 1,
+        nutrientCharges: 1,
+        toxinCharges: 1,
+      },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 90, speed: 8, engulfMultiplier: 4 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    arena.state.cells.get(2)!.vol = 0;
+    expect(arena.applyTool('egg', [10, 10])).toBe(true);
+    expect(arena.getToolStates().egg.charges).toBe(0);
+    expect(arena.getEcology().livingEnemies).toBe(1);
+
+    for (let i = 0; i < 60 * 8; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+
+    expect(arena.getToolStates().egg.charges).toBe(1);
+    expect(arena.getEcology().supplyDrops).toBe(1);
+  });
+
+  it('does not replenish eggs early while multiple lifeforms are active', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 3,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        eggCharges: 1,
+        nutrientCharges: 1,
+        toxinCharges: 1,
+      },
+      enemies: [
+        { archetype: 'swarmlet' as const, targetVol: 90, speed: 8, engulfMultiplier: 4 },
+        { archetype: 'bruiser' as const, targetVol: 150, speed: 6, engulfMultiplier: 6 },
+      ],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    expect(arena.applyTool('egg', [10, 10])).toBe(true);
+    expect(arena.getToolStates().egg.charges).toBe(0);
+    for (const [id, cell] of arena.state.cells) {
+      if (id === 1) continue;
+      cell.vol = 260;
+      cell.targetVol = 260;
+    }
+
+    for (let i = 0; i < 60 * 8; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+
+    expect(arena.getEcology().livingEnemies).toBeGreaterThanOrEqual(2);
+    expect(arena.getToolStates().egg.charges).toBe(0);
+    expect(arena.getEcology().supplyDrops).toBe(0);
+  });
+
+  it('ends the epoch immediately as won when the current objective is satisfied', () => {
+    const arena = createArena({
+      LX: 50,
+      LY: 50,
+      seed: 1,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [{ archetype: 'bruiser' as const, targetVol: 150, speed: 8, engulfMultiplier: 6.5 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+      objective: {
+        kind: 'preserve',
+        name: 'Test Preserve',
+        description: 'Preserve one cell.',
+        target: '1 blue lifeform at deadline',
+      },
+    });
+
+    expect(arena.getStatus()).toBe('running');
+    expect(arena.endEpochNow()).toBe('won');
+    expect(arena.getStatus()).toBe('won');
+  });
+
+  it('ends the epoch immediately as lost when the current objective is not satisfied', () => {
+    const arena = createArena({
+      LX: 50,
+      LY: 50,
+      seed: 1,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [{ archetype: 'bruiser' as const, targetVol: 150, speed: 8, engulfMultiplier: 6.5 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+      objective: {
+        kind: 'preserve',
+        name: 'Test Preserve',
+        description: 'Preserve one cell.',
+        target: '1 blue lifeform at deadline',
+      },
+    });
+    arena.state.cells.get(2)!.vol = 0;
+
+    expect(arena.endEpochNow()).toBe('lost');
+    expect(arena.getStatus()).toBe('lost');
+  });
+
+  it('agitation spends a charge and mixes living cell movement for a short pulse', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 11,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        { archetype: 'swarmlet' as const, targetVol: 120, speed: 8, engulfMultiplier: 4 },
+        { archetype: 'bruiser' as const, targetVol: 180, speed: 6, engulfMultiplier: 6 },
+      ],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+
+    expect(arena.getAgitationState()).toEqual({ charges: 2, maxCharges: 2, activeTicks: 0 });
+    expect(arena.agitate()).toBe(true);
+    expect(arena.getAgitationState().charges).toBe(1);
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+
+    const movedCells = Array.from(arena.state.cells.values()).filter((cell) => (
+      cell.vol > 0
+      && Math.hypot(cell.intent.vec[0], cell.intent.vec[1]) > 0.9
+      && cell.intent.speed >= 6
+    ));
+    expect(movedCells.length).toBeGreaterThanOrEqual(2);
+    expect(arena.getAgitationState().activeTicks).toBeGreaterThan(0);
+  });
+
   it('seeds an egg near the click when the clicked cell is occupied', () => {
     const arena = createArena({
       LX: 50,

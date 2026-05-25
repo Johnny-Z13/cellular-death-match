@@ -1,5 +1,5 @@
 import { createRun, EPOCHS_PER_RUN } from './game/run';
-import { createArena, type Arena } from './game/arena';
+import { createArena, type Arena, type ArenaStatus } from './game/arena';
 import { createRenderer, type Renderer } from './ui/render';
 import { createDebugPanel } from './ui/debug';
 import { createScreens, type ToolId } from './ui/screens';
@@ -35,6 +35,9 @@ let tickerState = createTickerState();
 
 canvas.tabIndex = 0;
 canvas.focus();
+canvas.addEventListener('animationend', () => {
+  canvas.classList.remove('dish-shake');
+});
 canvas.addEventListener('pointerdown', (event) => {
   if (!arena || run.getState().phase !== 'arena') return;
   ecologyAudio.unlock();
@@ -56,6 +59,22 @@ screens.onEndRestart(() => {
 screens.onToolSelect((tool) => {
   selectedTool = tool;
   screens.setTool(tool);
+});
+screens.onAgitate(() => {
+  if (!arena || run.getState().phase !== 'arena') return;
+  ecologyAudio.unlock();
+  if (!arena.agitate()) return;
+  screens.updateAgitation(arena.getAgitationState());
+  screens.addTicker('Dish agitated: lifeforms are mixing.');
+  canvas.classList.remove('dish-shake');
+  void canvas.offsetWidth;
+  canvas.classList.add('dish-shake');
+});
+screens.onEndEpoch(() => {
+  if (!arena || run.getState().phase !== 'arena') return;
+  ecologyAudio.unlock();
+  const status = arena.endEpochNow();
+  resolveArenaStatus(status);
 });
 screens.setEggOptions(EGG_ARCHETYPES.map((archetype) => ({
   archetype,
@@ -126,6 +145,7 @@ function startNewFight() {
   screens.clearTicker();
   screens.addTicker(`Objective received: ${run.getObjective().name}.`);
   screens.updateToolCharges(arena.getToolStates());
+  screens.updateAgitation(arena.getAgitationState());
   // Update debug panel swatches to match the renderer's palette.
   debug.setSwatch(1, swatchForCellId(1, PALETTE_SIZE));
   for (let i = 0; i < enemies.length; i++) {
@@ -187,6 +207,7 @@ function loop() {
       }),
     });
     screens.updateToolCharges(arena.getToolStates());
+    screens.updateAgitation(arena.getAgitationState());
   }
   updateTicker(arena);
 
@@ -198,19 +219,23 @@ function loop() {
   });
 
   // Status check: did this tick end the fight?
-  const status = arena.getStatus();
+  if (resolveArenaStatus(arena.getStatus())) return;
+
+  requestAnimationFrame(loop);
+}
+
+function resolveArenaStatus(status: ArenaStatus): boolean {
   if (status === 'won') {
     run.completeEpoch();
     showPhase();
-    return;
+    return true;
   }
   if (status === 'lost') {
     run.failEpoch();
     showPhase();
-    return;
+    return true;
   }
-
-  requestAnimationFrame(loop);
+  return false;
 }
 
 interface TickerState {
