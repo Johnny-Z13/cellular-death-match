@@ -1,3 +1,5 @@
+import type { TraitId } from './ecology';
+
 export type EnemyArchetype =
   | 'bruiser' | 'sniper' | 'splitter' | 'swarmlet' | 'mirror' | 'boss';
 
@@ -16,6 +18,7 @@ export interface EnemySpawn {
   shootCooldown?: number;          // ticks between shots (snipers only)
   bulletSize?: number;
   bulletSpeed?: number;
+  traits?: TraitId[];
 }
 
 export const EGG_ARCHETYPES: EnemyArchetype[] = [

@@ -202,6 +202,7 @@ function loop() {
       births: ecology.births,
       supplyDrops: ecology.supplyDrops,
       dominant: ecology.dominant,
+      crisis: ecology.crisis,
       objectiveName: objective.def.name,
       objectiveSummary: objective.summary,
       upgrades: runState.upgrades.map((u) => {
@@ -249,6 +250,7 @@ interface TickerState {
   lastDominant: string;
   lastToolPressureTick: number;
   lastObjectiveSummary: string;
+  seenSignals: string[];
   didWarnDeadline: boolean;
   didWarnCritical: boolean;
 }
@@ -261,6 +263,7 @@ function createTickerState(): TickerState {
     lastDominant: 'none',
     lastToolPressureTick: -9999,
     lastObjectiveSummary: '',
+    seenSignals: [],
     didWarnDeadline: false,
     didWarnCritical: false,
   };
@@ -277,6 +280,13 @@ function updateTicker(ar: Arena): void {
   const coverage = livingVol / (LX * LY);
   const ecology = ar.getEcology();
   const objective = ar.getObjectiveProgress();
+
+  for (const signal of ecology.signals.slice().reverse()) {
+    if (tickerState.seenSignals.includes(signal)) continue;
+    tickerState.seenSignals.push(signal);
+    while (tickerState.seenSignals.length > 12) tickerState.seenSignals.shift();
+    screens.addTicker(signal);
+  }
 
   const redBand = redVol <= 35 ? 'critical' : redVol <= 140 ? 'dying' : redVol >= 650 ? 'surging' : 'stable';
   if (redBand !== tickerState.lastRedBand) {

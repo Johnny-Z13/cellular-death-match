@@ -17,6 +17,7 @@ export interface HudInfo {
   births: number;
   supplyDrops: number;
   dominant: string;
+  crisis: string;
   objectiveName: string;
   objectiveSummary: string;
   upgrades: string[];          // upgrade names, e.g. ["Bigger Cell", "Faster Engulf x2"]
@@ -204,7 +205,8 @@ export function createScreens(): Screens {
       hudFight.textContent = `${info.fightIndex + 1} / ${info.totalFights}`;
       hudVol.textContent = `${info.vol} / ${Math.round(info.targetVol)}`;
       hudProgress.textContent = `${info.secondsRemaining}s`;
-      hudEco.textContent = `${info.livingEnemies} lifeforms, ${info.mutations} mutations, ${info.births} births, ${info.supplyDrops} drops, ${info.dominant} dominant`;
+      const crisis = info.crisis === 'none' ? '' : `, ${info.crisis} active`;
+      hudEco.textContent = `${info.livingEnemies} lifeforms, ${info.mutations} mutations, ${info.births} births, ${info.supplyDrops} drops, ${info.dominant} dominant${crisis}`;
       hudObjective.textContent = `${info.objectiveName}: ${info.objectiveSummary}`;
       hudUpgrades.textContent = info.upgrades.length === 0 ? 'none' : info.upgrades.join(', ');
     },

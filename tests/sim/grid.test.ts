@@ -5,6 +5,7 @@ import {
   xy,
   setCell,
   isCellBoundary,
+  neighborVals,
   recomputeBoundary,
 } from '../../src/sim/grid';
 
@@ -55,10 +56,20 @@ describe('isCellBoundary', () => {
     expect(isCellBoundary(g, 4, 0)).toBe(true); // wraps to (0,0) neighbor
   });
 
-  it('with wrap=false, off-grid neighbors do not count', () => {
+  it('with wrap=false, off-grid neighbors count as empty medium', () => {
     const g = createGrid(5, 5, false);
     g.cells.fill(1);
-    expect(isCellBoundary(g, 0, 0)).toBe(false); // alone-on-edge, no off-grid
+    expect(isCellBoundary(g, 0, 0)).toBe(true);
+  });
+});
+
+describe('neighborVals', () => {
+  it('with wrap=false, includes empty medium values beyond the edge', () => {
+    const g = createGrid(5, 5, false);
+    g.cells.fill(1);
+    const vals = neighborVals(g, 0, 0);
+    expect(vals.length).toBe(8);
+    expect(vals.filter((v) => v === 0).length).toBe(5);
   });
 });
 

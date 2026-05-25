@@ -319,6 +319,21 @@ describe('arena ecosystem mode', () => {
     expect(arena.getAgitationState().activeTicks).toBe(89);
   });
 
+  it('uses upgraded agitation charge capacity from player config', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 12,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3, agitationCharges: 3 },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 120, speed: 8, engulfMultiplier: 4 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+
+    expect(arena.getAgitationState()).toEqual({ charges: 3, maxCharges: 3, activeTicks: 0 });
+  });
+
   it('seeds an egg near the click when the clicked cell is occupied', () => {
     const arena = createArena({
       LX: 50,
@@ -420,6 +435,162 @@ describe('arena ecosystem mode', () => {
     expect(cell.intent.vec[0]).toBeLessThan(-0.8);
     expect(Math.abs(cell.intent.vec[1])).toBeLessThan(0.25);
     expect(cell.intent.speed).toBeGreaterThan(9);
+  });
+
+  it('lets propagators prefer compatible swarmlets over closer predators', () => {
+    const arena = createArena({
+      LX: 100,
+      LY: 100,
+      seed: 13,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        { archetype: 'splitter' as const, targetVol: 150, speed: 8, engulfMultiplier: 6 },
+        { archetype: 'bruiser' as const, targetVol: 150, speed: 8, engulfMultiplier: 6 },
+        { archetype: 'swarmlet' as const, targetVol: 120, speed: 8, engulfMultiplier: 4 },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const player = arena.state.cells.get(1)!;
+    const splitter = arena.state.cells.get(2)!;
+    const bruiser = arena.state.cells.get(3)!;
+    const swarmlet = arena.state.cells.get(4)!;
+    player.center = [94, 94];
+    splitter.center = [50, 50];
+    bruiser.center = [55, 50];
+    swarmlet.center = [50, 70];
+    splitter.vol = 150;
+    bruiser.vol = 150;
+    swarmlet.vol = 120;
+
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+
+    expect(splitter.intent.vec[1]).toBeGreaterThan(0.65);
+    expect(Math.abs(splitter.intent.vec[0])).toBeLessThan(0.35);
+  });
+
+  it('names mutation traits and exposes ecology signals', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 14,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 120, speed: 8, engulfMultiplier: 4 }],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+
+    for (let i = 0; i < 60 * 10; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+
+    const spawn = arena.archetypes.get(2)!;
+    expect(spawn.traits?.length).toBeGreaterThanOrEqual(1);
+    expect(arena.getEcology().signals.some((signal) => signal.includes('mutation'))).toBe(true);
+  });
+
+  it('makes eggs inherit budding traits inside nutrient fields', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 15,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        eggCharges: 1,
+        nutrientCharges: 1,
+      },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 120, speed: 8, engulfMultiplier: 4 }],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+
+    expect(arena.applyTool('nutrient', [30, 30])).toBe(true);
+    expect(arena.applyTool('egg', [30, 30], { eggArchetype: 'splitter' })).toBe(true);
+
+    const spawned = Array.from(arena.archetypes)
+      .find(([id]) => id !== 2)?.[1];
+    expect(spawned?.traits).toContain('budding');
+    expect(arena.getEcology().signals.some((signal) => signal.includes('Nutrient egg'))).toBe(true);
+  });
+
+  it('makes eggs inherit toxin resistance inside toxin fields', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 16,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        eggCharges: 1,
+        toxinCharges: 1,
+      },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 120, speed: 8, engulfMultiplier: 4 }],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+
+    expect(arena.applyTool('toxin', [32, 32])).toBe(true);
+    expect(arena.applyTool('egg', [32, 32], { eggArchetype: 'bruiser' })).toBe(true);
+
+    const spawned = Array.from(arena.archetypes)
+      .find(([id]) => id !== 2)?.[1];
+    expect(spawned?.traits).toContain('toxin_resistant');
+    expect(arena.getEcology().signals.some((signal) => signal.includes('Toxin egg'))).toBe(true);
+  });
+
+  it('spreads active tool fields when agitation is used', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 17,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        nutrientCharges: 1,
+      },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 120, speed: 8, engulfMultiplier: 4 }],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+
+    expect(arena.applyTool('nutrient', [20, 20])).toBe(true);
+    expect(arena.getToolEffects()[0]?.radius).toBe(20);
+    expect(arena.agitate()).toBe(true);
+
+    expect(arena.getToolEffects()[0]?.radius).toBeGreaterThan(20);
+    expect(arena.getEcology().signals.some((signal) => signal.includes('Agitation spread nutrient'))).toBe(true);
+  });
+
+  it('starts crisis events during long ecosystem epochs', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 18,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 120, speed: 8, engulfMultiplier: 4 }],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 30,
+    });
+
+    for (let i = 0; i < 60 * 18; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+
+    expect(arena.getEcology().crisis).not.toBe('none');
+    expect(arena.getEcology().signals.some((signal) => signal.includes('Crisis'))).toBe(true);
   });
 
   it('does not apply tool pressure across dish edges when wrapping is disabled', () => {

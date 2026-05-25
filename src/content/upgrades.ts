@@ -10,6 +10,7 @@ export interface PlayerConfig {
   toxinCharges?: number;
   nutrientRadius?: number;
   toxinRadius?: number;
+  agitationCharges?: number;
 }
 
 // A stable handle to an upgrade in the run state.
@@ -31,6 +32,7 @@ export interface UpgradeDef {
     addEggCharges?: number;
     addNutrientCharges?: number;
     addToxinCharges?: number;
+    addAgitationCharges?: number;
     pctNutrientRadius?: number;
     pctToxinRadius?: number;
   };
@@ -56,6 +58,12 @@ export const UPGRADES: ReadonlyArray<UpgradeDef> = [
     name: 'Antibody Ampoule',
     description: '+1 toxin charge',
     modifiers: { addToxinCharges: 1 },
+  },
+  {
+    id: 'centrifuge_1',
+    name: 'Centrifuge Rotor',
+    description: '+1 agitation charge',
+    modifiers: { addAgitationCharges: 1 },
   },
   {
     id: 'food_radius_1',
@@ -95,6 +103,7 @@ export function applyUpgrades(base: PlayerConfig, refs: ReadonlyArray<UpgradeRef
   let addEggCharges = 0;
   let addNutrientCharges = 0;
   let addToxinCharges = 0;
+  let addAgitationCharges = 0;
   let pctNutrientRadius = 0;
   let pctToxinRadius = 0;
   for (const ref of refs) {
@@ -108,6 +117,7 @@ export function applyUpgrades(base: PlayerConfig, refs: ReadonlyArray<UpgradeRef
     if (m.addEggCharges !== undefined)       addEggCharges      += m.addEggCharges * ref.stacks;
     if (m.addNutrientCharges !== undefined)  addNutrientCharges += m.addNutrientCharges * ref.stacks;
     if (m.addToxinCharges !== undefined)     addToxinCharges    += m.addToxinCharges * ref.stacks;
+    if (m.addAgitationCharges !== undefined) addAgitationCharges += m.addAgitationCharges * ref.stacks;
     if (m.pctNutrientRadius !== undefined)   pctNutrientRadius  += m.pctNutrientRadius * ref.stacks;
     if (m.pctToxinRadius !== undefined)      pctToxinRadius     += m.pctToxinRadius * ref.stacks;
   }
@@ -125,6 +135,9 @@ export function applyUpgrades(base: PlayerConfig, refs: ReadonlyArray<UpgradeRef
   }
   if (base.toxinCharges !== undefined || addToxinCharges !== 0) {
     out.toxinCharges = (base.toxinCharges ?? 0) + addToxinCharges;
+  }
+  if (base.agitationCharges !== undefined || addAgitationCharges !== 0) {
+    out.agitationCharges = (base.agitationCharges ?? 0) + addAgitationCharges;
   }
   if (base.nutrientRadius !== undefined || pctNutrientRadius !== 0) {
     out.nutrientRadius = (base.nutrientRadius ?? 20) * (1 + pctNutrientRadius);

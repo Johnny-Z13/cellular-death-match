@@ -4,6 +4,14 @@ import { removePixel } from '../sim/cell';
 import { getCell, setCell, updateBoundaryAround } from '../sim/grid';
 import { type PlayerConfig } from '../content/upgrades';
 import { type EnemyArchetype, type EnemySpawn, ARCHETYPE_DEFAULTS } from '../content/enemies';
+import {
+  ARCHETYPE_ECOLOGY,
+  CRISES,
+  MUTATION_TRAITS,
+  pickMutationTrait,
+  type CrisisId,
+  type TraitId,
+} from '../content/ecology';
 import { type ObjectiveDef, objectiveForEpoch } from '../content/objectives';
 import { bruiserStep } from './enemies/bruiser';
 import { sniperStep, type SniperState } from './enemies/sniper';
@@ -52,6 +60,8 @@ export interface EcologyInfo {
   births: number;
   supplyDrops: number;
   dominant: string;
+  signals: string[];
+  crisis: string;
 }
 
 export interface ObjectiveProgress {
@@ -109,12 +119,13 @@ const MUTATION_INTERVAL_TICKS = 60 * 10;
 const RESEED_INTERVAL_TICKS = 60 * 5;
 const RESUPPLY_INTERVAL_TICKS = 60 * 11;
 const EMERGENCY_EGG_REFILL_TICKS = 60 * 8;
+const CRISIS_INTERVAL_TICKS = 60 * 18;
 const ECOSYSTEM_MIN_POPULATION = 5;
 const QUIET_EGG_REFILL_POPULATION = 2;
 const ECOSYSTEM_MAX_POPULATION = 22;
 const PLAYER_THREAT_RANGE = 16;
 const MAX_TOOL_EFFECTS = 10;
-const AGITATE_CHARGES = 2;
+const DEFAULT_AGITATE_CHARGES = 2;
 const AGITATION_DURATION_TICKS = 90;
 const AGITATION_MIN_SPEED = 10;
 const AGITATION_EXTRA_SPEED = 14;
@@ -161,11 +172,20 @@ export function createArena(opts: CreateArenaOpts): Arena {
   let birthCount = 0;
   let supplyDropCount = 0;
   let forcedStatus: ArenaStatus | null = null;
-  let agitationCharges = AGITATE_CHARGES;
+  const maxAgitationCharges = opts.player.agitationCharges ?? DEFAULT_AGITATE_CHARGES;
+  let agitationCharges = maxAgitationCharges;
   let agitationTicksRemaining = 0;
   let lastEmergencyEggTick = 0;
+  let activeCrisis: { id: CrisisId; ttl: number } | null = null;
   const toolEffects: ToolEffect[] = [];
   const toolStates: Record<LabTool, ToolState> = toolLoadoutFor(opts.player);
+  const signals: string[] = [];
+
+  function pushSignal(message: string): void {
+    if (signals[0] === message) return;
+    signals.unshift(message);
+    while (signals.length > 5) signals.pop();
+  }
 
   for (let i = 0; i < nEnemies; i++) {
     const cellId = 2 + i;
@@ -250,6 +270,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
         births: birthCount,
         supplyDrops: supplyDropCount,
         dominant,
+        signals: [...signals],
+        crisis: activeCrisis ? CRISES[activeCrisis.id].name : 'none',
       };
     },
     getObjectiveProgress(): ObjectiveProgress {
@@ -265,7 +287,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
     getAgitationState(): AgitationState {
       return {
         charges: agitationCharges,
-        maxCharges: AGITATE_CHARGES,
+        maxCharges: maxAgitationCharges,
         activeTicks: agitationTicksRemaining,
       };
     },
@@ -283,6 +305,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         if (!seedPos) return false;
         toolState.charges -= 1;
         const spawn = eggSpawnFor(applyOpts.eggArchetype ?? 'swarmlet', state.rng.random());
+        applyEggSynergies(state, toolEffects, seedPos, spawn, pushSignal);
         this.spawnEnemy({ spawn, pos: seedPos });
         birthCount += 1;
         return true;
@@ -299,7 +322,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         maxTtl: tool === 'nutrient' ? 60 * 8 : 60 * 7,
         seed: state.rng.randInt(1_000_000),
       };
-      pulseToolEffect(state, effect);
+      pulseToolEffect(state, effect, archetypes);
       toolEffects.push(effect);
       while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
       return true;
@@ -308,6 +331,14 @@ export function createArena(opts: CreateArenaOpts): Arena {
       if (this.getStatus() !== 'running' || agitationCharges <= 0) return false;
       agitationCharges -= 1;
       agitationTicksRemaining = AGITATION_DURATION_TICKS;
+      const hadNutrient = toolEffects.some((effect) => effect.type === 'nutrient');
+      const hadToxin = toolEffects.some((effect) => effect.type === 'toxin');
+      for (const effect of toolEffects) {
+        effect.radius = clamp(effect.radius + 7, effect.radius, 48);
+        effect.ttl = Math.min(effect.maxTtl, effect.ttl + 45);
+      }
+      if (hadNutrient) pushSignal('Agitation spread nutrient mist.');
+      if (hadToxin) pushSignal('Agitation spread toxin pressure.');
       return true;
     },
     endEpochNow(): ArenaStatus {
@@ -345,24 +376,35 @@ export function createArena(opts: CreateArenaOpts): Arena {
           const cell = state.cells.get(id);
           if (!cell || cell.vol === 0) continue;
           const target = mode === 'ecosystem'
-            ? chooseEcosystemTarget(cell, playerCell, state)
+            ? chooseEcosystemTarget(cell, playerCell, state, archetypes)
             : playerCell;
           dispatchAi(cell, target, this);
         }
       }
 
       if (mode === 'ecosystem') {
-        applyToolEffects(state, toolEffects);
+        applyToolEffects(state, toolEffects, archetypes);
         if (agitationTicksRemaining > 0) {
           applyAgitation(state, agitationTicksRemaining / AGITATION_DURATION_TICKS);
           agitationTicksRemaining -= 1;
+        }
+        if (!activeCrisis && tickNo % CRISIS_INTERVAL_TICKS === 0) {
+          const result = activateCrisis(this, state, archetypes);
+          activeCrisis = { id: result.id, ttl: CRISES[result.id].durationTicks };
+          birthCount += result.births;
+          pushSignal(`Crisis: ${CRISES[result.id].name}.`);
+        }
+        if (activeCrisis) {
+          applyCrisisEffects(state, activeCrisis.id);
+          activeCrisis.ttl -= 1;
+          if (activeCrisis.ttl <= 0) activeCrisis = null;
         }
         for (const effect of toolEffects) effect.ttl -= 1;
         for (let i = toolEffects.length - 1; i >= 0; i--) {
           if (toolEffects[i]!.ttl <= 0) toolEffects.splice(i, 1);
         }
         if (tickNo % MUTATION_INTERVAL_TICKS === 0) {
-          mutationCount += mutateEcology(state, archetypes);
+          mutationCount += mutateEcology(state, archetypes, pushSignal);
         }
         if (tickNo % RESEED_INTERVAL_TICKS === 0) {
           birthCount += reseedEcology(this, state, archetypes);
@@ -520,40 +562,66 @@ function dishMetrics(state: SimState): {
   };
 }
 
-function mutateEcology(state: SimState, archetypes: Map<CellId, EnemySpawn>): number {
+function mutateEcology(
+  state: SimState,
+  archetypes: Map<CellId, EnemySpawn>,
+  pushSignal?: (message: string) => void,
+): number {
   let changed = 0;
   for (const [id, spawn] of archetypes) {
     const cell = state.cells.get(id);
     if (!cell || cell.vol <= 0) continue;
     const instability = spawn.instability ?? 1;
     const drift = (state.rng.random() - 0.5) * 0.18 * instability;
+    const trait = pickMutationTrait(spawn.traits, state.rng.random());
+    addTraitToSpawn(spawn, trait);
+    const traitDef = MUTATION_TRAITS[trait];
     spawn.targetVol = clamp(spawn.targetVol * (1 + drift), 55, 1800);
     spawn.speed = clamp(spawn.speed * (1 - drift * 0.45), 3, 16);
     spawn.engulfMultiplier = clamp(spawn.engulfMultiplier * (1 + drift * 0.6), 1, 9);
+    spawn.targetVol = clamp(spawn.targetVol * traitDef.targetVolMultiplier, 55, 1800);
+    spawn.speed = clamp(spawn.speed * traitDef.speedMultiplier, 3, 18);
     if (spawn.shootCooldown !== undefined) {
       spawn.shootCooldown = Math.round(clamp(spawn.shootCooldown * (1 + drift), 28, 90));
     }
     cell.targetVol = clamp((cell.targetVol + spawn.targetVol) / 2, 35, 1800);
+    pushSignal?.(`${capitalize(spawn.archetype)} mutation: ${traitDef.name}.`);
     changed += 1;
   }
   return changed;
 }
 
-function chooseEcosystemTarget(self: Cell, player: Cell, state: SimState): Cell {
+function addTraitToSpawn(spawn: EnemySpawn, trait: TraitId): void {
+  if (spawn.traits?.includes(trait)) return;
+  spawn.traits = [...(spawn.traits ?? []), trait];
+}
+
+function chooseEcosystemTarget(
+  self: Cell,
+  player: Cell,
+  state: SimState,
+  archetypes: Map<CellId, EnemySpawn>,
+): Cell {
   const { LX, LY } = state.grid;
   const playerVec = displacementVec(self.center, player.center, LX, LY, state.grid.wrap);
   const playerDist = Math.hypot(playerVec[0], playerVec[1]);
   if (playerDist <= PLAYER_THREAT_RANGE) return player;
 
   let best: Cell | null = null;
-  let bestDist = Infinity;
+  let bestScore = Infinity;
+  const selfArchetype = archetypes.get(self.id)?.archetype;
+  const profile = selfArchetype ? ARCHETYPE_ECOLOGY[selfArchetype] : undefined;
   for (const [id, candidate] of state.cells) {
     if (id === self.id || id === PLAYER_ID || candidate.vol <= 0) continue;
     const v = displacementVec(self.center, candidate.center, LX, LY, state.grid.wrap);
     const dist = Math.hypot(v[0], v[1]);
-    if (dist < bestDist) {
+    const targetArchetype = archetypes.get(id)?.archetype;
+    let score = dist;
+    if (targetArchetype && profile?.prefers.includes(targetArchetype)) score *= 0.22;
+    if (targetArchetype && profile?.avoids.includes(targetArchetype)) score *= 2.5;
+    if (score < bestScore) {
       best = candidate;
-      bestDist = dist;
+      bestScore = score;
     }
   }
   return best ?? self;
@@ -605,9 +673,50 @@ function normalizeCoord(
   return [x, y];
 }
 
-function pulseToolEffect(state: SimState, effect: ToolEffect): void {
+function applyEggSynergies(
+  state: SimState,
+  effects: ToolEffect[],
+  pos: [number, number],
+  spawn: EnemySpawn,
+  pushSignal: (message: string) => void,
+): void {
+  const nutrient = nearbyToolEffect(state, effects, 'nutrient', pos);
+  const toxin = nearbyToolEffect(state, effects, 'toxin', pos);
+  if (nutrient) {
+    addTraitToSpawn(spawn, 'budding');
+    spawn.targetVol = clamp(spawn.targetVol * 1.22, 55, 760);
+    spawn.instability = (spawn.instability ?? 1) * 1.08;
+    pushSignal('Nutrient egg cultured a budding strain.');
+  }
+  if (toxin) {
+    addTraitToSpawn(spawn, 'toxin_resistant');
+    spawn.targetVol = clamp(spawn.targetVol * 0.9, 45, 760);
+    spawn.instability = (spawn.instability ?? 1) * 1.18;
+    pushSignal('Toxin egg selected a resistant strain.');
+  }
+}
+
+function nearbyToolEffect(
+  state: SimState,
+  effects: ToolEffect[],
+  type: ToolEffect['type'],
+  pos: [number, number],
+): ToolEffect | undefined {
   const { LX, LY } = state.grid;
-  for (const [, cell] of state.cells) {
+  return effects.find((effect) => {
+    if (effect.type !== type) return false;
+    const v = displacementVec(pos, effect.pos, LX, LY, state.grid.wrap);
+    return Math.hypot(v[0], v[1]) <= effect.radius;
+  });
+}
+
+function pulseToolEffect(
+  state: SimState,
+  effect: ToolEffect,
+  archetypes: Map<CellId, EnemySpawn>,
+): void {
+  const { LX, LY } = state.grid;
+  for (const [id, cell] of state.cells) {
     if (cell.vol <= 0) continue;
     const v = displacementVec(cell.center, effect.pos, LX, LY, state.grid.wrap);
     const dist = Math.hypot(v[0], v[1]);
@@ -616,15 +725,21 @@ function pulseToolEffect(state: SimState, effect: ToolEffect): void {
     if (effect.type === 'nutrient') {
       cell.targetVol = clamp(cell.targetVol + NUTRIENT_PULSE_GROWTH * strength, 25, 2200);
     } else {
-      cell.targetVol = clamp(cell.targetVol - TOXIN_PULSE_DAMAGE * strength, 12, 2200);
+      const toxinMultiplier = toxinMultiplierForCell(archetypes, id);
+      cell.targetVol = clamp(cell.targetVol - TOXIN_PULSE_DAMAGE * strength * toxinMultiplier, 12, 2200);
     }
   }
   if (effect.type === 'toxin') {
-    erodePixels(state, effect, 68);
+    erodePixels(state, effect, 68, archetypes);
   }
 }
 
-function erodePixels(state: SimState, effect: ToolEffect, maxPixels: number): void {
+function erodePixels(
+  state: SimState,
+  effect: ToolEffect,
+  maxPixels: number,
+  archetypes: Map<CellId, EnemySpawn>,
+): void {
   const { grid } = state;
   const cx = Math.round(effect.pos[0]);
   const cy = Math.round(effect.pos[1]);
@@ -645,9 +760,10 @@ function erodePixels(state: SimState, effect: ToolEffect, maxPixels: number): vo
       const id = getCell(grid, x, y);
       if (id === 0) continue;
       const strength = 1 - dist / effect.radius;
-      if (state.rng.random() > strength * 0.9) continue;
       const cell = state.cells.get(id);
       if (!cell || cell.vol <= 0) continue;
+      const toxinMultiplier = toxinMultiplierForCell(archetypes, id);
+      if (state.rng.random() > strength * 0.9 * toxinMultiplier) continue;
       setCell(grid, x, y, 0);
       removePixel(cell, x, y, grid.LX, grid.LY);
       updateBoundaryAround(grid, x, y);
@@ -656,10 +772,14 @@ function erodePixels(state: SimState, effect: ToolEffect, maxPixels: number): vo
   }
 }
 
-function applyToolEffects(state: SimState, effects: ToolEffect[]): void {
+function applyToolEffects(
+  state: SimState,
+  effects: ToolEffect[],
+  archetypes: Map<CellId, EnemySpawn>,
+): void {
   if (effects.length === 0) return;
   const { LX, LY } = state.grid;
-  for (const [, cell] of state.cells) {
+  for (const [id, cell] of state.cells) {
     if (cell.vol <= 0) continue;
     let vx = 0;
     let vy = 0;
@@ -677,10 +797,11 @@ function applyToolEffects(state: SimState, effects: ToolEffect[]): void {
         speedBoost += NUTRIENT_PULL_SPEED * strength;
         cell.targetVol = clamp(cell.targetVol + NUTRIENT_GROWTH_PER_TICK * strength, 25, 2200);
       } else {
+        const toxinMultiplier = toxinMultiplierForCell(archetypes, id);
         vx -= dirX * strength;
         vy -= dirY * strength;
-        speedBoost += TOXIN_FLEE_SPEED * strength;
-        cell.targetVol = clamp(cell.targetVol - TOXIN_SHRINK_PER_TICK * strength, 12, 2200);
+        speedBoost += TOXIN_FLEE_SPEED * strength * toxinMultiplier;
+        cell.targetVol = clamp(cell.targetVol - TOXIN_SHRINK_PER_TICK * strength * toxinMultiplier, 12, 2200);
       }
     }
     const len = Math.hypot(vx, vy);
@@ -694,6 +815,14 @@ function applyToolEffects(state: SimState, effects: ToolEffect[]): void {
   }
 }
 
+function toxinMultiplierForCell(archetypes: Map<CellId, EnemySpawn>, id: CellId): number {
+  const spawn = archetypes.get(id);
+  if (!spawn) return 1;
+  return (spawn.traits ?? []).reduce((multiplier, trait) => (
+    multiplier * MUTATION_TRAITS[trait].toxinMultiplier
+  ), 1);
+}
+
 function applyAgitation(state: SimState, intensity: number): void {
   const speed = AGITATION_MIN_SPEED + AGITATION_EXTRA_SPEED * clamp(intensity, 0, 1);
   for (const [, cell] of state.cells) {
@@ -702,6 +831,48 @@ function applyAgitation(state: SimState, intensity: number): void {
     cell.intent.vec = [Math.cos(angle), Math.sin(angle)];
     cell.intent.speed = Math.max(cell.intent.speed, speed);
     if (cell.intent.engulfMultiplier <= 1) cell.intent.engulfMultiplier = 1;
+  }
+}
+
+function activateCrisis(
+  arena: Arena,
+  state: SimState,
+  archetypes: Map<CellId, EnemySpawn>,
+): { id: CrisisId; births: number } {
+  const ids = Object.keys(CRISES) as CrisisId[];
+  const id = ids[state.rng.randInt(ids.length)] ?? 'heat_spike';
+  let births = 0;
+  if (id === 'contamination_bloom' && archetypes.size < ECOSYSTEM_MAX_POPULATION) {
+    arena.spawnEnemy({
+      spawn: {
+        ...ARCHETYPE_DEFAULTS.swarmlet,
+        traits: ['fleet'],
+        instability: (ARCHETYPE_DEFAULTS.swarmlet.instability ?? 1) * 1.25,
+      },
+      pos: [
+        state.rng.randInt(state.grid.LX),
+        state.rng.randInt(state.grid.LY),
+      ],
+    });
+    births += 1;
+  }
+  return { id, births };
+}
+
+function applyCrisisEffects(state: SimState, id: CrisisId): void {
+  if (id === 'heat_spike') {
+    for (const [, cell] of state.cells) {
+      if (cell.vol <= 0) continue;
+      cell.intent.speed = Math.max(cell.intent.speed, 14);
+    }
+    return;
+  }
+
+  if (id === 'oxygen_crash') {
+    for (const [, cell] of state.cells) {
+      if (cell.vol <= 0 || cell.targetVol < 220) continue;
+      cell.targetVol = clamp(cell.targetVol - 0.18, 45, 2200);
+    }
   }
 }
 
@@ -779,4 +950,8 @@ function eggSpawnFor(archetype: EnemyArchetype, roll: number): EnemySpawn {
 
 function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n));
+}
+
+function capitalize(s: string): string {
+  return s.length === 0 ? s : `${s[0]!.toUpperCase()}${s.slice(1)}`;
 }

@@ -50,6 +50,11 @@ describe('applyUpgrades', () => {
     expect(result.toxinCharges).toBe(1);
   });
 
+  it('adds agitation charges from "centrifuge_1"', () => {
+    const result = applyUpgrades(BASE, [{ id: 'centrifuge_1', stacks: 1 }]);
+    expect(result.agitationCharges).toBe(1);
+  });
+
   it('applies tool radius research', () => {
     const result = applyUpgrades({ ...BASE, nutrientRadius: 20, toxinRadius: 24 }, [
       { id: 'food_radius_1', stacks: 1 },

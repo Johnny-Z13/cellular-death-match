@@ -50,7 +50,10 @@ export function isCellBoundary(g: Grid, x: number, y: number): boolean {
   const here = getCell(g, x, y);
   for (const [dx, dy] of NEIGHBOR_DIRS) {
     const n = neighborCoord(g, x, y, dx, dy);
-    if (n === null) continue;
+    if (n === null) {
+      if (here !== 0) return true;
+      continue;
+    }
     if (getCell(g, n[0], n[1]) !== here) return true;
   }
   return false;
@@ -81,7 +84,10 @@ export function neighborVals(g: Grid, x: number, y: number): CellId[] {
   const out: CellId[] = [];
   for (const [dx, dy] of NEIGHBOR_DIRS) {
     const n = neighborCoord(g, x, y, dx, dy);
-    if (n === null) continue;
+    if (n === null) {
+      out.push(0);
+      continue;
+    }
     out.push(getCell(g, n[0], n[1]));
   }
   return out;
