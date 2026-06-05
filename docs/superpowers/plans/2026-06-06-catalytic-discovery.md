@@ -210,6 +210,117 @@ git commit -m "refactor: extract ecosystem tuning constants"
 
 ---
 
+### Task 1.5: Replace Color-Lineage Objectives With Ecology Goals
+
+**Files:**
+- Modify: `src/content/objectives.ts`
+- Modify: `src/game/arena.ts`
+- Modify: `src/main.ts`
+- Modify: `src/ui/render.ts`
+- Modify: `src/ui/debug.ts`
+- Modify: `index.html`
+- Modify: existing objective/arena tests or create objective tests if missing.
+
+- [ ] **Step 1: Audit red/blue player-facing language**
+
+Search:
+
+```bash
+rg -n "red lineage|blue lineage|red|blue|lineage" src index.html tests
+```
+
+Classify each hit:
+
+- Internal simulation anchor, acceptable only if not exposed to the player.
+- Player-facing copy, should be renamed or removed.
+- Color constant, should become semantic identity or event color.
+- Objective logic, should be converted to ecology/species goals.
+
+- [ ] **Step 2: Rewrite objective definitions around species/ecology**
+
+Replace current color-team objectives with ecology goals. Suggested first set:
+
+```ts
+export type ObjectiveKind =
+  | 'preserve_grazers'
+  | 'breed_archetype'
+  | 'discover_breed'
+  | 'dominant_archetype'
+  | 'balanced_ecology'
+  | 'controlled_reaction';
+```
+
+Suggested goals:
+
+- Preserve at least three grazer or non-predator lifeforms until deadline.
+- Breed a target count of a named archetype, such as Snipers or Swarmlets.
+- Discover any hidden breed.
+- Make Boss or Bruiser organisms dominant without sterilizing the dish.
+- Keep no one lifeform family above the dominance cap.
+- Trigger a named catalytic reaction while keeping minimum living coverage.
+
+Keep objective names short and player-legible. Avoid `red`, `blue`, and generic `lineage` in player-facing objective names, descriptions, targets, HUD summaries, and ticker messages.
+
+- [ ] **Step 3: Update objective metrics**
+
+In `src/game/arena.ts`, replace `redVol`/`blueLiving` objective metrics with semantic metrics:
+
+- count by archetype.
+- count by trait or ecology role.
+- living coverage.
+- dominant archetype/breed.
+- discovered breed/reaction counts.
+- control sample volume only if an objective explicitly needs it.
+
+If cell `1` remains as an internal control sample, name that concept internally as `CONTROL_SAMPLE_ID` or similar. Do not call it red lineage in UI-facing functions.
+
+- [ ] **Step 4: Update HUD, ticker, debug, and renderer copy**
+
+Replace UI strings such as:
+
+- `Red lineage is near collapse.`
+- `Blue lineage is under threat.`
+- `red lineage`
+- `blue lineage sample`
+
+Use species/ecology copy instead:
+
+- `Control sample is destabilizing.`
+- `Grazer population is thinning.`
+- `Sniper colonies are dominant.`
+- `Boss organisms are reshaping the dish.`
+
+Renderer comments and palette names should also stop encoding "lifeforms are blue". Colors are lifeform identity colors, not teams.
+
+- [ ] **Step 5: Verify objective behavior**
+
+Run:
+
+```bash
+npm test -- tests/game/arena.test.ts
+npm run build
+```
+
+Expected: PASS.
+
+- [ ] **Step 6: Browser smoke**
+
+Check:
+
+- Objectives read as species/ecology tasks.
+- HUD does not expose red/blue lineage framing.
+- Dish log explains population changes using lifeform names, traits, or ecology roles.
+- Debug-only labels are clearly debug/control-sample language.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add src/content/objectives.ts src/game/arena.ts src/main.ts src/ui/render.ts src/ui/debug.ts index.html tests
+git commit -m "feat: replace lineage objectives with ecology goals"
+```
+
+---
+
 ### Task 2: Add Catalysis Content Definitions
 
 **Files:**
@@ -1287,7 +1398,7 @@ git commit -m "feat: wire discovery persistence debug controls"
 
 ---
 
-### Task 9: Clean Runtime UI And Add Lifeform Inspector
+### Task 9: Audit UI Meaning And Add Lifeform Identity Inspector
 
 **Files:**
 - Modify: `index.html`
@@ -1297,11 +1408,61 @@ git commit -m "feat: wire discovery persistence debug controls"
 - Modify: `src/game/input.ts` if shared keyboard handling is the cleanest integration point.
 - Modify: `src/styles.css`
 
-- [ ] **Step 1: Trace current UI ownership**
+- [ ] **Step 1: Trace current UI ownership and meaning**
 
-Read `index.html`, `src/main.ts`, `src/ui/screens.ts`, `src/ui/debug.ts`, and `src/game/input.ts`. Confirm where keyboard input, debug inspector visibility, lifeform list rendering, and static control reminders currently live before editing.
+Read `index.html`, `src/main.ts`, `src/ui/screens.ts`, `src/ui/debug.ts`, `src/ui/render.ts`, `src/audio/ecologyAudio.ts`, and `src/game/input.ts`. Confirm where keyboard input, debug inspector visibility, lifeform list rendering, static control reminders, lifeform colors, and audio hooks currently live before editing.
 
-- [ ] **Step 2: Define runtime overlay state**
+Create a short checklist in the implementation notes for each UI surface:
+
+- Toolbox: what action each control communicates.
+- HUD: what state the player can act on.
+- Debug/menu: what is debug-only.
+- Lifeform guide: how each lifeform is identified.
+- Dish log: what events it explains.
+- Canvas: what color, motion, and event markers mean.
+
+Remove, rename, or hide UI that does not communicate a current game concept.
+
+- [ ] **Step 1.5: Establish layout line boxes**
+
+Before final visual styling, define a simple layout grid and stable bounding boxes for the main UI surfaces:
+
+- Dish.
+- Toolbox.
+- HUD.
+- Lifeform guide.
+- Dish log.
+- Escape/debug menu.
+- Fullscreen/presentation viewport.
+
+Use CSS variables for spacing and panel sizing where practical:
+
+```css
+:root {
+  --ui-grid: 8px;
+  --ui-gap: 12px;
+  --panel-radius: 8px;
+}
+```
+
+During implementation, it is acceptable to add temporary debug outline classes or a debug menu toggle for layout boxes. Do not leave loud debug outlines on by default in normal play. Verify that panel bounds do not shift when copy, counters, hover states, or selected lifeform info changes.
+
+- [ ] **Step 2: Define fullscreen and presentation behavior**
+
+Keep the default dish presentation phone-portrait friendly. Treat the square Petri dish as the primary playable object unless a later visual prototype proves another aspect is better.
+
+Add or plan a fullscreen/presentation mode:
+
+- A control in the Escape menu can enter fullscreen where supported.
+- Tapping/clicking the dish in presentation mode can reveal minimal controls.
+- Escape exits overlays or fullscreen depending on browser behavior.
+- On iPhone/mobile, respect safe-area insets and avoid permanent controls over the dish.
+- Do not stretch the simulation grid; use `aspect-ratio`, letterboxing, or pillarboxing.
+- Support a low-chrome "visualizer" state for long-running simulations/screensaver-style viewing.
+
+If browser fullscreen APIs are inconsistent on mobile, implement the layout mode first and use native fullscreen only where reliable.
+
+- [ ] **Step 3: Define runtime overlay state**
 
 In `src/main.ts`, add explicit state for UI chrome:
 
@@ -1315,7 +1476,7 @@ interface RuntimeOverlayState {
 
 Use this state to drive CSS classes or `hidden` attributes. The default runtime view should hide the large debug inspector and static control-reminder block.
 
-- [ ] **Step 3: Add Escape menu/debug behavior**
+- [ ] **Step 4: Add Escape menu/debug behavior**
 
 Add Escape behavior:
 
@@ -1326,13 +1487,42 @@ Add Escape behavior:
 
 If `src/game/input.ts` already centralizes key ownership, add a menu-open guard there. If Escape handling is simpler in `src/main.ts`, keep it there and document why in code only if the flow is not obvious.
 
-- [ ] **Step 4: Move control reminders out of the permanent debug panel**
+- [ ] **Step 5: Move control reminders out of the permanent debug panel**
 
 In `index.html`, move the existing always-visible controls copy into an overlay/menu section. Keep FPS, tick, boundary, persistence controls, and save-management actions inside a debug area that is hidden by default.
 
 Do not remove the debug data. The requirement is to recover screen space during normal play, not lose diagnostics.
 
-- [ ] **Step 5: Add lifeform selection API**
+- [ ] **Step 6: Define lifeform identity data**
+
+Extend content definitions or add a small identity map so every base archetype and hidden breed has:
+
+- display name.
+- role text.
+- primary and accent color.
+- behavior silhouette summary.
+- sound identity id.
+- icon/rendering style hint.
+
+Example:
+
+```ts
+export interface LifeformIdentity {
+  id: string;
+  name: string;
+  role: string;
+  colors: {
+    primary: [number, number, number];
+    accent: [number, number, number];
+  };
+  soundId: string;
+  renderStyle: 'cellular' | 'needle' | 'anchor' | 'crystal' | 'glitter' | 'cycle';
+}
+```
+
+Rare discovered breeds should use special styles such as restrained Commodore color cycling, glitter pixels, crystalline edges, or shimmer. Do not make base lifeforms all blue/cyan by default unless that is a deliberate individual identity.
+
+- [ ] **Step 7: Add lifeform selection API**
 
 In `src/ui/screens.ts`, extend the screen API so the lifeform guide can report hover/focus/click selection and render selected info:
 
@@ -1345,11 +1535,13 @@ The selected panel should show:
 
 - Lifeform name.
 - Short role.
+- Color and icon identity.
+- Sound identity label if useful, such as `scratchy pulse` or `glass tick`.
 - Traits or discovered breed tags.
 - Caution hint when the lifeform participates in volatile recipes.
 - Discovery status for hidden breeds.
 
-- [ ] **Step 6: Make lifeform icons compact and expressive**
+- [ ] **Step 8: Make lifeform icons compact and expressive**
 
 In `src/styles.css`, reduce the lifeform list footprint. Use small translucent icon buttons with subtle CSS animation:
 
@@ -1373,25 +1565,41 @@ In `src/styles.css`, reduce the lifeform list footprint. Use small translucent i
 
 Keep animation subtle and avoid layout shift. Respect `prefers-reduced-motion`.
 
-- [ ] **Step 7: Browser smoke**
+- [ ] **Step 9: Align renderer and audio identity**
+
+In `src/ui/render.ts`, make cell colors come from the lifeform identity map, including hidden-breed styles when available. In the sound-design task, use the same identity ids for audio mapping so a lifeform's color, icon, behavior, and sound reinforce one another.
+
+This step should make rare breeds visually distinct through one or more of:
+
+- palette cycling.
+- glitter/spark pixels.
+- edge shimmer.
+- crystalline outline.
+- different bullet or pulse color.
+
+- [ ] **Step 10: Browser smoke**
 
 Run dev server and check:
 
 - `375x667`: debug inspector is hidden by default, Escape opens/closes the menu, dish and controls have more breathing room.
-- `390x844`: lifeform icons fit without crowding the dish log.
+- `390x844`: lifeform icons fit without crowding the dish log and are distinguishable without reading long text.
 - `1280x720`: lifeform hover/focus/click reveals info without covering the dish.
+- Fullscreen/presentation mode keeps the dish framed cleanly, does not stretch the simulation, and can hide/reveal chrome.
+- On phone portrait, fullscreen still leaves core controls reachable or recoverable through tap/Escape/menu.
+- UI surfaces snap to the spacing grid and line boxes remain stable as dynamic text changes.
+- Base lifeforms and rare discoveries are visually identifiable by color/render style, not only by text.
 
-- [ ] **Step 8: Verify build**
+- [ ] **Step 11: Verify build**
 
 Run: `npm run build`
 
 Expected: PASS.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 12: Commit**
 
 ```bash
 git add index.html src/main.ts src/ui/screens.ts src/ui/debug.ts src/game/input.ts src/styles.css
-git commit -m "feat: clean runtime UI and inspect lifeforms"
+git commit -m "feat: align UI with lifeform identity"
 ```
 
 ---
@@ -1856,6 +2064,10 @@ Play at least two epochs and tune only data constants for these outcomes:
 - Hidden breed discovery should happen in a normal run without requiring exact pixel-perfect setup.
 - Debug/FPS/controls are reachable from Escape but not permanently crowding normal play.
 - Lifeform icons are compact, selectable, and readable through hover/focus/click info.
+- Player-facing objectives and HUD copy use ecology/species concepts instead of red/blue lineage framing.
+- UI panels and controls use stable line boxes on a deliberate spacing grid.
+- Fullscreen/presentation mode supports phone portrait and windowed desktop without distorting the dish.
+- Base and rare lifeforms are identifiable by color, behavior, sound, icon, and render style.
 - Sound events are distinctive, layered, and capped so they add energy without overwhelming the dish.
 - Dish log should explain discoveries without becoming noisy.
 - Dish event markers should make visible mutations and reactions obvious without becoming noisy.
@@ -1886,10 +2098,11 @@ If there are no tuning changes after verification, skip this commit and report t
 Spec coverage:
 
 - Catalytic reactions: Tasks 2, 5, 7, and 10.
+- Ecology objective language: Task 1.5.
 - Stronger water behavior: Task 4.
 - Hidden breeds: Tasks 2 and 6.
 - Folding/Rule-30-inspired local rule: Task 7.
-- Runtime UI cleanup and lifeform inspection: Task 9.
+- Runtime UI cleanup and lifeform identity inspection: Task 9.
 - Dish event signposting: Task 10.
 - Retro VDU dish log: Task 11.
 - Sound design and audio layering: Task 12.

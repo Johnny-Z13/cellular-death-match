@@ -145,8 +145,33 @@ This gives us a progression foundation without committing to permanent meta-prog
 
 Keep the Petri dish as the hero. UI panels should feel like retro lab monitors around the dish rather than decorative cards. Desktop can grow richer monitor panels. Mobile must stay thumb-friendly and avoid permanent panels over the dish.
 
+Every UI component should earn its place by communicating a game concept the player can act on. Current red/blue lineage language is legacy framing from the old objective-anchor model and conflicts with species selection. Player-facing UI should talk about lifeforms, strains, traits, reactions, dominance, discoveries, and sample state. If an internal anchor still exists, present it as a control sample, contaminant, or objective specimen only when the player needs to understand it.
+
+Layout should be designed on visible line boxes before visual polish. Use a consistent spacing grid, stable panel bounds, and optional debug outlines so the HUD, toolbox, lifeform guide, dish log, and menu can be aligned before final styling. This is especially important on mobile where every permanent panel competes with the dish.
+
+The Petri dish is already close to the right design size. Preserve a phone-portrait playable default and a tidy desktop windowed layout. If aspect changes are explored, do not stretch the simulation to fill arbitrary rectangles. Prefer a square dish with responsive framing, or a deliberate fullscreen presentation mode that letterboxes/pillarboxes safely.
+
+Fullscreen should support two moods:
+
+- Play mode: controls remain reachable, with safe-area padding on phones.
+- Visualizer mode: chrome fades back so long-running simulations can look like a screensaver or music visualizer, with tap/Escape bringing UI back.
+
+Lifeforms need a strong identity stack:
+
+- Distinct color palette that does not rely only on "blue team" meaning.
+- Distinct behavior silhouette in the dish.
+- Distinct sound or audio layer.
+- Distinct icon/swatch treatment in the lifeform guide.
+- Clear label and short role text when selected, hovered, or focused.
+
+Discovered rare breeds should feel visibly special. Use restrained Commodore-style palettes, color cycling, glitter/sparkle pixels, altered edge rendering, scanline shimmer, or other rendering differences so a player can say "that's this guy" before reading a label. Do not rely on sparkle alone; rare breeds still need readable behavior and sound identity.
+
 For this pass:
 
+- Review every UI component for game meaning and remove or rename legacy red/blue lineage framing.
+- Snap UI panels and controls to a deliberate layout grid with stable line boxes before final visual styling.
+- Preserve phone-portrait play and add a fullscreen/presentation mode without distorting the dish.
+- Replace color-team objectives with species, trait, reaction, discovery, and dominance goals.
 - Upgrade Dish Log styling and size.
 - Use VDU-inspired monitor styling with restrained green, amber, red, cyan, and violet event tones.
 - Add canvas signposting for visible mutations, catalytic reactions, and discoveries.
@@ -213,6 +238,9 @@ Use TDD for every subsystem.
 - The player can discover at least five named catalytic or breed events in one run.
 - Water has at least three distinct tactical uses.
 - Violent reactions are visibly stronger than current reactions but do not cause immediate arbitrary run loss.
+- Player-facing UI no longer uses red/blue lineage as the main objective language.
+- Lifeforms are identifiable by combined color, behavior, sound, icon, and short label/role text.
+- The dish remains playable in portrait and can enter a fullscreen/presentation mode for long-running visualizer-style simulations.
 - Dish Log communicates discoveries clearly and feels more like a lab monitor.
 - Discovery save data can be toggled, cleared, and revealed from debug controls.
 - Numeric catalytic/ecology tuning is no longer buried only in `arena.ts`.
