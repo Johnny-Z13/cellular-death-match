@@ -404,7 +404,15 @@ function readAudioFrame(ar: Arena): {
     }
   }
   const activeReactions = ar.getToolEffects()
-    .filter((effect) => effect.type === 'bloom' || effect.type === 'brine' || effect.type === 'lysis' || effect.type === 'foam')
+    .filter((effect) =>
+      effect.type === 'bloom'
+      || effect.type === 'brine'
+      || effect.type === 'lysis'
+      || effect.type === 'foam'
+      || effect.type === 'conduit'
+      || effect.type === 'flare'
+      || effect.type === 'crystal'
+      || effect.type === 'fold_fault')
     .filter((effect) => effect.ttl > effect.maxTtl - 4).length;
   reactions += activeReactions;
   mutations += ar.getToolEffects()

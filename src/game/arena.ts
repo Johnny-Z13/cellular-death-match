@@ -20,6 +20,13 @@ import {
   TOOL_EFFECT_TUNING,
   TOOL_TUNING,
 } from '../content/ecologyTuning';
+import {
+  reactionRecipeFor,
+  type BreedId,
+  type CatalysisEffectType,
+  type DiscoveryNoteId,
+  type ReactionContext,
+} from '../content/catalysis';
 import { type ObjectiveDef, objectiveForEpoch } from '../content/objectives';
 import { bruiserStep } from './enemies/bruiser';
 import { sniperStep, type SniperState } from './enemies/sniper';
@@ -85,6 +92,11 @@ export interface EcologyInfo {
   dominant: string;
   signals: string[];
   crisis: string;
+  discoveries: {
+    breedIds: BreedId[];
+    noteIds: DiscoveryNoteId[];
+    latest: string[];
+  };
 }
 
 export interface ObjectiveProgress {
@@ -226,11 +238,21 @@ export function createArena(opts: CreateArenaOpts): Arena {
   const toolEffects: ToolEffect[] = [];
   const toolStates: Record<LabTool, ToolState> = toolLoadoutFor(opts.player);
   const signals: string[] = [];
+  const discoveredBreedIds = new Set<BreedId>();
+  const discoveredNoteIds = new Set<DiscoveryNoteId>();
+  const discoveryMessages: string[] = [];
 
   function pushSignal(message: string): void {
     if (signals[0] === message) return;
     signals.unshift(message);
     while (signals.length > 5) signals.pop();
+  }
+
+  function discoverNote(id: DiscoveryNoteId, message: string): void {
+    if (!discoveredNoteIds.has(id)) discoveredNoteIds.add(id);
+    discoveryMessages.unshift(message);
+    pushSignal(message);
+    while (discoveryMessages.length > 8) discoveryMessages.pop();
   }
 
   for (let i = 0; i < nEnemies; i++) {
@@ -327,6 +349,11 @@ export function createArena(opts: CreateArenaOpts): Arena {
         dominant,
         signals: [...signals],
         crisis: activeCrisis ? CRISES[activeCrisis.id].name : 'none',
+        discoveries: {
+          breedIds: [...discoveredBreedIds],
+          noteIds: [...discoveredNoteIds],
+          latest: [...discoveryMessages],
+        },
       };
     },
     getObjectiveProgress(): ObjectiveProgress {
@@ -382,8 +409,16 @@ export function createArena(opts: CreateArenaOpts): Arena {
 
       toolState.charges -= 1;
       const effect = toolEffectFor(tool, pos, opts.player, state.rng.randInt(1_000_000));
-      pulseToolEffect(state, effect, archetypes);
       toolEffects.push(effect);
+      const catalyticReaction = catalyticReactionFor(
+        effect,
+        toolEffects,
+        state,
+        archetypes,
+        agitationTicksRemaining > 0,
+        state.rng.randInt(1_000_000),
+      );
+      pulseToolEffect(state, effect, archetypes);
       const waterReaction = applyWaterTransformations(
         effect,
         toolEffects,
@@ -400,6 +435,12 @@ export function createArena(opts: CreateArenaOpts): Arena {
         reactionCount += 1;
         pulseToolEffect(state, reaction, archetypes);
         toolEffects.push(reaction);
+      }
+      if (catalyticReaction) {
+        reactionCount += 1;
+        pulseToolEffect(state, catalyticReaction.effect, archetypes);
+        toolEffects.push(catalyticReaction.effect);
+        discoverNote(catalyticReaction.noteId, catalyticReaction.message);
       }
       while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
       return true;
@@ -618,6 +659,90 @@ function reactionFor(newEffect: ToolEffect, effects: ToolEffect[], seed: number)
   return null;
 }
 
+function catalyticReactionFor(
+  newEffect: ToolEffect,
+  effects: ToolEffect[],
+  state: SimState,
+  archetypes: Map<CellId, EnemySpawn>,
+  agitated: boolean,
+  seed: number,
+): { effect: ToolEffect; noteId: DiscoveryNoteId; message: string } | null {
+  const newType = catalysisEffectTypeFor(newEffect.type);
+  if (!newType) return null;
+
+  for (const effect of effects) {
+    if (effect === newEffect) continue;
+    const otherType = catalysisEffectTypeFor(effect.type);
+    if (!otherType) continue;
+
+    const dist = distanceBetween(state, newEffect.pos, effect.pos);
+    if (dist > reagentOverlapDistance(newEffect, effect)) continue;
+
+    const context = reactionContextFor(state, archetypes, {
+      ...newEffect,
+      pos: [
+        (newEffect.pos[0] + effect.pos[0]) / 2,
+        (newEffect.pos[1] + effect.pos[1]) / 2,
+      ],
+      radius: Math.max(newEffect.radius, effect.radius) + 10,
+    }, agitated);
+    const recipe = reactionRecipeFor([newType, otherType], context);
+    if (!recipe) continue;
+
+    return {
+      effect: derivedEffect(
+        recipe.effect.type,
+        newEffect,
+        effect,
+        seed,
+        recipe.effect.ttl,
+        recipe.effect.radiusBonus,
+      ),
+      noteId: recipe.discoveryNoteId,
+      message: reactionMessageFor(recipe.effect.type, recipe.name),
+    };
+  }
+
+  return null;
+}
+
+function reactionContextFor(
+  state: SimState,
+  archetypes: Map<CellId, EnemySpawn>,
+  effect: ToolEffect,
+  agitated: boolean,
+): ReactionContext {
+  const traits: TraitId[] = [];
+  const archetypeSet = new Set<EnemyArchetype>();
+  for (const [id, cell] of state.cells) {
+    if (id === PLAYER_ID || (cell.vol <= 0 && cell.targetVol <= 0)) continue;
+    const dist = distanceBetween(state, cell.center, effect.pos);
+    if (dist > effect.radius + 10) continue;
+    const spawn = archetypes.get(id);
+    if (!spawn) continue;
+    archetypeSet.add(spawn.archetype);
+    for (const trait of spawn.traits ?? []) traits.push(trait);
+  }
+  return { traits, archetypes: [...archetypeSet], agitated };
+}
+
+function reactionMessageFor(type: CatalysisEffectType, recipeName: string): string {
+  if (type === 'flare') return `CATALYTIC FLARE: ${recipeName} discovered.`;
+  if (type === 'crystal') return `CATALYTIC CRYSTAL: ${recipeName} discovered.`;
+  if (type === 'fold_fault') return `FOLDING FAULT: ${recipeName} discovered.`;
+  return `CATALYTIC REACTION: ${recipeName} discovered.`;
+}
+
+function catalysisEffectTypeFor(type: ToolEffectType): CatalysisEffectType | null {
+  if (type === 'mutation' || type === 'hatch') return null;
+  return type;
+}
+
+function distanceBetween(state: SimState, a: [number, number], b: [number, number]): number {
+  const v = displacementVec(a, b, state.grid.LX, state.grid.LY, state.grid.wrap);
+  return Math.hypot(v[0], v[1]);
+}
+
 function applyWaterTransformations(
   newEffect: ToolEffect,
   effects: ToolEffect[],
@@ -663,10 +788,14 @@ function nearestOverlappingEffect(
   for (const effect of effects) {
     if (effect === newEffect || effect.type !== type) continue;
     const dist = Math.hypot(newEffect.pos[0] - effect.pos[0], newEffect.pos[1] - effect.pos[1]);
-    if (dist > Math.min(newEffect.radius, effect.radius) * 0.9) continue;
+    if (dist > reagentOverlapDistance(newEffect, effect)) continue;
     if (!nearest || dist < nearest.dist) nearest = { effect, dist };
   }
   return nearest?.effect ?? null;
+}
+
+function reagentOverlapDistance(a: ToolEffect, b: ToolEffect): number {
+  return a.radius + b.radius;
 }
 
 function derivedEffect(
@@ -1098,17 +1227,22 @@ function pulseToolEffect(
       cell.targetVol = clamp(cell.targetVol + WATER_PULSE_GROWTH * 1.25 * strength, 25, 2400);
     } else if (effect.type === 'bloom') {
       cell.targetVol = clamp(cell.targetVol + NUTRIENT_PULSE_GROWTH * 1.35 * strength, 25, 2400);
+    } else if (effect.type === 'flare') {
+      const toxinMultiplier = toxinMultiplierForCell(archetypes, id);
+      cell.targetVol = clamp(cell.targetVol - ACID_PULSE_DAMAGE * 1.35 * strength * toxinMultiplier, 12, 2400);
+    } else if (effect.type === 'crystal') {
+      cell.targetVol = clamp(cell.targetVol - SALT_PULSE_DAMAGE * 0.7 * strength, 12, 2400);
     } else {
       const toxinMultiplier = toxinMultiplierForCell(archetypes, id);
       const damage =
-        effect.type === 'acid' || effect.type === 'lysis' ? ACID_PULSE_DAMAGE :
+        effect.type === 'acid' || effect.type === 'lysis' || effect.type === 'fold_fault' ? ACID_PULSE_DAMAGE :
         effect.type === 'salt' || effect.type === 'brine' ? SALT_PULSE_DAMAGE :
         TOXIN_PULSE_DAMAGE;
       cell.targetVol = clamp(cell.targetVol - damage * strength * toxinMultiplier, 12, 2200);
     }
   }
-  if (effect.type === 'toxin' || effect.type === 'acid' || effect.type === 'lysis') {
-    erodePixels(state, effect, effect.type === 'acid' ? 112 : effect.type === 'lysis' ? 150 : 68, archetypes);
+  if (effect.type === 'toxin' || effect.type === 'acid' || effect.type === 'lysis' || effect.type === 'flare') {
+    erodePixels(state, effect, effect.type === 'acid' ? 6 : effect.type === 'lysis' || effect.type === 'flare' ? 150 : 68, archetypes);
   }
 }
 
@@ -1192,10 +1326,11 @@ function applyToolEffects(
         vy += dirY * strength * 0.4;
         speedBoost += WATER_SPREAD_SPEED * 0.75 * strength;
         cell.targetVol = clamp(cell.targetVol + WATER_GROWTH_PER_TICK * 1.6 * strength, 25, 2400);
-      } else if (effect.type === 'salt' || effect.type === 'brine') {
-        cell.intent.speed = Math.min(cell.intent.speed, effect.type === 'brine' ? 2.4 : SALT_MAX_SPEED);
+      } else if (effect.type === 'salt' || effect.type === 'brine' || effect.type === 'crystal') {
+        cell.intent.speed = Math.min(cell.intent.speed, effect.type === 'crystal' ? 2.2 : effect.type === 'brine' ? 2.4 : SALT_MAX_SPEED);
+        if (effect.type === 'crystal') speedBoost = Math.min(speedBoost, 2.2);
         cell.targetVol = clamp(
-          cell.targetVol - (effect.type === 'brine' ? BRINE_SHRINK_PER_TICK : SALT_SHRINK_PER_TICK) * strength,
+          cell.targetVol - (effect.type === 'crystal' ? SALT_SHRINK_PER_TICK * 0.55 : effect.type === 'brine' ? BRINE_SHRINK_PER_TICK : SALT_SHRINK_PER_TICK) * strength,
           12,
           2200,
         );
@@ -1203,11 +1338,11 @@ function applyToolEffects(
         const toxinMultiplier = toxinMultiplierForCell(archetypes, id);
         vx -= dirX * strength;
         vy -= dirY * strength;
-        const flee = effect.type === 'acid' || effect.type === 'lysis' || effect.type === 'foam'
+        const flee = effect.type === 'acid' || effect.type === 'lysis' || effect.type === 'foam' || effect.type === 'flare' || effect.type === 'fold_fault'
           ? ACID_FLEE_SPEED
           : TOXIN_FLEE_SPEED;
         speedBoost += flee * strength * toxinMultiplier;
-        const shrink = effect.type === 'acid' || effect.type === 'lysis' || effect.type === 'foam'
+        const shrink = effect.type === 'acid' || effect.type === 'lysis' || effect.type === 'foam' || effect.type === 'flare' || effect.type === 'fold_fault'
           ? ACID_SHRINK_PER_TICK
           : TOXIN_SHRINK_PER_TICK;
         cell.targetVol = clamp(cell.targetVol - shrink * strength * toxinMultiplier, 12, 2200);

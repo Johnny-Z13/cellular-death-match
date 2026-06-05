@@ -98,12 +98,12 @@ export function createEcologyAudio(): EcologyAudio {
     if (!ctx || !out) return;
     const c = ctx;
     const now = c.currentTime;
-    const strength = Math.min(1, amount / 3);
+    const strength = Math.min(1, amount / 5);
 
     const osc = c.createOscillator();
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(520 + Math.random() * 180, now);
-    osc.frequency.exponentialRampToValueAtTime(150 + Math.random() * 60, now + 0.24);
+    osc.frequency.setValueAtTime(520 + Math.random() * 180 + 120 * strength, now);
+    osc.frequency.exponentialRampToValueAtTime(150 + Math.random() * 60, now + 0.22 + 0.06 * strength);
 
     const filter = c.createBiquadFilter();
     filter.type = 'bandpass';
@@ -112,8 +112,8 @@ export function createEcologyAudio(): EcologyAudio {
 
     const gain = c.createGain();
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.022 + 0.046 * strength, now + 0.012);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+    gain.gain.linearRampToValueAtTime(0.022 + 0.052 * strength, now + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3 + 0.04 * strength);
 
     osc.connect(filter).connect(gain).connect(out);
     osc.start(now);

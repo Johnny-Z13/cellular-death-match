@@ -177,7 +177,7 @@ export const REACTION_RECIPES: readonly ReactionRecipe[] = [
     id: 'salt_water_crystal',
     name: 'Salt-Water Crystal',
     inputs: ['salt', 'water'],
-    traits: ['toxin_resistant'],
+    traits: ['gelatinous'],
     archetypes: ['bruiser', 'mirror'],
     caution: 'volatile',
     discoveryNoteId: 'recipe_salt_water_crystal',

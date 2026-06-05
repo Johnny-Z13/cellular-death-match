@@ -822,6 +822,52 @@ describe('arena ecosystem mode', () => {
     expect(arena.getEcology().signals.some((signal) => signal.includes('water diluted'))).toBe(true);
   });
 
+  it('creates a critical acid toxin flare near fragile life', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 220,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        { archetype: 'sniper' as const, targetVol: 140, speed: 10, engulfMultiplier: 1, traits: ['fragile'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('acid', cell.center)).toBe(true);
+    expect(arena.applyTool('toxin', cell.center)).toBe(true);
+
+    expect(arena.getToolEffects().some((effect) => effect.type === 'flare')).toBe(true);
+    expect(arena.getEcology().signals.some((signal) => signal.includes('CATALYTIC FLARE'))).toBe(true);
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_acid_toxin_flare');
+  });
+
+  it('creates a crystal reaction from salt and water near gelatinous life', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 221,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        { archetype: 'bruiser' as const, targetVol: 260, speed: 8, engulfMultiplier: 6, traits: ['gelatinous'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('salt', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+
+    expect(arena.getToolEffects().some((effect) => effect.type === 'crystal')).toBe(true);
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    expect(cell.intent.speed).toBeLessThanOrEqual(2.6);
+  });
+
   it('periodically drops random reagent accidents in ecosystem mode', () => {
     const arena = createArena({
       LX: 80,
