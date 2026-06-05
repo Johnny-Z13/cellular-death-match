@@ -12,6 +12,14 @@ import {
   type CrisisId,
   type TraitId,
 } from '../content/ecology';
+import {
+  AGITATION_TUNING,
+  ARENA_TIMING,
+  ECOSYSTEM_LIMITS,
+  OBJECTIVE_TUNING,
+  TOOL_EFFECT_TUNING,
+  TOOL_TUNING,
+} from '../content/ecologyTuning';
 import { type ObjectiveDef, objectiveForEpoch } from '../content/objectives';
 import { bruiserStep } from './enemies/bruiser';
 import { sniperStep, type SniperState } from './enemies/sniper';
@@ -118,49 +126,49 @@ export interface CreateArenaOpts {
 const PLAYER_ID = 1;
 const ENGULF_DECAY_PER_FRAME = 0.035;
 const MC_STEPS_PER_TICK = 1100;
-const DEFAULT_EPOCH_TICKS = 60 * 75;
-const MUTATION_INTERVAL_TICKS = 60 * 10;
-const RESEED_INTERVAL_TICKS = 60 * 5;
-const OUTBREAK_INTERVAL_TICKS = 60 * 7;
-const RESUPPLY_INTERVAL_TICKS = 60 * 11;
-const ACCIDENT_INTERVAL_TICKS = 60 * 13;
-const EMERGENCY_EGG_REFILL_TICKS = 60 * 8;
-const CRISIS_INTERVAL_TICKS = 60 * 18;
-const ECOSYSTEM_MIN_POPULATION = 5;
-const QUIET_EGG_REFILL_POPULATION = 2;
-const ECOSYSTEM_MAX_POPULATION = 28;
-const PLAYER_THREAT_RANGE = 16;
-const MAX_TOOL_EFFECTS = 10;
-const DEFAULT_AGITATE_CHARGES = 2;
-const AGITATION_DURATION_TICKS = 90;
-const AGITATION_MIN_SPEED = 10;
-const AGITATION_EXTRA_SPEED = 14;
-const OUTBREAK_MIN_TARGET_VOL = 360;
-const OUTBREAK_HUNTER_COUNT = 3;
-const NUTRIENT_PULSE_GROWTH = 80;
-const NUTRIENT_GROWTH_PER_TICK = 1.8;
-const NUTRIENT_PULL_SPEED = 5.5;
-const TOXIN_PULSE_DAMAGE = 42;
-const TOXIN_SHRINK_PER_TICK = 0.24;
-const TOXIN_FLEE_SPEED = 13;
-const WATER_PULSE_GROWTH = 34;
-const WATER_GROWTH_PER_TICK = 0.58;
-const WATER_SPREAD_SPEED = 4.2;
-const SALT_PULSE_DAMAGE = 24;
-const SALT_SHRINK_PER_TICK = 0.38;
-const SALT_MAX_SPEED = 3.6;
-const ACID_PULSE_DAMAGE = 76;
-const ACID_SHRINK_PER_TICK = 0.66;
-const ACID_FLEE_SPEED = 9;
-const BLOOM_GROWTH_PER_TICK = 3.1;
-const BRINE_SHRINK_PER_TICK = 0.72;
-const CULL_RED_MAX_VOL = 180;
-const CULL_BLUE_MIN = 2;
-const PRESERVE_BLUE_MIN = 1;
-const BLOOM_MIN_COVERAGE = 0.10;
-const STERILIZE_MAX_COVERAGE = 0.04;
-const BALANCE_MAX_DOMINANCE = 0.56;
-const BALANCE_BLUE_MIN = 2;
+const DEFAULT_EPOCH_TICKS = ARENA_TIMING.defaultEpochTicks;
+const MUTATION_INTERVAL_TICKS = ARENA_TIMING.mutationIntervalTicks;
+const RESEED_INTERVAL_TICKS = ARENA_TIMING.reseedIntervalTicks;
+const OUTBREAK_INTERVAL_TICKS = ARENA_TIMING.outbreakIntervalTicks;
+const RESUPPLY_INTERVAL_TICKS = ARENA_TIMING.resupplyIntervalTicks;
+const ACCIDENT_INTERVAL_TICKS = ARENA_TIMING.accidentIntervalTicks;
+const EMERGENCY_EGG_REFILL_TICKS = ARENA_TIMING.emergencyEggRefillTicks;
+const CRISIS_INTERVAL_TICKS = ARENA_TIMING.crisisIntervalTicks;
+const ECOSYSTEM_MIN_POPULATION = ECOSYSTEM_LIMITS.minPopulation;
+const QUIET_EGG_REFILL_POPULATION = ECOSYSTEM_LIMITS.quietEggRefillPopulation;
+const ECOSYSTEM_MAX_POPULATION = ECOSYSTEM_LIMITS.maxPopulation;
+const PLAYER_THREAT_RANGE = ECOSYSTEM_LIMITS.playerThreatRange;
+const MAX_TOOL_EFFECTS = ECOSYSTEM_LIMITS.maxToolEffects;
+const DEFAULT_AGITATE_CHARGES = AGITATION_TUNING.defaultCharges;
+const AGITATION_DURATION_TICKS = AGITATION_TUNING.durationTicks;
+const AGITATION_MIN_SPEED = AGITATION_TUNING.minSpeed;
+const AGITATION_EXTRA_SPEED = AGITATION_TUNING.extraSpeed;
+const OUTBREAK_MIN_TARGET_VOL = ECOSYSTEM_LIMITS.outbreakMinTargetVol;
+const OUTBREAK_HUNTER_COUNT = ECOSYSTEM_LIMITS.outbreakHunterCount;
+const NUTRIENT_PULSE_GROWTH = TOOL_EFFECT_TUNING.nutrientPulseGrowth;
+const NUTRIENT_GROWTH_PER_TICK = TOOL_EFFECT_TUNING.nutrientGrowthPerTick;
+const NUTRIENT_PULL_SPEED = TOOL_EFFECT_TUNING.nutrientPullSpeed;
+const TOXIN_PULSE_DAMAGE = TOOL_EFFECT_TUNING.toxinPulseDamage;
+const TOXIN_SHRINK_PER_TICK = TOOL_EFFECT_TUNING.toxinShrinkPerTick;
+const TOXIN_FLEE_SPEED = TOOL_EFFECT_TUNING.toxinFleeSpeed;
+const WATER_PULSE_GROWTH = TOOL_EFFECT_TUNING.waterPulseGrowth;
+const WATER_GROWTH_PER_TICK = TOOL_EFFECT_TUNING.waterGrowthPerTick;
+const WATER_SPREAD_SPEED = TOOL_EFFECT_TUNING.waterSpreadSpeed;
+const SALT_PULSE_DAMAGE = TOOL_EFFECT_TUNING.saltPulseDamage;
+const SALT_SHRINK_PER_TICK = TOOL_EFFECT_TUNING.saltShrinkPerTick;
+const SALT_MAX_SPEED = TOOL_EFFECT_TUNING.saltMaxSpeed;
+const ACID_PULSE_DAMAGE = TOOL_EFFECT_TUNING.acidPulseDamage;
+const ACID_SHRINK_PER_TICK = TOOL_EFFECT_TUNING.acidShrinkPerTick;
+const ACID_FLEE_SPEED = TOOL_EFFECT_TUNING.acidFleeSpeed;
+const BLOOM_GROWTH_PER_TICK = TOOL_EFFECT_TUNING.bloomGrowthPerTick;
+const BRINE_SHRINK_PER_TICK = TOOL_EFFECT_TUNING.brineShrinkPerTick;
+const CULL_RED_MAX_VOL = OBJECTIVE_TUNING.cullRedMaxVol;
+const CULL_BLUE_MIN = OBJECTIVE_TUNING.cullBlueMin;
+const PRESERVE_BLUE_MIN = OBJECTIVE_TUNING.preserveBlueMin;
+const BLOOM_MIN_COVERAGE = OBJECTIVE_TUNING.bloomMinCoverage;
+const STERILIZE_MAX_COVERAGE = OBJECTIVE_TUNING.sterilizeMaxCoverage;
+const BALANCE_MAX_DOMINANCE = OBJECTIVE_TUNING.balanceMaxDominance;
+const BALANCE_BLUE_MIN = OBJECTIVE_TUNING.balanceBlueMin;
 
 interface AiState {
   sniper?: SniperState;
@@ -347,9 +355,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
         toolEffects.push({
           type: 'hatch',
           pos: seedPos,
-          radius: 16,
-          ttl: 60 * 2,
-          maxTtl: 60 * 2,
+          radius: TOOL_TUNING.egg.hatchRadius,
+          ttl: TOOL_TUNING.egg.hatchTtl,
+          maxTtl: TOOL_TUNING.egg.hatchTtl,
           seed: state.rng.randInt(1_000_000),
         });
         while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
@@ -519,12 +527,12 @@ export function createArena(opts: CreateArenaOpts): Arena {
 }
 
 function toolLoadoutFor(player: PlayerConfig): Record<LabTool, ToolState> {
-  const eggCharges = player.eggCharges ?? 8;
-  const nutrientCharges = player.nutrientCharges ?? 5;
-  const toxinCharges = player.toxinCharges ?? 4;
-  const waterCharges = player.waterCharges ?? 6;
-  const saltCharges = player.saltCharges ?? 4;
-  const acidCharges = player.acidCharges ?? 3;
+  const eggCharges = player.eggCharges ?? TOOL_TUNING.egg.charges;
+  const nutrientCharges = player.nutrientCharges ?? TOOL_TUNING.nutrient.charges;
+  const toxinCharges = player.toxinCharges ?? TOOL_TUNING.toxin.charges;
+  const waterCharges = player.waterCharges ?? TOOL_TUNING.water.charges;
+  const saltCharges = player.saltCharges ?? TOOL_TUNING.salt.charges;
+  const acidCharges = player.acidCharges ?? TOOL_TUNING.acid.charges;
   return {
     egg: { charges: eggCharges, maxCharges: eggCharges },
     nutrient: { charges: nutrientCharges, maxCharges: nutrientCharges },
@@ -542,17 +550,12 @@ function toolEffectFor(
   seed: number,
 ): ToolEffect {
   const radius =
-    tool === 'nutrient' ? player.nutrientRadius ?? 20 :
-    tool === 'toxin' ? player.toxinRadius ?? 24 :
-    tool === 'water' ? player.waterRadius ?? 28 :
-    tool === 'salt' ? player.saltRadius ?? 18 :
-    player.acidRadius ?? 17;
-  const maxTtl =
-    tool === 'nutrient' ? 60 * 8 :
-    tool === 'toxin' ? 60 * 7 :
-    tool === 'water' ? 60 * 6 :
-    tool === 'salt' ? 60 * 9 :
-    60 * 5;
+    tool === 'nutrient' ? player.nutrientRadius ?? TOOL_TUNING.nutrient.radius :
+    tool === 'toxin' ? player.toxinRadius ?? TOOL_TUNING.toxin.radius :
+    tool === 'water' ? player.waterRadius ?? TOOL_TUNING.water.radius :
+    tool === 'salt' ? player.saltRadius ?? TOOL_TUNING.salt.radius :
+    player.acidRadius ?? TOOL_TUNING.acid.radius;
+  const maxTtl = TOOL_TUNING[tool].ttl;
   return {
     type: tool,
     pos,
