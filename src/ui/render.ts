@@ -8,13 +8,13 @@ export interface Renderer {
 
 // Cached palette indexed by CellId.
 // - cells[0] (empty) = black.
-// - cells[1] = red lineage, the fixed objective anchor.
-// - cells[2+] (lifeforms) stay in blue/cyan/teal families. Tool effects own
-//   green-gold (nutrient) and purple (toxin), so those hues stay readable.
+// - cells[1] = control sample, the fixed reference culture.
+// - cells[2+] use lifeform identity colors. Tool effects own green-gold
+//   (nutrient) and purple (toxin), so those hues stay readable.
 function buildPalette(nCells: number): Uint8ClampedArray[] {
   const out: Uint8ClampedArray[] = [];
   out.push(new Uint8ClampedArray([0, 0, 0, 255]));        // empty
-  out.push(new Uint8ClampedArray([186, 32, 42, 255]));    // red invasive lineage
+  out.push(new Uint8ClampedArray([186, 32, 42, 255]));    // control sample
   const lifeColors: Array<[number, number, number]> = [
     [42, 150, 214],
     [62, 202, 218],

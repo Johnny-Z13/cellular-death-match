@@ -49,13 +49,15 @@ export const TOOL_EFFECT_TUNING = {
 } as const;
 
 export const OBJECTIVE_TUNING = {
-  cullRedMaxVol: 180,
-  cullBlueMin: 2,
-  preserveBlueMin: 1,
+  preserveGrazerMin: 3,
+  breedTargetCount: 4,
+  controlledReactionMinCount: 1,
+  controlledReactionMinCoverage: 0.04,
+  dominantMinCoverage: 0.04,
   bloomMinCoverage: 0.10,
   sterilizeMaxCoverage: 0.04,
   balanceMaxDominance: 0.56,
-  balanceBlueMin: 2,
+  balanceMinLifeforms: 3,
 } as const;
 
 export const AGITATION_TUNING = {

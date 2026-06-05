@@ -162,13 +162,13 @@ const ACID_SHRINK_PER_TICK = TOOL_EFFECT_TUNING.acidShrinkPerTick;
 const ACID_FLEE_SPEED = TOOL_EFFECT_TUNING.acidFleeSpeed;
 const BLOOM_GROWTH_PER_TICK = TOOL_EFFECT_TUNING.bloomGrowthPerTick;
 const BRINE_SHRINK_PER_TICK = TOOL_EFFECT_TUNING.brineShrinkPerTick;
-const CULL_RED_MAX_VOL = OBJECTIVE_TUNING.cullRedMaxVol;
-const CULL_BLUE_MIN = OBJECTIVE_TUNING.cullBlueMin;
-const PRESERVE_BLUE_MIN = OBJECTIVE_TUNING.preserveBlueMin;
-const BLOOM_MIN_COVERAGE = OBJECTIVE_TUNING.bloomMinCoverage;
-const STERILIZE_MAX_COVERAGE = OBJECTIVE_TUNING.sterilizeMaxCoverage;
+const PRESERVE_GRAZER_MIN = OBJECTIVE_TUNING.preserveGrazerMin;
+const BREED_TARGET_COUNT = OBJECTIVE_TUNING.breedTargetCount;
+const CONTROLLED_REACTION_MIN_COUNT = OBJECTIVE_TUNING.controlledReactionMinCount;
+const CONTROLLED_REACTION_MIN_COVERAGE = OBJECTIVE_TUNING.controlledReactionMinCoverage;
+const DOMINANT_MIN_COVERAGE = OBJECTIVE_TUNING.dominantMinCoverage;
 const BALANCE_MAX_DOMINANCE = OBJECTIVE_TUNING.balanceMaxDominance;
-const BALANCE_BLUE_MIN = OBJECTIVE_TUNING.balanceBlueMin;
+const BALANCE_MIN_LIFEFORMS = OBJECTIVE_TUNING.balanceMinLifeforms;
 
 interface AiState {
   sniper?: SniperState;
@@ -272,7 +272,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
       const p = state.cells.get(PLAYER_ID);
       if (!p || p.vol === 0) return mode === 'ecosystem' ? 'running' : 'lost';
       if (mode === 'ecosystem') {
-        const status = evaluateObjective(state, objective, tickNo, epochTicks).status;
+        const status = evaluateObjective(state, archetypes, objective, tickNo, epochTicks, {
+          reactions: reactionCount,
+        }).status;
         if (status === 'satisfied') return 'won';
         if (status === 'failed') return 'lost';
         return 'running';
@@ -317,7 +319,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
       };
     },
     getObjectiveProgress(): ObjectiveProgress {
-      return evaluateObjective(state, objective, tickNo, epochTicks);
+      return evaluateObjective(state, archetypes, objective, tickNo, epochTicks, {
+        reactions: reactionCount,
+      });
     },
     getToolStates(): Record<LabTool, ToolState> {
       return {
@@ -396,7 +400,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
       const current = this.getStatus();
       if (current !== 'running') return current;
       if (mode !== 'ecosystem') return current;
-      const status = evaluateObjective(state, objective, epochTicks, epochTicks).status;
+      const status = evaluateObjective(state, archetypes, objective, epochTicks, epochTicks, {
+        reactions: reactionCount,
+      }).status;
       forcedStatus = status === 'satisfied' ? 'won' : 'lost';
       tickNo = Math.max(tickNo, epochTicks);
       return forcedStatus;
@@ -405,7 +411,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       if (this.getStatus() !== 'running') return;
       tickNo += 1;
 
-      // The red lineage is no longer directly piloted in ecosystem mode. It
+      // The control sample is no longer directly piloted in ecosystem mode. It
       // remains a visible anchor organism, influenced by the same dish tools.
       const p = state.cells.get(PLAYER_ID);
       if (p) {
@@ -616,8 +622,8 @@ function triggerPredatorOutbreak(
   if (!source) return null;
 
   const sourceArchetype = source.id === PLAYER_ID
-    ? 'red'
-    : archetypes.get(source.id)?.archetype ?? 'lineage';
+    ? 'control_sample'
+    : archetypes.get(source.id)?.archetype ?? 'culture';
   const hunterCount = Math.min(OUTBREAK_HUNTER_COUNT, ECOSYSTEM_MAX_POPULATION - archetypes.size);
   let births = 0;
   for (let i = 0; i < hunterCount; i++) {
@@ -660,7 +666,7 @@ function dominantOutbreakSource(state: SimState): { id: CellId; cell: Cell } | n
 
 function outbreakHunterSpawn(sourceArchetype: string): EnemySpawn {
   const base = ARCHETYPE_DEFAULTS.swarmlet;
-  const sourceIsAnchor = sourceArchetype === 'red' || sourceArchetype === 'boss' || sourceArchetype === 'bruiser';
+  const sourceIsAnchor = sourceArchetype === 'control_sample' || sourceArchetype === 'boss' || sourceArchetype === 'bruiser';
   return {
     ...base,
     targetVol: sourceIsAnchor ? 105 : 85,
@@ -686,63 +692,73 @@ function isPair(a: ToolEffectType, b: ToolEffectType, x: ToolEffectType, y: Tool
 
 function evaluateObjective(
   state: SimState,
+  archetypes: Map<CellId, EnemySpawn>,
   objective: ObjectiveDef,
   tickNo: number,
   epochTicks: number,
+  context: { reactions: number },
 ): ObjectiveProgress {
-  const metrics = dishMetrics(state);
+  const metrics = dishMetrics(state, archetypes);
   const deadline = tickNo >= epochTicks;
   const urgency = objectiveUrgency(tickNo, epochTicks);
 
-  if (objective.kind === 'preserve') {
-    const ok = metrics.blueLiving >= PRESERVE_BLUE_MIN;
+  if (objective.kind === 'preserve_grazers') {
+    const minCount = objective.minCount ?? PRESERVE_GRAZER_MIN;
+    const ok = metrics.protectedCultureCount >= minCount;
     return {
       def: objective,
       status: deadline ? ok ? 'satisfied' : 'failed' : 'running',
-      summary: `${metrics.blueLiving} / ${PRESERVE_BLUE_MIN} blue lineages preserved`,
+      summary: `${metrics.protectedCultureCount} / ${minCount} protected cultures`,
       urgency,
     };
   }
 
-  if (objective.kind === 'cull_red') {
-    const ok = metrics.redVol <= CULL_RED_MAX_VOL && metrics.blueLiving >= CULL_BLUE_MIN;
+  if (objective.kind === 'breed_archetype') {
+    const archetype = objective.archetype ?? 'swarmlet';
+    const targetCount = objective.targetCount ?? BREED_TARGET_COUNT;
+    const count = metrics.archetypeCounts.get(archetype) ?? 0;
+    const ok = count >= targetCount;
     const failed = deadline && !ok;
     return {
       def: objective,
       status: ok ? 'satisfied' : failed ? 'failed' : 'running',
-      summary: `red ${metrics.redVol} / ${CULL_RED_MAX_VOL}, blue ${metrics.blueLiving} / ${CULL_BLUE_MIN}`,
+      summary: `${count} / ${targetCount} ${archetype} cultures`,
       urgency,
     };
   }
 
-  if (objective.kind === 'bloom') {
-    const pct = metrics.coverage;
-    const ok = pct >= BLOOM_MIN_COVERAGE;
+  if (objective.kind === 'controlled_reaction') {
+    const targetCount = objective.targetCount ?? CONTROLLED_REACTION_MIN_COUNT;
+    const minCoverage = objective.minCoverage ?? CONTROLLED_REACTION_MIN_COVERAGE;
+    const ok = context.reactions >= targetCount && metrics.coverage >= minCoverage;
     return {
       def: objective,
       status: ok ? 'satisfied' : deadline ? 'failed' : 'running',
-      summary: `${Math.round(pct * 100)}% / ${Math.round(BLOOM_MIN_COVERAGE * 100)}% coverage`,
+      summary: `${context.reactions} / ${targetCount} reactions, ${Math.round(metrics.coverage * 100)}% living coverage`,
       urgency,
     };
   }
 
-  if (objective.kind === 'sterilize') {
-    const pct = metrics.coverage;
-    const ok = pct <= STERILIZE_MAX_COVERAGE;
+  if (objective.kind === 'dominant_archetype') {
+    const archetype = objective.archetype ?? 'boss';
+    const minCoverage = objective.minCoverage ?? DOMINANT_MIN_COVERAGE;
+    const ok = metrics.dominantArchetype === archetype && metrics.coverage >= minCoverage;
     return {
       def: objective,
-      status: deadline ? ok ? 'satisfied' : 'failed' : 'running',
-      summary: `${Math.round(pct * 100)}% / ${Math.round(STERILIZE_MAX_COVERAGE * 100)}% living matter`,
+      status: ok ? 'satisfied' : deadline ? 'failed' : 'running',
+      summary: `${metrics.dominantArchetype ?? 'none'} dominant, ${Math.round(metrics.coverage * 100)}% living coverage`,
       urgency,
     };
   }
 
-  const dominancePct = metrics.livingVol === 0 ? 0 : metrics.dominantVol / metrics.livingVol;
-  const ok = dominancePct <= BALANCE_MAX_DOMINANCE && metrics.blueLiving >= BALANCE_BLUE_MIN;
+  const maxDominance = objective.maxDominance ?? BALANCE_MAX_DOMINANCE;
+  const minCount = objective.minCount ?? BALANCE_MIN_LIFEFORMS;
+  const dominancePct = metrics.lifeformVol === 0 ? 0 : metrics.dominantVol / metrics.lifeformVol;
+  const ok = dominancePct <= maxDominance && metrics.livingLifeforms >= minCount;
   return {
     def: objective,
     status: deadline ? ok ? 'satisfied' : 'failed' : 'running',
-    summary: `${Math.round(dominancePct * 100)}% / ${Math.round(BALANCE_MAX_DOMINANCE * 100)}% dominant lineage`,
+    summary: `${Math.round(dominancePct * 100)}% / ${Math.round(maxDominance * 100)}% dominance, ${metrics.livingLifeforms} cultures`,
     urgency,
   };
 }
@@ -754,29 +770,55 @@ function objectiveUrgency(tickNo: number, epochTicks: number): ObjectiveProgress
   return 'safe';
 }
 
-function dishMetrics(state: SimState): {
-  redVol: number;
-  blueLiving: number;
+function dishMetrics(state: SimState, archetypes: Map<CellId, EnemySpawn>): {
+  controlSampleVol: number;
+  livingLifeforms: number;
+  protectedCultureCount: number;
+  archetypeCounts: Map<EnemyArchetype, number>;
   livingVol: number;
+  lifeformVol: number;
   dominantVol: number;
+  dominantArchetype: EnemyArchetype | null;
   coverage: number;
 } {
-  let redVol = 0;
-  let blueLiving = 0;
+  let controlSampleVol = 0;
+  let livingLifeforms = 0;
+  let protectedCultureCount = 0;
   let livingVol = 0;
+  let lifeformVol = 0;
   let dominantVol = 0;
+  let dominantArchetype: EnemyArchetype | null = null;
+  const archetypeCounts = new Map<EnemyArchetype, number>();
   for (const [id, cell] of state.cells) {
     if (cell.vol <= 0) continue;
     livingVol += cell.vol;
-    dominantVol = Math.max(dominantVol, cell.vol);
-    if (id === PLAYER_ID) redVol += Math.min(cell.vol, cell.targetVol);
-    else blueLiving += 1;
+    if (id === PLAYER_ID) {
+      controlSampleVol += Math.min(cell.vol, cell.targetVol);
+      continue;
+    }
+
+    livingLifeforms += 1;
+    lifeformVol += cell.vol;
+    const archetype = archetypes.get(id)?.archetype;
+    if (archetype) {
+      archetypeCounts.set(archetype, (archetypeCounts.get(archetype) ?? 0) + 1);
+      const role = ARCHETYPE_ECOLOGY[archetype].role;
+      if (role === 'grazer' || role === 'propagator') protectedCultureCount += 1;
+      if (cell.vol > dominantVol) {
+        dominantVol = cell.vol;
+        dominantArchetype = archetype;
+      }
+    }
   }
   return {
-    redVol,
-    blueLiving,
+    controlSampleVol,
+    livingLifeforms,
+    protectedCultureCount,
+    archetypeCounts,
     livingVol,
+    lifeformVol,
     dominantVol,
+    dominantArchetype,
     coverage: livingVol / (state.grid.LX * state.grid.LY),
   };
 }
@@ -1143,10 +1185,12 @@ function applyCrisisEffects(state: SimState, id: CrisisId): void {
 }
 
 function resupplyLab(toolStates: Record<LabTool, ToolState>, objective: ObjectiveDef): number {
-  const preference: LabTool[] = objective.kind === 'bloom' || objective.kind === 'preserve'
+  const preference: LabTool[] = objective.kind === 'preserve_grazers' || objective.kind === 'breed_archetype'
     ? ['water', 'nutrient', 'egg', 'salt', 'acid', 'toxin']
-    : objective.kind === 'cull_red' || objective.kind === 'sterilize'
-      ? ['acid', 'toxin', 'salt', 'egg', 'water', 'nutrient']
+    : objective.kind === 'controlled_reaction'
+      ? ['water', 'nutrient', 'acid', 'toxin', 'salt', 'egg']
+      : objective.kind === 'dominant_archetype'
+        ? ['egg', 'nutrient', 'water', 'salt', 'acid', 'toxin']
       : ['egg', 'water', 'salt', 'acid', 'toxin', 'nutrient'];
   const refill = preference.find((tool) => toolStates[tool].charges < toolStates[tool].maxCharges);
   if (!refill) return 0;

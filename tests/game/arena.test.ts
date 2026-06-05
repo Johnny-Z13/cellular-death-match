@@ -99,10 +99,11 @@ describe('arena ecosystem mode', () => {
       mode: 'ecosystem',
       epochTicks: 1,
       objective: {
-        kind: 'preserve',
+        kind: 'preserve_grazers',
         name: 'Test Preserve',
-        description: 'Preserve one cell.',
-        target: '1 blue lifeform at deadline',
+        description: 'Preserve cultures.',
+        target: '2 protected cultures at deadline',
+        minCount: 2,
       },
     });
     arena.applyTool('egg', [10, 10]);
@@ -112,7 +113,7 @@ describe('arena ecosystem mode', () => {
     expect(arena.getEcology().progress).toBe(1);
   });
 
-  it('fails a cull objective at the deadline instead of idling forever', () => {
+  it('fails a species-breeding objective at the deadline instead of idling forever', () => {
     const arena = createArena({
       LX: 50,
       LY: 50,
@@ -126,13 +127,14 @@ describe('arena ecosystem mode', () => {
       mode: 'ecosystem',
       epochTicks: 2,
       objective: {
-        kind: 'cull_red',
-        name: 'Test Cull',
-        description: 'Cull red.',
-        target: 'red <= 180, blue >= 2',
+        kind: 'breed_archetype',
+        name: 'Test Breed Snipers',
+        description: 'Breed snipers.',
+        target: '3 living Snipers',
+        archetype: 'sniper',
+        targetCount: 3,
       },
     });
-    arena.state.cells.get(1)!.vol = 300;
     arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     expect(arena.getStatus()).toBe('running');
     arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
@@ -158,10 +160,11 @@ describe('arena ecosystem mode', () => {
       mode: 'ecosystem',
       epochTicks: 60 * 20,
       objective: {
-        kind: 'preserve',
+        kind: 'preserve_grazers',
         name: 'Test Preserve',
-        description: 'Preserve blue.',
-        target: '1 blue lifeform at deadline',
+        description: 'Preserve cultures.',
+        target: '1 protected culture at deadline',
+        minCount: 1,
       },
     });
     expect(arena.applyTool('nutrient', [10, 10])).toBe(true);
@@ -250,15 +253,16 @@ describe('arena ecosystem mode', () => {
       LY: 50,
       seed: 1,
       player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
-      enemies: [{ archetype: 'bruiser' as const, targetVol: 150, speed: 8, engulfMultiplier: 6.5 }],
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 150, speed: 8, engulfMultiplier: 6.5 }],
       wrap: true,
       mode: 'ecosystem',
       epochTicks: 60 * 20,
       objective: {
-        kind: 'preserve',
+        kind: 'preserve_grazers',
         name: 'Test Preserve',
         description: 'Preserve one cell.',
-        target: '1 blue lifeform at deadline',
+        target: '1 protected culture at deadline',
+        minCount: 1,
       },
     });
 
@@ -278,10 +282,11 @@ describe('arena ecosystem mode', () => {
       mode: 'ecosystem',
       epochTicks: 60 * 20,
       objective: {
-        kind: 'preserve',
+        kind: 'preserve_grazers',
         name: 'Test Preserve',
         description: 'Preserve one cell.',
-        target: '1 blue lifeform at deadline',
+        target: '1 protected culture at deadline',
+        minCount: 1,
       },
     });
     arena.state.cells.get(2)!.vol = 0;
@@ -640,7 +645,7 @@ describe('arena ecosystem mode', () => {
     expect(cell.targetVol).toBe(120);
   });
 
-  it('lets focused toxin pressure satisfy the cull objective before the deadline', () => {
+  it('lets a controlled reagent reaction satisfy the catalysis objective before the deadline', () => {
     const arena = createArena({
       LX: 80,
       LY: 80,
@@ -651,8 +656,9 @@ describe('arena ecosystem mode', () => {
         engulfMultiplier: 5,
         bulletSize: 3,
         eggCharges: 0,
-        nutrientCharges: 0,
-        toxinCharges: 4,
+        nutrientCharges: 1,
+        toxinCharges: 0,
+        waterCharges: 1,
       },
       enemies: [
         { archetype: 'swarmlet' as const, targetVol: 95, speed: 8, engulfMultiplier: 3 },
@@ -662,22 +668,21 @@ describe('arena ecosystem mode', () => {
       mode: 'ecosystem',
       epochTicks: 60 * 55,
       objective: {
-        kind: 'cull_red',
-        name: 'Test Cull',
-        description: 'Cull red.',
-        target: 'red <= 180, blue >= 2',
+        kind: 'controlled_reaction',
+        name: 'Test Catalysis',
+        description: 'Trigger a reaction.',
+        target: '1 reaction',
+        targetCount: 1,
+        minCoverage: 0.01,
       },
     });
-    const red = arena.state.cells.get(1)!;
-    red.vol = 320;
-    red.targetVol = 320;
-    for (let i = 0; i < 4; i++) {
-      expect(arena.applyTool('toxin', red.center)).toBe(true);
-    }
+    const target = arena.state.cells.get(2)!;
+    expect(arena.applyTool('nutrient', target.center)).toBe(true);
+    expect(arena.applyTool('water', target.center)).toBe(true);
     for (let i = 0; i < 60 * 25 && arena.getStatus() === 'running'; i++) {
       arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     }
-    expect(arena.getObjectiveProgress().summary).toContain('red');
+    expect(arena.getObjectiveProgress().summary).toContain('reaction');
     expect(arena.getStatus()).toBe('won');
   });
 
@@ -796,7 +801,7 @@ describe('arena ecosystem mode', () => {
     )).toBe(true);
   });
 
-  it('periodically triggers predator outbreaks from oversized lineages', () => {
+  it('periodically triggers predator outbreaks from oversized cultures', () => {
     const arena = createArena({
       LX: 80,
       LY: 80,
@@ -880,7 +885,7 @@ describe('arena ecosystem mode', () => {
     expect(arena.getToolEffects().some((effect) => effect.type === 'mutation')).toBe(true);
   });
 
-  it('does not auto-complete sterilize objectives just because the dish starts sparse', () => {
+  it('does not auto-complete catalysis objectives just because the dish starts sparse', () => {
     const arena = createArena({
       LX: 80,
       LY: 80,
@@ -896,17 +901,19 @@ describe('arena ecosystem mode', () => {
       mode: 'ecosystem',
       epochTicks: 2,
       objective: {
-        kind: 'sterilize',
-        name: 'Test Sterilize',
-        description: 'Sterilize the dish.',
-        target: '4% living coverage',
+        kind: 'controlled_reaction',
+        name: 'Test Catalysis',
+        description: 'Trigger a reaction.',
+        target: '1 reaction',
+        targetCount: 1,
+        minCoverage: 0.01,
       },
     });
     expect(arena.getStatus()).toBe('running');
     arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     expect(arena.getStatus()).toBe('running');
     arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
-    expect(arena.getStatus()).toBe('won');
+    expect(arena.getStatus()).toBe('lost');
   });
 });
 

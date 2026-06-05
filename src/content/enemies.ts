@@ -53,7 +53,7 @@ export const ARCHETYPE_INFO: Record<EnemyArchetype, ArchetypeInfo> = {
   },
   mirror: {
     name: 'Mirror',
-    summary: 'Adaptive imitators that echo the red lineage profile.',
+    summary: 'Adaptive imitators that echo the control sample profile.',
     color: [126, 132, 232],
   },
   boss: {

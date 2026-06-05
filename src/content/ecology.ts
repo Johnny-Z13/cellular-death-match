@@ -120,7 +120,7 @@ export const ARCHETYPE_ECOLOGY: Record<EnemyArchetype, ArchetypeEcology> = {
     role: 'mimic',
     prefers: ['bruiser', 'sniper'],
     avoids: [],
-    summary: 'An adaptive strain that shadows dominant lineages and copies their pressure.',
+    summary: 'An adaptive strain that shadows dominant cultures and copies their pressure.',
   },
   boss: {
     role: 'anchor',

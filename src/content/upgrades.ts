@@ -51,7 +51,7 @@ export interface UpgradeDef {
 }
 
 // The current compact catalogue focuses on the ecosystem tools and objective
-// anchor lineage.
+// control sample.
 export const UPGRADES: ReadonlyArray<UpgradeDef> = [
   {
     id: 'egg_1',
@@ -115,8 +115,8 @@ export const UPGRADES: ReadonlyArray<UpgradeDef> = [
   },
   {
     id: 'red_buffer_1',
-    name: 'Reference Lineage',
-    description: '+80 red lineage starting volume',
+    name: 'Control Buffer',
+    description: '+80 control sample starting volume',
     modifiers: { addTargetVol: 80 },
   },
 ];

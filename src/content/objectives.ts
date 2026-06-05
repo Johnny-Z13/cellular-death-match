@@ -1,42 +1,64 @@
-export type ObjectiveKind = 'preserve' | 'cull_red' | 'bloom' | 'sterilize' | 'balance';
+import type { EnemyArchetype } from './enemies';
+import { OBJECTIVE_TUNING } from './ecologyTuning';
+
+export type ObjectiveKind =
+  | 'preserve_grazers'
+  | 'breed_archetype'
+  | 'controlled_reaction'
+  | 'balanced_ecology'
+  | 'dominant_archetype';
 
 export interface ObjectiveDef {
   kind: ObjectiveKind;
   name: string;
   description: string;
   target: string;
+  archetype?: EnemyArchetype;
+  targetCount?: number;
+  minCount?: number;
+  minCoverage?: number;
+  maxDominance?: number;
 }
 
 export const OBJECTIVES: ReadonlyArray<ObjectiveDef> = [
   {
-    kind: 'preserve',
-    name: 'Preserve Blue Lineages',
-    description: 'Keep at least 1 non-red lifeform alive until the deadline.',
-    target: '1 blue lifeform at deadline',
+    kind: 'preserve_grazers',
+    name: 'Protect Grazer Cultures',
+    description: 'Keep at least 3 grazer or propagator cultures alive until the deadline.',
+    target: '3 protected cultures at deadline',
+    minCount: OBJECTIVE_TUNING.preserveGrazerMin,
   },
   {
-    kind: 'cull_red',
-    name: 'Cull the Red Invasive',
-    description: 'Reduce the red lineage below 180 volume while keeping at least 2 blue lifeforms alive.',
-    target: 'red <= 180, blue >= 2',
+    kind: 'breed_archetype',
+    name: 'Breed Swarmlets',
+    description: 'Raise the Swarmlet population to 4 living cultures.',
+    target: '4 living Swarmlets',
+    archetype: 'swarmlet',
+    targetCount: OBJECTIVE_TUNING.breedTargetCount,
   },
   {
-    kind: 'bloom',
-    name: 'Induce Bloom',
-    description: 'Fill at least 10% of the dish with living cellular matter.',
-    target: '10% living coverage',
+    kind: 'controlled_reaction',
+    name: 'Trigger Catalysis',
+    description: 'Create a reagent reaction while keeping enough living matter in the dish.',
+    target: '1 reaction, 4% living coverage',
+    targetCount: OBJECTIVE_TUNING.controlledReactionMinCount,
+    minCoverage: OBJECTIVE_TUNING.controlledReactionMinCoverage,
   },
   {
-    kind: 'sterilize',
-    name: 'Sterilize Sample',
-    description: 'Reduce living matter below 4% of the dish before the deadline.',
-    target: '4% living coverage',
-  },
-  {
-    kind: 'balance',
+    kind: 'balanced_ecology',
     name: 'Prevent Monoculture',
-    description: 'Reach the deadline with no single lineage above 56% of living matter.',
-    target: 'dominant <= 56% at deadline',
+    description: 'Reach the deadline with no single lifeform family above 56% of living matter.',
+    target: 'dominance <= 56% at deadline',
+    maxDominance: OBJECTIVE_TUNING.balanceMaxDominance,
+    minCount: OBJECTIVE_TUNING.balanceMinLifeforms,
+  },
+  {
+    kind: 'dominant_archetype',
+    name: 'Cultivate Boss Anchors',
+    description: 'Make Boss organisms the dominant culture without collapsing the dish.',
+    target: 'Boss dominant, 4% living coverage',
+    archetype: 'boss',
+    minCoverage: OBJECTIVE_TUNING.dominantMinCoverage,
   },
 ];
 

@@ -255,8 +255,8 @@ function scheduleLoop(): void {
 }
 
 interface TickerState {
-  lastRedBand: string;
-  lastBlueBand: string;
+  lastControlSampleBand: string;
+  lastLifeformBand: string;
   lastCoverageBand: string;
   lastDominant: string;
   lastToolPressureTick: number;
@@ -272,8 +272,8 @@ interface TickerState {
 
 function createTickerState(): TickerState {
   return {
-    lastRedBand: 'unknown',
-    lastBlueBand: 'unknown',
+    lastControlSampleBand: 'unknown',
+    lastLifeformBand: 'unknown',
     lastCoverageBand: 'unknown',
     lastDominant: 'none',
     lastToolPressureTick: -9999,
@@ -290,9 +290,9 @@ function createTickerState(): TickerState {
 
 function updateTicker(ar: Arena): void {
   if (tickCount % 45 !== 0) return;
-  const red = ar.state.cells.get(PLAYER_ID);
-  const redVol = red?.vol ?? 0;
-  const blueLiving = Array.from(ar.state.cells)
+  const controlSample = ar.state.cells.get(PLAYER_ID);
+  const controlSampleVol = controlSample?.vol ?? 0;
+  const livingLifeforms = Array.from(ar.state.cells)
     .filter(([id, cell]) => id !== PLAYER_ID && cell.vol > 0).length;
   const livingVol = Array.from(ar.state.cells)
     .reduce((sum, [, cell]) => sum + Math.max(0, cell.vol), 0);
@@ -307,20 +307,20 @@ function updateTicker(ar: Arena): void {
     screens.addTicker(signal);
   }
 
-  const redBand = redVol <= 35 ? 'critical' : redVol <= 140 ? 'dying' : redVol >= 650 ? 'surging' : 'stable';
-  if (redBand !== tickerState.lastRedBand) {
-    tickerState.lastRedBand = redBand;
-    if (redBand === 'critical') screens.addTicker('Red lineage is near collapse.');
-    else if (redBand === 'dying') screens.addTicker('Red lineage is dying.');
-    else if (redBand === 'surging') screens.addTicker('Red lineage is overgrowing the dish.');
+  const controlSampleBand = controlSampleVol <= 35 ? 'critical' : controlSampleVol <= 140 ? 'thin' : controlSampleVol >= 650 ? 'surging' : 'stable';
+  if (controlSampleBand !== tickerState.lastControlSampleBand) {
+    tickerState.lastControlSampleBand = controlSampleBand;
+    if (controlSampleBand === 'critical') screens.addTicker('Control sample is near collapse.');
+    else if (controlSampleBand === 'thin') screens.addTicker('Control sample is destabilizing.');
+    else if (controlSampleBand === 'surging') screens.addTicker('Control sample is overgrowing the dish.');
   }
 
-  const blueBand = blueLiving === 0 ? 'extinct' : blueLiving < 3 ? 'thin' : blueLiving >= 7 ? 'blooming' : 'stable';
-  if (blueBand !== tickerState.lastBlueBand) {
-    tickerState.lastBlueBand = blueBand;
-    if (blueBand === 'extinct') screens.addTicker('Blue lineage has vanished from the dish.');
-    else if (blueBand === 'thin') screens.addTicker('Blue lineage is under threat.');
-    else if (blueBand === 'blooming') screens.addTicker('Blue lineage is blooming.');
+  const lifeformBand = livingLifeforms === 0 ? 'extinct' : livingLifeforms < 3 ? 'thin' : livingLifeforms >= 7 ? 'blooming' : 'stable';
+  if (lifeformBand !== tickerState.lastLifeformBand) {
+    tickerState.lastLifeformBand = lifeformBand;
+    if (lifeformBand === 'extinct') screens.addTicker('Lifeforms have vanished from the dish.');
+    else if (lifeformBand === 'thin') screens.addTicker('Lifeform diversity is under threat.');
+    else if (lifeformBand === 'blooming') screens.addTicker('Lifeforms are blooming.');
   }
 
   const coverageBand = coverage <= 0.08 ? 'sterile' : coverage >= 0.42 ? 'bloom' : 'normal';
@@ -355,12 +355,12 @@ function updateTicker(ar: Arena): void {
 
   if (ecology.outbreaks > tickerState.lastOutbreakCount) {
     tickerState.lastOutbreakCount = ecology.outbreaks;
-    screens.addTicker('Predator outbreak: hunter cells erupted from the dominant lineage.');
+    screens.addTicker('Predator outbreak: hunter cells erupted from the dominant culture.');
   }
 
   if (ecology.mutations > tickerState.lastMutationCount) {
     tickerState.lastMutationCount = ecology.mutations;
-    screens.addTicker('Visible mutation: a lineage expressed a new trait.');
+    screens.addTicker('Visible mutation: a culture expressed a new trait.');
   }
 
   if (objective.summary !== tickerState.lastObjectiveSummary && tickCount % 180 === 0) {

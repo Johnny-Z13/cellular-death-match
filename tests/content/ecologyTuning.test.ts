@@ -41,15 +41,20 @@ describe('ecology tuning', () => {
   });
 
   it('keeps objective thresholds in playable ranges', () => {
-    expect(OBJECTIVE_TUNING.cullRedMaxVol).toBeGreaterThan(0);
-    expect(OBJECTIVE_TUNING.cullBlueMin).toBeGreaterThan(0);
-    expect(OBJECTIVE_TUNING.preserveBlueMin).toBeGreaterThan(0);
+    expect(OBJECTIVE_TUNING.preserveGrazerMin).toBeGreaterThan(0);
+    expect(OBJECTIVE_TUNING.breedTargetCount).toBeGreaterThan(0);
+    expect(OBJECTIVE_TUNING.controlledReactionMinCount).toBeGreaterThan(0);
+    expect(OBJECTIVE_TUNING.controlledReactionMinCoverage).toBeGreaterThan(0);
+    expect(OBJECTIVE_TUNING.controlledReactionMinCoverage).toBeLessThan(1);
+    expect(OBJECTIVE_TUNING.dominantMinCoverage).toBeGreaterThan(0);
+    expect(OBJECTIVE_TUNING.dominantMinCoverage).toBeLessThan(1);
     expect(OBJECTIVE_TUNING.bloomMinCoverage).toBeGreaterThan(0);
     expect(OBJECTIVE_TUNING.bloomMinCoverage).toBeLessThan(1);
     expect(OBJECTIVE_TUNING.sterilizeMaxCoverage).toBeGreaterThan(0);
     expect(OBJECTIVE_TUNING.sterilizeMaxCoverage).toBeLessThan(OBJECTIVE_TUNING.bloomMinCoverage);
     expect(OBJECTIVE_TUNING.balanceMaxDominance).toBeGreaterThan(0);
     expect(OBJECTIVE_TUNING.balanceMaxDominance).toBeLessThan(1);
+    expect(OBJECTIVE_TUNING.balanceMinLifeforms).toBeGreaterThan(0);
   });
 
   it('defines agitation tuning without hidden zero values', () => {

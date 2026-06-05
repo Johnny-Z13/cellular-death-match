@@ -4,7 +4,7 @@ import { displacementVec } from '../geometry';
 
 const ENGULF_RANGE = 6;
 
-// Mirror plays like the current red lineage profile. The stat-copying happens
+// Mirror plays like the current control sample profile. The stat-copying happens
 // in the arena when a mirror spawn is initialized.
 export function mirrorStep(
   self: Cell,
