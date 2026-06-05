@@ -1,4 +1,5 @@
 import type { TraitId } from './ecology';
+import type { BreedId } from './catalysis';
 
 export type EnemyArchetype =
   | 'bruiser' | 'sniper' | 'splitter' | 'swarmlet' | 'mirror' | 'boss';
@@ -11,6 +12,7 @@ export interface ArchetypeInfo {
 
 export interface EnemySpawn {
   archetype: EnemyArchetype;
+  breedId?: BreedId;
   targetVol: number;
   speed: number;
   engulfMultiplier: number;
