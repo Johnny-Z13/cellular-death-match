@@ -16,6 +16,8 @@
 - Create `src/content/catalysis.ts`: recipe definitions, hidden breed definitions, discovery note definitions, helper lookup functions.
 - Create `src/game/discoverySave.ts`: injectable localStorage wrapper for optional persistent discoveries.
 - Create `src/game/hash.ts`: shared deterministic hash helper for rendering and folding fault local rules.
+- Create `src/audio/soundDesign.ts`: event-to-sound mapping, generated asset manifest, lifeform audio identity definitions.
+- Create `scripts/generate-audio-assets.ts`: optional local-only audio generation script that reads `.env` without logging secrets.
 - Modify `src/content/enemies.ts`: add `breedId?: BreedId` to `EnemySpawn`.
 - Modify `src/game/arena.ts`: import tuning/content, detect catalytic reactions, spawn hidden breeds, advance folding faults, expose discovery and dish event state.
 - Modify `src/ui/render.ts`: tint hidden breeds, folding-fault affected strains, and short-lived dish event markers.
@@ -23,7 +25,7 @@
 - Modify `src/ui/debug.ts`: add persistence controls and clear/reveal handlers.
 - Modify `src/game/input.ts`: support menu/debug key ownership if Escape handling belongs in the shared input layer.
 - Modify `src/main.ts`: wire save state, discovery events, dish log copy, runtime overlay state, and debug callbacks.
-- Modify `src/audio/ecologyAudio.ts`: add stronger audio accents for catalytic flare, crystal shatter, and discovery.
+- Modify `src/audio/ecologyAudio.ts`: add stronger procedural accents, generated asset playback, and lifeform/reaction layering.
 - Modify `src/styles.css`: retro VDU dish log, event tone colors, debug controls, mobile-safe compact log.
 - Modify `index.html`: add debug persistence controls and bump asset cache keys after CSS/JS edits.
 - Create or modify tests in `tests/content/`, `tests/game/`, and `tests/ui/` where practical.
@@ -1691,7 +1693,132 @@ git commit -m "feat: restyle dish log as VDU discovery terminal"
 
 ---
 
-### Task 12: Full Verification And Tuning Pass
+### Task 12: Sound Design And Audio Layering Pass
+
+**Files:**
+- Create: `src/audio/soundDesign.ts`
+- Create: `scripts/generate-audio-assets.ts`
+- Create: `public/audio/generated/` or another Vite-served audio asset folder chosen after checking current project conventions.
+- Modify: `src/audio/ecologyAudio.ts`
+- Modify: `src/main.ts`
+- Modify: `package.json` if a local generation script is added.
+- Modify: tests where practical.
+
+- [ ] **Step 1: Confirm audio-generation provider and secret handling**
+
+Do not read, print, or commit `.env`. Confirm the provider, environment variable names, and API contract from official documentation before writing the generation script. The implementation should fail with a clear local-only message if the required key is absent.
+
+Keep `.env` ignored by git. If the implementation creates generated audio files, commit only the generated assets that are intended to ship, not the key or request logs.
+
+- [ ] **Step 2: Define the sound design map**
+
+Create `src/audio/soundDesign.ts`:
+
+```ts
+export type SoundEventId =
+  | 'hatch'
+  | 'eat'
+  | 'fight'
+  | 'visible_mutation'
+  | 'catalytic_flare'
+  | 'water_stabilize'
+  | 'salt_crystal'
+  | 'folding_fault'
+  | 'hidden_breed'
+  | 'objective_warning';
+
+export interface SoundEventDef {
+  id: SoundEventId;
+  asset?: string;
+  proceduralLayer: 'none' | 'soft' | 'medium' | 'strong';
+  maxVoices: number;
+  cooldownMs: number;
+  gain: number;
+}
+```
+
+Add mappings for hidden breeds and base lifeform families. Lifeform identity sounds should be subtle loops or sparse one-shots, not constant clutter.
+
+- [ ] **Step 3: Write or scaffold generation script**
+
+Create `scripts/generate-audio-assets.ts` as a local utility. It should:
+
+- Load `.env` locally.
+- Verify required env vars are present.
+- Generate short prompt-driven SFX for the sound map.
+- Write files into the chosen audio asset folder.
+- Write a small manifest that `src/audio/soundDesign.ts` can import or mirror.
+- Avoid logging request headers, full response payloads, or secrets.
+
+If the provider API requires a package dependency, add it only after checking official docs. Otherwise use `fetch` from the Node runtime if available.
+
+- [ ] **Step 4: Generate first-pass assets**
+
+Generate a restrained first set:
+
+- `visible_mutation`: quick color-cycling chirp/glitch.
+- `catalytic_flare`: volatile magnesium-like flare, bright but short.
+- `water_stabilize`: wet glassy softener.
+- `salt_crystal`: brittle crystallization tick/shatter.
+- `folding_fault`: stuttering rule-machine fold.
+- `hidden_breed`: discovery sting.
+- Optional lifeform identities for swarmlet, sniper, bruiser, boss, and support strains.
+
+Keep clips short, normalize volume, and avoid copyrighted musical material or recognizable third-party game samples.
+
+- [ ] **Step 5: Integrate generated playback with procedural Web Audio**
+
+In `src/audio/ecologyAudio.ts`, add a small asset loader/player that can mix generated clips with existing procedural tones:
+
+```ts
+interface LoadedSoundAsset {
+  id: SoundEventId;
+  buffer: AudioBuffer;
+}
+```
+
+Use cooldowns and max voice counts from `soundDesign.ts`. Generated clips should enhance event signatures; procedural audio should still cover dense simulation feedback.
+
+- [ ] **Step 6: Add audio controls and defaults**
+
+Respect existing browser audio unlock behavior. Add simple internal gain groups:
+
+- master.
+- procedural.
+- generated events.
+- lifeform identity.
+
+If UI controls are added, put them in the Escape/debug menu from Task 9 rather than adding permanent chrome.
+
+- [ ] **Step 7: Verify audio behavior**
+
+Run:
+
+```bash
+npm run build
+```
+
+Expected: PASS.
+
+Browser smoke:
+
+- Audio unlocks only after user interaction.
+- Mutation, flare, crystal, folding fault, and hidden breed events trigger distinct sounds.
+- Dense reactions do not stack into painful loudness.
+- Escape/debug UI can expose mute or gain controls if added.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add src/audio src/main.ts package.json scripts public/audio/generated tests
+git commit -m "feat: add catalytic sound design pass"
+```
+
+Skip `package.json`, `scripts`, `public/audio/generated`, or `tests` in the `git add` if they were not changed. Never add `.env`.
+
+---
+
+### Task 13: Full Verification And Tuning Pass
 
 **Files:**
 - Modify only tuning/content files unless tests prove code changes are required.
@@ -1729,6 +1856,7 @@ Play at least two epochs and tune only data constants for these outcomes:
 - Hidden breed discovery should happen in a normal run without requiring exact pixel-perfect setup.
 - Debug/FPS/controls are reachable from Escape but not permanently crowding normal play.
 - Lifeform icons are compact, selectable, and readable through hover/focus/click info.
+- Sound events are distinctive, layered, and capped so they add energy without overwhelming the dish.
 - Dish log should explain discoveries without becoming noisy.
 - Dish event markers should make visible mutations and reactions obvious without becoming noisy.
 
@@ -1764,8 +1892,9 @@ Spec coverage:
 - Runtime UI cleanup and lifeform inspection: Task 9.
 - Dish event signposting: Task 10.
 - Retro VDU dish log: Task 11.
+- Sound design and audio layering: Task 12.
 - Optional save/debug discovery controls: Tasks 3 and 8.
 - Magic number extraction: Task 1.
-- Verification: Task 12.
+- Verification: Task 13.
 
 No real-world disease vocabulary is required by any task. The plan keeps `src/sim/` generic and places new tunable data in content modules. The plan uses concrete file paths, commands, and test snippets. No unresolved placeholders remain.

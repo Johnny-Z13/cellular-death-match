@@ -117,6 +117,19 @@ Escape behavior should be simple:
 
 The lifeform guide can become denser and more useful. Lifeform icons can be small, translucent, and gently animated. Hover, focus, or selection should reveal a short info panel: name, role, traits, caution hints, and discovery status. The player only needs enough information to recognize "this lifeform is this" and make an experiment feel intentional.
 
+### Sound Design
+
+The current procedural Web Audio layer can be pushed further with generated sound effects and layered organic textures. The sound direction should be scratchy, tactile, and slightly alien without becoming horror. Each lifeform family can have a small sonic identity, while reactions and discoveries get stronger accents.
+
+Sound goals:
+
+- Generated one-shot effects for hatches, visible mutations, catalytic flares, folding faults, crystals, water stabilization, and hidden breed discoveries.
+- Small lifeform identity layers that can blend when multiple lifeforms dominate the dish.
+- Procedural Web Audio remains available for responsive tick-level feedback.
+- Generated assets are used for recognizable event signatures and richer texture.
+- Audio must stay readable when layered; cap simultaneous voices and avoid constant noise.
+- The local `.env` may contain an audio-generation API key, but it must stay out of git and must not be printed in logs.
+
 ### Lab Notes And Save Data
 
 Add a small save-data layer for discoveries. Default behavior:
@@ -139,6 +152,7 @@ For this pass:
 - Add canvas signposting for visible mutations, catalytic reactions, and discoveries.
 - Move always-visible debug/control clutter into an Escape menu or debug overlay.
 - Add compact lifeform icons with hover/focus/select info.
+- Add a generated/procedural sound pass for lifeforms, reactions, discoveries, and folding events.
 - Add a compact Lab Notes/debug area on desktop.
 - Add persistence controls to the debug panel.
 - Do not add a large permanent mobile panel.
