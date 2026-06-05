@@ -466,6 +466,10 @@ function colorForEffect(type: ReturnType<Arena['getToolEffects']>[number]['type'
     case 'brine': return { core: [210, 255, 245], edge: [74, 142, 154] };
     case 'lysis': return { core: [255, 98, 98], edge: [144, 32, 82] };
     case 'foam': return { core: [201, 255, 255], edge: [103, 208, 176] };
+    case 'conduit': return { core: [128, 255, 176], edge: [64, 196, 255] };
+    case 'flare': return { core: [255, 190, 82], edge: [255, 76, 92] };
+    case 'crystal': return { core: [214, 255, 248], edge: [91, 196, 255] };
+    case 'fold_fault': return { core: [190, 142, 255], edge: [72, 255, 218] };
     case 'mutation': return { core: [255, 205, 74], edge: [255, 92, 174] };
     case 'hatch': return { core: [186, 255, 160], edge: [72, 210, 255] };
   }

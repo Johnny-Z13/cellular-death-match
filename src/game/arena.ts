@@ -40,7 +40,18 @@ export interface ArenaInput {
 export type ArenaStatus = 'running' | 'won' | 'lost';
 export type LabTool = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid';
 export type ObjectiveStatus = 'running' | 'satisfied' | 'failed';
-export type ToolEffectType = Exclude<LabTool, 'egg'> | 'bloom' | 'brine' | 'lysis' | 'foam' | 'mutation' | 'hatch';
+export type ToolEffectType =
+  | Exclude<LabTool, 'egg'>
+  | 'bloom'
+  | 'brine'
+  | 'lysis'
+  | 'foam'
+  | 'conduit'
+  | 'flare'
+  | 'crystal'
+  | 'fold_fault'
+  | 'mutation'
+  | 'hatch';
 
 export interface Arena {
   state: SimState;
@@ -373,6 +384,17 @@ export function createArena(opts: CreateArenaOpts): Arena {
       const effect = toolEffectFor(tool, pos, opts.player, state.rng.randInt(1_000_000));
       pulseToolEffect(state, effect, archetypes);
       toolEffects.push(effect);
+      const waterReaction = applyWaterTransformations(
+        effect,
+        toolEffects,
+        pushSignal,
+        state.rng.randInt(1_000_000),
+      );
+      if (waterReaction) {
+        reactionCount += 1;
+        pulseToolEffect(state, waterReaction, archetypes);
+        toolEffects.push(waterReaction);
+      }
       const reaction = reactionFor(effect, toolEffects, state.rng.randInt(1_000_000));
       if (reaction) {
         reactionCount += 1;
@@ -594,6 +616,78 @@ function reactionFor(newEffect: ToolEffect, effects: ToolEffect[], seed: number)
     };
   }
   return null;
+}
+
+function applyWaterTransformations(
+  newEffect: ToolEffect,
+  effects: ToolEffect[],
+  pushSignal: (message: string) => void,
+  seed: number,
+): ToolEffect | null {
+  if (newEffect.type !== 'water') return null;
+
+  const nutrient = nearestOverlappingEffect(newEffect, effects, 'nutrient');
+  if (nutrient) {
+    nutrient.radius = clamp(nutrient.radius + 10, nutrient.radius, 62);
+    nutrient.maxTtl = Math.max(nutrient.maxTtl, nutrient.ttl + 60);
+    nutrient.ttl = Math.min(nutrient.maxTtl, nutrient.ttl + 60);
+    pushSignal('Lab note: water carried nutrient farther.');
+    return derivedEffect('conduit', newEffect, nutrient, seed, 60 * 5, 12);
+  }
+
+  const acid = nearestOverlappingEffect(newEffect, effects, 'acid');
+  if (acid) {
+    acid.radius = clamp(acid.radius + 8, acid.radius, 54);
+    acid.ttl = Math.max(30, Math.floor(acid.ttl * 0.55));
+    pushSignal('Lab note: water diluted the acid field.');
+    return null;
+  }
+
+  const toxin = nearestOverlappingEffect(newEffect, effects, 'toxin');
+  if (toxin) {
+    toxin.radius = clamp(toxin.radius + 6, toxin.radius, 58);
+    toxin.ttl = Math.max(45, Math.floor(toxin.ttl * 0.7));
+    pushSignal('Lab note: water softened toxin pressure.');
+    return null;
+  }
+
+  return null;
+}
+
+function nearestOverlappingEffect(
+  newEffect: ToolEffect,
+  effects: ToolEffect[],
+  type: ToolEffectType,
+): ToolEffect | null {
+  let nearest: { effect: ToolEffect; dist: number } | null = null;
+  for (const effect of effects) {
+    if (effect === newEffect || effect.type !== type) continue;
+    const dist = Math.hypot(newEffect.pos[0] - effect.pos[0], newEffect.pos[1] - effect.pos[1]);
+    if (dist > Math.min(newEffect.radius, effect.radius) * 0.9) continue;
+    if (!nearest || dist < nearest.dist) nearest = { effect, dist };
+  }
+  return nearest?.effect ?? null;
+}
+
+function derivedEffect(
+  type: ToolEffectType,
+  newEffect: ToolEffect,
+  source: ToolEffect,
+  seed: number,
+  maxTtl: number,
+  radiusBonus: number,
+): ToolEffect {
+  return {
+    type,
+    pos: [
+      (newEffect.pos[0] + source.pos[0]) / 2,
+      (newEffect.pos[1] + source.pos[1]) / 2,
+    ],
+    radius: Math.max(newEffect.radius, source.radius) + radiusBonus,
+    ttl: maxTtl,
+    maxTtl,
+    seed,
+  };
 }
 
 function randomAccidentEffect(state: SimState): ToolEffect {
@@ -1000,6 +1094,8 @@ function pulseToolEffect(
       cell.targetVol = clamp(cell.targetVol + NUTRIENT_PULSE_GROWTH * strength, 25, 2200);
     } else if (effect.type === 'water') {
       cell.targetVol = clamp(cell.targetVol + WATER_PULSE_GROWTH * strength, 25, 2200);
+    } else if (effect.type === 'conduit') {
+      cell.targetVol = clamp(cell.targetVol + WATER_PULSE_GROWTH * 1.25 * strength, 25, 2400);
     } else if (effect.type === 'bloom') {
       cell.targetVol = clamp(cell.targetVol + NUTRIENT_PULSE_GROWTH * 1.35 * strength, 25, 2400);
     } else {
@@ -1091,6 +1187,11 @@ function applyToolEffects(
         vy -= dirY * strength;
         speedBoost += WATER_SPREAD_SPEED * strength;
         cell.targetVol = clamp(cell.targetVol + WATER_GROWTH_PER_TICK * strength, 25, 2200);
+      } else if (effect.type === 'conduit') {
+        vx += dirX * strength * 0.4;
+        vy += dirY * strength * 0.4;
+        speedBoost += WATER_SPREAD_SPEED * 0.75 * strength;
+        cell.targetVol = clamp(cell.targetVol + WATER_GROWTH_PER_TICK * 1.6 * strength, 25, 2400);
       } else if (effect.type === 'salt' || effect.type === 'brine') {
         cell.intent.speed = Math.min(cell.intent.speed, effect.type === 'brine' ? 2.4 : SALT_MAX_SPEED);
         cell.targetVol = clamp(

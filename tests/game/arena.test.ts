@@ -776,6 +776,52 @@ describe('arena ecosystem mode', () => {
     expect(arena.getToolEffects().some((effect) => effect.type === 'bloom')).toBe(true);
   });
 
+  it('lets water extend nutrient fields into a conduit', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 210,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        { archetype: 'swarmlet' as const, targetVol: 120, speed: 8, engulfMultiplier: 4, traits: ['budding'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('nutrient', cell.center)).toBe(true);
+    expect(arena.applyTool('water', [cell.center[0] + 4, cell.center[1]])).toBe(true);
+
+    const conduit = arena.getToolEffects().find((effect) => effect.type === 'conduit');
+    expect(conduit).toBeDefined();
+    expect(arena.getEcology().signals.some((signal) => signal.includes('water carried nutrient'))).toBe(true);
+  });
+
+  it('lets water soften acid pressure when used after a flare', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 211,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 120, speed: 8, engulfMultiplier: 4 }],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('acid', cell.center)).toBe(true);
+    const acidBefore = arena.getToolEffects().find((effect) => effect.type === 'acid')!;
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+    const acidAfter = arena.getToolEffects().find((effect) => effect.type === 'acid')!;
+
+    expect(acidAfter.radius).toBeGreaterThan(acidBefore.radius);
+    expect(acidAfter.ttl).toBeLessThanOrEqual(acidBefore.ttl);
+    expect(arena.getEcology().signals.some((signal) => signal.includes('water diluted'))).toBe(true);
+  });
+
   it('periodically drops random reagent accidents in ecosystem mode', () => {
     const arena = createArena({
       LX: 80,
