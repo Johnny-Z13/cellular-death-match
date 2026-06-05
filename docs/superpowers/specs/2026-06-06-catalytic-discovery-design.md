@@ -97,11 +97,12 @@ Signposting should include:
 
 - Color-coded pulse rings around the event origin.
 - Brief flash or tint on affected cells.
+- Palette-cycling mutation bands inspired by old Commodore 64 color cycling, used sparingly for mutations, folding faults, and critical catalytic events.
 - Small non-blocking glyphs or tick marks near the event, if readable.
 - Matching dish-log tone so the same event reads consistently across canvas and monitor UI.
 - Different colors for discovery, caution, critical reaction, mutation, and stabilizing/water events.
 
-The signposting should be informative without turning into noisy particle spam. It should decay quickly and avoid covering the player controls on mobile.
+The signposting should be informative without turning into noisy particle spam. It should decay quickly, avoid covering the player controls on mobile, and respect reduced-motion preferences by falling back to slower pulses or static tints.
 
 ### Runtime UI Space
 

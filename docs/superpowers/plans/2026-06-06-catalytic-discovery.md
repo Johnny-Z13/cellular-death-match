@@ -1487,11 +1487,36 @@ Use consistent kind/color mapping:
 - `stabilize`: green.
 - `fold`: violet.
 
-- [ ] **Step 4: Decay event markers**
+- [ ] **Step 4: Add palette cycling for mutation-class events**
+
+Add a small visual-only palette cycle for mutation, fold, and critical markers. Keep it data-driven so it can be tuned:
+
+```ts
+const DISH_EVENT_PALETTES = {
+  mutation: ['#f6d365', '#fda085', '#b771ff', '#66e3ff'],
+  fold: ['#8f7cff', '#45f0d1', '#f6d365', '#ff6b9d'],
+  critical: ['#ff6b4a', '#ffd166', '#ff3b7a', '#ffffff'],
+} as const;
+```
+
+Use the event age to select the current color, similar to old C64-style color cycling:
+
+```ts
+function cycledDishEventColor(event: DishEventMarker, frame: number): string {
+  const palette = DISH_EVENT_PALETTES[event.kind as keyof typeof DISH_EVENT_PALETTES];
+  if (!palette) return colorForDishEvent(event.color);
+  const speed = event.kind === 'critical' ? 3 : 5;
+  return palette[Math.floor(frame / speed) % palette.length]!;
+}
+```
+
+Respect `prefers-reduced-motion` by disabling fast cycling and using a single tone or slow alpha pulse.
+
+- [ ] **Step 5: Decay event markers**
 
 Each ecosystem tick, decrement `ttl` and remove expired markers. Cap marker count, for example `ECOSYSTEM_LIMITS.maxDishEvents`, so repeated reactions cannot flood the renderer.
 
-- [ ] **Step 5: Render event markers**
+- [ ] **Step 6: Render event markers**
 
 In `src/ui/render.ts`, draw short-lived marker rings after fields and before foreground cells:
 
@@ -1500,7 +1525,7 @@ function drawDishEventMarker(ctx: CanvasRenderingContext2D, event: DishEventMark
   const t = event.ttl / event.maxTtl;
   ctx.save();
   ctx.globalAlpha = 0.18 + 0.55 * t;
-  ctx.strokeStyle = colorForDishEvent(event.color);
+  ctx.strokeStyle = cycledDishEventColor(event, frame);
   ctx.lineWidth = 1.5 + (1 - t) * 3;
   ctx.beginPath();
   ctx.arc(event.pos[0], event.pos[1], event.radius + (1 - t) * 12, 0, Math.PI * 2);
@@ -1511,11 +1536,11 @@ function drawDishEventMarker(ctx: CanvasRenderingContext2D, event: DishEventMark
 
 Keep labels off the mobile canvas by default. If adding glyphs, use tiny symbols only and test overlap.
 
-- [ ] **Step 6: Match monitor log tones**
+- [ ] **Step 7: Match monitor log tones**
 
 In `src/ui/screens.ts` and `src/main.ts`, map the same event categories to monitor line tones so a red dish pulse and red/critical log line refer to the same moment.
 
-- [ ] **Step 7: Verify signposting**
+- [ ] **Step 8: Verify signposting**
 
 Run: `npm test -- tests/game/arena.test.ts -t "dish event|visible mutations|catalytic reactions"`
 
@@ -1525,15 +1550,15 @@ Run: `npm run build`
 
 Expected: PASS.
 
-- [ ] **Step 8: Browser smoke**
+- [ ] **Step 9: Browser smoke**
 
 Check:
 
 - `375x667`: event rings are visible but do not cover thumb controls.
 - `390x844`: visible mutation pulses can be seen in the dish.
-- `1280x720`: reaction pulses, cell tint, and monitor log tone are visually connected.
+- `1280x720`: reaction pulses, palette-cycled mutation/fold events, cell tint, and monitor log tone are visually connected.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
 git add src/game/arena.ts src/ui/render.ts src/ui/screens.ts src/main.ts src/styles.css tests/game/arena.test.ts
