@@ -8,8 +8,14 @@ export interface PlayerConfig {
   eggCharges?: number;
   nutrientCharges?: number;
   toxinCharges?: number;
+  waterCharges?: number;
+  saltCharges?: number;
+  acidCharges?: number;
   nutrientRadius?: number;
   toxinRadius?: number;
+  waterRadius?: number;
+  saltRadius?: number;
+  acidRadius?: number;
   agitationCharges?: number;
 }
 
@@ -33,8 +39,14 @@ export interface UpgradeDef {
     addNutrientCharges?: number;
     addToxinCharges?: number;
     addAgitationCharges?: number;
+    addWaterCharges?: number;
+    addSaltCharges?: number;
+    addAcidCharges?: number;
     pctNutrientRadius?: number;
     pctToxinRadius?: number;
+    pctWaterRadius?: number;
+    pctSaltRadius?: number;
+    pctAcidRadius?: number;
   };
 }
 
@@ -78,6 +90,30 @@ export const UPGRADES: ReadonlyArray<UpgradeDef> = [
     modifiers: { pctToxinRadius: 0.18 },
   },
   {
+    id: 'water_1',
+    name: 'Flood Flask',
+    description: '+2 water charges',
+    modifiers: { addWaterCharges: 2 },
+  },
+  {
+    id: 'salt_1',
+    name: 'Salt Lattice',
+    description: '+2 salt charges',
+    modifiers: { addSaltCharges: 2 },
+  },
+  {
+    id: 'acid_1',
+    name: 'Acid Pipette',
+    description: '+1 acid charge',
+    modifiers: { addAcidCharges: 1 },
+  },
+  {
+    id: 'volatile_reagents_1',
+    name: 'Unstable Medium',
+    description: '+12% water, salt, and acid spread',
+    modifiers: { pctWaterRadius: 0.12, pctSaltRadius: 0.12, pctAcidRadius: 0.12 },
+  },
+  {
     id: 'red_buffer_1',
     name: 'Reference Lineage',
     description: '+80 red lineage starting volume',
@@ -104,8 +140,14 @@ export function applyUpgrades(base: PlayerConfig, refs: ReadonlyArray<UpgradeRef
   let addNutrientCharges = 0;
   let addToxinCharges = 0;
   let addAgitationCharges = 0;
+  let addWaterCharges = 0;
+  let addSaltCharges = 0;
+  let addAcidCharges = 0;
   let pctNutrientRadius = 0;
   let pctToxinRadius = 0;
+  let pctWaterRadius = 0;
+  let pctSaltRadius = 0;
+  let pctAcidRadius = 0;
   for (const ref of refs) {
     const def = UPGRADES_BY_ID.get(ref.id);
     if (!def) continue;
@@ -118,8 +160,14 @@ export function applyUpgrades(base: PlayerConfig, refs: ReadonlyArray<UpgradeRef
     if (m.addNutrientCharges !== undefined)  addNutrientCharges += m.addNutrientCharges * ref.stacks;
     if (m.addToxinCharges !== undefined)     addToxinCharges    += m.addToxinCharges * ref.stacks;
     if (m.addAgitationCharges !== undefined) addAgitationCharges += m.addAgitationCharges * ref.stacks;
+    if (m.addWaterCharges !== undefined)     addWaterCharges    += m.addWaterCharges * ref.stacks;
+    if (m.addSaltCharges !== undefined)      addSaltCharges     += m.addSaltCharges * ref.stacks;
+    if (m.addAcidCharges !== undefined)      addAcidCharges     += m.addAcidCharges * ref.stacks;
     if (m.pctNutrientRadius !== undefined)   pctNutrientRadius  += m.pctNutrientRadius * ref.stacks;
     if (m.pctToxinRadius !== undefined)      pctToxinRadius     += m.pctToxinRadius * ref.stacks;
+    if (m.pctWaterRadius !== undefined)      pctWaterRadius     += m.pctWaterRadius * ref.stacks;
+    if (m.pctSaltRadius !== undefined)       pctSaltRadius      += m.pctSaltRadius * ref.stacks;
+    if (m.pctAcidRadius !== undefined)       pctAcidRadius      += m.pctAcidRadius * ref.stacks;
   }
   const out: PlayerConfig = {
     targetVol: base.targetVol + addTargetVol,
@@ -136,6 +184,15 @@ export function applyUpgrades(base: PlayerConfig, refs: ReadonlyArray<UpgradeRef
   if (base.toxinCharges !== undefined || addToxinCharges !== 0) {
     out.toxinCharges = (base.toxinCharges ?? 0) + addToxinCharges;
   }
+  if (base.waterCharges !== undefined || addWaterCharges !== 0) {
+    out.waterCharges = (base.waterCharges ?? 0) + addWaterCharges;
+  }
+  if (base.saltCharges !== undefined || addSaltCharges !== 0) {
+    out.saltCharges = (base.saltCharges ?? 0) + addSaltCharges;
+  }
+  if (base.acidCharges !== undefined || addAcidCharges !== 0) {
+    out.acidCharges = (base.acidCharges ?? 0) + addAcidCharges;
+  }
   if (base.agitationCharges !== undefined || addAgitationCharges !== 0) {
     out.agitationCharges = (base.agitationCharges ?? 0) + addAgitationCharges;
   }
@@ -144,6 +201,15 @@ export function applyUpgrades(base: PlayerConfig, refs: ReadonlyArray<UpgradeRef
   }
   if (base.toxinRadius !== undefined || pctToxinRadius !== 0) {
     out.toxinRadius = (base.toxinRadius ?? 24) * (1 + pctToxinRadius);
+  }
+  if (base.waterRadius !== undefined || pctWaterRadius !== 0) {
+    out.waterRadius = (base.waterRadius ?? 28) * (1 + pctWaterRadius);
+  }
+  if (base.saltRadius !== undefined || pctSaltRadius !== 0) {
+    out.saltRadius = (base.saltRadius ?? 18) * (1 + pctSaltRadius);
+  }
+  if (base.acidRadius !== undefined || pctAcidRadius !== 0) {
+    out.acidRadius = (base.acidRadius ?? 17) * (1 + pctAcidRadius);
   }
   return out;
 }

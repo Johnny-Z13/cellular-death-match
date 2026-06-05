@@ -1,5 +1,6 @@
 import type { SimState, CellId } from '../sim/types';
 import { ARCHETYPE_INFO, type EnemySpawn } from '../content/enemies';
+import type { TraitId } from '../content/ecology';
 
 export interface Renderer {
   render(state: SimState, archetypes?: ReadonlyMap<CellId, EnemySpawn>): void;
@@ -32,6 +33,29 @@ function buildPalette(nCells: number): Uint8ClampedArray[] {
 
 function rgba([r, g, b]: [number, number, number]): Uint8ClampedArray {
   return new Uint8ClampedArray([r, g, b, 255]);
+}
+
+function mixColor(
+  base: Uint8ClampedArray,
+  tint: [number, number, number],
+  amount: number,
+): Uint8ClampedArray {
+  return new Uint8ClampedArray([
+    base[0]! * (1 - amount) + tint[0] * amount,
+    base[1]! * (1 - amount) + tint[1] * amount,
+    base[2]! * (1 - amount) + tint[2] * amount,
+    255,
+  ]);
+}
+
+function traitColor(base: Uint8ClampedArray, traits: readonly TraitId[] | undefined): Uint8ClampedArray {
+  const trait = traits?.at(-1);
+  if (trait === 'fleet') return mixColor(base, [212, 255, 72], 0.42);
+  if (trait === 'gelatinous') return mixColor(base, [224, 88, 255], 0.34);
+  if (trait === 'toxin_resistant') return mixColor(base, [225, 255, 255], 0.44);
+  if (trait === 'fragile') return mixColor(base, [255, 174, 64], 0.38);
+  if (trait === 'budding') return mixColor(base, [91, 255, 154], 0.4);
+  return base;
 }
 
 // Lighten an RGB color by `factor` toward white (0..1).
@@ -133,8 +157,10 @@ function buildRenderPalette(
   const out: Uint8ClampedArray[] = [];
   for (let id = 0; id < size; id++) {
     const fallback = fallbackBase[id] ?? fallbackBase[0]!;
-    const archetype = archetypes?.get(id)?.archetype;
-    out[id] = archetype ? rgba(ARCHETYPE_INFO[archetype].color) : fallback;
+    const spawn = archetypes?.get(id);
+    const archetype = spawn?.archetype;
+    const base = archetype ? rgba(ARCHETYPE_INFO[archetype].color) : fallback;
+    out[id] = traitColor(base, spawn?.traits);
   }
   out[0] = fallbackBase[0]!;
   out[1] = fallbackBase[1]!;

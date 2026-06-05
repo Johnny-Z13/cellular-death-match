@@ -13,7 +13,7 @@ html, body {
   min-height: 100svh;
   display: grid;
   place-items: center;
-  padding: calc(82px + env(safe-area-inset-top)) 12px calc(132px + env(safe-area-inset-bottom));
+  padding: calc(82px + env(safe-area-inset-top)) 12px calc(190px + env(safe-area-inset-bottom));
   box-sizing: border-box;
   overflow: hidden;
 }
@@ -28,8 +28,8 @@ canvas {
   border: 1px solid #273238;
   outline: none;
   box-shadow: 0 0 0 1px #050708, 0 20px 60px rgba(0, 0, 0, 0.35);
-  width: min(94vw, calc(100svh - 248px), 800px);
-  height: min(94vw, calc(100svh - 248px), 800px);
+  width: min(94vw, calc(100svh - 306px), 800px);
+  height: min(94vw, calc(100svh - 306px), 800px);
   max-width: 100%;
   max-height: 100%;
 }
@@ -59,7 +59,7 @@ canvas {
   justify-items: center;
   gap: 4px;
   min-width: 0;
-  min-height: 74px;
+  min-height: 66px;
   border: 1px solid #263038;
   background: rgba(16, 20, 23, 0.86);
   color: #d8d8d8;
@@ -177,6 +177,23 @@ canvas {
   100% { transform: translate(0, 0) rotate(0deg); }
 }
 
+.water-icon {
+  color: #57d8ff;
+  background: radial-gradient(circle at 35% 32%, #e8fbff, #57d8ff 48%, #216c9a 100%);
+}
+
+.salt-icon {
+  color: #e7f2f0;
+  background:
+    linear-gradient(45deg, transparent 42%, rgba(30, 50, 54, 0.75) 44%, transparent 48%),
+    radial-gradient(circle at 35% 32%, #fff, #d8ebe8 48%, #7c9a96 100%);
+}
+
+.acid-icon {
+  color: #83ff55;
+  background: radial-gradient(circle at 35% 32%, #efffda, #83ff55 46%, #2d8d3d 100%);
+}
+
 .debug {
   display: none;
   width: min(320px, 100%);
@@ -248,7 +265,7 @@ canvas {
   position: fixed;
   left: 12px;
   right: 12px;
-  bottom: calc(104px + env(safe-area-inset-bottom));
+  bottom: calc(164px + env(safe-area-inset-bottom));
   z-index: 4;
   pointer-events: none;
   color: #d8d8d8;
@@ -288,7 +305,7 @@ canvas {
   position: fixed;
   left: 12px;
   right: 12px;
-  bottom: calc(104px + env(safe-area-inset-bottom));
+  bottom: calc(184px + env(safe-area-inset-bottom));
   z-index: 5;
   display: grid;
   gap: 7px;
@@ -417,7 +434,7 @@ canvas {
 }
 
 .screen-card {
-  width: min(100%, 460px);
+  width: min(calc(100vw - 36px), 460px);
   background: #101417;
   border: 1px solid #2c3a42;
   padding: 26px 22px;
@@ -430,13 +447,17 @@ canvas {
   margin: 0 0 12px 0;
   font-size: 26px;
   font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 
 .screen-sub {
   margin: 0 auto 20px auto;
   color: #999;
   font-size: 14px;
+  line-height: 1.35;
   max-width: 480px;
+  overflow-wrap: anywhere;
 }
 
 .commit-debug {
@@ -553,26 +574,49 @@ canvas {
 @media (max-height: 700px) and (max-width: 899px) {
   .layout {
     padding-top: calc(66px + env(safe-area-inset-top));
-    padding-bottom: calc(112px + env(safe-area-inset-bottom));
+    padding-bottom: calc(170px + env(safe-area-inset-bottom));
   }
 
   canvas {
-    width: min(92vw, calc(100svh - 214px), 800px);
-    height: min(92vw, calc(100svh - 214px), 800px);
+    width: min(92vw, calc(100svh - 270px), 800px);
+    height: min(92vw, calc(100svh - 270px), 800px);
   }
 
   .toolbox {
     padding-top: 8px;
   }
 
+  .screen {
+    padding: 12px;
+  }
+
+  .screen-card {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    padding: 24px 16px;
+  }
+
+  .screen-title {
+    font-size: 23px;
+  }
+
   .tool-button {
-    min-height: 66px;
+    min-height: 58px;
+    padding: 7px 5px;
   }
 
   .life-panel {
-    bottom: calc(98px + env(safe-area-inset-bottom));
-    gap: 5px;
-    padding: 6px 8px;
+    bottom: calc(173px + env(safe-area-inset-bottom));
+    gap: 0;
+    max-height: 34px;
+    overflow: hidden;
+    padding: 4px 8px;
+  }
+
+  .life-panel-head {
+    display: none;
   }
 
   .life-summary {
@@ -580,7 +624,12 @@ canvas {
   }
 
   .egg-choice {
-    min-height: 38px;
+    grid-template-rows: 18px;
+    min-height: 26px;
+  }
+
+  .egg-choice-label {
+    display: none;
   }
 }
 
@@ -652,8 +701,8 @@ canvas {
     display: block;
     position: fixed;
     right: 24px;
-    top: 214px;
-    max-height: calc(100vh - 238px);
+    top: 356px;
+    max-height: calc(100vh - 380px);
     overflow: auto;
     z-index: 4;
   }
@@ -662,9 +711,11 @@ canvas {
     display: block;
     left: 50%;
     right: auto;
-    bottom: 18px;
+    top: calc(50% + min(41vh, 400px) + 16px);
+    bottom: auto;
     transform: translateX(-50%);
     width: min(800px, 82vh);
+    text-align: center;
   }
 
   .ticker-title {
@@ -672,7 +723,7 @@ canvas {
   }
 
   .ticker-lines {
-    justify-items: start;
+    justify-items: center;
   }
 
   .ticker-line:nth-child(n + 3) {
@@ -702,10 +753,12 @@ canvas {
     right: 24px;
     bottom: auto;
     top: 24px;
-    width: 354px;
-    max-height: 166px;
+    width: 430px;
+    max-height: 308px;
     min-height: 0;
     overflow: auto;
+    gap: 10px;
+    padding: 12px 14px;
   }
 
   .life-panel .egg-options {
@@ -717,16 +770,16 @@ canvas {
 
   .life-list {
     display: grid;
-    gap: 5px;
-    padding-top: 4px;
+    gap: 7px;
+    padding-top: 6px;
     border-top: 1px solid #1d1d1d;
   }
 }
 
 @media (min-width: 1181px) {
   .layout {
-    padding-left: 240px;
-    padding-right: 380px;
+    padding-left: 340px;
+    padding-right: 460px;
   }
 }
 
@@ -738,32 +791,27 @@ canvas {
     bottom: auto;
     transform: translateX(-50%);
     width: min(92vw, 560px);
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .debug {
-    left: 50%;
-    right: auto;
-    top: auto;
-    bottom: 16px;
-    transform: translateX(-50%);
-    max-height: 30vh;
-    overflow: auto;
+    display: none;
   }
 
   .ticker {
     width: min(92vw, 800px);
-    bottom: calc(32vh + 24px);
+    top: calc(50% + min(46vw, 400px) + 14px);
+    bottom: auto;
   }
 
   .life-panel {
     left: 50%;
     right: auto;
-    top: auto;
-    bottom: calc(32vh + 136px);
+    top: 86px;
+    bottom: auto;
     transform: translateX(-50%);
-    width: min(92vw, 560px);
-    max-height: none;
+    width: min(92vw, 680px);
+    max-height: 220px;
     min-height: 0;
   }
 
@@ -780,5 +828,22 @@ canvas {
   canvas {
     width: min(92vw, 800px);
     height: min(92vw, 800px);
+  }
+}
+
+@media (min-width: 900px) and (max-height: 780px) {
+  .ticker {
+    top: auto;
+    bottom: 8px;
+    max-height: 76px;
+    overflow: hidden;
+  }
+
+  .ticker-title {
+    display: none;
+  }
+
+  .ticker-line:nth-child(n + 2) {
+    display: none;
   }
 }

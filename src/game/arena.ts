@@ -30,8 +30,9 @@ export interface ArenaInput {
 }
 
 export type ArenaStatus = 'running' | 'won' | 'lost';
-export type LabTool = 'egg' | 'nutrient' | 'toxin';
+export type LabTool = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid';
 export type ObjectiveStatus = 'running' | 'satisfied' | 'failed';
+export type ToolEffectType = Exclude<LabTool, 'egg'> | 'bloom' | 'brine' | 'lysis' | 'foam' | 'mutation' | 'hatch';
 
 export interface Arena {
   state: SimState;
@@ -59,6 +60,9 @@ export interface EcologyInfo {
   mutations: number;
   births: number;
   supplyDrops: number;
+  reactions: number;
+  accidents: number;
+  outbreaks: number;
   dominant: string;
   signals: string[];
   crisis: string;
@@ -81,7 +85,7 @@ export interface AgitationState extends ToolState {
 }
 
 export interface ToolEffect {
-  type: Exclude<LabTool, 'egg'>;
+  type: ToolEffectType;
   pos: [number, number];
   radius: number;
   ttl: number;
@@ -117,24 +121,39 @@ const MC_STEPS_PER_TICK = 1100;
 const DEFAULT_EPOCH_TICKS = 60 * 75;
 const MUTATION_INTERVAL_TICKS = 60 * 10;
 const RESEED_INTERVAL_TICKS = 60 * 5;
+const OUTBREAK_INTERVAL_TICKS = 60 * 7;
 const RESUPPLY_INTERVAL_TICKS = 60 * 11;
+const ACCIDENT_INTERVAL_TICKS = 60 * 13;
 const EMERGENCY_EGG_REFILL_TICKS = 60 * 8;
 const CRISIS_INTERVAL_TICKS = 60 * 18;
 const ECOSYSTEM_MIN_POPULATION = 5;
 const QUIET_EGG_REFILL_POPULATION = 2;
-const ECOSYSTEM_MAX_POPULATION = 22;
+const ECOSYSTEM_MAX_POPULATION = 28;
 const PLAYER_THREAT_RANGE = 16;
 const MAX_TOOL_EFFECTS = 10;
 const DEFAULT_AGITATE_CHARGES = 2;
 const AGITATION_DURATION_TICKS = 90;
 const AGITATION_MIN_SPEED = 10;
 const AGITATION_EXTRA_SPEED = 14;
+const OUTBREAK_MIN_TARGET_VOL = 360;
+const OUTBREAK_HUNTER_COUNT = 3;
 const NUTRIENT_PULSE_GROWTH = 80;
 const NUTRIENT_GROWTH_PER_TICK = 1.8;
 const NUTRIENT_PULL_SPEED = 5.5;
 const TOXIN_PULSE_DAMAGE = 42;
 const TOXIN_SHRINK_PER_TICK = 0.24;
 const TOXIN_FLEE_SPEED = 13;
+const WATER_PULSE_GROWTH = 34;
+const WATER_GROWTH_PER_TICK = 0.58;
+const WATER_SPREAD_SPEED = 4.2;
+const SALT_PULSE_DAMAGE = 24;
+const SALT_SHRINK_PER_TICK = 0.38;
+const SALT_MAX_SPEED = 3.6;
+const ACID_PULSE_DAMAGE = 76;
+const ACID_SHRINK_PER_TICK = 0.66;
+const ACID_FLEE_SPEED = 9;
+const BLOOM_GROWTH_PER_TICK = 3.1;
+const BRINE_SHRINK_PER_TICK = 0.72;
 const CULL_RED_MAX_VOL = 180;
 const CULL_BLUE_MIN = 2;
 const PRESERVE_BLUE_MIN = 1;
@@ -147,6 +166,11 @@ interface AiState {
   sniper?: SniperState;
   boss?: BossState;
   splitter?: { didSpawn: boolean };
+}
+
+interface MutationResult {
+  changed: number;
+  effects: ToolEffect[];
 }
 
 export function createArena(opts: CreateArenaOpts): Arena {
@@ -171,6 +195,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
   let mutationCount = 0;
   let birthCount = 0;
   let supplyDropCount = 0;
+  let reactionCount = 0;
+  let accidentCount = 0;
+  let outbreakCount = 0;
   let forcedStatus: ArenaStatus | null = null;
   const maxAgitationCharges = opts.player.agitationCharges ?? DEFAULT_AGITATE_CHARGES;
   let agitationCharges = maxAgitationCharges;
@@ -257,7 +284,11 @@ export function createArena(opts: CreateArenaOpts): Arena {
         livingEnemies += 1;
         if (cell.vol > dominantVol) {
           dominantVol = cell.vol;
-          dominant = archetypes.get(id)?.archetype ?? `cell ${id}`;
+          const spawn = archetypes.get(id);
+          const trait = spawn?.traits?.at(-1);
+          dominant = spawn
+            ? trait ? `${MUTATION_TRAITS[trait].name} ${spawn.archetype}` : spawn.archetype
+            : `cell ${id}`;
         }
       }
       return {
@@ -269,6 +300,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
         mutations: mutationCount,
         births: birthCount,
         supplyDrops: supplyDropCount,
+        reactions: reactionCount,
+        accidents: accidentCount,
+        outbreaks: outbreakCount,
         dominant,
         signals: [...signals],
         crisis: activeCrisis ? CRISES[activeCrisis.id].name : 'none',
@@ -282,6 +316,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
         egg: { ...toolStates.egg },
         nutrient: { ...toolStates.nutrient },
         toxin: { ...toolStates.toxin },
+        water: { ...toolStates.water },
+        salt: { ...toolStates.salt },
+        acid: { ...toolStates.acid },
       };
     },
     getAgitationState(): AgitationState {
@@ -307,23 +344,29 @@ export function createArena(opts: CreateArenaOpts): Arena {
         const spawn = eggSpawnFor(applyOpts.eggArchetype ?? 'swarmlet', state.rng.random());
         applyEggSynergies(state, toolEffects, seedPos, spawn, pushSignal);
         this.spawnEnemy({ spawn, pos: seedPos });
+        toolEffects.push({
+          type: 'hatch',
+          pos: seedPos,
+          radius: 16,
+          ttl: 60 * 2,
+          maxTtl: 60 * 2,
+          seed: state.rng.randInt(1_000_000),
+        });
+        while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
         birthCount += 1;
         return true;
       }
 
       toolState.charges -= 1;
-      const effect: ToolEffect = {
-        type: tool,
-        pos,
-        radius: tool === 'nutrient'
-          ? opts.player.nutrientRadius ?? 20
-          : opts.player.toxinRadius ?? 24,
-        ttl: tool === 'nutrient' ? 60 * 8 : 60 * 7,
-        maxTtl: tool === 'nutrient' ? 60 * 8 : 60 * 7,
-        seed: state.rng.randInt(1_000_000),
-      };
+      const effect = toolEffectFor(tool, pos, opts.player, state.rng.randInt(1_000_000));
       pulseToolEffect(state, effect, archetypes);
       toolEffects.push(effect);
+      const reaction = reactionFor(effect, toolEffects, state.rng.randInt(1_000_000));
+      if (reaction) {
+        reactionCount += 1;
+        pulseToolEffect(state, reaction, archetypes);
+        toolEffects.push(reaction);
+      }
       while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
       return true;
     },
@@ -404,7 +447,10 @@ export function createArena(opts: CreateArenaOpts): Arena {
           if (toolEffects[i]!.ttl <= 0) toolEffects.splice(i, 1);
         }
         if (tickNo % MUTATION_INTERVAL_TICKS === 0) {
-          mutationCount += mutateEcology(state, archetypes, pushSignal);
+          const mutation = mutateEcology(state, archetypes, pushSignal);
+          mutationCount += mutation.changed;
+          for (const effect of mutation.effects) toolEffects.push(effect);
+          while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
         }
         if (tickNo % RESEED_INTERVAL_TICKS === 0) {
           birthCount += reseedEcology(this, state, archetypes);
@@ -413,8 +459,26 @@ export function createArena(opts: CreateArenaOpts): Arena {
           supplyDropCount += refillEggIfQuiet(toolStates, state);
           if (toolStates.egg.charges > 0) lastEmergencyEggTick = tickNo;
         }
+        if (tickNo % OUTBREAK_INTERVAL_TICKS === 0) {
+          const outbreak = triggerPredatorOutbreak(this, state, archetypes);
+          if (outbreak) {
+            outbreakCount += 1;
+            birthCount += outbreak.births;
+            reactionCount += 1;
+            pulseToolEffect(state, outbreak.effect, archetypes);
+            toolEffects.push(outbreak.effect);
+            while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
+          }
+        }
         if (tickNo % RESUPPLY_INTERVAL_TICKS === 0) {
           supplyDropCount += resupplyLab(toolStates, objective);
+        }
+        if (tickNo % ACCIDENT_INTERVAL_TICKS === 0) {
+          const accident = randomAccidentEffect(state);
+          pulseToolEffect(state, accident, archetypes);
+          toolEffects.push(accident);
+          accidentCount += 1;
+          while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
         }
       }
 
@@ -458,11 +522,163 @@ function toolLoadoutFor(player: PlayerConfig): Record<LabTool, ToolState> {
   const eggCharges = player.eggCharges ?? 8;
   const nutrientCharges = player.nutrientCharges ?? 5;
   const toxinCharges = player.toxinCharges ?? 4;
+  const waterCharges = player.waterCharges ?? 6;
+  const saltCharges = player.saltCharges ?? 4;
+  const acidCharges = player.acidCharges ?? 3;
   return {
     egg: { charges: eggCharges, maxCharges: eggCharges },
     nutrient: { charges: nutrientCharges, maxCharges: nutrientCharges },
     toxin: { charges: toxinCharges, maxCharges: toxinCharges },
+    water: { charges: waterCharges, maxCharges: waterCharges },
+    salt: { charges: saltCharges, maxCharges: saltCharges },
+    acid: { charges: acidCharges, maxCharges: acidCharges },
   };
+}
+
+function toolEffectFor(
+  tool: Exclude<LabTool, 'egg'>,
+  pos: [number, number],
+  player: PlayerConfig,
+  seed: number,
+): ToolEffect {
+  const radius =
+    tool === 'nutrient' ? player.nutrientRadius ?? 20 :
+    tool === 'toxin' ? player.toxinRadius ?? 24 :
+    tool === 'water' ? player.waterRadius ?? 28 :
+    tool === 'salt' ? player.saltRadius ?? 18 :
+    player.acidRadius ?? 17;
+  const maxTtl =
+    tool === 'nutrient' ? 60 * 8 :
+    tool === 'toxin' ? 60 * 7 :
+    tool === 'water' ? 60 * 6 :
+    tool === 'salt' ? 60 * 9 :
+    60 * 5;
+  return {
+    type: tool,
+    pos,
+    radius,
+    ttl: maxTtl,
+    maxTtl,
+    seed,
+  };
+}
+
+function reactionFor(newEffect: ToolEffect, effects: ToolEffect[], seed: number): ToolEffect | null {
+  for (const effect of effects) {
+    if (effect === newEffect) continue;
+    const dist = Math.hypot(newEffect.pos[0] - effect.pos[0], newEffect.pos[1] - effect.pos[1]);
+    if (dist > Math.min(newEffect.radius, effect.radius) * 0.85) continue;
+    const reactionType = reactionTypeFor(newEffect.type, effect.type);
+    if (!reactionType) continue;
+    const radius = Math.max(newEffect.radius, effect.radius) + 7;
+    const maxTtl = reactionType === 'bloom' ? 60 * 5 : reactionType === 'brine' ? 60 * 6 : 60 * 3;
+    return {
+      type: reactionType,
+      pos: [
+        (newEffect.pos[0] + effect.pos[0]) / 2,
+        (newEffect.pos[1] + effect.pos[1]) / 2,
+      ],
+      radius,
+      ttl: maxTtl,
+      maxTtl,
+      seed,
+    };
+  }
+  return null;
+}
+
+function randomAccidentEffect(state: SimState): ToolEffect {
+  const accidentTools: Array<Exclude<LabTool, 'egg' | 'nutrient' | 'toxin'>> = ['water', 'salt', 'acid'];
+  const tool = accidentTools[state.rng.randInt(accidentTools.length)]!;
+  return toolEffectFor(
+    tool,
+    [state.rng.randInt(state.grid.LX), state.rng.randInt(state.grid.LY)],
+    {
+      targetVol: 0,
+      speed: 0,
+      engulfMultiplier: 1,
+      bulletSize: 0,
+    },
+    state.rng.randInt(1_000_000),
+  );
+}
+
+function triggerPredatorOutbreak(
+  arena: Arena,
+  state: SimState,
+  archetypes: Map<CellId, EnemySpawn>,
+): { births: number; effect: ToolEffect } | null {
+  if (archetypes.size >= ECOSYSTEM_MAX_POPULATION) return null;
+  const source = dominantOutbreakSource(state);
+  if (!source) return null;
+
+  const sourceArchetype = source.id === PLAYER_ID
+    ? 'red'
+    : archetypes.get(source.id)?.archetype ?? 'lineage';
+  const hunterCount = Math.min(OUTBREAK_HUNTER_COUNT, ECOSYSTEM_MAX_POPULATION - archetypes.size);
+  let births = 0;
+  for (let i = 0; i < hunterCount; i++) {
+    const angle = (Math.PI * 2 * i) / hunterCount + state.rng.random() * 0.45;
+    const distance = 8 + state.rng.randInt(9);
+    arena.spawnEnemy({
+      spawn: outbreakHunterSpawn(sourceArchetype),
+      pos: [
+        source.cell.center[0] + Math.cos(angle) * distance,
+        source.cell.center[1] + Math.sin(angle) * distance,
+      ],
+    });
+    births += 1;
+  }
+
+  source.cell.targetVol = clamp(source.cell.targetVol * 0.82, 35, 2200);
+  return {
+    births,
+    effect: {
+      type: 'lysis',
+      pos: [...source.cell.center],
+      radius: 24,
+      ttl: 60 * 4,
+      maxTtl: 60 * 4,
+      seed: state.rng.randInt(1_000_000),
+    },
+  };
+}
+
+function dominantOutbreakSource(state: SimState): { id: CellId; cell: Cell } | null {
+  let best: { id: CellId; cell: Cell; score: number } | null = null;
+  for (const [id, cell] of state.cells) {
+    if (cell.vol <= 0) continue;
+    const score = Math.max(cell.targetVol, cell.vol);
+    if (score < OUTBREAK_MIN_TARGET_VOL) continue;
+    if (!best || score > best.score) best = { id, cell, score };
+  }
+  return best ? { id: best.id, cell: best.cell } : null;
+}
+
+function outbreakHunterSpawn(sourceArchetype: string): EnemySpawn {
+  const base = ARCHETYPE_DEFAULTS.swarmlet;
+  const sourceIsAnchor = sourceArchetype === 'red' || sourceArchetype === 'boss' || sourceArchetype === 'bruiser';
+  return {
+    ...base,
+    targetVol: sourceIsAnchor ? 105 : 85,
+    speed: sourceIsAnchor ? 16 : 15,
+    engulfMultiplier: sourceIsAnchor ? 7.8 : 7.2,
+    instability: 2.15,
+    traits: ['fleet'],
+  };
+}
+
+function reactionTypeFor(a: ToolEffectType, b: ToolEffectType): ToolEffectType | null {
+  if (isPair(a, b, 'water', 'nutrient')) return 'bloom';
+  if (isPair(a, b, 'water', 'salt')) return 'brine';
+  if (isPair(a, b, 'acid', 'toxin')) return 'lysis';
+  if (isPair(a, b, 'acid', 'water')) return 'foam';
+  if (isPair(a, b, 'acid', 'nutrient')) return 'bloom';
+  return null;
+}
+
+function isPair(a: ToolEffectType, b: ToolEffectType, x: ToolEffectType, y: ToolEffectType): boolean {
+  return (a === x && b === y) || (a === y && b === x);
 }
 
 function evaluateObjective(
@@ -512,7 +728,7 @@ function evaluateObjective(
     const ok = pct <= STERILIZE_MAX_COVERAGE;
     return {
       def: objective,
-      status: ok ? 'satisfied' : deadline ? 'failed' : 'running',
+      status: deadline ? ok ? 'satisfied' : 'failed' : 'running',
       summary: `${Math.round(pct * 100)}% / ${Math.round(STERILIZE_MAX_COVERAGE * 100)}% living matter`,
       urgency,
     };
@@ -566,8 +782,9 @@ function mutateEcology(
   state: SimState,
   archetypes: Map<CellId, EnemySpawn>,
   pushSignal?: (message: string) => void,
-): number {
+): MutationResult {
   let changed = 0;
+  const effects: ToolEffect[] = [];
   for (const [id, spawn] of archetypes) {
     const cell = state.cells.get(id);
     if (!cell || cell.vol <= 0) continue;
@@ -586,9 +803,17 @@ function mutateEcology(
     }
     cell.targetVol = clamp((cell.targetVol + spawn.targetVol) / 2, 35, 1800);
     pushSignal?.(`${capitalize(spawn.archetype)} mutation: ${traitDef.name}.`);
+    effects.push({
+      type: 'mutation',
+      pos: [...cell.center],
+      radius: clamp(12 + instability * 5, 14, 28),
+      ttl: 60 * 2,
+      maxTtl: 60 * 2,
+      seed: state.rng.randInt(1_000_000),
+    });
     changed += 1;
   }
-  return changed;
+  return { changed, effects };
 }
 
 function addTraitToSpawn(spawn: EnemySpawn, trait: TraitId): void {
@@ -722,15 +947,27 @@ function pulseToolEffect(
     const dist = Math.hypot(v[0], v[1]);
     if (dist > effect.radius) continue;
     const strength = 1 - dist / effect.radius;
-    if (effect.type === 'nutrient') {
+    if (effect.type === 'hatch') {
+      cell.targetVol = clamp(cell.targetVol + 10 * strength, 12, 2400);
+    } else if (effect.type === 'mutation') {
+      cell.targetVol = clamp(cell.targetVol + 4 * strength, 12, 2400);
+    } else if (effect.type === 'nutrient') {
       cell.targetVol = clamp(cell.targetVol + NUTRIENT_PULSE_GROWTH * strength, 25, 2200);
+    } else if (effect.type === 'water') {
+      cell.targetVol = clamp(cell.targetVol + WATER_PULSE_GROWTH * strength, 25, 2200);
+    } else if (effect.type === 'bloom') {
+      cell.targetVol = clamp(cell.targetVol + NUTRIENT_PULSE_GROWTH * 1.35 * strength, 25, 2400);
     } else {
       const toxinMultiplier = toxinMultiplierForCell(archetypes, id);
-      cell.targetVol = clamp(cell.targetVol - TOXIN_PULSE_DAMAGE * strength * toxinMultiplier, 12, 2200);
+      const damage =
+        effect.type === 'acid' || effect.type === 'lysis' ? ACID_PULSE_DAMAGE :
+        effect.type === 'salt' || effect.type === 'brine' ? SALT_PULSE_DAMAGE :
+        TOXIN_PULSE_DAMAGE;
+      cell.targetVol = clamp(cell.targetVol - damage * strength * toxinMultiplier, 12, 2200);
     }
   }
-  if (effect.type === 'toxin') {
-    erodePixels(state, effect, 68, archetypes);
+  if (effect.type === 'toxin' || effect.type === 'acid' || effect.type === 'lysis') {
+    erodePixels(state, effect, effect.type === 'acid' ? 112 : effect.type === 'lysis' ? 150 : 68, archetypes);
   }
 }
 
@@ -791,17 +1028,43 @@ function applyToolEffects(
       const strength = (1 - dist / effect.radius) * (effect.ttl / effect.maxTtl);
       const dirX = dist > 0 ? v[0] / dist : 0;
       const dirY = dist > 0 ? v[1] / dist : 0;
-      if (effect.type === 'nutrient') {
+      if (effect.type === 'hatch') {
+        speedBoost += 1.4 * strength;
+      } else if (effect.type === 'mutation') {
+        speedBoost += 2.2 * strength;
+      } else if (effect.type === 'nutrient' || effect.type === 'bloom') {
         vx += dirX * strength;
         vy += dirY * strength;
-        speedBoost += NUTRIENT_PULL_SPEED * strength;
-        cell.targetVol = clamp(cell.targetVol + NUTRIENT_GROWTH_PER_TICK * strength, 25, 2200);
+        speedBoost += (effect.type === 'bloom' ? NUTRIENT_PULL_SPEED * 1.4 : NUTRIENT_PULL_SPEED) * strength;
+        cell.targetVol = clamp(
+          cell.targetVol + (effect.type === 'bloom' ? BLOOM_GROWTH_PER_TICK : NUTRIENT_GROWTH_PER_TICK) * strength,
+          25,
+          2400,
+        );
+      } else if (effect.type === 'water') {
+        vx -= dirX * strength;
+        vy -= dirY * strength;
+        speedBoost += WATER_SPREAD_SPEED * strength;
+        cell.targetVol = clamp(cell.targetVol + WATER_GROWTH_PER_TICK * strength, 25, 2200);
+      } else if (effect.type === 'salt' || effect.type === 'brine') {
+        cell.intent.speed = Math.min(cell.intent.speed, effect.type === 'brine' ? 2.4 : SALT_MAX_SPEED);
+        cell.targetVol = clamp(
+          cell.targetVol - (effect.type === 'brine' ? BRINE_SHRINK_PER_TICK : SALT_SHRINK_PER_TICK) * strength,
+          12,
+          2200,
+        );
       } else {
         const toxinMultiplier = toxinMultiplierForCell(archetypes, id);
         vx -= dirX * strength;
         vy -= dirY * strength;
-        speedBoost += TOXIN_FLEE_SPEED * strength * toxinMultiplier;
-        cell.targetVol = clamp(cell.targetVol - TOXIN_SHRINK_PER_TICK * strength * toxinMultiplier, 12, 2200);
+        const flee = effect.type === 'acid' || effect.type === 'lysis' || effect.type === 'foam'
+          ? ACID_FLEE_SPEED
+          : TOXIN_FLEE_SPEED;
+        speedBoost += flee * strength * toxinMultiplier;
+        const shrink = effect.type === 'acid' || effect.type === 'lysis' || effect.type === 'foam'
+          ? ACID_SHRINK_PER_TICK
+          : TOXIN_SHRINK_PER_TICK;
+        cell.targetVol = clamp(cell.targetVol - shrink * strength * toxinMultiplier, 12, 2200);
       }
     }
     const len = Math.hypot(vx, vy);
@@ -878,10 +1141,10 @@ function applyCrisisEffects(state: SimState, id: CrisisId): void {
 
 function resupplyLab(toolStates: Record<LabTool, ToolState>, objective: ObjectiveDef): number {
   const preference: LabTool[] = objective.kind === 'bloom' || objective.kind === 'preserve'
-    ? ['nutrient', 'egg', 'toxin']
+    ? ['water', 'nutrient', 'egg', 'salt', 'acid', 'toxin']
     : objective.kind === 'cull_red' || objective.kind === 'sterilize'
-      ? ['toxin', 'egg', 'nutrient']
-      : ['egg', 'toxin', 'nutrient'];
+      ? ['acid', 'toxin', 'salt', 'egg', 'water', 'nutrient']
+      : ['egg', 'water', 'salt', 'acid', 'toxin', 'nutrient'];
   const refill = preference.find((tool) => toolStates[tool].charges < toolStates[tool].maxCharges);
   if (!refill) return 0;
   toolStates[refill].charges += 1;
@@ -935,6 +1198,7 @@ function budSpawn(parent: EnemySpawn, roll: number): EnemySpawn {
     speed: clamp(base.speed * 1.08, 4, 16),
     engulfMultiplier: clamp(base.engulfMultiplier * 0.92, 1, 8),
     instability: (base.instability ?? 1) * 1.18,
+    traits: base.traits?.slice(-2),
   };
 }
 

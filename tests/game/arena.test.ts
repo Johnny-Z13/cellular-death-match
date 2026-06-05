@@ -361,6 +361,27 @@ describe('arena ecosystem mode', () => {
     expect(seeded.length).toBe(1);
   });
 
+  it('leaves a visible hatch pulse when an egg seeds a lifeform', () => {
+    const arena = createArena({
+      LX: 50,
+      LY: 50,
+      seed: 20,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        eggCharges: 1,
+      },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 90, speed: 12, engulfMultiplier: 4 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    expect(arena.applyTool('egg', [10, 10], { eggArchetype: 'splitter' })).toBe(true);
+    expect(arena.getToolEffects().some((effect) => effect.type === 'hatch')).toBe(true);
+  });
+
   it('uses the selected egg archetype when seeding lifeforms', () => {
     const arena = createArena({
       LX: 50,
@@ -657,6 +678,234 @@ describe('arena ecosystem mode', () => {
       arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     }
     expect(arena.getObjectiveProgress().summary).toContain('red');
+    expect(arena.getStatus()).toBe('won');
+  });
+
+  it('loads extra reagent tools so the player has activity after eggs run low', () => {
+    const arena = createArena({
+      LX: 50,
+      LY: 50,
+      seed: 1,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+      },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 120, speed: 12, engulfMultiplier: 4 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const tools = arena.getToolStates() as Record<string, { charges: number; maxCharges: number }>;
+    expect(tools.water).toEqual({ charges: 6, maxCharges: 6 });
+    expect(tools.salt).toEqual({ charges: 4, maxCharges: 4 });
+    expect(tools.acid).toEqual({ charges: 3, maxCharges: 3 });
+  });
+
+  it('makes salt desiccate nearby organisms and damp their movement', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 12,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+      },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 140, speed: 12, engulfMultiplier: 4 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+    const beforeTarget = cell.targetVol;
+    expect(arena.applyTool('salt' as never, cell.center)).toBe(true);
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    expect(cell.targetVol).toBeLessThan(beforeTarget);
+    expect(cell.intent.speed).toBeLessThan(8);
+  });
+
+  it('makes acid burn pixels immediately for decisive mad-science interventions', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 13,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+      },
+      enemies: [{ archetype: 'bruiser' as const, targetVol: 450, speed: 8, engulfMultiplier: 6.5 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+    const beforeVol = cell.vol;
+    expect(arena.applyTool('acid' as never, cell.center)).toBe(true);
+    expect(cell.vol).toBeLessThan(beforeVol);
+  });
+
+  it('creates a named reaction field when water floods nutrient medium', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 14,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+      },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 100, speed: 12, engulfMultiplier: 4 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+    expect(arena.applyTool('nutrient', cell.center)).toBe(true);
+    expect(arena.applyTool('water' as never, cell.center)).toBe(true);
+    expect(arena.getToolEffects().some((effect) => effect.type === 'bloom')).toBe(true);
+  });
+
+  it('periodically drops random reagent accidents in ecosystem mode', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 15,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+      },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 100, speed: 12, engulfMultiplier: 4 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    for (let i = 0; i < 60 * 13; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+    expect(arena.getEcology().accidents).toBe(1);
+    expect(arena.getToolEffects().some((effect) =>
+      effect.type === 'water' || effect.type === 'salt' || effect.type === 'acid',
+    )).toBe(true);
+  });
+
+  it('periodically triggers predator outbreaks from oversized lineages', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 17,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+      },
+      enemies: [{ archetype: 'bruiser' as const, targetVol: 520, speed: 8, engulfMultiplier: 6.5 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 30,
+    });
+    const beforeLiving = arena.getEcology().livingEnemies;
+    expect(arena.getEcology().outbreaks).toBe(0);
+    for (let i = 0; i < 60 * 7; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+    expect(arena.getEcology().outbreaks).toBe(1);
+    expect(arena.getEcology().livingEnemies).toBeGreaterThan(beforeLiving);
+    expect(arena.getToolEffects().some((effect) => effect.type === 'lysis')).toBe(true);
+  });
+
+  it('arms outbreak-spawned hunters with aggressive swarmlet stats', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 18,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+      },
+      enemies: [{ archetype: 'bruiser' as const, targetVol: 620, speed: 8, engulfMultiplier: 6.5 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 30,
+    });
+    for (let i = 0; i < 60 * 7; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+    const hunters = Array.from(arena.archetypes)
+      .filter(([id]) => id > 2)
+      .map(([, spawn]) => spawn);
+    const outbreakHunters = hunters.filter((spawn) =>
+      spawn.archetype === 'swarmlet' && spawn.speed >= 15 && spawn.engulfMultiplier >= 7,
+    );
+    expect(outbreakHunters.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('makes mutation cycles assign visible traits and pulse the dish', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 19,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+      },
+      enemies: [
+        { archetype: 'swarmlet' as const, targetVol: 130, speed: 12, engulfMultiplier: 4, instability: 3 },
+        { archetype: 'splitter' as const, targetVol: 260, speed: 8, engulfMultiplier: 6, instability: 2.8 },
+      ],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 30,
+    });
+    for (let i = 0; i < 60 * 10; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+    const livingTraits = Array.from(arena.archetypes)
+      .filter(([id]) => arena.state.cells.get(id)?.vol ?? 0 > 0)
+      .flatMap(([, spawn]) => spawn.traits ?? []);
+    expect(livingTraits.length).toBeGreaterThan(0);
+    expect(arena.getEcology().mutations).toBeGreaterThan(0);
+    expect(arena.getToolEffects().some((effect) => effect.type === 'mutation')).toBe(true);
+  });
+
+  it('does not auto-complete sterilize objectives just because the dish starts sparse', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 16,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+      },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 100, speed: 12, engulfMultiplier: 4 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 2,
+      objective: {
+        kind: 'sterilize',
+        name: 'Test Sterilize',
+        description: 'Sterilize the dish.',
+        target: '4% living coverage',
+      },
+    });
+    expect(arena.getStatus()).toBe('running');
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    expect(arena.getStatus()).toBe('running');
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     expect(arena.getStatus()).toBe('won');
   });
 });

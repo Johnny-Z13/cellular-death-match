@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cellular Death Match</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="/src/styles.css" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260605-evolution-5" />
   </head>
   <body>
     <main class="layout">
@@ -51,6 +51,30 @@
           </span>
           <b>now</b>
         </button>
+        <button class="tool-button" type="button" data-tool="water">
+          <span class="tool-icon water-icon"></span>
+          <span>
+            <strong>Water</strong>
+            <small>dilute and spread</small>
+          </span>
+          <b data-tool-count>6/6</b>
+        </button>
+        <button class="tool-button" type="button" data-tool="salt">
+          <span class="tool-icon salt-icon"></span>
+          <span>
+            <strong>Salt</strong>
+            <small>slow and dry</small>
+          </span>
+          <b data-tool-count>4/4</b>
+        </button>
+        <button class="tool-button" type="button" data-tool="acid">
+          <span class="tool-icon acid-icon"></span>
+          <span>
+            <strong>Acid</strong>
+            <small>burn tissue</small>
+          </span>
+          <b data-tool-count>3/3</b>
+        </button>
       </aside>
       <aside id="debug" class="debug">
         <h2 class="debug-title">DISH INSPECTOR</h2>
@@ -87,7 +111,7 @@
       <div id="screen-title" class="screen visible">
         <div class="screen-card">
           <h1 class="screen-title">Cellular Death Match</h1>
-          <p class="screen-sub">Cultivate tense ecosystem trials. Drop eggs, nutrients, and toxins before the dish clock expires.</p>
+          <p class="screen-sub">Run unstable ecosystem trials. Breed organisms, flood reagents, shake the dish, and trigger strange reactions before the dish clock expires.</p>
           <p id="commit-debug" class="commit-debug">commit: loading</p>
           <button id="title-start" class="screen-button">Enter Ecosystem</button>
         </div>
@@ -133,6 +157,6 @@
         <div id="ticker-lines" class="ticker-lines"></div>
       </aside>
     </main>
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/main.ts?v=20260605-evolution-5"></script>
   </body>
 </html>

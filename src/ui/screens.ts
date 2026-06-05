@@ -3,7 +3,7 @@ import type { UpgradeDef } from '../content/upgrades';
 import type { EnemyArchetype } from '../content/enemies';
 
 type ScreenName = 'title' | 'pick' | 'end' | 'hud';
-export type ToolId = 'egg' | 'nutrient' | 'toxin';
+export type ToolId = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid';
 
 export interface HudInfo {
   fightIndex: number;          // 0-based; HUD shows fightIndex+1
@@ -16,6 +16,9 @@ export interface HudInfo {
   mutations: number;
   births: number;
   supplyDrops: number;
+  reactions: number;
+  accidents: number;
+  outbreaks: number;
   dominant: string;
   crisis: string;
   objectiveName: string;
@@ -128,7 +131,7 @@ export function createScreens(): Screens {
     updateToolCharges(charges) {
       for (const btn of toolButtons) {
         const tool = btn.dataset.tool;
-        if (tool !== 'egg' && tool !== 'nutrient' && tool !== 'toxin') continue;
+        if (!isToolId(tool)) continue;
         const count = btn.querySelector<HTMLElement>('[data-tool-count]');
         const state = charges[tool];
         btn.disabled = state.charges <= 0;
@@ -143,7 +146,7 @@ export function createScreens(): Screens {
     onToolSelect(handler) {
       for (const btn of toolButtons) {
         const tool = btn.dataset.tool;
-        if (tool === 'egg' || tool === 'nutrient' || tool === 'toxin') {
+        if (isToolId(tool)) {
           btn.addEventListener('click', () => handler(tool));
         }
       }
@@ -206,7 +209,7 @@ export function createScreens(): Screens {
       hudVol.textContent = `${info.vol} / ${Math.round(info.targetVol)}`;
       hudProgress.textContent = `${info.secondsRemaining}s`;
       const crisis = info.crisis === 'none' ? '' : `, ${info.crisis} active`;
-      hudEco.textContent = `${info.livingEnemies} lifeforms, ${info.mutations} mutations, ${info.births} births, ${info.supplyDrops} drops, ${info.dominant} dominant${crisis}`;
+      hudEco.textContent = `${info.livingEnemies} lifeforms, ${info.outbreaks} outbreaks, ${info.reactions} reactions, ${info.accidents} accidents, ${info.mutations} mutations, ${info.births} births, ${info.supplyDrops} drops, ${info.dominant} dominant${crisis}`;
       hudObjective.textContent = `${info.objectiveName}: ${info.objectiveSummary}`;
       hudUpgrades.textContent = info.upgrades.length === 0 ? 'none' : info.upgrades.join(', ');
     },
@@ -248,4 +251,13 @@ export function createScreens(): Screens {
 
 function rgb(color: [number, number, number]): string {
   return `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+}
+
+function isToolId(tool: string | undefined): tool is ToolId {
+  return tool === 'egg'
+    || tool === 'nutrient'
+    || tool === 'toxin'
+    || tool === 'water'
+    || tool === 'salt'
+    || tool === 'acid';
 }

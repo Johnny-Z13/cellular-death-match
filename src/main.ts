@@ -156,7 +156,7 @@ function startNewFight() {
     debug.setSwatch(2 + i, swatchForArchetype(enemies[i]!.archetype));
   }
   showPhase();
-  requestAnimationFrame(loop);
+  loop();
 }
 
 function loop() {
@@ -201,6 +201,9 @@ function loop() {
       mutations: ecology.mutations,
       births: ecology.births,
       supplyDrops: ecology.supplyDrops,
+      reactions: ecology.reactions,
+      accidents: ecology.accidents,
+      outbreaks: ecology.outbreaks,
       dominant: ecology.dominant,
       crisis: ecology.crisis,
       objectiveName: objective.def.name,
@@ -226,7 +229,7 @@ function loop() {
   // Status check: did this tick end the fight?
   if (resolveArenaStatus(arena.getStatus())) return;
 
-  requestAnimationFrame(loop);
+  scheduleLoop();
 }
 
 function resolveArenaStatus(status: ArenaStatus): boolean {
@@ -243,12 +246,24 @@ function resolveArenaStatus(status: ArenaStatus): boolean {
   return false;
 }
 
+function scheduleLoop(): void {
+  if (typeof window.requestAnimationFrame === 'function') {
+    window.requestAnimationFrame(loop);
+  } else {
+    window.setTimeout(loop, 16);
+  }
+}
+
 interface TickerState {
   lastRedBand: string;
   lastBlueBand: string;
   lastCoverageBand: string;
   lastDominant: string;
   lastToolPressureTick: number;
+  lastReactionCount: number;
+  lastAccidentCount: number;
+  lastOutbreakCount: number;
+  lastMutationCount: number;
   lastObjectiveSummary: string;
   seenSignals: string[];
   didWarnDeadline: boolean;
@@ -262,6 +277,10 @@ function createTickerState(): TickerState {
     lastCoverageBand: 'unknown',
     lastDominant: 'none',
     lastToolPressureTick: -9999,
+    lastReactionCount: 0,
+    lastAccidentCount: 0,
+    lastOutbreakCount: 0,
+    lastMutationCount: 0,
     lastObjectiveSummary: '',
     seenSignals: [],
     didWarnDeadline: false,
@@ -316,10 +335,32 @@ function updateTicker(ar: Arena): void {
     screens.addTicker(`${capitalize(ecology.dominant)} has become dominant.`);
   }
 
-  const toolPressure = ar.getToolEffects().find((effect) => effect.type === 'toxin');
+  const toolPressure = ar.getToolEffects().find((effect) =>
+    effect.type === 'toxin' || effect.type === 'acid' || effect.type === 'salt' || effect.type === 'brine',
+  );
   if (toolPressure && tickCount - tickerState.lastToolPressureTick > 240) {
     tickerState.lastToolPressureTick = tickCount;
-    screens.addTicker('Toxin pressure is reshaping local movement.');
+    screens.addTicker(`${capitalize(toolPressure.type)} pressure is reshaping local movement.`);
+  }
+
+  if (ecology.reactions > tickerState.lastReactionCount) {
+    tickerState.lastReactionCount = ecology.reactions;
+    screens.addTicker('Reagent reaction: unstable chemistry is blooming.');
+  }
+
+  if (ecology.accidents > tickerState.lastAccidentCount) {
+    tickerState.lastAccidentCount = ecology.accidents;
+    screens.addTicker('Lab accident: rogue reagent entered the dish.');
+  }
+
+  if (ecology.outbreaks > tickerState.lastOutbreakCount) {
+    tickerState.lastOutbreakCount = ecology.outbreaks;
+    screens.addTicker('Predator outbreak: hunter cells erupted from the dominant lineage.');
+  }
+
+  if (ecology.mutations > tickerState.lastMutationCount) {
+    tickerState.lastMutationCount = ecology.mutations;
+    screens.addTicker('Visible mutation: a lineage expressed a new trait.');
   }
 
   if (objective.summary !== tickerState.lastObjectiveSummary && tickCount % 180 === 0) {
@@ -340,9 +381,18 @@ function capitalize(s: string): string {
   return s.length === 0 ? s : s[0]!.toUpperCase() + s.slice(1);
 }
 
-function readAudioFrame(ar: Arena): { eating: number; fighting: number } {
+function readAudioFrame(ar: Arena): {
+  eating: number;
+  fighting: number;
+  reactions: number;
+  mutations: number;
+  hatches: number;
+} {
   let eating = 0;
   let fighting = 0;
+  let reactions = 0;
+  let mutations = 0;
+  let hatches = 0;
   for (const event of ar.state.events) {
     if (event.type !== 'pixelTransferred') continue;
     if (event.from === 0 && event.to !== 0) {
@@ -353,7 +403,17 @@ function readAudioFrame(ar: Arena): { eating: number; fighting: number } {
       else fighting += 1;
     }
   }
-  return { eating, fighting };
+  const activeReactions = ar.getToolEffects()
+    .filter((effect) => effect.type === 'bloom' || effect.type === 'brine' || effect.type === 'lysis' || effect.type === 'foam')
+    .filter((effect) => effect.ttl > effect.maxTtl - 4).length;
+  reactions += activeReactions;
+  mutations += ar.getToolEffects()
+    .filter((effect) => effect.type === 'mutation')
+    .filter((effect) => effect.ttl > effect.maxTtl - 4).length;
+  hatches += ar.getToolEffects()
+    .filter((effect) => effect.type === 'hatch')
+    .filter((effect) => effect.ttl > effect.maxTtl - 4).length;
+  return { eating, fighting, reactions, mutations, hatches };
 }
 
 function canvasEventToGridPos(event: PointerEvent): [number, number] {
@@ -373,9 +433,7 @@ function renderToolEffects(ar: Arena): void {
   const sy = canvas.height / LY;
   for (const effect of ar.getToolEffects()) {
     const alpha = Math.max(0, effect.ttl / effect.maxTtl);
-    const color = effect.type === 'nutrient'
-      ? { core: [212, 214, 94], edge: [102, 170, 96] }
-      : { core: [171, 93, 220], edge: [104, 52, 150] };
+    const color = colorForEffect(effect.type);
     const pixels = splodgePixels(effect.seed, effect.radius);
     ctx.save();
     ctx.imageSmoothingEnabled = false;
@@ -391,6 +449,25 @@ function renderToolEffects(ar: Arena): void {
       );
     }
     ctx.restore();
+  }
+}
+
+function colorForEffect(type: ReturnType<Arena['getToolEffects']>[number]['type']): {
+  core: [number, number, number];
+  edge: [number, number, number];
+} {
+  switch (type) {
+    case 'nutrient': return { core: [212, 214, 94], edge: [102, 170, 96] };
+    case 'toxin': return { core: [171, 93, 220], edge: [104, 52, 150] };
+    case 'water': return { core: [90, 216, 255], edge: [39, 108, 154] };
+    case 'salt': return { core: [234, 246, 242], edge: [128, 158, 154] };
+    case 'acid': return { core: [131, 255, 85], edge: [45, 141, 61] };
+    case 'bloom': return { core: [246, 255, 96], edge: [60, 232, 152] };
+    case 'brine': return { core: [210, 255, 245], edge: [74, 142, 154] };
+    case 'lysis': return { core: [255, 98, 98], edge: [144, 32, 82] };
+    case 'foam': return { core: [201, 255, 255], edge: [103, 208, 176] };
+    case 'mutation': return { core: [255, 205, 74], edge: [255, 92, 174] };
+    case 'hatch': return { core: [186, 255, 160], edge: [72, 210, 255] };
   }
 }
 

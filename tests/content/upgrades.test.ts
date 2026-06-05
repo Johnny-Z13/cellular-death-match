@@ -64,6 +64,33 @@ describe('applyUpgrades', () => {
     expect(result.toxinRadius).toBeCloseTo(28.32, 5);
   });
 
+  it('adds water, salt, and acid charges from reagent research', () => {
+    const result = applyUpgrades(BASE, [
+      { id: 'water_1', stacks: 1 },
+      { id: 'salt_1', stacks: 1 },
+      { id: 'acid_1', stacks: 1 },
+    ]);
+    expect(result.waterCharges).toBe(2);
+    expect(result.saltCharges).toBe(2);
+    expect(result.acidCharges).toBe(1);
+  });
+
+  it('applies radius research for volatile reagents', () => {
+    const result = applyUpgrades({ ...BASE, waterRadius: 28, saltRadius: 18, acidRadius: 17 }, [
+      { id: 'volatile_reagents_1', stacks: 1 },
+    ]);
+    expect(result.waterRadius).toBeCloseTo(31.36, 5);
+    expect(result.saltRadius).toBeCloseTo(20.16, 5);
+    expect(result.acidRadius).toBeCloseTo(19.04, 5);
+  });
+
+  it('stacks volatile reagent research additively', () => {
+    const result = applyUpgrades({ ...BASE, acidRadius: 17 }, [
+      { id: 'volatile_reagents_1', stacks: 2 },
+    ]);
+    expect(result.acidRadius).toBeCloseTo(21.08, 5);
+  });
+
   it('multiple different upgrades compose correctly', () => {
     const result = applyUpgrades(BASE, [
       { id: 'red_buffer_1', stacks: 1 },
