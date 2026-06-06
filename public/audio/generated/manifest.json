@@ -1,0 +1,45 @@
+{
+  "generatedAt": "2026-06-06T00:30:15.147Z",
+  "assets": [
+    {
+      "id": "hatch",
+      "file": "/audio/generated/hatch.mp3",
+      "skipped": false
+    },
+    {
+      "id": "visible_mutation",
+      "file": "/audio/generated/visible_mutation.mp3",
+      "skipped": false
+    },
+    {
+      "id": "catalytic_flare",
+      "file": "/audio/generated/catalytic_flare.mp3",
+      "skipped": false
+    },
+    {
+      "id": "water_stabilize",
+      "file": "/audio/generated/water_stabilize.mp3",
+      "skipped": false
+    },
+    {
+      "id": "salt_crystal",
+      "file": "/audio/generated/salt_crystal.mp3",
+      "skipped": false
+    },
+    {
+      "id": "folding_fault",
+      "file": "/audio/generated/folding_fault.mp3",
+      "skipped": false
+    },
+    {
+      "id": "hidden_breed",
+      "file": "/audio/generated/hidden_breed.mp3",
+      "skipped": false
+    },
+    {
+      "id": "objective_warning",
+      "file": "/audio/generated/objective_warning.mp3",
+      "skipped": false
+    }
+  ]
+}

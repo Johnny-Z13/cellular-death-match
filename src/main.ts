@@ -6,6 +6,7 @@ import { createScreens, type ToolId } from './ui/screens';
 import { getUpgradeDef } from './content/upgrades';
 import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/enemies';
 import { createEcologyAudio } from './audio/ecologyAudio';
+import { soundEventForDishSignal, type SoundEventId } from './audio/soundDesign';
 import { hash2 } from './game/hash';
 import {
   clearDiscoverySave,
@@ -50,6 +51,7 @@ let framesSinceTick = 0;
 let lastFpsTick = performance.now();
 let tickCount = 0;
 let tickerState = createTickerState();
+let heardDishEventIds = new Set<number>();
 
 interface RuntimeOverlayState {
   menuOpen: boolean;
@@ -207,6 +209,7 @@ function startNewFight() {
   renderer = createRenderer(canvas, PALETTE_SIZE);
   tickCount = 0;
   tickerState = createTickerState();
+  heardDishEventIds = new Set<number>();
   screens.clearTicker();
   screens.addTicker(`Objective received: ${run.getObjective().name}.`);
   screens.updateToolCharges(arena.getToolStates());
@@ -509,12 +512,14 @@ function readAudioFrame(ar: Arena): {
   reactions: number;
   mutations: number;
   hatches: number;
+  events: SoundEventId[];
 } {
   let eating = 0;
   let fighting = 0;
   let reactions = 0;
   let mutations = 0;
   let hatches = 0;
+  const events: SoundEventId[] = [];
   for (const event of ar.state.events) {
     if (event.type !== 'pixelTransferred') continue;
     if (event.from === 0 && event.to !== 0) {
@@ -543,7 +548,14 @@ function readAudioFrame(ar: Arena): {
   hatches += ar.getToolEffects()
     .filter((effect) => effect.type === 'hatch')
     .filter((effect) => effect.ttl > effect.maxTtl - 4).length;
-  return { eating, fighting, reactions, mutations, hatches };
+  if (hatches > 0) events.push('hatch');
+  for (const event of ar.getDishEvents()) {
+    if (heardDishEventIds.has(event.id)) continue;
+    heardDishEventIds.add(event.id);
+    const sound = soundEventForDishSignal(event.kind, event.label);
+    if (sound) events.push(sound);
+  }
+  return { eating, fighting, reactions, mutations, hatches, events };
 }
 
 function canvasEventToGridPos(event: PointerEvent): [number, number] {

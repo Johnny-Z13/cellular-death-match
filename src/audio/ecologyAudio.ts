@@ -1,9 +1,16 @@
+import {
+  SOUND_EVENT_DEFS,
+  type SoundEventDef,
+  type SoundEventId,
+} from './soundDesign';
+
 export interface EcologyAudioFrame {
   eating: number;
   fighting: number;
   reactions: number;
   mutations: number;
   hatches: number;
+  events: SoundEventId[];
 }
 
 export interface EcologyAudio {
@@ -19,6 +26,10 @@ export function createEcologyAudio(): EcologyAudio {
   let lastReactionAt = 0;
   let lastMutationAt = 0;
   let lastHatchAt = 0;
+  let didRequestAssets = false;
+  const soundBuffers = new Map<SoundEventId, AudioBuffer>();
+  const lastEventAt = new Map<SoundEventId, number>();
+  const activeVoices = new Map<SoundEventId, number>();
 
   function ensureContext(): AudioContext {
     if (ctx) return ctx;
@@ -29,7 +40,25 @@ export function createEcologyAudio(): EcologyAudio {
     out = ctx.createGain();
     out.gain.value = 0.45;
     out.connect(ctx.destination);
+    void preloadSoundAssets(ctx);
     return ctx;
+  }
+
+  async function preloadSoundAssets(c: AudioContext): Promise<void> {
+    if (didRequestAssets) return;
+    didRequestAssets = true;
+    const defs = Object.values(SOUND_EVENT_DEFS).filter((def) => def.asset);
+    await Promise.all(defs.map(async (def) => {
+      try {
+        const response = await fetch(def.asset!);
+        if (!response.ok) return;
+        const bytes = await response.arrayBuffer();
+        const buffer = await c.decodeAudioData(bytes);
+        soundBuffers.set(def.id, buffer);
+      } catch {
+        // Missing generated assets fall back to procedural layers.
+      }
+    }));
   }
 
   function makeNoiseBuffer(c: AudioContext, seconds: number): AudioBuffer {
@@ -175,6 +204,170 @@ export function createEcologyAudio(): EcologyAudio {
     osc.stop(now + 0.2);
   }
 
+  function playSoundEvent(id: SoundEventId): void {
+    if (!ctx || !out) return;
+    const def = SOUND_EVENT_DEFS[id];
+    const nowMs = ctx.currentTime * 1000;
+    const lastAt = lastEventAt.get(id) ?? -Infinity;
+    if (nowMs - lastAt < def.cooldownMs) return;
+    const voices = activeVoices.get(id) ?? 0;
+    if (voices >= def.maxVoices) return;
+    lastEventAt.set(id, nowMs);
+    activeVoices.set(id, voices + 1);
+
+    const buffer = soundBuffers.get(id);
+    if (buffer) {
+      playBufferEvent(def, buffer);
+    } else {
+      playProceduralEvent(def);
+    }
+
+    window.setTimeout(() => {
+      activeVoices.set(id, Math.max(0, (activeVoices.get(id) ?? 1) - 1));
+    }, Math.max(120, def.cooldownMs));
+  }
+
+  function playBufferEvent(def: SoundEventDef, buffer: AudioBuffer): void {
+    if (!ctx || !out) return;
+    const c = ctx;
+    const now = c.currentTime;
+    const source = c.createBufferSource();
+    const gain = c.createGain();
+    source.buffer = buffer;
+    gain.gain.setValueAtTime(def.gain, now);
+    source.connect(gain).connect(out);
+    source.start(now);
+  }
+
+  function playProceduralEvent(def: SoundEventDef): void {
+    if (!ctx || !out) return;
+    if (def.id === 'hatch') {
+      playHatch(1);
+      return;
+    }
+    if (def.id === 'visible_mutation') {
+      playMutation(2);
+      return;
+    }
+    if (def.id === 'catalytic_flare') {
+      playReaction(5);
+      playFight(6);
+      return;
+    }
+    if (def.id === 'water_stabilize') {
+      playWaterStabilize(def.gain);
+      return;
+    }
+    if (def.id === 'salt_crystal') {
+      playSaltCrystal(def.gain);
+      return;
+    }
+    if (def.id === 'folding_fault') {
+      playFoldingFault(def.gain);
+      return;
+    }
+    if (def.id === 'hidden_breed') {
+      playHiddenBreed(def.gain);
+      return;
+    }
+    playObjectiveWarning(def.gain);
+  }
+
+  function playWaterStabilize(gainValue: number): void {
+    if (!ctx || !out) return;
+    const c = ctx;
+    const now = c.currentTime;
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(520, now);
+    osc.frequency.exponentialRampToValueAtTime(180, now + 0.28);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.05 * gainValue, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.34);
+    osc.connect(gain).connect(out);
+    osc.start(now);
+    osc.stop(now + 0.36);
+  }
+
+  function playSaltCrystal(gainValue: number): void {
+    if (!ctx || !out) return;
+    const c = ctx;
+    const now = c.currentTime;
+    for (let i = 0; i < 3; i++) {
+      const osc = c.createOscillator();
+      const gain = c.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(1180 + i * 240 + Math.random() * 80, now + i * 0.018);
+      gain.gain.setValueAtTime(0, now + i * 0.018);
+      gain.gain.linearRampToValueAtTime(0.035 * gainValue, now + i * 0.018 + 0.006);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.018 + 0.09);
+      osc.connect(gain).connect(out);
+      osc.start(now + i * 0.018);
+      osc.stop(now + i * 0.018 + 0.1);
+    }
+  }
+
+  function playFoldingFault(gainValue: number): void {
+    if (!ctx || !out) return;
+    const c = ctx;
+    const now = c.currentTime;
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(92, now);
+    osc.frequency.setValueAtTime(184, now + 0.04);
+    osc.frequency.setValueAtTime(123, now + 0.08);
+    osc.frequency.exponentialRampToValueAtTime(62, now + 0.32);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.06 * gainValue, now + 0.018);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+    osc.connect(gain).connect(out);
+    osc.start(now);
+    osc.stop(now + 0.44);
+  }
+
+  function playHiddenBreed(gainValue: number): void {
+    if (!ctx || !out) return;
+    const c = ctx;
+    const now = c.currentTime;
+    const osc = c.createOscillator();
+    const shimmer = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = 'sine';
+    shimmer.type = 'square';
+    osc.frequency.setValueAtTime(420, now);
+    osc.frequency.exponentialRampToValueAtTime(840, now + 0.16);
+    shimmer.frequency.setValueAtTime(1260, now + 0.04);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.052 * gainValue, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
+    osc.connect(gain);
+    shimmer.connect(gain);
+    gain.connect(out);
+    osc.start(now);
+    shimmer.start(now + 0.04);
+    osc.stop(now + 0.26);
+    shimmer.stop(now + 0.2);
+  }
+
+  function playObjectiveWarning(gainValue: number): void {
+    if (!ctx || !out) return;
+    const c = ctx;
+    const now = c.currentTime;
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(310, now);
+    osc.frequency.setValueAtTime(232, now + 0.11);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.04 * gainValue, now + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+    osc.connect(gain).connect(out);
+    osc.start(now);
+    osc.stop(now + 0.24);
+  }
+
   return {
     unlock() {
       const c = ensureContext();
@@ -187,6 +380,7 @@ export function createEcologyAudio(): EcologyAudio {
         && frame.reactions <= 0
         && frame.mutations <= 0
         && frame.hatches <= 0
+        && frame.events.length === 0
       ) return;
       const c = ensureContext();
       if (c.state === 'suspended') return;
@@ -211,6 +405,9 @@ export function createEcologyAudio(): EcologyAudio {
       if (frame.hatches > 0 && now - lastHatchAt > 0.12) {
         playHatch(frame.hatches);
         lastHatchAt = now;
+      }
+      for (const event of frame.events) {
+        playSoundEvent(event);
       }
     },
   };
