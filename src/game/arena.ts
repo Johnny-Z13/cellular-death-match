@@ -210,6 +210,7 @@ const CONTROLLED_REACTION_MIN_COVERAGE = OBJECTIVE_TUNING.controlledReactionMinC
 const DOMINANT_MIN_COVERAGE = OBJECTIVE_TUNING.dominantMinCoverage;
 const BALANCE_MAX_DOMINANCE = OBJECTIVE_TUNING.balanceMaxDominance;
 const BALANCE_MIN_LIFEFORMS = OBJECTIVE_TUNING.balanceMinLifeforms;
+const DISCOVERY_SHOWCASE_TICKS = 90;
 
 interface AiState {
   sniper?: SniperState;
@@ -259,6 +260,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
   const toolStates: Record<LabTool, ToolState> = toolLoadoutFor(opts.player);
   const signals: string[] = [];
   const discoveredBreedIds = new Set<BreedId>();
+  const discoveredBreedTicks = new Map<BreedId, number>();
   const discoveredNoteIds = new Set<DiscoveryNoteId>();
   const discoveryMessages: string[] = [];
 
@@ -278,9 +280,10 @@ export function createArena(opts: CreateArenaOpts): Arena {
   function discoverBreed(arena: Arena, id: BreedId, sourceCell?: Cell): void {
     if (discoveredBreedIds.has(id)) return;
     discoveredBreedIds.add(id);
-    discoverNote(`breed_${id}`, `NEW BREED DISCOVERED: ${BREED_DEFS[id].name}.`);
+    discoveredBreedTicks.set(id, tickNo);
+    discoverNote(`breed_${id}`, `NEW LIFEFORM CREATED: ${BREED_DEFS[id].name}.`);
     if (sourceCell) {
-      addDishEvent('discovery', `NEW BREED: ${BREED_DEFS[id].name}`, sourceCell.center, 20, 'cyan');
+      addDishEvent('discovery', `NEW LIFEFORM: ${BREED_DEFS[id].name}`, sourceCell.center, 20, 'cyan');
     }
     if (!sourceCell || sourceCell.vol <= 0 || archetypes.size >= ECOSYSTEM_MAX_POPULATION) return;
     arena.spawnEnemy({
@@ -370,6 +373,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       if (mode === 'ecosystem') {
         const status = evaluateObjective(state, archetypes, objective, tickNo, epochTicks, {
           reactions: reactionCount,
+          discoveredBreedTicks,
         }).status;
         if (status === 'satisfied') return 'won';
         if (status === 'failed') return 'lost';
@@ -422,6 +426,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
     getObjectiveProgress(): ObjectiveProgress {
       return evaluateObjective(state, archetypes, objective, tickNo, epochTicks, {
         reactions: reactionCount,
+        discoveredBreedTicks,
       });
     },
     getToolStates(): Record<LabTool, ToolState> {
@@ -564,6 +569,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
       if (mode !== 'ecosystem') return current;
       const status = evaluateObjective(state, archetypes, objective, epochTicks, epochTicks, {
         reactions: reactionCount,
+        discoveredBreedTicks,
+        forceShowcase: true,
       }).status;
       forcedStatus = status === 'satisfied' ? 'won' : 'lost';
       tickNo = Math.max(tickNo, epochTicks);
@@ -1086,6 +1093,9 @@ function evaluateBreedDiscoveries(
   effects: ToolEffect[],
   discover: (id: BreedId, sourceCell?: Cell) => void,
 ): void {
+  const bloomMassSource = bloomMassPairSource(state, archetypes, effects);
+  if (bloomMassSource) discover('bloom_mass', bloomMassSource);
+
   const needleSource = needleSwarmSource(state, archetypes);
   if (needleSource) discover('needle_swarm', needleSource);
 
@@ -1116,6 +1126,41 @@ function evaluateBreedDiscoveries(
       discover('folded_anchor', cell);
     }
   }
+}
+
+function bloomMassPairSource(
+  state: SimState,
+  archetypes: Map<CellId, EnemySpawn>,
+  effects: ToolEffect[],
+): Cell | null {
+  const nutrientFields = effects.filter((effect) =>
+    effect.type === 'nutrient' || effect.type === 'bloom' || effect.type === 'conduit',
+  );
+  if (nutrientFields.length === 0) return null;
+
+  const swarmlets: Cell[] = [];
+  const splitters: Cell[] = [];
+  for (const [id, spawn] of archetypes) {
+    const cell = state.cells.get(id);
+    if (!cell || cell.vol <= 0) continue;
+    if (spawn.archetype === 'swarmlet') swarmlets.push(cell);
+    if (spawn.archetype === 'splitter') splitters.push(cell);
+  }
+
+  for (const swarmlet of swarmlets) {
+    for (const splitter of splitters) {
+      const pairDistance = distanceBetween(state, swarmlet.center, splitter.center);
+      if (pairDistance > 18) continue;
+      const inNutrient = nutrientFields.some((effect) => {
+        const swarmletDistance = distanceBetween(state, swarmlet.center, effect.pos);
+        const splitterDistance = distanceBetween(state, splitter.center, effect.pos);
+        return swarmletDistance <= effect.radius + 6 && splitterDistance <= effect.radius + 6;
+      });
+      if (inNutrient) return splitter;
+    }
+  }
+
+  return null;
 }
 
 function needleSwarmSource(
@@ -1236,11 +1281,29 @@ function evaluateObjective(
   objective: ObjectiveDef,
   tickNo: number,
   epochTicks: number,
-  context: { reactions: number },
+  context: {
+    reactions: number;
+    discoveredBreedTicks: ReadonlyMap<BreedId, number>;
+    forceShowcase?: boolean;
+  },
 ): ObjectiveProgress {
   const metrics = dishMetrics(state, archetypes);
   const deadline = tickNo >= epochTicks;
   const urgency = objectiveUrgency(tickNo, epochTicks);
+
+  if (objective.kind === 'discover_breed') {
+    const breedId = objective.breedId ?? 'bloom_mass';
+    const discoveredTick = context.discoveredBreedTicks.get(breedId);
+    const discovered = discoveredTick !== undefined;
+    const showcased = discovered && (context.forceShowcase || tickNo - discoveredTick >= DISCOVERY_SHOWCASE_TICKS);
+    const name = BREED_DEFS[breedId]?.name ?? breedId;
+    return {
+      def: objective,
+      status: showcased ? 'satisfied' : deadline && !discovered ? 'failed' : 'running',
+      summary: discovered ? `${name} created - logging sample` : `${name} not yet created`,
+      urgency,
+    };
+  }
 
   if (objective.kind === 'preserve_grazers') {
     const minCount = objective.minCount ?? PRESERVE_GRAZER_MIN;
@@ -1594,7 +1657,7 @@ function erodePixels(
       const toxinMultiplier = toxinMultiplierForCell(archetypes, id);
       if (state.rng.random() > strength * 0.9 * toxinMultiplier) continue;
       setCell(grid, x, y, 0);
-      removePixel(cell, x, y, grid.LX, grid.LY);
+      removePixel(cell, x, y, grid.LX, grid.LY, grid.wrap);
       updateBoundaryAround(grid, x, y);
       removed += 1;
     }

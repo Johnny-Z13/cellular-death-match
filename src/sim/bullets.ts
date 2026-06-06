@@ -66,7 +66,7 @@ export function stepBullets(state: SimState): void {
         if (victim) {
           // Use the canonical pixel-removal helper so center & vol stay in sync.
           // (Don't reimplement the circular-mean math here — that's cell.ts's job.)
-          removePixel(victim, x, y, LX, LY);
+          removePixel(victim, x, y, LX, LY, grid.wrap);
           victim.targetVol -= 1;        // metabolism decay on damage; Python: target_cell_vols[id] -= 1
         }
         setCell(grid, x, y, 0);

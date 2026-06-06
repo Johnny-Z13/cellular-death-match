@@ -9,6 +9,7 @@ export function createCell(id: CellId, targetVol: number): Cell {
       { re: 0, im: 0 },
       { re: 0, im: 0 },
     ],
+    centerLinearSum: [0, 0],
     center: [0, 0],
     intent: {
       vec: [0, 0],
@@ -37,11 +38,17 @@ function applyContribution(
   c.centerSum[0].im += sign * Math.sin(ax);
   c.centerSum[1].re += sign * Math.cos(ay);
   c.centerSum[1].im += sign * Math.sin(ay);
+  c.centerLinearSum[0] += sign * x;
+  c.centerLinearSum[1] += sign * y;
 }
 
-function recomputeCenter(c: Cell, LX: number, LY: number): void {
+function recomputeCenter(c: Cell, LX: number, LY: number, wrap: boolean): void {
   if (c.vol <= 0) {
     c.center = [0, 0];
+    return;
+  }
+  if (!wrap) {
+    c.center = [c.centerLinearSum[0] / c.vol, c.centerLinearSum[1] / c.vol];
     return;
   }
   // angle of (sum / vol) is the same as angle of sum (vol is positive real),
@@ -54,14 +61,14 @@ function recomputeCenter(c: Cell, LX: number, LY: number): void {
   c.center = [(ux / (2 * Math.PI)) * LX, (uy / (2 * Math.PI)) * LY];
 }
 
-export function addPixel(c: Cell, x: number, y: number, LX: number, LY: number): void {
+export function addPixel(c: Cell, x: number, y: number, LX: number, LY: number, wrap = true): void {
   c.vol += 1;
   applyContribution(c, x, y, LX, LY, 1);
-  recomputeCenter(c, LX, LY);
+  recomputeCenter(c, LX, LY, wrap);
 }
 
-export function removePixel(c: Cell, x: number, y: number, LX: number, LY: number): void {
+export function removePixel(c: Cell, x: number, y: number, LX: number, LY: number, wrap = true): void {
   c.vol -= 1;
   applyContribution(c, x, y, LX, LY, -1);
-  recomputeCenter(c, LX, LY);
+  recomputeCenter(c, LX, LY, wrap);
 }

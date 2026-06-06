@@ -38,7 +38,7 @@ export function createSim(opts: CreateSimOpts): SimState {
       // Don't overwrite another cell's pixels (shouldn't happen with reasonable nCells/LX).
       if (grid.cells[idx(grid, nx, ny)] !== 0) continue;
       setCell(grid, nx, ny, i);
-      addPixel(c, nx, ny, opts.LX, opts.LY);
+      addPixel(c, nx, ny, opts.LX, opts.LY, opts.wrap);
     }
   }
 
@@ -94,7 +94,7 @@ export function addCell(state: SimState, opts: AddCellOpts): CellId {
       }
       if ((state.grid.cells[idx(state.grid, nx, ny)] ?? 0) !== 0) continue;
       setCell(state.grid, nx, ny, opts.id);
-      addPixel(cell, nx, ny, LX, LY);
+      addPixel(cell, nx, ny, LX, LY, wrap);
     }
   }
 

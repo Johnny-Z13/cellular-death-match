@@ -5,12 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cellular Death Match</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="/src/styles.css?v=20260606-desktop-layout-2" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260606-discovery-progression" />
   </head>
   <body>
     <main class="layout">
       <canvas id="game" width="800" height="800"></canvas>
       <aside id="toolbox" class="toolbox" aria-label="Petri dish tools">
+        <div class="toolbox-head">
+          <h2 class="toolbox-title">Reagents</h2>
+          <p id="tool-summary" class="tool-summary">Egg - plants the selected lifeform strain in open dish space.</p>
+        </div>
         <button class="tool-button selected" type="button" data-tool="egg">
           <span class="tool-icon egg-icon"></span>
           <span>
@@ -145,7 +149,8 @@
       <div id="hud" class="hud">
         <div class="hud-row"><span class="hud-key">Epoch</span><span id="hud-fight" class="hud-val">1 / 5</span></div>
         <div class="hud-row"><span class="hud-key">Deadline</span><span id="hud-progress" class="hud-val">55s</span></div>
-        <div class="hud-row hud-eco-row"><span class="hud-key">Objective</span><span id="hud-objective" class="hud-val">—</span></div>
+        <div class="hud-row hud-eco-row hud-objective-row"><span class="hud-key">Objective</span><span id="hud-objective" class="hud-val">—</span></div>
+        <div class="hud-row hud-hint-row"><span class="hud-key">Hint</span><span id="hud-hint" class="hud-val">—</span></div>
         <div class="hud-row"><span class="hud-key">Vol</span><span id="hud-vol" class="hud-val">— / —</span></div>
         <div class="hud-row hud-eco-row"><span class="hud-key">Ecology</span><span id="hud-eco" class="hud-val">—</span></div>
         <div class="hud-row" id="hud-upgrades-row"><span class="hud-key">Build</span><span id="hud-upgrades" class="hud-val">none</span></div>
@@ -165,6 +170,6 @@
         <div id="ticker-lines" class="ticker-lines"></div>
       </aside>
     </main>
-    <script type="module" src="/src/main.ts?v=20260606-desktop-layout-2"></script>
+    <script type="module" src="/src/main.ts?v=20260606-discovery-progression"></script>
   </body>
 </html>

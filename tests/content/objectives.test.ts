@@ -4,6 +4,7 @@ import { OBJECTIVES, objectiveForEpoch } from '../../src/content/objectives';
 describe('OBJECTIVES', () => {
   it('defines ecology-first objective kinds', () => {
     expect(OBJECTIVES.map((objective) => objective.kind)).toEqual([
+      'discover_breed',
       'preserve_grazers',
       'breed_archetype',
       'controlled_reaction',
@@ -18,6 +19,13 @@ describe('OBJECTIVES', () => {
       expect(objective.name).not.toMatch(forbidden);
       expect(objective.description).not.toMatch(forbidden);
       expect(objective.target).not.toMatch(forbidden);
+      expect(objective.hint ?? '').not.toMatch(forbidden);
+    }
+  });
+
+  it('gives every objective a player-facing hint', () => {
+    for (const objective of OBJECTIVES) {
+      expect(objective.hint ?? '').toMatch(/\S/);
     }
   });
 

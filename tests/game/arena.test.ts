@@ -892,6 +892,81 @@ describe('arena ecosystem mode', () => {
     expect(Array.from(arena.archetypes.values()).some((spawn) => spawn.breedId === 'needle_swarm')).toBe(true);
   });
 
+  it('discovers Bloom Mass from close Swarmlet and Splitter cultures in nutrient medium', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 260,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        nutrientCharges: 1,
+      },
+      enemies: [
+        { archetype: 'swarmlet' as const, targetVol: 120, speed: 12, engulfMultiplier: 4 },
+        { archetype: 'splitter' as const, targetVol: 260, speed: 8, engulfMultiplier: 6 },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const swarmlet = arena.state.cells.get(2)!;
+    const splitter = arena.state.cells.get(3)!;
+    swarmlet.center = [42, 44];
+    splitter.center = [50, 44];
+
+    expect(arena.applyTool('nutrient', [46, 44])).toBe(true);
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+
+    expect(arena.getEcology().discoveries.breedIds).toContain('bloom_mass');
+    expect(arena.getEcology().discoveries.latest[0]).toContain('NEW LIFEFORM CREATED: Bloom Mass');
+  });
+
+  it('completes the first discovery objective after showcasing the new lifeform', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 261,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        nutrientCharges: 1,
+      },
+      enemies: [
+        { archetype: 'swarmlet' as const, targetVol: 120, speed: 12, engulfMultiplier: 4 },
+        { archetype: 'splitter' as const, targetVol: 260, speed: 8, engulfMultiplier: 6 },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+      objective: {
+        kind: 'discover_breed',
+        name: 'Create a New Lifeform',
+        description: 'Create Bloom Mass.',
+        target: 'Bloom Mass created',
+        hint: 'Plant Swarmlet and Splitter close together, then feed the area with Nutrient.',
+        breedId: 'bloom_mass',
+      },
+    });
+    arena.state.cells.get(2)!.center = [42, 44];
+    arena.state.cells.get(3)!.center = [50, 44];
+
+    expect(arena.applyTool('nutrient', [46, 44])).toBe(true);
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    expect(arena.getObjectiveProgress().status).toBe('running');
+
+    for (let i = 0; i < 90; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+
+    expect(arena.getObjectiveProgress().status).toBe('satisfied');
+    expect(arena.getStatus()).toBe('won');
+  });
+
   it('discovers glass antibody from acid toxin flare survivors', () => {
     const arena = createArena({
       LX: 90,

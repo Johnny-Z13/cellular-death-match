@@ -23,6 +23,7 @@ export interface Cell {
     { re: number; im: number },  // x-axis circular sum
     { re: number; im: number },  // y-axis circular sum
   ];
+  centerLinearSum: [number, number];
   center: [number, number];
   intent: Intent;
 }

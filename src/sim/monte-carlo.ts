@@ -130,11 +130,11 @@ function applyPixelTransfer(
 
   if (sourceVal !== 0) {
     const c = state.cells.get(sourceVal);
-    if (c) addPixel(c, xT, yT, grid.LX, grid.LY);
+    if (c) addPixel(c, xT, yT, grid.LX, grid.LY, grid.wrap);
   }
   if (targetVal !== 0) {
     const c = state.cells.get(targetVal);
-    if (c) removePixel(c, xT, yT, grid.LX, grid.LY);
+    if (c) removePixel(c, xT, yT, grid.LX, grid.LY, grid.wrap);
   }
 
   // Metabolism: when source is actively engulfing AND consuming a non-empty

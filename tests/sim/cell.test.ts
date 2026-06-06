@@ -56,4 +56,12 @@ describe('addPixel / removePixel', () => {
     expect(c.center[0]).toBeCloseTo(9.5, 1);
     expect(c.center[1]).toBeCloseTo(0, 1);
   });
+
+  it('uses a linear centroid for non-wrapping dishes', () => {
+    const c = fresh();
+    addPixel(c, 0, 0, LX, LY, false);
+    addPixel(c, LX - 1, 0, LX, LY, false);
+    expect(c.center[0]).toBeCloseTo((LX - 1) / 2, 5);
+    expect(c.center[1]).toBeCloseTo(0, 5);
+  });
 });

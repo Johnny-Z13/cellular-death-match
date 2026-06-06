@@ -11,11 +11,17 @@ import { hash2 } from './game/hash';
 import {
   clearDiscoverySave,
   loadDiscoverySave,
-  revealAllDiscoveries,
   saveDiscoveryState,
   setDiscoveryPersistence,
   type DiscoverySaveState,
 } from './game/discoverySave';
+import {
+  clearDiscoveryProgression,
+  createDiscoveryProgression,
+  revealAllDiscoveryProgression,
+  updateDiscoveryProgression,
+  type ProgressionLifeformId,
+} from './game/discoveryProgression';
 
 declare const __COMMIT_MESSAGE__: string;
 
@@ -39,6 +45,7 @@ const debug = createDebugPanel();
 const ecologyAudio = createEcologyAudio();
 const discoveryStorage = window.localStorage;
 let discoverySave: DiscoverySaveState = loadDiscoverySave(discoveryStorage);
+let discoveryProgression = createDiscoveryProgression(discoverySave);
 // Allow up to PALETTE_SIZE total cell colors for evolving ecosystem spawns.
 const PALETTE_SIZE = 32;
 
@@ -69,14 +76,19 @@ const overlayState: RuntimeOverlayState = {
 
 debug.onDiscoveryPersistenceChange((enabled) => {
   discoverySave = setDiscoveryPersistence(discoveryStorage, enabled);
+  if (enabled) saveRuntimeDiscoveryState();
   debug.updateDiscoveries(discoveryDebugInfo());
 });
 debug.onClearDiscoveries(() => {
   discoverySave = clearDiscoverySave(discoveryStorage);
+  discoveryProgression = clearDiscoveryProgression(discoveryProgression);
+  applyDiscoveryProgressionUi();
   debug.updateDiscoveries(discoveryDebugInfo());
 });
 debug.onRevealDiscoveries(() => {
-  discoverySave = revealAllDiscoveries(discoveryStorage);
+  discoveryProgression = revealAllDiscoveryProgression(discoveryProgression);
+  saveRuntimeDiscoveryState();
+  applyDiscoveryProgressionUi();
   debug.updateDiscoveries(discoveryDebugInfo());
 });
 debug.onPresentationToggle(() => {
@@ -121,6 +133,7 @@ screens.onEndRestart(() => {
   showPhase();
 });
 screens.onToolSelect((tool) => {
+  if (!discoveryProgression.unlockedTools.includes(tool)) return;
   selectedTool = tool;
   screens.setTool(tool);
 });
@@ -144,7 +157,9 @@ screens.setEggOptions(EGG_ARCHETYPES.map((archetype) => ({
   archetype,
   ...ARCHETYPE_INFO[archetype],
 })));
+applyDiscoveryProgressionUi();
 screens.onEggSelect((archetype) => {
+  if (!isUnlockedEggArchetype(archetype)) return;
   selectedEggArchetype = archetype;
   selectedTool = 'egg';
   screens.setTool(selectedTool);
@@ -273,6 +288,7 @@ function loop() {
       crisis: ecology.crisis,
       objectiveName: objective.def.name,
       objectiveSummary: objective.summary,
+      objectiveHint: objective.def.hint ?? '',
       upgrades: runState.upgrades.map((u) => {
         const def = getUpgradeDef(u.id);
         if (!def) return u.id;
@@ -323,13 +339,19 @@ function scheduleLoop(): void {
 
 function persistArenaDiscoveries(ar: Arena): void {
   const discoveries = ar.getEcology().discoveries;
-  if (!discoverySave.persistenceEnabled) return;
-  discoverySave = {
-    ...discoverySave,
-    discoveredBreedIds: unique([...discoverySave.discoveredBreedIds, ...discoveries.breedIds]),
-    discoveredNoteIds: unique([...discoverySave.discoveredNoteIds, ...discoveries.noteIds]),
-  };
-  discoverySave = saveDiscoveryState(discoveryStorage, discoverySave);
+  const previousTools = discoveryProgression.unlockedTools;
+  const previousLifeforms = discoveryProgression.unlockedLifeforms;
+  const nextProgression = updateDiscoveryProgression(discoveryProgression, discoveries);
+  const changed = previousTools.join('|') !== nextProgression.unlockedTools.join('|')
+    || previousLifeforms.join('|') !== nextProgression.unlockedLifeforms.join('|')
+    || discoveryProgression.discoveredBreedIds.join('|') !== nextProgression.discoveredBreedIds.join('|')
+    || discoveryProgression.discoveredNoteIds.join('|') !== nextProgression.discoveredNoteIds.join('|');
+  if (!changed) return;
+
+  discoveryProgression = nextProgression;
+  applyDiscoveryProgressionUi();
+  announceUnlocks(previousTools, previousLifeforms, discoveryProgression);
+  saveRuntimeDiscoveryState();
 }
 
 function discoveryDebugInfo(): {
@@ -340,11 +362,67 @@ function discoveryDebugInfo(): {
   return {
     persistenceEnabled: discoverySave.persistenceEnabled,
     discoveredCount: unique([
-      ...discoverySave.discoveredBreedIds,
-      ...discoverySave.discoveredNoteIds,
+      ...discoveryProgression.discoveredBreedIds,
+      ...discoveryProgression.discoveredNoteIds,
     ]).length,
-    revealAll: discoverySave.revealAll,
+    revealAll: discoveryProgression.revealAll,
   };
+}
+
+function saveRuntimeDiscoveryState(): void {
+  if (!discoverySave.persistenceEnabled) return;
+  discoverySave = saveDiscoveryState(discoveryStorage, {
+    ...discoverySave,
+    discoveredBreedIds: discoveryProgression.discoveredBreedIds,
+    discoveredNoteIds: discoveryProgression.discoveredNoteIds,
+    revealAll: discoveryProgression.revealAll,
+  });
+}
+
+function applyDiscoveryProgressionUi(): void {
+  screens.setToolUnlocks(discoveryProgression.unlockedTools);
+  screens.setLifeformUnlocks(discoveryProgression.unlockedLifeforms);
+
+  if (!discoveryProgression.unlockedTools.includes(selectedTool)) {
+    selectedTool = 'egg';
+  }
+  if (!isUnlockedEggArchetype(selectedEggArchetype)) {
+    selectedEggArchetype = 'swarmlet';
+  }
+
+  screens.setTool(selectedTool);
+  screens.setEggArchetype(selectedEggArchetype);
+  if (
+    !overlayState.selectedLifeformId
+    || !discoveryProgression.unlockedLifeforms.includes(overlayState.selectedLifeformId as ProgressionLifeformId)
+  ) {
+    overlayState.selectedLifeformId = selectedEggArchetype;
+  }
+  screens.setSelectedLifeform(overlayState.selectedLifeformId);
+}
+
+function isUnlockedEggArchetype(archetype: EnemyArchetype): boolean {
+  return discoveryProgression.unlockedLifeforms.includes(archetype);
+}
+
+function announceUnlocks(
+  previousTools: readonly ToolId[],
+  previousLifeforms: readonly ProgressionLifeformId[],
+  next: { unlockedTools: readonly ToolId[]; unlockedLifeforms: readonly ProgressionLifeformId[] },
+): void {
+  for (const tool of next.unlockedTools) {
+    if (previousTools.includes(tool)) continue;
+    screens.addTicker(`Research unlocked: ${capitalize(tool)} reagent available.`, 'discovery');
+  }
+  for (const lifeform of next.unlockedLifeforms) {
+    if (previousLifeforms.includes(lifeform)) continue;
+    if (!isBaseArchetype(lifeform)) continue;
+    screens.addTicker(`Research unlocked: ${ARCHETYPE_INFO[lifeform].name} eggs available.`, 'discovery');
+  }
+}
+
+function isBaseArchetype(id: ProgressionLifeformId): id is EnemyArchetype {
+  return (EGG_ARCHETYPES as readonly string[]).includes(id);
 }
 
 function unique<T>(values: readonly T[]): T[] {
@@ -491,6 +569,7 @@ function updateTicker(ar: Arena): void {
 }
 
 function toneForTickerSignal(signal: string): 'normal' | 'discovery' | 'caution' | 'critical' {
+  if (signal.startsWith('NEW LIFEFORM CREATED')) return 'discovery';
   if (signal.startsWith('NEW BREED DISCOVERED')) return 'discovery';
   if (signal.startsWith('CATALYTIC FLARE') || signal.startsWith('FOLDING FAULT') || signal.startsWith('Crisis')) {
     return 'critical';

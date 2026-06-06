@@ -27,6 +27,7 @@ export interface HudInfo {
   crisis: string;
   objectiveName: string;
   objectiveSummary: string;
+  objectiveHint: string;
   upgrades: string[];          // upgrade names, e.g. ["Bigger Cell", "Faster Engulf x2"]
 }
 
@@ -55,6 +56,7 @@ export interface Screens {
   addTicker(message: string, tone?: TickerTone): void;
   clearTicker(): void;
   setTool(tool: ToolId): void;
+  setToolUnlocks(tools: readonly ToolId[]): void;
   updateToolCharges(charges: Record<ToolId, ToolState>): void;
   updateAgitation(state: AgitationState): void;
   onToolSelect(handler: (tool: ToolId) => void): void;
@@ -62,6 +64,7 @@ export interface Screens {
   onEndEpoch(handler: () => void): void;
   setEggOptions(options: EggOption[]): void;
   setEggArchetype(archetype: EnemyArchetype): void;
+  setLifeformUnlocks(ids: readonly string[]): void;
   onEggSelect(handler: (archetype: EnemyArchetype) => void): void;
   onLifeformSelect(handler: (id: string) => void): void;
   setSelectedLifeform(id: string | null): void;
@@ -95,7 +98,9 @@ export function createScreens(): Screens {
   const hudProgress  = get('hud-progress');
   const hudEco       = get('hud-eco');
   const hudObjective = get('hud-objective');
+  const hudHint      = get('hud-hint');
   const hudUpgrades  = get('hud-upgrades');
+  const toolSummary  = get('tool-summary');
   const eggOptions   = get('egg-options');
   const lifeSummary  = get('life-summary');
   const lifeList     = get('life-list');
@@ -108,6 +113,10 @@ export function createScreens(): Screens {
   let eggButtons: HTMLButtonElement[] = [];
   const lifeButtons = new Map<string, HTMLButtonElement>();
   let selectedLifeformId: string | null = null;
+  let selectedToolId: ToolId = 'egg';
+  let selectedEggArchetype: EnemyArchetype = 'swarmlet';
+  let unlockedLifeformIds = new Set<string>();
+  let unlockedToolIds = new Set<ToolId>(['egg', 'nutrient', 'toxin', 'water', 'salt', 'acid']);
   let eggSelectHandler: ((archetype: EnemyArchetype) => void) | null = null;
   let lifeformSelectHandler: ((id: string) => void) | null = null;
   const optionByArchetype = new Map<EnemyArchetype, EggOption>();
@@ -118,6 +127,16 @@ export function createScreens(): Screens {
     end: screenEnd,
     hud,
   };
+
+  function applyLifeformVisibility(): void {
+    for (const button of eggButtons) {
+      const id = button.dataset.eggArchetype;
+      button.hidden = !id || !unlockedLifeformIds.has(id);
+    }
+    for (const [id, button] of lifeButtons) {
+      button.hidden = !unlockedLifeformIds.has(id);
+    }
+  }
 
   return {
     show(name) { elFor[name].classList.add('visible'); },
@@ -135,8 +154,18 @@ export function createScreens(): Screens {
       tickerLines.replaceChildren();
     },
     setTool(tool) {
+      selectedToolId = tool;
       for (const btn of toolButtons) {
         btn.classList.toggle('selected', btn.dataset.tool === tool);
+      }
+      updateToolSummary(toolSummary, selectedToolId, selectedEggArchetype, optionByArchetype);
+    },
+    setToolUnlocks(tools) {
+      unlockedToolIds = new Set(tools);
+      for (const btn of toolButtons) {
+        const tool = btn.dataset.tool;
+        if (!isToolId(tool)) continue;
+        btn.hidden = !unlockedToolIds.has(tool);
       }
     },
     updateToolCharges(charges) {
@@ -230,15 +259,22 @@ export function createScreens(): Screens {
         lifeButtons.set(id, item);
         lifeList.append(item);
       }
+      applyLifeformVisibility();
     },
     setEggArchetype(archetype) {
+      selectedEggArchetype = archetype;
       const option = optionByArchetype.get(archetype);
       for (const btn of eggButtons) {
         btn.classList.toggle('selected', btn.dataset.eggArchetype === archetype);
       }
       if (!option) return;
       eggTool?.style.setProperty('--egg-color', rgb(option.color));
+      updateToolSummary(toolSummary, selectedToolId, selectedEggArchetype, optionByArchetype);
       if (!selectedLifeformId) this.setSelectedLifeform(archetype);
+    },
+    setLifeformUnlocks(ids) {
+      unlockedLifeformIds = new Set(ids);
+      applyLifeformVisibility();
     },
     onEggSelect(handler) {
       eggSelectHandler = handler;
@@ -265,6 +301,7 @@ export function createScreens(): Screens {
       const crisis = info.crisis === 'none' ? '' : `, ${info.crisis} active`;
       hudEco.textContent = `${info.livingEnemies} lifeforms, ${info.outbreaks} outbreaks, ${info.reactions} reactions, ${info.accidents} accidents, ${info.mutations} mutations, ${info.births} births, ${info.supplyDrops} drops, ${info.dominant} dominant${crisis}`;
       hudObjective.textContent = `${info.objectiveName}: ${info.objectiveSummary}`;
+      hudHint.textContent = info.objectiveHint;
       hudUpgrades.textContent = info.upgrades.length === 0 ? 'none' : info.upgrades.join(', ');
     },
     setPickChoices(choices, onPick) {
@@ -314,4 +351,22 @@ function isToolId(tool: string | undefined): tool is ToolId {
     || tool === 'water'
     || tool === 'salt'
     || tool === 'acid';
+}
+
+function updateToolSummary(
+  el: HTMLElement,
+  tool: ToolId,
+  eggArchetype: EnemyArchetype,
+  eggOptions: Map<EnemyArchetype, EggOption>,
+): void {
+  const eggName = eggOptions.get(eggArchetype)?.name ?? 'selected';
+  const summaries: Record<ToolId, string> = {
+    egg: `Egg - plants a ${eggName} culture in open dish space.`,
+    nutrient: 'Nutrient - attracts nearby tissue and feeds growth inside the drop zone.',
+    toxin: 'Toxin - repels and thins tissue, useful for separating crowded cultures.',
+    water: 'Water - dilutes pressure, spreads reactions, and pushes cultures outward.',
+    salt: 'Salt - slows local movement and dries cultures into brittle patterns.',
+    acid: 'Acid - burns tissue quickly and can trigger volatile reactions.',
+  };
+  el.textContent = summaries[tool];
 }
