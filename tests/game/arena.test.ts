@@ -868,6 +868,60 @@ describe('arena ecosystem mode', () => {
     expect(cell.intent.speed).toBeLessThanOrEqual(2.6);
   });
 
+  it('discovers needle swarm from sniper pressure and swarmlet crowding', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 230,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        { archetype: 'sniper' as const, targetVol: 140, speed: 10, engulfMultiplier: 1 },
+        { archetype: 'swarmlet' as const, targetVol: 90, speed: 14, engulfMultiplier: 4 },
+        { archetype: 'swarmlet' as const, targetVol: 90, speed: 14, engulfMultiplier: 4 },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+
+    for (let i = 0; i < 90; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+
+    expect(arena.getEcology().discoveries.breedIds).toContain('needle_swarm');
+    expect(Array.from(arena.archetypes.values()).some((spawn) => spawn.breedId === 'needle_swarm')).toBe(true);
+  });
+
+  it('discovers glass antibody from acid toxin flare survivors', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 231,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        {
+          archetype: 'swarmlet' as const,
+          targetVol: 150,
+          speed: 10,
+          engulfMultiplier: 4,
+          traits: ['toxin_resistant', 'fragile'],
+        },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('acid', cell.center)).toBe(true);
+    expect(arena.applyTool('toxin', cell.center)).toBe(true);
+    for (let i = 0; i < 20; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+
+    expect(arena.getEcology().discoveries.breedIds).toContain('glass_antibody');
+  });
+
   it('periodically drops random reagent accidents in ecosystem mode', () => {
     const arena = createArena({
       LX: 80,

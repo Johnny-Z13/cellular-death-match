@@ -21,6 +21,7 @@ import {
   TOOL_TUNING,
 } from '../content/ecologyTuning';
 import {
+  BREED_DEFS,
   reactionRecipeFor,
   type BreedId,
   type CatalysisEffectType,
@@ -255,6 +256,18 @@ export function createArena(opts: CreateArenaOpts): Arena {
     while (discoveryMessages.length > 8) discoveryMessages.pop();
   }
 
+  function discoverBreed(arena: Arena, id: BreedId, sourceCell?: Cell): void {
+    if (discoveredBreedIds.has(id)) return;
+    discoveredBreedIds.add(id);
+    discoverNote(`breed_${id}`, `NEW BREED DISCOVERED: ${BREED_DEFS[id].name}.`);
+    if (!sourceCell || sourceCell.vol <= 0 || archetypes.size >= ECOSYSTEM_MAX_POPULATION) return;
+    arena.spawnEnemy({
+      spawn: breedSpawnFor(id, archetypes.get(sourceCell.id)),
+      pos: [...sourceCell.center],
+    });
+    birthCount += 1;
+  }
+
   for (let i = 0; i < nEnemies; i++) {
     const cellId = 2 + i;
     let spawn = opts.enemies[i]!;
@@ -418,6 +431,15 @@ export function createArena(opts: CreateArenaOpts): Arena {
         agitationTicksRemaining > 0,
         state.rng.randInt(1_000_000),
       );
+      if (catalyticReaction?.effect.type === 'flare') {
+        const sourceCell = sourceCellWithTraits(
+          state,
+          archetypes,
+          catalyticReaction.effect,
+          ['toxin_resistant', 'fragile'],
+        );
+        if (sourceCell) discoverBreed(this, 'glass_antibody', sourceCell);
+      }
       pulseToolEffect(state, effect, archetypes);
       const waterReaction = applyWaterTransformations(
         effect,
@@ -557,6 +579,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
           accidentCount += 1;
           while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
         }
+        evaluateBreedDiscoveries(state, archetypes, toolEffects, (id, sourceCell) => {
+          discoverBreed(this, id, sourceCell);
+        });
       }
 
       // On-death handlers.
@@ -898,6 +923,106 @@ function outbreakHunterSpawn(sourceArchetype: string): EnemySpawn {
     instability: 2.15,
     traits: ['fleet'],
   };
+}
+
+function breedSpawnFor(id: BreedId, base?: EnemySpawn): EnemySpawn {
+  const def = BREED_DEFS[id];
+  const source = base ?? ARCHETYPE_DEFAULTS[def.baseArchetype];
+  return {
+    ...source,
+    archetype: def.baseArchetype,
+    breedId: id,
+    targetVol: clamp(source.targetVol * def.targetVolMultiplier, 45, 1800),
+    speed: clamp(source.speed * def.speedMultiplier, 3, 20),
+    engulfMultiplier: clamp(source.engulfMultiplier * def.engulfMultiplier, 1, 11),
+    instability: (source.instability ?? 1) * def.instabilityMultiplier,
+    traits: [...new Set([...(source.traits ?? []), ...def.traits])],
+  };
+}
+
+function evaluateBreedDiscoveries(
+  state: SimState,
+  archetypes: Map<CellId, EnemySpawn>,
+  effects: ToolEffect[],
+  discover: (id: BreedId, sourceCell?: Cell) => void,
+): void {
+  const needleSource = needleSwarmSource(state, archetypes);
+  if (needleSource) discover('needle_swarm', needleSource);
+
+  for (const [id, spawn] of archetypes) {
+    const cell = state.cells.get(id);
+    if (!cell || cell.vol <= 0) continue;
+
+    if (hasTraits(spawn, ['toxin_resistant', 'fragile']) && overlapsEffect(state, cell, effects, 'flare')) {
+      discover('glass_antibody', cell);
+    }
+
+    if (
+      hasTraits(spawn, ['budding'])
+      && cell.targetVol > 420
+      && (overlapsEffect(state, cell, effects, 'conduit') || overlapsEffect(state, cell, effects, 'bloom'))
+    ) {
+      discover('bloom_mass', cell);
+    }
+
+    if (hasTraits(spawn, ['gelatinous']) && overlapsEffect(state, cell, effects, 'crystal')) {
+      discover('static_lattice', cell);
+    }
+
+    if (
+      (spawn.archetype === 'boss' || spawn.archetype === 'bruiser')
+      && overlapsEffect(state, cell, effects, 'fold_fault')
+    ) {
+      discover('folded_anchor', cell);
+    }
+  }
+}
+
+function needleSwarmSource(
+  state: SimState,
+  archetypes: Map<CellId, EnemySpawn>,
+): Cell | null {
+  const swarmlets: Cell[] = [];
+  const snipers: Cell[] = [];
+  for (const [id, spawn] of archetypes) {
+    const cell = state.cells.get(id);
+    if (!cell || cell.vol <= 0) continue;
+    if (spawn.archetype === 'swarmlet') swarmlets.push(cell);
+    if (spawn.archetype === 'sniper') snipers.push(cell);
+  }
+
+  if (snipers.length > 0 && swarmlets.length >= 2) return snipers[0]!;
+  return null;
+}
+
+function hasTraits(spawn: EnemySpawn, traits: readonly TraitId[]): boolean {
+  return traits.every((trait) => spawn.traits?.includes(trait));
+}
+
+function sourceCellWithTraits(
+  state: SimState,
+  archetypes: Map<CellId, EnemySpawn>,
+  effect: ToolEffect,
+  traits: readonly TraitId[],
+): Cell | undefined {
+  for (const [id, spawn] of archetypes) {
+    if (!hasTraits(spawn, traits)) continue;
+    const cell = state.cells.get(id);
+    if (!cell || cell.vol <= 0) continue;
+    if (distanceBetween(state, cell.center, effect.pos) <= effect.radius + 4) return cell;
+  }
+  return undefined;
+}
+
+function overlapsEffect(
+  state: SimState,
+  cell: Cell,
+  effects: ToolEffect[],
+  type: ToolEffectType,
+): boolean {
+  return effects.some((effect) => (
+    effect.type === type && distanceBetween(state, cell.center, effect.pos) <= effect.radius + 4
+  ));
 }
 
 function reactionTypeFor(a: ToolEffectType, b: ToolEffectType): ToolEffectType | null {

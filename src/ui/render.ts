@@ -1,6 +1,7 @@
 import type { SimState, CellId } from '../sim/types';
 import { ARCHETYPE_INFO, type EnemySpawn } from '../content/enemies';
 import type { TraitId } from '../content/ecology';
+import { BREED_DEFS } from '../content/catalysis';
 
 export interface Renderer {
   render(state: SimState, archetypes?: ReadonlyMap<CellId, EnemySpawn>): void;
@@ -159,7 +160,8 @@ function buildRenderPalette(
     const fallback = fallbackBase[id] ?? fallbackBase[0]!;
     const spawn = archetypes?.get(id);
     const archetype = spawn?.archetype;
-    const base = archetype ? rgba(ARCHETYPE_INFO[archetype].color) : fallback;
+    let base = archetype ? rgba(ARCHETYPE_INFO[archetype].color) : fallback;
+    if (spawn?.breedId) base = mixColor(base, BREED_DEFS[spawn.breedId].tint, 0.5);
     out[id] = traitColor(base, spawn?.traits);
   }
   out[0] = fallbackBase[0]!;
