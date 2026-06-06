@@ -317,10 +317,11 @@ canvas {
 .ticker-title {
   display: none;
   margin: 0 0 6px 0;
-  color: #7f8d91;
+  color: #95b7aa;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.16em;
+  text-shadow: 0 0 10px rgba(126, 230, 255, 0.24);
 }
 
 .ticker-lines {
@@ -331,28 +332,41 @@ canvas {
 
 .ticker-line {
   max-width: 100%;
-  background: rgba(8, 12, 14, 0.72);
-  border: 1px solid #263038;
+  min-height: 28px;
+  background:
+    linear-gradient(rgba(185, 232, 205, 0.055), rgba(70, 132, 132, 0.02)),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 5px),
+    rgba(5, 13, 15, 0.91);
+  border: 1px solid #2d4f55;
   padding: 6px 9px;
-  color: #cfd8d9;
+  color: #d6f2dc;
   font-size: 11px;
   line-height: 1.25;
+  text-shadow: 0 0 8px rgba(214, 242, 220, 0.18);
+  box-shadow: inset 0 0 18px rgba(67, 214, 174, 0.035), 0 3px 14px rgba(0, 0, 0, 0.22);
   box-sizing: border-box;
+}
+
+.ticker-line-normal {
+  border-color: #2d4f55;
 }
 
 .ticker-line-discovery {
   border-color: #6bcfe8;
   color: #d8f8ff;
+  text-shadow: 0 0 9px rgba(126, 230, 255, 0.3);
 }
 
 .ticker-line-caution {
   border-color: #d6c85e;
   color: #f4f0a2;
+  text-shadow: 0 0 9px rgba(244, 240, 162, 0.26);
 }
 
 .ticker-line-critical {
   border-color: #ff7b5c;
   color: #ffd0c4;
+  text-shadow: 0 0 9px rgba(255, 123, 92, 0.34);
 }
 
 .ticker-line:nth-child(n + 3) {
@@ -847,6 +861,10 @@ canvas {
 
   .ticker-line:nth-child(n + 3) {
     display: block;
+  }
+
+  .ticker-line:nth-child(n + 6) {
+    display: none;
   }
 
   .hud {

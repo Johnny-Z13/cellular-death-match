@@ -127,7 +127,7 @@ export function createScreens(): Screens {
       line.className = `ticker-line ticker-line-${tone}`;
       line.textContent = message;
       tickerLines.prepend(line);
-      while (tickerLines.children.length > 4) {
+      while (tickerLines.children.length > 5) {
         tickerLines.lastElementChild?.remove();
       }
     },

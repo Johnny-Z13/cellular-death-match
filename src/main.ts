@@ -414,29 +414,29 @@ function updateTicker(ar: Arena): void {
     if (tickerState.seenSignals.includes(signal)) continue;
     tickerState.seenSignals.push(signal);
     while (tickerState.seenSignals.length > 12) tickerState.seenSignals.shift();
-    screens.addTicker(signal);
+    screens.addTicker(signal, toneForTickerSignal(signal));
   }
 
   const controlSampleBand = controlSampleVol <= 35 ? 'critical' : controlSampleVol <= 140 ? 'thin' : controlSampleVol >= 650 ? 'surging' : 'stable';
   if (controlSampleBand !== tickerState.lastControlSampleBand) {
     tickerState.lastControlSampleBand = controlSampleBand;
-    if (controlSampleBand === 'critical') screens.addTicker('Control sample is near collapse.');
-    else if (controlSampleBand === 'thin') screens.addTicker('Control sample is destabilizing.');
-    else if (controlSampleBand === 'surging') screens.addTicker('Control sample is overgrowing the dish.');
+    if (controlSampleBand === 'critical') screens.addTicker('Control sample is near collapse.', 'critical');
+    else if (controlSampleBand === 'thin') screens.addTicker('Control sample is destabilizing.', 'caution');
+    else if (controlSampleBand === 'surging') screens.addTicker('Control sample is overgrowing the dish.', 'caution');
   }
 
   const lifeformBand = livingLifeforms === 0 ? 'extinct' : livingLifeforms < 3 ? 'thin' : livingLifeforms >= 7 ? 'blooming' : 'stable';
   if (lifeformBand !== tickerState.lastLifeformBand) {
     tickerState.lastLifeformBand = lifeformBand;
-    if (lifeformBand === 'extinct') screens.addTicker('Lifeforms have vanished from the dish.');
-    else if (lifeformBand === 'thin') screens.addTicker('Lifeform diversity is under threat.');
-    else if (lifeformBand === 'blooming') screens.addTicker('Lifeforms are blooming.');
+    if (lifeformBand === 'extinct') screens.addTicker('Lifeforms have vanished from the dish.', 'critical');
+    else if (lifeformBand === 'thin') screens.addTicker('Lifeform diversity is under threat.', 'caution');
+    else if (lifeformBand === 'blooming') screens.addTicker('Lifeforms are blooming.', 'discovery');
   }
 
   const coverageBand = coverage <= 0.08 ? 'sterile' : coverage >= 0.42 ? 'bloom' : 'normal';
   if (coverageBand !== tickerState.lastCoverageBand) {
     tickerState.lastCoverageBand = coverageBand;
-    if (coverageBand === 'sterile') screens.addTicker('Dish is approaching sterility.');
+    if (coverageBand === 'sterile') screens.addTicker('Dish is approaching sterility.', 'critical');
     else if (coverageBand === 'bloom') screens.addTicker('Living matter is filling the dish.');
   }
 
@@ -450,7 +450,7 @@ function updateTicker(ar: Arena): void {
   );
   if (toolPressure && tickCount - tickerState.lastToolPressureTick > 240) {
     tickerState.lastToolPressureTick = tickCount;
-    screens.addTicker(`${capitalize(toolPressure.type)} pressure is reshaping local movement.`);
+    screens.addTicker(`${capitalize(toolPressure.type)} pressure is reshaping local movement.`, 'caution');
   }
 
   if (ecology.reactions > tickerState.lastReactionCount) {
@@ -480,11 +480,23 @@ function updateTicker(ar: Arena): void {
 
   if (!tickerState.didWarnDeadline && objective.urgency === 'warning') {
     tickerState.didWarnDeadline = true;
-    screens.addTicker('Deadline pressure is rising.');
+    screens.addTicker('Deadline pressure is rising.', 'caution');
   } else if (!tickerState.didWarnCritical && objective.urgency === 'critical') {
     tickerState.didWarnCritical = true;
-    screens.addTicker('Final seconds: finish the objective now.');
+    screens.addTicker('Final seconds: finish the objective now.', 'critical');
   }
+}
+
+function toneForTickerSignal(signal: string): 'normal' | 'discovery' | 'caution' | 'critical' {
+  if (signal.startsWith('NEW BREED DISCOVERED')) return 'discovery';
+  if (signal.startsWith('CATALYTIC FLARE') || signal.startsWith('FOLDING FAULT') || signal.startsWith('Crisis')) {
+    return 'critical';
+  }
+  if (signal.startsWith('CATALYTIC') || signal.startsWith('Lab accident') || signal.startsWith('CAUTION')) {
+    return 'caution';
+  }
+  if (signal.startsWith('Lab note') || signal.includes('mutation') || signal.includes('cultured')) return 'discovery';
+  return 'normal';
 }
 
 function capitalize(s: string): string {
