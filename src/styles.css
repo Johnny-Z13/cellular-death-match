@@ -340,6 +340,21 @@ canvas {
   box-sizing: border-box;
 }
 
+.ticker-line-discovery {
+  border-color: #6bcfe8;
+  color: #d8f8ff;
+}
+
+.ticker-line-caution {
+  border-color: #d6c85e;
+  color: #f4f0a2;
+}
+
+.ticker-line-critical {
+  border-color: #ff7b5c;
+  color: #ffd0c4;
+}
+
 .ticker-line:nth-child(n + 3) {
   display: none;
 }

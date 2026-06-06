@@ -52,7 +52,7 @@ export interface EggOption {
 export interface Screens {
   show(name: ScreenName): void;
   hide(name: ScreenName): void;
-  addTicker(message: string): void;
+  addTicker(message: string, tone?: TickerTone): void;
   clearTicker(): void;
   setTool(tool: ToolId): void;
   updateToolCharges(charges: Record<ToolId, ToolState>): void;
@@ -71,6 +71,8 @@ export interface Screens {
   onTitleStart(handler: () => void): void;
   onEndRestart(handler: () => void): void;
 }
+
+export type TickerTone = 'normal' | 'discovery' | 'caution' | 'critical';
 
 export function createScreens(): Screens {
   const get = (id: string): HTMLElement => {
@@ -120,9 +122,9 @@ export function createScreens(): Screens {
   return {
     show(name) { elFor[name].classList.add('visible'); },
     hide(name) { elFor[name].classList.remove('visible'); },
-    addTicker(message) {
+    addTicker(message, tone = 'normal') {
       const line = document.createElement('div');
-      line.className = 'ticker-line';
+      line.className = `ticker-line ticker-line-${tone}`;
       line.textContent = message;
       tickerLines.prepend(line);
       while (tickerLines.children.length > 4) {

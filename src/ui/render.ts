@@ -2,10 +2,21 @@ import type { SimState, CellId } from '../sim/types';
 import { type EnemySpawn } from '../content/enemies';
 import type { TraitId } from '../content/ecology';
 import { lifeformIdentityForSpawn } from '../content/lifeformIdentity';
+import type { DishEventMarker } from '../game/arena';
 
 export interface Renderer {
-  render(state: SimState, archetypes?: ReadonlyMap<CellId, EnemySpawn>): void;
+  render(
+    state: SimState,
+    archetypes?: ReadonlyMap<CellId, EnemySpawn>,
+    dishEvents?: readonly DishEventMarker[],
+  ): void;
 }
+
+const DISH_EVENT_PALETTES = {
+  mutation: ['#f6d365', '#fda085', '#b771ff', '#66e3ff'],
+  fold: ['#8f7cff', '#45f0d1', '#f6d365', '#ff6b9d'],
+  critical: ['#ff6b4a', '#ffd166', '#ff3b7a', '#ffffff'],
+} as const;
 
 // Cached palette indexed by CellId.
 // - cells[0] (empty) = black.
@@ -83,9 +94,18 @@ export function createRenderer(
   let imageData: ImageData | null = null;
   let offscreen: HTMLCanvasElement | null = null;
   let offCtx: CanvasRenderingContext2D | null = null;
+  let frame = 0;
+  const reduceMotion = typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   return {
-    render(state: SimState, archetypes?: ReadonlyMap<CellId, EnemySpawn>) {
+    render(
+      state: SimState,
+      archetypes?: ReadonlyMap<CellId, EnemySpawn>,
+      dishEvents: readonly DishEventMarker[] = [],
+    ) {
+      frame += 1;
       const { LX, LY, cells, boundary } = state.grid;
       const base = buildRenderPalette(nCells, state.cells, archetypes, fallbackBase);
       const boundaryColors = base.map((c) => lighten(c, 0.3));
@@ -129,6 +149,9 @@ export function createRenderer(
       // Draw bullets on top, in display coordinates.
       const sx = canvas.width / LX;
       const sy = canvas.height / LY;
+      for (const event of dishEvents) {
+        drawDishEventMarker(ctx, event, sx, sy, frame, reduceMotion);
+      }
       for (const b of state.bullets) {
         const palette = base[b.ownerId] ?? base[0]!;
         // Lighten by 0.5 for the bullet color (slightly brighter than boundary).
@@ -146,6 +169,51 @@ export function createRenderer(
       }
     },
   };
+}
+
+function drawDishEventMarker(
+  ctx: CanvasRenderingContext2D,
+  event: DishEventMarker,
+  sx: number,
+  sy: number,
+  frame: number,
+  reduceMotion: boolean,
+): void {
+  const t = Math.max(0, event.ttl / event.maxTtl);
+  const radiusScale = (sx + sy) * 0.5;
+  ctx.save();
+  ctx.globalAlpha = 0.18 + 0.55 * t;
+  ctx.strokeStyle = cycledDishEventColor(event, frame, reduceMotion);
+  ctx.lineWidth = 1.5 + (1 - t) * 3;
+  ctx.beginPath();
+  ctx.arc(
+    event.pos[0] * sx,
+    event.pos[1] * sy,
+    (event.radius + (1 - t) * 12) * radiusScale,
+    0,
+    Math.PI * 2,
+  );
+  ctx.stroke();
+  ctx.restore();
+}
+
+function cycledDishEventColor(
+  event: DishEventMarker,
+  frame: number,
+  reduceMotion: boolean,
+): string {
+  const palette = DISH_EVENT_PALETTES[event.kind as keyof typeof DISH_EVENT_PALETTES];
+  if (!palette || reduceMotion) return colorForDishEvent(event.color);
+  const speed = event.kind === 'critical' ? 3 : 5;
+  return palette[Math.floor(frame / speed) % palette.length]!;
+}
+
+function colorForDishEvent(color: DishEventMarker['color']): string {
+  if (color === 'cyan') return '#7ee6ff';
+  if (color === 'green') return '#84f5a8';
+  if (color === 'red') return '#ff6b4a';
+  if (color === 'violet') return '#b771ff';
+  return '#f6d365';
 }
 
 function buildRenderPalette(

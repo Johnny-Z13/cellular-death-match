@@ -72,6 +72,7 @@ export interface Arena {
   getToolStates(): Record<LabTool, ToolState>;
   getAgitationState(): AgitationState;
   getToolEffects(): ToolEffect[];
+  getDishEvents(): DishEventMarker[];
   applyTool(tool: LabTool, pos: [number, number], opts?: ApplyToolOpts): boolean;
   agitate(): boolean;
   endEpochNow(): ArenaStatus;
@@ -126,6 +127,20 @@ export interface ToolEffect {
   seed: number;
 }
 
+export type DishEventKind = 'mutation' | 'discovery' | 'caution' | 'critical' | 'stabilize' | 'fold';
+export type DishEventColor = 'amber' | 'cyan' | 'green' | 'red' | 'violet';
+
+export interface DishEventMarker {
+  id: number;
+  kind: DishEventKind;
+  label: string;
+  pos: [number, number];
+  radius: number;
+  ttl: number;
+  maxTtl: number;
+  color: DishEventColor;
+}
+
 export interface SpawnEnemyOpts {
   spawn: EnemySpawn;
   pos: [number, number];
@@ -164,6 +179,7 @@ const QUIET_EGG_REFILL_POPULATION = ECOSYSTEM_LIMITS.quietEggRefillPopulation;
 const ECOSYSTEM_MAX_POPULATION = ECOSYSTEM_LIMITS.maxPopulation;
 const PLAYER_THREAT_RANGE = ECOSYSTEM_LIMITS.playerThreatRange;
 const MAX_TOOL_EFFECTS = ECOSYSTEM_LIMITS.maxToolEffects;
+const MAX_DISH_EVENTS = ECOSYSTEM_LIMITS.maxDishEvents;
 const DEFAULT_AGITATE_CHARGES = AGITATION_TUNING.defaultCharges;
 const AGITATION_DURATION_TICKS = AGITATION_TUNING.durationTicks;
 const AGITATION_MIN_SPEED = AGITATION_TUNING.minSpeed;
@@ -238,6 +254,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
   let lastEmergencyEggTick = 0;
   let activeCrisis: { id: CrisisId; ttl: number } | null = null;
   const toolEffects: ToolEffect[] = [];
+  const dishEvents: DishEventMarker[] = [];
+  let nextDishEventId = 1;
   const toolStates: Record<LabTool, ToolState> = toolLoadoutFor(opts.player);
   const signals: string[] = [];
   const discoveredBreedIds = new Set<BreedId>();
@@ -261,12 +279,43 @@ export function createArena(opts: CreateArenaOpts): Arena {
     if (discoveredBreedIds.has(id)) return;
     discoveredBreedIds.add(id);
     discoverNote(`breed_${id}`, `NEW BREED DISCOVERED: ${BREED_DEFS[id].name}.`);
+    if (sourceCell) {
+      addDishEvent('discovery', `NEW BREED: ${BREED_DEFS[id].name}`, sourceCell.center, 20, 'cyan');
+    }
     if (!sourceCell || sourceCell.vol <= 0 || archetypes.size >= ECOSYSTEM_MAX_POPULATION) return;
     arena.spawnEnemy({
       spawn: breedSpawnFor(id, archetypes.get(sourceCell.id)),
       pos: [...sourceCell.center],
     });
     birthCount += 1;
+  }
+
+  function addDishEvent(
+    kind: DishEventKind,
+    label: string,
+    pos: [number, number],
+    radius: number,
+    color: DishEventColor,
+  ): void {
+    const maxTtl = kind === 'discovery' ? 120 : kind === 'critical' || kind === 'fold' ? 96 : 78;
+    dishEvents.unshift({
+      id: nextDishEventId++,
+      kind,
+      label,
+      pos: [...pos],
+      radius,
+      ttl: maxTtl,
+      maxTtl,
+      color,
+    });
+    while (dishEvents.length > MAX_DISH_EVENTS) dishEvents.pop();
+  }
+
+  function decayDishEvents(): void {
+    for (const event of dishEvents) event.ttl -= 1;
+    for (let i = dishEvents.length - 1; i >= 0; i--) {
+      if (dishEvents[i]!.ttl <= 0) dishEvents.splice(i, 1);
+    }
   }
 
   for (let i = 0; i < nEnemies; i++) {
@@ -398,6 +447,12 @@ export function createArena(opts: CreateArenaOpts): Arena {
         pos: [...effect.pos],
       }));
     },
+    getDishEvents(): DishEventMarker[] {
+      return dishEvents.map((event) => ({
+        ...event,
+        pos: [...event.pos],
+      }));
+    },
     applyTool(tool: LabTool, pos: [number, number], applyOpts: ApplyToolOpts = {}): boolean {
       const toolState = toolStates[tool];
       if (toolState.charges <= 0) return false;
@@ -446,24 +501,30 @@ export function createArena(opts: CreateArenaOpts): Arena {
         effect,
         toolEffects,
         pushSignal,
+        (label, eventPos, eventRadius) => {
+          addDishEvent('stabilize', label, eventPos, eventRadius, 'green');
+        },
         state.rng.randInt(1_000_000),
       );
       if (waterReaction) {
         reactionCount += 1;
         pulseToolEffect(state, waterReaction, archetypes);
         toolEffects.push(waterReaction);
+        addDishEvent('stabilize', 'WATER CARRIED NUTRIENT', waterReaction.pos, waterReaction.radius, 'green');
       }
       const reaction = reactionFor(effect, toolEffects, state.rng.randInt(1_000_000));
       if (reaction) {
         reactionCount += 1;
         pulseToolEffect(state, reaction, archetypes);
         toolEffects.push(reaction);
+        addDishEventForEffect(reaction, addDishEvent);
       }
       if (catalyticReaction) {
         reactionCount += 1;
         pulseToolEffect(state, catalyticReaction.effect, archetypes);
         toolEffects.push(catalyticReaction.effect);
         discoverNote(catalyticReaction.noteId, catalyticReaction.message);
+        addDishEventForCatalysis(catalyticReaction, addDishEvent);
       }
       while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
       return true;
@@ -492,6 +553,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         };
         toolEffects.push(fault);
         discoverNote('recipe_folding_fault', 'FOLDING FAULT: local rule escaped containment.');
+        addDishEvent('fold', 'FOLDING FAULT', fault.pos, fault.radius, 'violet');
         while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
       }
       return true;
@@ -566,7 +628,10 @@ export function createArena(opts: CreateArenaOpts): Arena {
         if (tickNo % MUTATION_INTERVAL_TICKS === 0) {
           const mutation = mutateEcology(state, archetypes, pushSignal);
           mutationCount += mutation.changed;
-          for (const effect of mutation.effects) toolEffects.push(effect);
+          for (const effect of mutation.effects) {
+            toolEffects.push(effect);
+            addDishEvent('mutation', 'VISIBLE MUTATION', effect.pos, effect.radius, 'amber');
+          }
           while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
         }
         if (tickNo % RESEED_INTERVAL_TICKS === 0) {
@@ -584,6 +649,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
             reactionCount += 1;
             pulseToolEffect(state, outbreak.effect, archetypes);
             toolEffects.push(outbreak.effect);
+            addDishEvent('critical', 'PREDATOR OUTBREAK', outbreak.effect.pos, outbreak.effect.radius, 'red');
             while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
           }
         }
@@ -594,6 +660,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           const accident = randomAccidentEffect(state);
           pulseToolEffect(state, accident, archetypes);
           toolEffects.push(accident);
+          addDishEvent('caution', 'ROGUE REAGENT', accident.pos, accident.radius, 'amber');
           accidentCount += 1;
           while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
         }
@@ -601,6 +668,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           discoverBreed(this, id, sourceCell);
         });
       }
+      decayDishEvents();
 
       // On-death handlers.
       for (const [id, spawn] of archetypes) {
@@ -709,7 +777,7 @@ function catalyticReactionFor(
   archetypes: Map<CellId, EnemySpawn>,
   agitated: boolean,
   seed: number,
-): { effect: ToolEffect; noteId: DiscoveryNoteId; message: string } | null {
+): { effect: ToolEffect; noteId: DiscoveryNoteId; message: string; caution: 'stable' | 'volatile' | 'critical' } | null {
   const newType = catalysisEffectTypeFor(newEffect.type);
   if (!newType) return null;
 
@@ -743,6 +811,7 @@ function catalyticReactionFor(
       ),
       noteId: recipe.discoveryNoteId,
       message: reactionMessageFor(recipe.effect.type, recipe.name),
+      caution: recipe.caution,
     };
   }
 
@@ -790,6 +859,7 @@ function applyWaterTransformations(
   newEffect: ToolEffect,
   effects: ToolEffect[],
   pushSignal: (message: string) => void,
+  pushEvent: (label: string, pos: [number, number], radius: number) => void,
   seed: number,
 ): ToolEffect | null {
   if (newEffect.type !== 'water') return null;
@@ -808,6 +878,7 @@ function applyWaterTransformations(
     acid.radius = clamp(acid.radius + 8, acid.radius, 54);
     acid.ttl = Math.max(30, Math.floor(acid.ttl * 0.55));
     pushSignal('Lab note: water diluted the acid field.');
+    pushEvent('WATER DILUTED ACID', acid.pos, acid.radius);
     return null;
   }
 
@@ -816,10 +887,61 @@ function applyWaterTransformations(
     toxin.radius = clamp(toxin.radius + 6, toxin.radius, 58);
     toxin.ttl = Math.max(45, Math.floor(toxin.ttl * 0.7));
     pushSignal('Lab note: water softened toxin pressure.');
+    pushEvent('WATER SOFTENED TOXIN', toxin.pos, toxin.radius);
     return null;
   }
 
   return null;
+}
+
+function addDishEventForCatalysis(
+  reaction: {
+    effect: ToolEffect;
+    message: string;
+    caution: 'stable' | 'volatile' | 'critical';
+  },
+  addDishEvent: (
+    kind: DishEventKind,
+    label: string,
+    pos: [number, number],
+    radius: number,
+    color: DishEventColor,
+  ) => void,
+): void {
+  if (reaction.effect.type === 'fold_fault') {
+    addDishEvent('fold', reaction.message, reaction.effect.pos, reaction.effect.radius, 'violet');
+    return;
+  }
+  if (reaction.caution === 'critical') {
+    addDishEvent('critical', reaction.message, reaction.effect.pos, reaction.effect.radius, 'red');
+    return;
+  }
+  if (reaction.caution === 'volatile') {
+    addDishEvent('caution', reaction.message, reaction.effect.pos, reaction.effect.radius, 'amber');
+    return;
+  }
+  addDishEvent('stabilize', reaction.message, reaction.effect.pos, reaction.effect.radius, 'green');
+}
+
+function addDishEventForEffect(
+  effect: ToolEffect,
+  addDishEvent: (
+    kind: DishEventKind,
+    label: string,
+    pos: [number, number],
+    radius: number,
+    color: DishEventColor,
+  ) => void,
+): void {
+  if (effect.type === 'brine' || effect.type === 'crystal') {
+    addDishEvent('caution', `${effect.type.toUpperCase()} REACTION`, effect.pos, effect.radius, 'amber');
+  } else if (effect.type === 'lysis' || effect.type === 'flare') {
+    addDishEvent('critical', `${effect.type.toUpperCase()} REACTION`, effect.pos, effect.radius, 'red');
+  } else if (effect.type === 'fold_fault') {
+    addDishEvent('fold', 'FOLDING FAULT', effect.pos, effect.radius, 'violet');
+  } else {
+    addDishEvent('stabilize', `${effect.type.toUpperCase()} REACTION`, effect.pos, effect.radius, 'green');
+  }
 }
 
 function nearestOverlappingEffect(

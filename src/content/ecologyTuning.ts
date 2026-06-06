@@ -15,6 +15,7 @@ export const ECOSYSTEM_LIMITS = {
   maxPopulation: 28,
   playerThreatRange: 16,
   maxToolEffects: 10,
+  maxDishEvents: 16,
   outbreakMinTargetVol: 360,
   outbreakHunterCount: 3,
 } as const;

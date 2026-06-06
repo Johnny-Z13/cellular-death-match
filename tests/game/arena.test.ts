@@ -1097,6 +1097,57 @@ describe('arena ecosystem mode', () => {
     expect(arena.getToolEffects().some((effect) => effect.type === 'mutation')).toBe(true);
   });
 
+  it('emits a dish event marker for visible mutations', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 250,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        { archetype: 'swarmlet' as const, targetVol: 150, speed: 10, engulfMultiplier: 4, instability: 4 },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+
+    for (let i = 0; i < 60 * 10; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'mutation'
+      && event.ttl > 0
+      && event.maxTtl > event.ttl
+      && event.pos.length === 2,
+    )).toBe(true);
+  });
+
+  it('emits color-coded dish event markers for catalytic reactions', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 251,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        { archetype: 'swarmlet' as const, targetVol: 150, speed: 10, engulfMultiplier: 4, traits: ['fragile'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('acid', cell.center)).toBe(true);
+    expect(arena.applyTool('toxin', cell.center)).toBe(true);
+
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'critical'
+      && event.color === 'red'
+      && event.label.includes('CATALYTIC'),
+    )).toBe(true);
+  });
+
   it('does not auto-complete catalysis objectives just because the dish starts sparse', () => {
     const arena = createArena({
       LX: 80,

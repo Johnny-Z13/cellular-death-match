@@ -236,7 +236,7 @@ function loop() {
   ecologyAudio.update(readAudioFrame(arena));
   tickCount++;
 
-  renderer.render(arena.state, arena.archetypes);
+  renderer.render(arena.state, arena.archetypes, arena.getDishEvents());
   renderToolEffects(arena);
 
   framesSinceTick++;
@@ -455,22 +455,22 @@ function updateTicker(ar: Arena): void {
 
   if (ecology.reactions > tickerState.lastReactionCount) {
     tickerState.lastReactionCount = ecology.reactions;
-    screens.addTicker('Reagent reaction: unstable chemistry is blooming.');
+    screens.addTicker('Reagent reaction: unstable chemistry is blooming.', 'caution');
   }
 
   if (ecology.accidents > tickerState.lastAccidentCount) {
     tickerState.lastAccidentCount = ecology.accidents;
-    screens.addTicker('Lab accident: rogue reagent entered the dish.');
+    screens.addTicker('Lab accident: rogue reagent entered the dish.', 'caution');
   }
 
   if (ecology.outbreaks > tickerState.lastOutbreakCount) {
     tickerState.lastOutbreakCount = ecology.outbreaks;
-    screens.addTicker('Predator outbreak: hunter cells erupted from the dominant culture.');
+    screens.addTicker('Predator outbreak: hunter cells erupted from the dominant culture.', 'critical');
   }
 
   if (ecology.mutations > tickerState.lastMutationCount) {
     tickerState.lastMutationCount = ecology.mutations;
-    screens.addTicker('Visible mutation: a culture expressed a new trait.');
+    screens.addTicker('Visible mutation: a culture expressed a new trait.', 'discovery');
   }
 
   if (objective.summary !== tickerState.lastObjectiveSummary && tickCount % 180 === 0) {
