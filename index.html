@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cellular Death Match</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="/src/styles.css?v=20260605-evolution-5" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260606-discovery-persist" />
   </head>
   <body>
     <main class="layout">
@@ -104,6 +104,13 @@
           <div class="debug-help">click dish: apply tool</div>
           <div class="debug-help">complete objective: unlock research</div>
           <div class="debug-help">R: restart (after end)</div>
+          <label class="debug-toggle">
+            <input id="dbg-persist-discoveries" type="checkbox" />
+            persist discoveries
+          </label>
+          <button id="dbg-clear-discoveries" class="debug-mini-button" type="button">clear discoveries</button>
+          <button id="dbg-reveal-discoveries" class="debug-mini-button" type="button">reveal all</button>
+          <div class="debug-help" id="dbg-discovery-status">discoveries: run-local</div>
         </section>
       </aside>
 
@@ -157,6 +164,6 @@
         <div id="ticker-lines" class="ticker-lines"></div>
       </aside>
     </main>
-    <script type="module" src="/src/main.ts?v=20260605-evolution-5"></script>
+    <script type="module" src="/src/main.ts?v=20260606-discovery-persist"></script>
   </body>
 </html>

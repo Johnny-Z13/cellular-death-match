@@ -7,6 +7,14 @@ import { getUpgradeDef } from './content/upgrades';
 import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/enemies';
 import { createEcologyAudio } from './audio/ecologyAudio';
 import { hash2 } from './game/hash';
+import {
+  clearDiscoverySave,
+  loadDiscoverySave,
+  revealAllDiscoveries,
+  saveDiscoveryState,
+  setDiscoveryPersistence,
+  type DiscoverySaveState,
+} from './game/discoverySave';
 
 declare const __COMMIT_MESSAGE__: string;
 
@@ -25,6 +33,8 @@ const run = createRun(Date.now() & 0xffffffff);
 const screens = createScreens();
 const debug = createDebugPanel();
 const ecologyAudio = createEcologyAudio();
+const discoveryStorage = window.localStorage;
+let discoverySave: DiscoverySaveState = loadDiscoverySave(discoveryStorage);
 // Allow up to PALETTE_SIZE total cell colors for evolving ecosystem spawns.
 const PALETTE_SIZE = 32;
 
@@ -37,6 +47,20 @@ let framesSinceTick = 0;
 let lastFpsTick = performance.now();
 let tickCount = 0;
 let tickerState = createTickerState();
+
+debug.onDiscoveryPersistenceChange((enabled) => {
+  discoverySave = setDiscoveryPersistence(discoveryStorage, enabled);
+  debug.updateDiscoveries(discoveryDebugInfo());
+});
+debug.onClearDiscoveries(() => {
+  discoverySave = clearDiscoverySave(discoveryStorage);
+  debug.updateDiscoveries(discoveryDebugInfo());
+});
+debug.onRevealDiscoveries(() => {
+  discoverySave = revealAllDiscoveries(discoveryStorage);
+  debug.updateDiscoveries(discoveryDebugInfo());
+});
+debug.updateDiscoveries(discoveryDebugInfo());
 
 canvas.tabIndex = 0;
 canvas.focus();
@@ -151,6 +175,7 @@ function startNewFight() {
   screens.addTicker(`Objective received: ${run.getObjective().name}.`);
   screens.updateToolCharges(arena.getToolStates());
   screens.updateAgitation(arena.getAgitationState());
+  debug.updateDiscoveries(discoveryDebugInfo());
   // Update debug panel swatches to match the renderer's palette.
   debug.setSwatch(1, swatchForCellId(1, PALETTE_SIZE));
   for (let i = 0; i < enemies.length; i++) {
@@ -219,6 +244,7 @@ function loop() {
     screens.updateAgitation(arena.getAgitationState());
   }
   updateTicker(arena);
+  persistArenaDiscoveries(arena);
 
   // Debug panel.
   debug.update(arena.state, {
@@ -226,6 +252,7 @@ function loop() {
     tick: tickCount,
     status: arena.getStatus(),
   });
+  debug.updateDiscoveries(discoveryDebugInfo());
 
   // Status check: did this tick end the fight?
   if (resolveArenaStatus(arena.getStatus())) return;
@@ -253,6 +280,36 @@ function scheduleLoop(): void {
   } else {
     window.setTimeout(loop, 16);
   }
+}
+
+function persistArenaDiscoveries(ar: Arena): void {
+  const discoveries = ar.getEcology().discoveries;
+  if (!discoverySave.persistenceEnabled) return;
+  discoverySave = {
+    ...discoverySave,
+    discoveredBreedIds: unique([...discoverySave.discoveredBreedIds, ...discoveries.breedIds]),
+    discoveredNoteIds: unique([...discoverySave.discoveredNoteIds, ...discoveries.noteIds]),
+  };
+  discoverySave = saveDiscoveryState(discoveryStorage, discoverySave);
+}
+
+function discoveryDebugInfo(): {
+  persistenceEnabled: boolean;
+  discoveredCount: number;
+  revealAll: boolean;
+} {
+  return {
+    persistenceEnabled: discoverySave.persistenceEnabled,
+    discoveredCount: unique([
+      ...discoverySave.discoveredBreedIds,
+      ...discoverySave.discoveredNoteIds,
+    ]).length,
+    revealAll: discoverySave.revealAll,
+  };
+}
+
+function unique<T>(values: readonly T[]): T[] {
+  return [...new Set(values)];
 }
 
 interface TickerState {

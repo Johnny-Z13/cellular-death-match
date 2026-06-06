@@ -260,6 +260,33 @@ canvas {
   font-size: 11px;
 }
 
+.debug-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+  color: #b8c8bd;
+  font-size: 11px;
+}
+
+.debug-mini-button {
+  width: 100%;
+  margin-top: 6px;
+  border: 1px solid #2d5140;
+  background: #0d1b14;
+  color: #baf5c7;
+  font: inherit;
+  font-size: 11px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.debug-mini-button:hover,
+.debug-mini-button:focus-visible {
+  border-color: #55a875;
+  color: #e0ffe7;
+}
+
 .ticker {
   display: none;
   position: fixed;

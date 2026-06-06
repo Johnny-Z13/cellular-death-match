@@ -6,15 +6,30 @@ export interface DebugInfo {
   status: string;
 }
 
+export interface DebugDiscoveryInfo {
+  persistenceEnabled: boolean;
+  discoveredCount: number;
+  revealAll: boolean;
+}
+
 export interface DebugPanel {
   update(state: SimState, info: DebugInfo): void;
   setSwatch(cellId: CellId, color: string): void;
+  updateDiscoveries(info: DebugDiscoveryInfo): void;
+  onDiscoveryPersistenceChange(handler: (enabled: boolean) => void): void;
+  onClearDiscoveries(handler: () => void): void;
+  onRevealDiscoveries(handler: () => void): void;
 }
 
 export function createDebugPanel(): DebugPanel {
   const get = (id: string): HTMLElement => {
     const el = document.getElementById(id);
     if (!el) throw new Error(`debug panel: missing #${id}`);
+    return el;
+  };
+  const getInput = (id: string): HTMLInputElement => {
+    const el = document.getElementById(id);
+    if (!(el instanceof HTMLInputElement)) throw new Error(`debug panel: missing #${id}`);
     return el;
   };
 
@@ -30,6 +45,10 @@ export function createDebugPanel(): DebugPanel {
   const eVol       = get('dbg-e-vol');
   const eTvol      = get('dbg-e-tvol');
   const eCenter    = get('dbg-e-center');
+  const persistDiscoveries = getInput('dbg-persist-discoveries');
+  const clearDiscoveries = get('dbg-clear-discoveries');
+  const revealDiscoveries = get('dbg-reveal-discoveries');
+  const discoveryStatus = get('dbg-discovery-status');
 
   const fmt2 = (n: number): string => n.toFixed(2);
   const fmtVec = (v: readonly [number, number]): string =>
@@ -59,6 +78,21 @@ export function createDebugPanel(): DebugPanel {
         eTvol.textContent     = fmt2(enemy.targetVol);
         eCenter.textContent   = fmtVec(enemy.center);
       }
+    },
+    updateDiscoveries(info) {
+      persistDiscoveries.checked = info.persistenceEnabled;
+      const mode = info.persistenceEnabled ? 'saved' : 'run-local';
+      const reveal = info.revealAll ? ' / reveal-all' : '';
+      discoveryStatus.textContent = `discoveries: ${mode} / ${info.discoveredCount}${reveal}`;
+    },
+    onDiscoveryPersistenceChange(handler) {
+      persistDiscoveries.addEventListener('change', () => handler(persistDiscoveries.checked));
+    },
+    onClearDiscoveries(handler) {
+      clearDiscoveries.addEventListener('click', handler);
+    },
+    onRevealDiscoveries(handler) {
+      revealDiscoveries.addEventListener('click', handler);
     },
   };
 }
