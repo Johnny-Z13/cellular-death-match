@@ -915,8 +915,98 @@ canvas {
 
 @media (min-width: 1181px) {
   .layout {
-    padding-left: 340px;
-    padding-right: 460px;
+    padding-left: 268px;
+    padding-right: 424px;
+  }
+
+  canvas {
+    width: min(calc(100svh - 140px), calc(100vw - 760px), 800px);
+    height: min(calc(100svh - 140px), calc(100vw - 760px), 800px);
+  }
+
+  .hud {
+    width: 292px;
+  }
+
+  .hud-val {
+    max-width: 200px;
+  }
+
+  .toolbox {
+    top: 220px;
+    transform: none;
+    width: 220px;
+  }
+
+  .life-panel {
+    width: 400px;
+    top: 24px;
+    bottom: 24px;
+    max-height: none;
+    align-content: start;
+  }
+
+  .life-panel .egg-options {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .life-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ticker {
+    width: min(800px, calc(100vw - 760px));
+  }
+}
+
+@media (min-width: 1600px) {
+  .layout {
+    padding-left: 324px;
+    padding-right: 560px;
+  }
+
+  canvas {
+    width: min(calc(100svh - 140px), calc(100vw - 910px), 860px);
+    height: min(calc(100svh - 140px), calc(100vw - 910px), 860px);
+    min-width: 720px;
+    min-height: 720px;
+  }
+
+  .ticker {
+    width: min(860px, calc(100vw - 910px));
+  }
+
+  .hud {
+    width: 304px;
+  }
+
+  .hud-val {
+    max-width: 212px;
+  }
+
+  .toolbox {
+    width: 232px;
+  }
+
+  .life-panel {
+    width: 536px;
+    padding: 14px 16px;
+  }
+
+  .life-summary {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .life-item {
+    min-height: 38px;
+    font-size: 11px;
+    padding: 7px 8px;
+  }
+
+  .life-swatch {
+    width: 10px;
+    height: 10px;
   }
 }
 
