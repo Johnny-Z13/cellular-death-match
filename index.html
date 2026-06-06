@@ -5,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cellular Death Match</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="/src/styles.css?v=20260606-debug-overlay-layer" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260606-notebook-catalogue" />
   </head>
   <body>
     <main class="layout">
       <canvas id="game" width="800" height="800"></canvas>
+      <button id="notebook-button" class="notebook-button" type="button" aria-label="Open Discoverer's Notebook">Notebook</button>
       <aside id="toolbox" class="toolbox" aria-label="Petri dish tools">
         <div class="toolbox-head">
           <h2 class="toolbox-title">Reagents</h2>
@@ -149,6 +150,19 @@
         </div>
       </div>
 
+      <div id="screen-notebook" class="screen notebook-screen" aria-modal="true">
+        <section class="notebook-card" aria-labelledby="notebook-title">
+          <header class="notebook-head">
+            <div>
+              <h2 id="notebook-title" class="screen-title notebook-title">Discoverer's Notebook</h2>
+              <p id="notebook-progress" class="notebook-progress">0 / 0 entries logged</p>
+            </div>
+            <button id="notebook-close" class="notebook-close" type="button" aria-label="Close notebook">Close</button>
+          </header>
+          <div id="notebook-list" class="notebook-list"></div>
+        </section>
+      </div>
+
       <div id="hud" class="hud">
         <div class="hud-row"><span class="hud-key">Epoch</span><span id="hud-fight" class="hud-val">1 / 5</span></div>
         <div class="hud-row"><span class="hud-key">Deadline</span><span id="hud-progress" class="hud-val">55s</span></div>
@@ -173,6 +187,6 @@
         <div id="ticker-lines" class="ticker-lines"></div>
       </aside>
     </main>
-    <script type="module" src="/src/main.ts?v=20260606-debug-overlay-layer"></script>
+    <script type="module" src="/src/main.ts?v=20260606-notebook-catalogue"></script>
   </body>
 </html>

@@ -1183,6 +1183,148 @@ describe('arena ecosystem mode', () => {
     )).toBe(true);
   });
 
+  it('spills chromatic foam when acid, water, and nutrient meet fragile growth', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 226,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        nutrientCharges: 1,
+        waterCharges: 1,
+        acidCharges: 1,
+      },
+      enemies: [
+        { archetype: 'splitter' as const, targetVol: 180, speed: 8, engulfMultiplier: 5, traits: ['fragile'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('acid', cell.center)).toBe(true);
+    expect(arena.applyTool('nutrient', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+
+    expect(arena.getToolEffects().some((effect) => effect.type === 'foam')).toBe(true);
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_chromatic_spill');
+    expect(arena.getEcology().signals.some((signal) => signal.includes('Chromatic Spill'))).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'caution' && event.label.includes('Chromatic Spill'),
+    )).toBe(true);
+  });
+
+  it('blooms a nutrient conduit when feeding a crystal lattice', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 227,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        nutrientCharges: 1,
+        waterCharges: 1,
+        saltCharges: 1,
+      },
+      enemies: [
+        { archetype: 'mirror' as const, targetVol: 180, speed: 8, engulfMultiplier: 5, traits: ['budding', 'gelatinous'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('salt', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+    expect(arena.getToolEffects().some((effect) => effect.type === 'crystal')).toBe(true);
+    expect(arena.applyTool('nutrient', cell.center)).toBe(true);
+
+    expect(arena.getToolEffects().some((effect) => effect.type === 'conduit')).toBe(true);
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_lattice_bloom');
+    expect(arena.getEcology().signals.some((signal) => signal.includes('Lattice Bloom'))).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'caution' && event.label.includes('Lattice Bloom'),
+    )).toBe(true);
+  });
+
+  it('throws a spore comet when an agitated hatch enters reactive foam', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 228,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        eggCharges: 1,
+        waterCharges: 1,
+        toxinCharges: 1,
+        agitationCharges: 1,
+      },
+      enemies: [
+        { archetype: 'swarmlet' as const, targetVol: 150, speed: 12, engulfMultiplier: 4, traits: ['budding'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('toxin', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+    expect(arena.getToolEffects().some((effect) => effect.type === 'foam')).toBe(true);
+    expect(arena.agitate()).toBe(true);
+    expect(arena.applyTool('egg', cell.center, { eggArchetype: 'swarmlet' })).toBe(true);
+
+    expect(arena.getToolEffects().some((effect) => effect.type === 'flare')).toBe(true);
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_spore_comet');
+    expect(arena.getEcology().signals.some((signal) => signal.includes('Spore Comet'))).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'critical' && event.label.includes('Spore Comet'),
+    )).toBe(true);
+  });
+
+  it('forms a velvet prison when salt and toxin trap gelatinous anchors', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 229,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        saltCharges: 1,
+        toxinCharges: 1,
+      },
+      enemies: [
+        { archetype: 'boss' as const, targetVol: 260, speed: 5, engulfMultiplier: 7, traits: ['gelatinous'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('salt', cell.center)).toBe(true);
+    expect(arena.applyTool('toxin', cell.center)).toBe(true);
+
+    expect(arena.getToolEffects().some((effect) => effect.type === 'lysis')).toBe(true);
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_velvet_prison');
+    expect(arena.getEcology().signals.some((signal) => signal.includes('Velvet Prison'))).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'critical' && event.label.includes('Velvet Prison'),
+    )).toBe(true);
+  });
+
   it('discovers static lattice when foam lightning patterns quick starter cultures', () => {
     const arena = createArena({
       LX: 80,

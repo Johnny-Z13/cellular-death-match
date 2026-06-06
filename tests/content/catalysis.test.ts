@@ -129,6 +129,16 @@ describe('catalysis content', () => {
     expect(DISCOVERY_NOTES.recipe_crystal_toxin_prism?.title).toBe('Prism Flare');
   });
 
+  it('prioritizes toxin prism over salt traps when toxin hits a crystal field', () => {
+    const recipe = reactionRecipeFor(['crystal', 'toxin', 'salt', 'water'], {
+      traits: ['gelatinous'],
+      archetypes: ['mirror'],
+    }, 'toxin');
+
+    expect(recipe?.id).toBe('crystal_toxin_prism');
+    expect(recipe?.effect.type).toBe('flare');
+  });
+
   it('discovers a brine flash when acid hits salty pressure near soft tissue', () => {
     const recipe = reactionRecipeFor(['acid', 'brine', 'water', 'salt'], {
       traits: ['gelatinous'],
@@ -199,6 +209,74 @@ describe('catalysis content', () => {
     expect(recipe?.caution).toBe('critical');
     expect(recipe?.effect.type).toBe('flare');
     expect(DISCOVERY_NOTES.recipe_foam_lightning?.title).toBe('Foam Lightning');
+  });
+
+  it('discovers chromatic spill when acid, water, and nutrient hit fragile growth', () => {
+    const recipe = reactionRecipeFor(['acid', 'water', 'nutrient'], {
+      traits: ['fragile'],
+      archetypes: ['splitter'],
+    });
+
+    expect(recipe?.id).toBe('chromatic_spill');
+    expect(recipe?.caution).toBe('volatile');
+    expect(recipe?.effect.type).toBe('foam');
+    expect(DISCOVERY_NOTES.recipe_chromatic_spill?.title).toBe('Chromatic Spill');
+  });
+
+  it('discovers lattice bloom when nutrient feeds a crystal field near pattern cultures', () => {
+    const recipe = reactionRecipeFor(['crystal', 'nutrient'], {
+      traits: ['budding'],
+      archetypes: ['mirror'],
+    });
+
+    expect(recipe?.id).toBe('lattice_bloom');
+    expect(recipe?.caution).toBe('volatile');
+    expect(recipe?.effect.type).toBe('conduit');
+    expect(DISCOVERY_NOTES.recipe_lattice_bloom?.title).toBe('Lattice Bloom');
+  });
+
+  it('prioritizes nutrient-fed lattice bloom over the crystal recipe that created the field', () => {
+    const recipe = reactionRecipeFor(['crystal', 'nutrient', 'salt', 'water'], {
+      traits: ['budding', 'gelatinous'],
+      archetypes: ['mirror'],
+    }, 'nutrient');
+
+    expect(recipe?.id).toBe('lattice_bloom');
+    expect(recipe?.effect.type).toBe('conduit');
+  });
+
+  it('discovers spore comet when an agitated hatch enters reactive foam', () => {
+    const recipe = reactionRecipeFor(['hatch', 'foam'], {
+      traits: ['budding'],
+      archetypes: ['swarmlet'],
+      agitated: true,
+    });
+
+    expect(recipe?.id).toBe('spore_comet');
+    expect(recipe?.caution).toBe('critical');
+    expect(recipe?.effect.type).toBe('flare');
+    expect(DISCOVERY_NOTES.recipe_spore_comet?.title).toBe('Spore Comet');
+  });
+
+  it('requires agitation for spore comet hatches', () => {
+    const calm = reactionRecipeFor(['hatch', 'foam'], {
+      traits: ['budding'],
+      archetypes: ['swarmlet'],
+    });
+
+    expect(calm?.id).not.toBe('spore_comet');
+  });
+
+  it('discovers velvet prison when salt and toxin trap gelatinous anchors', () => {
+    const recipe = reactionRecipeFor(['salt', 'toxin'], {
+      traits: ['gelatinous'],
+      archetypes: ['boss'],
+    });
+
+    expect(recipe?.id).toBe('velvet_prison');
+    expect(recipe?.caution).toBe('critical');
+    expect(recipe?.effect.type).toBe('lysis');
+    expect(DISCOVERY_NOTES.recipe_velvet_prison?.title).toBe('Velvet Prison');
   });
 
   it('maps every breed to a discovery note', () => {

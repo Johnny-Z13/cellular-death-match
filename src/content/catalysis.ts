@@ -26,6 +26,10 @@ export type ReactionRecipeId =
   | 'incubator_shock'
   | 'toxin_water_mist'
   | 'foam_lightning'
+  | 'chromatic_spill'
+  | 'lattice_bloom'
+  | 'spore_comet'
+  | 'velvet_prison'
   | 'mist_salt_discharge'
   | 'acid_water_foam'
   | 'foam_salt_rule30'
@@ -204,6 +208,50 @@ export const REACTION_RECIPES: readonly ReactionRecipe[] = [
     effect: { type: 'flare', radiusBonus: 20, ttl: 60 * 3 },
   },
   {
+    id: 'chromatic_spill',
+    name: 'Chromatic Spill',
+    inputs: ['acid', 'water', 'nutrient'],
+    trigger: 'water',
+    traits: ['fragile', 'budding'],
+    archetypes: ['splitter', 'swarmlet', 'sniper'],
+    caution: 'volatile',
+    discoveryNoteId: 'recipe_chromatic_spill',
+    effect: { type: 'foam', radiusBonus: 20, ttl: 60 * 5 },
+  },
+  {
+    id: 'lattice_bloom',
+    name: 'Lattice Bloom',
+    inputs: ['crystal', 'nutrient'],
+    trigger: 'nutrient',
+    traits: ['budding', 'toxin_resistant'],
+    archetypes: ['mirror', 'splitter', 'bruiser'],
+    caution: 'volatile',
+    discoveryNoteId: 'recipe_lattice_bloom',
+    effect: { type: 'conduit', radiusBonus: 18, ttl: 60 * 6 },
+  },
+  {
+    id: 'spore_comet',
+    name: 'Spore Comet',
+    inputs: ['hatch', 'foam'],
+    trigger: 'hatch',
+    traits: ['budding'],
+    archetypes: ['swarmlet', 'splitter'],
+    caution: 'critical',
+    discoveryNoteId: 'recipe_spore_comet',
+    effect: { type: 'flare', radiusBonus: 18, ttl: 60 * 3 },
+  },
+  {
+    id: 'velvet_prison',
+    name: 'Velvet Prison',
+    inputs: ['salt', 'toxin'],
+    trigger: 'toxin',
+    traits: ['gelatinous'],
+    archetypes: ['boss', 'bruiser', 'mirror'],
+    caution: 'critical',
+    discoveryNoteId: 'recipe_velvet_prison',
+    effect: { type: 'lysis', radiusBonus: 16, ttl: 60 * 5 },
+  },
+  {
     id: 'agitated_chain',
     name: 'Agitated Chain',
     inputs: ['water', 'nutrient', 'bloom'],
@@ -256,6 +304,7 @@ export const REACTION_RECIPES: readonly ReactionRecipe[] = [
     id: 'crystal_toxin_prism',
     name: 'Prism Flare',
     inputs: ['crystal', 'toxin'],
+    trigger: 'toxin',
     traits: ['gelatinous', 'toxin_resistant'],
     archetypes: ['mirror', 'bruiser'],
     caution: 'critical',
@@ -339,6 +388,30 @@ export const DISCOVERY_NOTES: Record<DiscoveryNoteId, DiscoveryNote> = {
     id: 'recipe_foam_lightning',
     title: 'Foam Lightning',
     body: 'A second water pulse can overcharge reactive foam into a bright branching flare.',
+    caution: 'critical',
+  },
+  recipe_chromatic_spill: {
+    id: 'recipe_chromatic_spill',
+    title: 'Chromatic Spill',
+    body: 'Acid, water, and food can spill through fragile growth as a fizzing color-cycling foam.',
+    caution: 'volatile',
+  },
+  recipe_lattice_bloom: {
+    id: 'recipe_lattice_bloom',
+    title: 'Lattice Bloom',
+    body: 'A crystal field can feed on nutrient pressure and push food through repeating lanes.',
+    caution: 'volatile',
+  },
+  recipe_spore_comet: {
+    id: 'recipe_spore_comet',
+    title: 'Spore Comet',
+    body: 'A fresh hatch can ride reactive foam like a bright little comet when the dish is shaken.',
+    caution: 'critical',
+  },
+  recipe_velvet_prison: {
+    id: 'recipe_velvet_prison',
+    title: 'Velvet Prison',
+    body: 'Salt and toxin can trap soft anchor cultures in a slow red lysis field.',
     caution: 'critical',
   },
   recipe_mist_salt_discharge: {
@@ -457,16 +530,21 @@ export function reactionRecipeFor(
     ));
     if (!archetypeOk) return false;
 
-    return recipe.id !== 'agitated_chain' || context.agitated === true;
-  }).sort((a, b) => recipePriority(b) - recipePriority(a))[0];
+    return !requiresAgitation(recipe.id) || context.agitated === true;
+  }).sort((a, b) => recipePriority(b, trigger) - recipePriority(a, trigger))[0];
 }
 
-function recipePriority(recipe: ReactionRecipe): number {
+function requiresAgitation(id: ReactionRecipeId): boolean {
+  return id === 'agitated_chain' || id === 'spore_comet';
+}
+
+function recipePriority(recipe: ReactionRecipe, trigger?: CatalysisEffectType): number {
+  const triggerScore = trigger && recipe.trigger === trigger ? 1000 : 0;
   const cautionScore = recipe.caution === 'critical' ? 300 : recipe.caution === 'volatile' ? 200 : 100;
   const effectScore = recipe.effect.type === 'fold_fault' ? 40
     : recipe.effect.type === 'flare' ? 30
       : recipe.effect.type === 'crystal' ? 20
         : recipe.effect.type === 'foam' ? 10
           : 0;
-  return cautionScore + effectScore + recipe.inputs.length;
+  return triggerScore + cautionScore + effectScore + recipe.inputs.length;
 }

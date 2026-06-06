@@ -6,6 +6,7 @@ import { createScreens, type ToolId } from './ui/screens';
 import { getUpgradeDef } from './content/upgrades';
 import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/enemies';
 import { BREED_DEFS, DISCOVERY_NOTES } from './content/catalysis';
+import { notebookViewForProgression } from './content/notebook';
 import { createEcologyAudio } from './audio/ecologyAudio';
 import { soundEventForDishSignal, type SoundEventId } from './audio/soundDesign';
 import { hash2 } from './game/hash';
@@ -70,6 +71,7 @@ let pendingResearchBrief: ResearchBriefLine[] = [];
 interface RuntimeOverlayState {
   menuOpen: boolean;
   debugOpen: boolean;
+  notebookOpen: boolean;
   presentationMode: boolean;
   selectedLifeformId: string | null;
 }
@@ -77,6 +79,7 @@ interface RuntimeOverlayState {
 const overlayState: RuntimeOverlayState = {
   menuOpen: false,
   debugOpen: false,
+  notebookOpen: false,
   presentationMode: false,
   selectedLifeformId: null,
 };
@@ -104,6 +107,14 @@ debug.onPresentationToggle(() => {
   setPresentationMode(!overlayState.presentationMode);
 });
 debug.updateDiscoveries(discoveryDebugInfo());
+refreshNotebook();
+
+screens.onNotebookOpen(() => {
+  openNotebook();
+});
+screens.onNotebookClose(() => {
+  closeNotebook();
+});
 
 screens.onLifeformSelect((id) => {
   overlayState.selectedLifeformId = id;
@@ -115,6 +126,10 @@ window.addEventListener('keydown', (event) => {
   event.preventDefault();
   if (overlayState.presentationMode) {
     setPresentationMode(false);
+    return;
+  }
+  if (overlayState.notebookOpen) {
+    closeNotebook();
     return;
   }
   overlayState.menuOpen = !overlayState.menuOpen;
@@ -191,7 +206,9 @@ function showPhase() {
   screens.hide('title');
   screens.hide('pick');
   screens.hide('end');
+  screens.hide('notebook');
   screens.hide('hud');
+  overlayState.notebookOpen = false;
   const state = run.getState();
   if (state.phase === 'title') {
     screens.show('title');
@@ -443,6 +460,7 @@ function saveRuntimeDiscoveryState(): void {
 function applyDiscoveryProgressionUi(): void {
   screens.setToolUnlocks(discoveryProgression.unlockedTools);
   screens.setLifeformUnlocks(discoveryProgression.unlockedLifeforms);
+  refreshNotebook();
 
   if (!discoveryProgression.unlockedTools.includes(selectedTool)) {
     selectedTool = 'egg';
@@ -516,11 +534,31 @@ function applyOverlayState(): void {
   layout.classList.toggle('presentation-mode', overlayState.presentationMode);
 }
 
+function refreshNotebook(): void {
+  screens.updateNotebook(notebookViewForProgression(discoveryProgression));
+}
+
+function openNotebook(): void {
+  refreshNotebook();
+  overlayState.notebookOpen = true;
+  overlayState.menuOpen = false;
+  overlayState.debugOpen = false;
+  screens.show('notebook');
+  applyOverlayState();
+}
+
+function closeNotebook(): void {
+  overlayState.notebookOpen = false;
+  screens.hide('notebook');
+  applyOverlayState();
+}
+
 function setPresentationMode(enabled: boolean): void {
   overlayState.presentationMode = enabled;
   if (enabled) {
     overlayState.menuOpen = false;
     overlayState.debugOpen = false;
+    closeNotebook();
   }
   if (enabled && document.fullscreenEnabled && !document.fullscreenElement) {
     void layout.requestFullscreen().catch(() => undefined);

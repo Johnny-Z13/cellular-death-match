@@ -2,12 +2,13 @@ import type { AgitationState, ToolState } from '../game/arena';
 import type { ResearchBriefLine } from '../game/researchBrief';
 import type { UpgradeDef } from '../content/upgrades';
 import type { EnemyArchetype } from '../content/enemies';
+import type { NotebookView } from '../content/notebook';
 import {
   LIFEFORM_IDENTITIES,
   type LifeformIdentityId,
 } from '../content/lifeformIdentity';
 
-type ScreenName = 'title' | 'pick' | 'end' | 'hud';
+type ScreenName = 'title' | 'pick' | 'end' | 'hud' | 'notebook';
 export type ToolId = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid';
 
 export interface HudInfo {
@@ -73,10 +74,13 @@ export interface Screens {
   setSelectedLifeform(id: string | null): void;
   updateHud(info: HudInfo): void;
   setPickResearchBrief(lines: readonly ResearchBriefLine[]): void;
+  updateNotebook(view: NotebookView): void;
   setPickChoices(choices: PickChoice[], onPick: (id: string) => void): void;
   updateEnd(info: EndInfo): void;
   onTitleStart(handler: () => void): void;
   onEndRestart(handler: () => void): void;
+  onNotebookOpen(handler: () => void): void;
+  onNotebookClose(handler: () => void): void;
 }
 
 export type TickerTone = 'normal' | 'discovery' | 'caution' | 'critical';
@@ -91,8 +95,13 @@ export function createScreens(): Screens {
   const screenTitle  = get('screen-title');
   const screenPick   = get('screen-pick');
   const screenEnd    = get('screen-end');
+  const screenNotebook = get('screen-notebook');
   const hud          = get('hud');
   const titleStart   = get('title-start');
+  const notebookButton = get('notebook-button') as HTMLButtonElement;
+  const notebookClose = get('notebook-close') as HTMLButtonElement;
+  const notebookProgress = get('notebook-progress');
+  const notebookList = get('notebook-list');
   const pickResearchBrief = get('pick-research-brief');
   const pickChoices  = get('pick-choices');
   const endTitle     = get('end-title');
@@ -129,6 +138,7 @@ export function createScreens(): Screens {
     title: screenTitle,
     pick: screenPick,
     end: screenEnd,
+    notebook: screenNotebook,
     hud,
   };
 
@@ -359,6 +369,41 @@ export function createScreens(): Screens {
         pickResearchBrief.append(line);
       }
     },
+    updateNotebook(view) {
+      notebookProgress.textContent = `${view.discoveredCount} / ${view.totalCount} entries logged`;
+      notebookList.replaceChildren();
+      for (const entry of view.entries) {
+        const card = document.createElement('article');
+        card.className = [
+          'notebook-entry',
+          `notebook-entry-${entry.category}`,
+          `notebook-entry-${entry.caution}`,
+          entry.discovered ? 'notebook-entry-discovered' : 'notebook-entry-locked',
+        ].join(' ');
+
+        const marker = document.createElement('span');
+        marker.className = 'notebook-marker';
+        marker.textContent = entry.discovered ? markerForCategory(entry.category) : '?';
+
+        const copy = document.createElement('div');
+        const header = document.createElement('div');
+        header.className = 'notebook-entry-head';
+        const title = document.createElement('strong');
+        title.textContent = entry.displayTitle;
+        const meta = document.createElement('span');
+        meta.textContent = `${entry.category.replace('_', ' ')} / ${entry.caution}`;
+        header.append(title, meta);
+
+        const body = document.createElement('p');
+        body.textContent = entry.displayBody;
+        const clue = document.createElement('small');
+        clue.textContent = entry.displayClue;
+
+        copy.append(header, body, clue);
+        card.append(marker, copy);
+        notebookList.append(card);
+      }
+    },
     setPickChoices(choices, onPick) {
       pickChoices.replaceChildren();
       for (const c of choices) {
@@ -391,6 +436,12 @@ export function createScreens(): Screens {
     },
     onEndRestart(handler) {
       endRestart.addEventListener('click', handler);
+    },
+    onNotebookOpen(handler) {
+      notebookButton.addEventListener('click', handler);
+    },
+    onNotebookClose(handler) {
+      notebookClose.addEventListener('click', handler);
     },
   };
 }
@@ -471,6 +522,13 @@ function setUnknownState(button: HTMLButtonElement, locked: boolean, label: stri
 function setSelectedButtonState(button: HTMLButtonElement, selected: boolean): void {
   button.classList.toggle('selected', selected);
   button.setAttribute('aria-selected', String(selected));
+}
+
+function markerForCategory(category: string): string {
+  if (category === 'lifeform') return 'L';
+  if (category === 'catalyst') return 'C';
+  if (category === 'event') return '!';
+  return 'N';
 }
 
 function tickerSpecialClassFor(message: string): string | null {
