@@ -16,10 +16,21 @@ export type CatalysisEffectType =
   | 'conduit'
   | 'flare'
   | 'crystal'
-  | 'fold_fault';
+  | 'fold_fault'
+  | 'hatch';
 
 export type ReactionRecipeId =
   | 'nutrient_conduit'
+  | 'bitter_bloom'
+  | 'pressure_bloom'
+  | 'incubator_shock'
+  | 'toxin_water_mist'
+  | 'foam_lightning'
+  | 'mist_salt_discharge'
+  | 'acid_water_foam'
+  | 'foam_salt_rule30'
+  | 'crystal_toxin_prism'
+  | 'brine_flash'
   | 'acid_toxin_flare'
   | 'salt_water_crystal'
   | 'agitated_chain'
@@ -48,6 +59,7 @@ export interface ReactionRecipe {
   id: ReactionRecipeId;
   name: string;
   inputs: readonly CatalysisEffectType[];
+  trigger?: CatalysisEffectType;
   traits?: readonly TraitId[];
   archetypes?: readonly EnemyArchetype[];
   caution: CautionLevel;
@@ -102,7 +114,7 @@ export const BREED_DEFS: Record<BreedId, BreedDef> = {
     engulfMultiplier: 1.18,
     instabilityMultiplier: 0.68,
     tint: [142, 118, 255],
-    discoveryTrigger: 'Rule-fold fault stabilizing inside an anchor culture',
+    discoveryTrigger: 'Rule-30 Cascade or fold fault stabilizing inside gelatinous tissue',
   },
   glass_antibody: {
     id: 'glass_antibody',
@@ -138,11 +150,59 @@ export const BREED_DEFS: Record<BreedId, BreedDef> = {
     engulfMultiplier: 0.96,
     instabilityMultiplier: 0.74,
     tint: [252, 220, 92],
-    discoveryTrigger: 'Agitated chain reaction freezes into a repeating pattern',
+    discoveryTrigger: 'Foam Lightning or crystal shock freezes quick cultures into a repeating pattern',
   },
 };
 
 export const REACTION_RECIPES: readonly ReactionRecipe[] = [
+  {
+    id: 'bitter_bloom',
+    name: 'Bitter Bloom',
+    inputs: ['nutrient', 'toxin'],
+    traits: ['budding'],
+    archetypes: ['splitter', 'swarmlet'],
+    caution: 'volatile',
+    discoveryNoteId: 'recipe_bitter_bloom',
+    effect: { type: 'lysis', radiusBonus: 14, ttl: 60 * 4 },
+  },
+  {
+    id: 'pressure_bloom',
+    name: 'Pressure Bloom',
+    inputs: ['nutrient', 'toxin'],
+    traits: ['toxin_resistant'],
+    archetypes: ['swarmlet', 'splitter', 'bruiser'],
+    caution: 'critical',
+    discoveryNoteId: 'recipe_pressure_bloom',
+    effect: { type: 'flare', radiusBonus: 16, ttl: 60 * 3 },
+  },
+  {
+    id: 'incubator_shock',
+    name: 'Incubator Shock',
+    inputs: ['hatch', 'nutrient', 'toxin'],
+    archetypes: ['swarmlet', 'splitter', 'bruiser'],
+    caution: 'critical',
+    discoveryNoteId: 'recipe_incubator_shock',
+    effect: { type: 'flare', radiusBonus: 20, ttl: 60 * 3 },
+  },
+  {
+    id: 'toxin_water_mist',
+    name: 'Toxin Mist',
+    inputs: ['toxin', 'water'],
+    archetypes: ['swarmlet', 'splitter'],
+    caution: 'volatile',
+    discoveryNoteId: 'recipe_toxin_water_mist',
+    effect: { type: 'foam', radiusBonus: 16, ttl: 60 * 4 },
+  },
+  {
+    id: 'foam_lightning',
+    name: 'Foam Lightning',
+    inputs: ['foam', 'water'],
+    trigger: 'water',
+    archetypes: ['swarmlet', 'splitter'],
+    caution: 'critical',
+    discoveryNoteId: 'recipe_foam_lightning',
+    effect: { type: 'flare', radiusBonus: 20, ttl: 60 * 3 },
+  },
   {
     id: 'agitated_chain',
     name: 'Agitated Chain',
@@ -162,6 +222,55 @@ export const REACTION_RECIPES: readonly ReactionRecipe[] = [
     caution: 'stable',
     discoveryNoteId: 'recipe_nutrient_conduit',
     effect: { type: 'conduit', radiusBonus: 16, ttl: 60 * 6 },
+  },
+  {
+    id: 'mist_salt_discharge',
+    name: 'Mist Lattice Discharge',
+    inputs: ['foam', 'salt'],
+    archetypes: ['swarmlet', 'splitter'],
+    caution: 'critical',
+    discoveryNoteId: 'recipe_mist_salt_discharge',
+    effect: { type: 'flare', radiusBonus: 18, ttl: 60 * 3 },
+  },
+  {
+    id: 'acid_water_foam',
+    name: 'Foam Inversion',
+    inputs: ['acid', 'water'],
+    traits: ['gelatinous', 'fragile'],
+    archetypes: ['bruiser', 'sniper', 'mirror'],
+    caution: 'volatile',
+    discoveryNoteId: 'recipe_acid_water_foam',
+    effect: { type: 'foam', radiusBonus: 22, ttl: 60 * 4 },
+  },
+  {
+    id: 'foam_salt_rule30',
+    name: 'Rule-30 Cascade',
+    inputs: ['foam', 'salt'],
+    traits: ['gelatinous', 'fragile'],
+    archetypes: ['bruiser', 'mirror', 'splitter'],
+    caution: 'critical',
+    discoveryNoteId: 'recipe_foam_salt_rule30',
+    effect: { type: 'fold_fault', radiusBonus: 30, ttl: 60 * 7 },
+  },
+  {
+    id: 'crystal_toxin_prism',
+    name: 'Prism Flare',
+    inputs: ['crystal', 'toxin'],
+    traits: ['gelatinous', 'toxin_resistant'],
+    archetypes: ['mirror', 'bruiser'],
+    caution: 'critical',
+    discoveryNoteId: 'recipe_crystal_toxin_prism',
+    effect: { type: 'flare', radiusBonus: 18, ttl: 60 * 3 },
+  },
+  {
+    id: 'brine_flash',
+    name: 'Brine Flash',
+    inputs: ['acid', 'brine'],
+    traits: ['gelatinous', 'toxin_resistant'],
+    archetypes: ['bruiser', 'mirror', 'boss'],
+    caution: 'critical',
+    discoveryNoteId: 'recipe_brine_flash',
+    effect: { type: 'flare', radiusBonus: 22, ttl: 60 * 3 },
   },
   {
     id: 'acid_toxin_flare',
@@ -202,10 +311,70 @@ export const DISCOVERY_NOTES: Record<DiscoveryNoteId, DiscoveryNote> = {
     body: 'Water can carry food into a budding culture and make it spread in channels.',
     caution: 'stable',
   },
+  recipe_bitter_bloom: {
+    id: 'recipe_bitter_bloom',
+    title: 'Bitter Bloom',
+    body: 'Toxin can sour a fed budding culture into a sharp little shock front.',
+    caution: 'volatile',
+  },
+  recipe_pressure_bloom: {
+    id: 'recipe_pressure_bloom',
+    title: 'Pressure Bloom',
+    body: 'A resistant starter culture can hold food and toxin pressure just long enough to flash violently.',
+    caution: 'critical',
+  },
+  recipe_incubator_shock: {
+    id: 'recipe_incubator_shock',
+    title: 'Incubator Shock',
+    body: 'A fresh hatch inside food and toxin pressure can kick the whole nursery into a dangerous flash.',
+    caution: 'critical',
+  },
+  recipe_toxin_water_mist: {
+    id: 'recipe_toxin_water_mist',
+    title: 'Toxin Mist',
+    body: 'Water can turn toxin pressure into a drifting mist front around quick starter cultures.',
+    caution: 'volatile',
+  },
+  recipe_foam_lightning: {
+    id: 'recipe_foam_lightning',
+    title: 'Foam Lightning',
+    body: 'A second water pulse can overcharge reactive foam into a bright branching flare.',
+    caution: 'critical',
+  },
+  recipe_mist_salt_discharge: {
+    id: 'recipe_mist_salt_discharge',
+    title: 'Mist Lattice Discharge',
+    body: 'Salt can snap toxin mist into a bright static discharge that briefly patterns the whole local culture.',
+    caution: 'critical',
+  },
   recipe_acid_toxin_flare: {
     id: 'recipe_acid_toxin_flare',
     title: 'Acid-Toxin Flare',
     body: 'Acid and toxin can ignite a short violent bloom around fragile tissue.',
+    caution: 'critical',
+  },
+  recipe_acid_water_foam: {
+    id: 'recipe_acid_water_foam',
+    title: 'Foam Inversion',
+    body: 'Water can flip acid into a fizzing foam front around soft tissue instead of merely diluting it.',
+    caution: 'volatile',
+  },
+  recipe_foam_salt_rule30: {
+    id: 'recipe_foam_salt_rule30',
+    title: 'Rule-30 Cascade',
+    body: 'Salt can crystallize unstable foam into a self-repeating fold pattern.',
+    caution: 'critical',
+  },
+  recipe_crystal_toxin_prism: {
+    id: 'recipe_crystal_toxin_prism',
+    title: 'Prism Flare',
+    body: 'Toxin can fracture a brittle crystal field into a brief, violent prism flash.',
+    caution: 'critical',
+  },
+  recipe_brine_flash: {
+    id: 'recipe_brine_flash',
+    title: 'Brine Flash',
+    body: 'Acid can ignite salty pressure into a short, violent flash around soft or resistant cultures.',
     caution: 'critical',
   },
   recipe_salt_water_crystal: {
@@ -273,10 +442,12 @@ export const DISCOVERY_NOTES: Record<DiscoveryNoteId, DiscoveryNote> = {
 export function reactionRecipeFor(
   inputs: readonly CatalysisEffectType[],
   context: ReactionContext,
+  trigger?: CatalysisEffectType,
 ): ReactionRecipe | undefined {
-  return REACTION_RECIPES.find((recipe) => {
+  return REACTION_RECIPES.filter((recipe) => {
     const hasInputs = recipe.inputs.every((input) => inputs.includes(input));
     if (!hasInputs) return false;
+    if (trigger && recipe.trigger && recipe.trigger !== trigger) return false;
 
     const traitOk = !recipe.traits || recipe.traits.some((trait) => context.traits.includes(trait));
     if (!traitOk) return false;
@@ -287,5 +458,15 @@ export function reactionRecipeFor(
     if (!archetypeOk) return false;
 
     return recipe.id !== 'agitated_chain' || context.agitated === true;
-  });
+  }).sort((a, b) => recipePriority(b) - recipePriority(a))[0];
+}
+
+function recipePriority(recipe: ReactionRecipe): number {
+  const cautionScore = recipe.caution === 'critical' ? 300 : recipe.caution === 'volatile' ? 200 : 100;
+  const effectScore = recipe.effect.type === 'fold_fault' ? 40
+    : recipe.effect.type === 'flare' ? 30
+      : recipe.effect.type === 'crystal' ? 20
+        : recipe.effect.type === 'foam' ? 10
+          : 0;
+  return cautionScore + effectScore + recipe.inputs.length;
 }

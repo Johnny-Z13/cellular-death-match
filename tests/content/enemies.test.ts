@@ -8,8 +8,8 @@ import {
 } from '../../src/content/enemies';
 
 describe('ECOSYSTEM_SCHEDULE', () => {
-  it('has exactly 5 longer ecosystems', () => {
-    expect(ECOSYSTEM_SCHEDULE.length).toBe(5);
+  it('has exactly 6 longer ecosystems', () => {
+    expect(ECOSYSTEM_SCHEDULE.length).toBe(6);
   });
 
   it('keeps the old export as a compatibility alias', () => {
@@ -33,6 +33,14 @@ describe('ECOSYSTEM_SCHEDULE', () => {
       'boss',
       'sniper',
       'splitter',
+    ]);
+    expect(ECOSYSTEM_SCHEDULE[5]!.map((e) => e.archetype).sort()).toEqual([
+      'bruiser',
+      'mirror',
+      'sniper',
+      'splitter',
+      'swarmlet',
+      'swarmlet',
     ]);
   });
 

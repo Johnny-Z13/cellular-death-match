@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cellular Death Match</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="/src/styles.css?v=20260606-discovery-progression" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260606-debug-overlay-layer" />
   </head>
   <body>
     <main class="layout">
@@ -116,6 +116,8 @@
           <button id="dbg-reveal-discoveries" class="debug-mini-button" type="button">reveal all</button>
           <button id="dbg-presentation-mode" class="debug-mini-button" type="button">presentation mode</button>
           <div class="debug-help" id="dbg-discovery-status">discoveries: run-local</div>
+          <div class="debug-help" id="dbg-discovery-catalysts">catalysts: none</div>
+          <div class="debug-help" id="dbg-discovery-lifeforms">lifeforms: none</div>
         </section>
       </aside>
 
@@ -132,6 +134,7 @@
       <div id="screen-pick" class="screen">
         <div class="screen-card">
           <h2 class="screen-title">Adapt the culture</h2>
+          <div id="pick-research-brief" class="pick-research-brief" hidden></div>
           <div id="pick-choices" class="pick-choices">
             <!-- 3 buttons inserted at runtime -->
           </div>
@@ -170,6 +173,6 @@
         <div id="ticker-lines" class="ticker-lines"></div>
       </aside>
     </main>
-    <script type="module" src="/src/main.ts?v=20260606-discovery-progression"></script>
+    <script type="module" src="/src/main.ts?v=20260606-debug-overlay-layer"></script>
   </body>
 </html>

@@ -18,10 +18,17 @@ describe('lifeform identity', () => {
       expect(identity.name.length).toBeGreaterThan(3);
       expect(identity.role.length).toBeGreaterThan(3);
       expect(identity.behavior.length).toBeGreaterThan(8);
+      expect(identity.origin.length).toBeGreaterThan(8);
       expect(identity.soundId.length).toBeGreaterThan(3);
       expect(identity.colors.primary.length).toBe(3);
       expect(identity.colors.accent.length).toBe(3);
       expect(['cellular', 'needle', 'anchor', 'crystal', 'glitter', 'cycle']).toContain(identity.renderStyle);
+    }
+  });
+
+  it('labels rare lifeform origins as discovery clues', () => {
+    for (const id of Object.keys(BREED_DEFS) as Array<keyof typeof BREED_DEFS>) {
+      expect(LIFEFORM_IDENTITIES[id].origin).toBe(`Discovery: ${BREED_DEFS[id].discoveryTrigger}.`);
     }
   });
 });

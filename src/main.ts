@@ -5,6 +5,7 @@ import { createDebugPanel } from './ui/debug';
 import { createScreens, type ToolId } from './ui/screens';
 import { getUpgradeDef } from './content/upgrades';
 import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/enemies';
+import { BREED_DEFS, DISCOVERY_NOTES } from './content/catalysis';
 import { createEcologyAudio } from './audio/ecologyAudio';
 import { soundEventForDishSignal, type SoundEventId } from './audio/soundDesign';
 import { hash2 } from './game/hash';
@@ -18,10 +19,15 @@ import {
 import {
   clearDiscoveryProgression,
   createDiscoveryProgression,
+  discoveryAnnouncementsForProgressionChange,
+  applyCompletionResearchGrant,
   revealAllDiscoveryProgression,
   updateDiscoveryProgression,
+  type DiscoveryDelta,
+  type DiscoveryProgressionState,
   type ProgressionLifeformId,
 } from './game/discoveryProgression';
+import { researchBriefForGrant, type ResearchBriefLine } from './game/researchBrief';
 
 declare const __COMMIT_MESSAGE__: string;
 
@@ -59,6 +65,7 @@ let lastFpsTick = performance.now();
 let tickCount = 0;
 let tickerState = createTickerState();
 let heardDishEventIds = new Set<number>();
+let pendingResearchBrief: ResearchBriefLine[] = [];
 
 interface RuntimeOverlayState {
   menuOpen: boolean;
@@ -83,12 +90,14 @@ debug.onClearDiscoveries(() => {
   discoverySave = clearDiscoverySave(discoveryStorage);
   discoveryProgression = clearDiscoveryProgression(discoveryProgression);
   applyDiscoveryProgressionUi();
+  refreshArenaToolUi();
   debug.updateDiscoveries(discoveryDebugInfo());
 });
 debug.onRevealDiscoveries(() => {
   discoveryProgression = revealAllDiscoveryProgression(discoveryProgression);
   saveRuntimeDiscoveryState();
   applyDiscoveryProgressionUi();
+  refreshArenaToolUi();
   debug.updateDiscoveries(discoveryDebugInfo());
 });
 debug.onPresentationToggle(() => {
@@ -104,6 +113,10 @@ screens.onLifeformSelect((id) => {
 window.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
   event.preventDefault();
+  if (overlayState.presentationMode) {
+    setPresentationMode(false);
+    return;
+  }
   overlayState.menuOpen = !overlayState.menuOpen;
   overlayState.debugOpen = overlayState.menuOpen;
   applyOverlayState();
@@ -226,7 +239,9 @@ function startNewFight() {
   tickerState = createTickerState();
   heardDishEventIds = new Set<number>();
   screens.clearTicker();
+  screens.setPickResearchBrief([]);
   screens.addTicker(`Objective received: ${run.getObjective().name}.`);
+  replayPendingResearchBrief();
   screens.updateToolCharges(arena.getToolStates());
   screens.updateAgitation(arena.getAgitationState());
   debug.updateDiscoveries(discoveryDebugInfo());
@@ -317,6 +332,10 @@ function loop() {
 
 function resolveArenaStatus(status: ArenaStatus): boolean {
   if (status === 'won') {
+    if (arena) {
+      persistArenaDiscoveries(arena);
+      awardCompletionResearchGrant();
+    }
     run.completeEpoch();
     showPhase();
     return true;
@@ -339,24 +358,61 @@ function scheduleLoop(): void {
 
 function persistArenaDiscoveries(ar: Arena): void {
   const discoveries = ar.getEcology().discoveries;
+  advanceDiscoveryProgression(discoveries);
+}
+
+function awardCompletionResearchGrant(): void {
   const previousTools = discoveryProgression.unlockedTools;
   const previousLifeforms = discoveryProgression.unlockedLifeforms;
-  const nextProgression = updateDiscoveryProgression(discoveryProgression, discoveries);
+  const result = applyCompletionResearchGrant(discoveryProgression);
+  if (!result) {
+    pendingResearchBrief = [];
+    screens.setPickResearchBrief([]);
+    return;
+  }
+
+  discoveryProgression = result.progression;
+  applyDiscoveryProgressionUi();
+  announceUnlocks(previousTools, previousLifeforms, discoveryProgression);
+  pendingResearchBrief = researchBriefForGrant(result.grant);
+  screens.setPickResearchBrief(pendingResearchBrief);
+  saveRuntimeDiscoveryState();
+  debug.updateDiscoveries(discoveryDebugInfo());
+}
+
+function replayPendingResearchBrief(): void {
+  if (pendingResearchBrief.length === 0) return;
+  for (const line of pendingResearchBrief) {
+    screens.addTicker(line.message, line.tone);
+  }
+  pendingResearchBrief = [];
+}
+
+function advanceDiscoveryProgression(delta: DiscoveryDelta): boolean {
+  const previousProgression = discoveryProgression;
+  const previousTools = previousProgression.unlockedTools;
+  const previousLifeforms = previousProgression.unlockedLifeforms;
+  const nextProgression = updateDiscoveryProgression(previousProgression, delta);
   const changed = previousTools.join('|') !== nextProgression.unlockedTools.join('|')
     || previousLifeforms.join('|') !== nextProgression.unlockedLifeforms.join('|')
-    || discoveryProgression.discoveredBreedIds.join('|') !== nextProgression.discoveredBreedIds.join('|')
-    || discoveryProgression.discoveredNoteIds.join('|') !== nextProgression.discoveredNoteIds.join('|');
-  if (!changed) return;
+    || previousProgression.discoveredBreedIds.join('|') !== nextProgression.discoveredBreedIds.join('|')
+    || previousProgression.discoveredNoteIds.join('|') !== nextProgression.discoveredNoteIds.join('|');
+  if (!changed) return false;
 
   discoveryProgression = nextProgression;
   applyDiscoveryProgressionUi();
+  announceDiscoveryProgressionChange(previousProgression, nextProgression);
   announceUnlocks(previousTools, previousLifeforms, discoveryProgression);
   saveRuntimeDiscoveryState();
+  debug.updateDiscoveries(discoveryDebugInfo());
+  return true;
 }
 
 function discoveryDebugInfo(): {
   persistenceEnabled: boolean;
   discoveredCount: number;
+  discoveredCatalysts: string[];
+  discoveredLifeforms: string[];
   revealAll: boolean;
 } {
   return {
@@ -365,6 +421,11 @@ function discoveryDebugInfo(): {
       ...discoveryProgression.discoveredBreedIds,
       ...discoveryProgression.discoveredNoteIds,
     ]).length,
+    discoveredCatalysts: discoveryProgression.discoveredNoteIds
+      .filter((noteId) => noteId.startsWith('recipe_'))
+      .map((noteId) => DISCOVERY_NOTES[noteId].title),
+    discoveredLifeforms: discoveryProgression.discoveredBreedIds
+      .map((breedId) => BREED_DEFS[breedId].name),
     revealAll: discoveryProgression.revealAll,
   };
 }
@@ -401,8 +462,23 @@ function applyDiscoveryProgressionUi(): void {
   screens.setSelectedLifeform(overlayState.selectedLifeformId);
 }
 
+function refreshArenaToolUi(): void {
+  if (!arena) return;
+  screens.updateToolCharges(arena.getToolStates());
+  screens.updateAgitation(arena.getAgitationState());
+}
+
 function isUnlockedEggArchetype(archetype: EnemyArchetype): boolean {
   return discoveryProgression.unlockedLifeforms.includes(archetype);
+}
+
+function announceDiscoveryProgressionChange(
+  previous: DiscoveryProgressionState,
+  next: DiscoveryProgressionState,
+): void {
+  for (const announcement of discoveryAnnouncementsForProgressionChange(previous, next)) {
+    screens.addTicker(announcement.message, announcement.tone);
+  }
 }
 
 function announceUnlocks(
@@ -412,12 +488,17 @@ function announceUnlocks(
 ): void {
   for (const tool of next.unlockedTools) {
     if (previousTools.includes(tool)) continue;
+    screens.showcaseToolUnlock(tool);
     screens.addTicker(`Research unlocked: ${capitalize(tool)} reagent available.`, 'discovery');
   }
   for (const lifeform of next.unlockedLifeforms) {
     if (previousLifeforms.includes(lifeform)) continue;
-    if (!isBaseArchetype(lifeform)) continue;
-    screens.addTicker(`Research unlocked: ${ARCHETYPE_INFO[lifeform].name} eggs available.`, 'discovery');
+    screens.showcaseLifeformUnlock(lifeform);
+    if (isBaseArchetype(lifeform)) {
+      screens.addTicker(`Research unlocked: ${ARCHETYPE_INFO[lifeform].name} eggs available.`, 'discovery');
+    } else if (lifeform in BREED_DEFS) {
+      screens.addTicker(`New lifeform catalogued: ${BREED_DEFS[lifeform].name}.`, 'discovery');
+    }
   }
 }
 
@@ -437,6 +518,10 @@ function applyOverlayState(): void {
 
 function setPresentationMode(enabled: boolean): void {
   overlayState.presentationMode = enabled;
+  if (enabled) {
+    overlayState.menuOpen = false;
+    overlayState.debugOpen = false;
+  }
   if (enabled && document.fullscreenEnabled && !document.fullscreenElement) {
     void layout.requestFullscreen().catch(() => undefined);
   } else if (!enabled && document.fullscreenElement) {

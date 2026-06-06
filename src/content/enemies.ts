@@ -132,6 +132,13 @@ export const ECOSYSTEM_SCHEDULE: ReadonlyArray<ReadonlyArray<EnemySpawn>> = [
   [{ ...ARCHETYPE_DEFAULTS.sniper }, { ...ARCHETYPE_DEFAULTS.bruiser }, ...colony(3, ARCHETYPE_DEFAULTS.swarmlet)],
   [{ ...ARCHETYPE_DEFAULTS.mirror }, elite({ ...ARCHETYPE_DEFAULTS.splitter }), ...colony(4, ARCHETYPE_DEFAULTS.swarmlet)],
   [{ ...ARCHETYPE_DEFAULTS.boss }, elite({ ...ARCHETYPE_DEFAULTS.sniper }), elite({ ...ARCHETYPE_DEFAULTS.splitter })],
+  [
+    { ...ARCHETYPE_DEFAULTS.mirror },
+    elite({ ...ARCHETYPE_DEFAULTS.sniper }),
+    elite({ ...ARCHETYPE_DEFAULTS.splitter }),
+    { ...ARCHETYPE_DEFAULTS.bruiser },
+    ...colony(2, ARCHETYPE_DEFAULTS.swarmlet),
+  ],
 ];
 
 // Back-compat export for older tests/docs that still refer to fights.

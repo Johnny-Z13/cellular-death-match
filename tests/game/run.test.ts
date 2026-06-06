@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createRun, FIGHTS_PER_RUN } from '../../src/game/run';
+import { OBJECTIVES } from '../../src/content/objectives';
 
 describe('createRun — initial', () => {
   it('starts in title phase', () => {
@@ -8,6 +9,10 @@ describe('createRun — initial', () => {
     expect(run.getState().fightIndex).toBe(0);
     expect(run.getState().upgrades).toEqual([]);
     expect(run.getState().outcome).toBeNull();
+  });
+
+  it('runs one ecosystem for every authored objective', () => {
+    expect(FIGHTS_PER_RUN).toBe(OBJECTIVES.length);
   });
 });
 
@@ -152,6 +157,19 @@ describe('getFightSpawnList', () => {
     expect(run.getState().fightIndex).toBe(4);
     const list = run.getFightSpawnList();
     expect(list.map((e) => e.archetype).sort()).toEqual(['boss', 'sniper', 'splitter']);
+  });
+
+  it('returns the final boss-cultivation objective after the boss egg unlock', () => {
+    const run = createRun(42);
+    run.start();
+    for (let i = 0; i < FIGHTS_PER_RUN - 1; i++) {
+      run.winFight();
+      run.pickUpgrade(run.getState().pendingPickChoices[0]!);
+    }
+
+    expect(run.getState().fightIndex).toBe(FIGHTS_PER_RUN - 1);
+    expect(run.getObjective().kind).toBe('dominant_archetype');
+    expect(run.getObjective().archetype).toBe('boss');
   });
 
   it('getEpochSpawnList returns defensive copies', () => {

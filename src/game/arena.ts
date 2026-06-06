@@ -22,6 +22,7 @@ import {
 } from '../content/ecologyTuning';
 import {
   BREED_DEFS,
+  DISCOVERY_NOTES,
   reactionRecipeFor,
   type BreedId,
   type CatalysisEffectType,
@@ -271,7 +272,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
   }
 
   function discoverNote(id: DiscoveryNoteId, message: string): void {
-    if (!discoveredNoteIds.has(id)) discoveredNoteIds.add(id);
+    if (discoveredNoteIds.has(id)) return;
+    discoveredNoteIds.add(id);
     discoveryMessages.unshift(message);
     pushSignal(message);
     while (discoveryMessages.length > 8) discoveryMessages.pop();
@@ -283,7 +285,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
     discoveredBreedTicks.set(id, tickNo);
     discoverNote(`breed_${id}`, `NEW LIFEFORM CREATED: ${BREED_DEFS[id].name}.`);
     if (sourceCell) {
-      addDishEvent('discovery', `NEW LIFEFORM: ${BREED_DEFS[id].name}`, sourceCell.center, 20, 'cyan');
+      const marker = breedDiscoveryMarkerFor(id);
+      addDishEvent(marker.kind, `NEW LIFEFORM: ${BREED_DEFS[id].name}`, sourceCell.center, marker.radius, marker.color);
     }
     if (!sourceCell || sourceCell.vol <= 0 || archetypes.size >= ECOSYSTEM_MAX_POPULATION) return;
     arena.spawnEnemy({
@@ -468,14 +471,30 @@ export function createArena(opts: CreateArenaOpts): Arena {
         const spawn = eggSpawnFor(applyOpts.eggArchetype ?? 'swarmlet', state.rng.random());
         applyEggSynergies(state, toolEffects, seedPos, spawn, pushSignal);
         this.spawnEnemy({ spawn, pos: seedPos });
-        toolEffects.push({
+        const hatchEffect: ToolEffect = {
           type: 'hatch',
           pos: seedPos,
           radius: TOOL_TUNING.egg.hatchRadius,
           ttl: TOOL_TUNING.egg.hatchTtl,
           maxTtl: TOOL_TUNING.egg.hatchTtl,
           seed: state.rng.randInt(1_000_000),
-        });
+        };
+        toolEffects.push(hatchEffect);
+        const catalyticReaction = catalyticReactionFor(
+          hatchEffect,
+          toolEffects,
+          state,
+          archetypes,
+          agitationTicksRemaining > 0,
+          state.rng.randInt(1_000_000),
+        );
+        if (catalyticReaction) {
+          reactionCount += 1;
+          pulseToolEffect(state, catalyticReaction.effect, archetypes);
+          toolEffects.push(catalyticReaction.effect);
+          discoverNote(catalyticReaction.noteId, catalyticReaction.message);
+          addDishEventForCatalysis(catalyticReaction, addDishEvent);
+        }
         while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
         birthCount += 1;
         return true;
@@ -501,11 +520,32 @@ export function createArena(opts: CreateArenaOpts): Arena {
         );
         if (sourceCell) discoverBreed(this, 'glass_antibody', sourceCell);
       }
+      if (catalyticReaction?.noteId === 'recipe_foam_lightning') {
+        const sourceCell = sourceCellWithArchetypes(
+          state,
+          archetypes,
+          catalyticReaction.effect,
+          ['swarmlet', 'splitter'],
+        );
+        if (sourceCell) discoverBreed(this, 'static_lattice', sourceCell);
+      }
+      if (catalyticReaction?.noteId === 'recipe_foam_salt_rule30') {
+        const sourceCell = sourceCellWithTraits(
+          state,
+          archetypes,
+          catalyticReaction.effect,
+          ['gelatinous'],
+        );
+        if (sourceCell) discoverBreed(this, 'folded_anchor', sourceCell);
+      }
       pulseToolEffect(state, effect, archetypes);
       const waterReaction = applyWaterTransformations(
         effect,
         toolEffects,
         pushSignal,
+        () => {
+          discoverNote('water_dilutes', 'Lab note: water can soften dangerous fields.');
+        },
         (label, eventPos, eventRadius) => {
           addDishEvent('stabilize', label, eventPos, eventRadius, 'green');
         },
@@ -787,6 +827,12 @@ function catalyticReactionFor(
 ): { effect: ToolEffect; noteId: DiscoveryNoteId; message: string; caution: 'stable' | 'volatile' | 'critical' } | null {
   const newType = catalysisEffectTypeFor(newEffect.type);
   if (!newType) return null;
+  let strongestReaction: {
+    effect: ToolEffect;
+    noteId: DiscoveryNoteId;
+    message: string;
+    caution: 'stable' | 'volatile' | 'critical';
+  } | null = null;
 
   for (const effect of effects) {
     if (effect === newEffect) continue;
@@ -804,10 +850,11 @@ function catalyticReactionFor(
       ],
       radius: Math.max(newEffect.radius, effect.radius) + 10,
     }, agitated);
-    const recipe = reactionRecipeFor([newType, otherType], context);
+    const inputs = overlappingCatalysisTypes(newEffect, effects, state, newType);
+    const recipe = reactionRecipeFor(inputs, context, newType);
     if (!recipe) continue;
 
-    return {
+    const reaction = {
       effect: derivedEffect(
         recipe.effect.type,
         newEffect,
@@ -820,9 +867,37 @@ function catalyticReactionFor(
       message: reactionMessageFor(recipe.effect.type, recipe.name),
       caution: recipe.caution,
     };
+    if (
+      !strongestReaction
+      || catalystPriority(reaction.effect.type, reaction.caution) > catalystPriority(strongestReaction.effect.type, strongestReaction.caution)
+    ) {
+      strongestReaction = reaction;
+    }
   }
 
-  return null;
+  return strongestReaction;
+}
+
+function overlappingCatalysisTypes(
+  newEffect: ToolEffect,
+  effects: ToolEffect[],
+  state: SimState,
+  newType: CatalysisEffectType,
+): CatalysisEffectType[] {
+  const inputs: CatalysisEffectType[] = [newType];
+  for (const effect of effects) {
+    const type = catalysisEffectTypeFor(effect.type);
+    if (!type || inputs.includes(type)) continue;
+    const dist = distanceBetween(state, newEffect.pos, effect.pos);
+    if (dist <= reagentOverlapDistance(newEffect, effect)) inputs.push(type);
+  }
+  return inputs;
+}
+
+function catalystPriority(type: ToolEffectType, caution: 'stable' | 'volatile' | 'critical'): number {
+  const cautionScore = caution === 'critical' ? 300 : caution === 'volatile' ? 200 : 100;
+  const typeScore = type === 'fold_fault' ? 40 : type === 'flare' ? 30 : type === 'crystal' ? 20 : 0;
+  return cautionScore + typeScore;
 }
 
 function reactionContextFor(
@@ -848,12 +923,13 @@ function reactionContextFor(
 function reactionMessageFor(type: CatalysisEffectType, recipeName: string): string {
   if (type === 'flare') return `CATALYTIC FLARE: ${recipeName} discovered.`;
   if (type === 'crystal') return `CATALYTIC CRYSTAL: ${recipeName} discovered.`;
+  if (type === 'foam') return `CATALYTIC FOAM: ${recipeName} discovered.`;
   if (type === 'fold_fault') return `FOLDING FAULT: ${recipeName} discovered.`;
   return `CATALYTIC REACTION: ${recipeName} discovered.`;
 }
 
 function catalysisEffectTypeFor(type: ToolEffectType): CatalysisEffectType | null {
-  if (type === 'mutation' || type === 'hatch') return null;
+  if (type === 'mutation') return null;
   return type;
 }
 
@@ -866,6 +942,7 @@ function applyWaterTransformations(
   newEffect: ToolEffect,
   effects: ToolEffect[],
   pushSignal: (message: string) => void,
+  discoverDilution: () => void,
   pushEvent: (label: string, pos: [number, number], radius: number) => void,
   seed: number,
 ): ToolEffect | null {
@@ -885,6 +962,7 @@ function applyWaterTransformations(
     acid.radius = clamp(acid.radius + 8, acid.radius, 54);
     acid.ttl = Math.max(30, Math.floor(acid.ttl * 0.55));
     pushSignal('Lab note: water diluted the acid field.');
+    discoverDilution();
     pushEvent('WATER DILUTED ACID', acid.pos, acid.radius);
     return null;
   }
@@ -894,6 +972,7 @@ function applyWaterTransformations(
     toxin.radius = clamp(toxin.radius + 6, toxin.radius, 58);
     toxin.ttl = Math.max(45, Math.floor(toxin.ttl * 0.7));
     pushSignal('Lab note: water softened toxin pressure.');
+    discoverDilution();
     pushEvent('WATER SOFTENED TOXIN', toxin.pos, toxin.radius);
     return null;
   }
@@ -921,10 +1000,12 @@ function addDishEventForCatalysis(
   }
   if (reaction.caution === 'critical') {
     addDishEvent('critical', reaction.message, reaction.effect.pos, reaction.effect.radius, 'red');
+    addDishEvent('critical', `${reaction.message} FLASH`, reaction.effect.pos, reaction.effect.radius * 0.58, 'amber');
     return;
   }
   if (reaction.caution === 'volatile') {
     addDishEvent('caution', reaction.message, reaction.effect.pos, reaction.effect.radius, 'amber');
+    addDishEvent('caution', `${reaction.message} SPARK`, reaction.effect.pos, reaction.effect.radius * 0.48, 'amber');
     return;
   }
   addDishEvent('stabilize', reaction.message, reaction.effect.pos, reaction.effect.radius, 'green');
@@ -1059,6 +1140,17 @@ function dominantOutbreakSource(state: SimState): { id: CellId; cell: Cell } | n
   return best ? { id: best.id, cell: best.cell } : null;
 }
 
+function breedDiscoveryMarkerFor(id: BreedId): {
+  kind: DishEventKind;
+  color: DishEventColor;
+  radius: number;
+} {
+  const caution = DISCOVERY_NOTES[`breed_${id}`].caution;
+  if (caution === 'critical') return { kind: 'critical', color: 'red', radius: 28 };
+  if (caution === 'volatile') return { kind: 'caution', color: 'amber', radius: 24 };
+  return { kind: 'discovery', color: 'cyan', radius: 20 };
+}
+
 function outbreakHunterSpawn(sourceArchetype: string): EnemySpawn {
   const base = ARCHETYPE_DEFAULTS.swarmlet;
   const sourceIsAnchor = sourceArchetype === 'control_sample' || sourceArchetype === 'boss' || sourceArchetype === 'bruiser';
@@ -1104,6 +1196,10 @@ function evaluateBreedDiscoveries(
     if (!cell || cell.vol <= 0) continue;
 
     if (hasTraits(spawn, ['toxin_resistant', 'fragile']) && overlapsEffect(state, cell, effects, 'flare')) {
+      discover('glass_antibody', cell);
+    }
+
+    if (hasTraits(spawn, ['toxin_resistant', 'fragile']) && overlapsEffect(state, cell, effects, 'crystal')) {
       discover('glass_antibody', cell);
     }
 
@@ -1192,6 +1288,21 @@ function sourceCellWithTraits(
 ): Cell | undefined {
   for (const [id, spawn] of archetypes) {
     if (!hasTraits(spawn, traits)) continue;
+    const cell = state.cells.get(id);
+    if (!cell || cell.vol <= 0) continue;
+    if (distanceBetween(state, cell.center, effect.pos) <= effect.radius + 4) return cell;
+  }
+  return undefined;
+}
+
+function sourceCellWithArchetypes(
+  state: SimState,
+  archetypes: Map<CellId, EnemySpawn>,
+  effect: ToolEffect,
+  sourceArchetypes: readonly EnemyArchetype[],
+): Cell | undefined {
+  for (const [id, spawn] of archetypes) {
+    if (!sourceArchetypes.includes(spawn.archetype)) continue;
     const cell = state.cells.get(id);
     if (!cell || cell.vol <= 0) continue;
     if (distanceBetween(state, cell.center, effect.pos) <= effect.radius + 4) return cell;

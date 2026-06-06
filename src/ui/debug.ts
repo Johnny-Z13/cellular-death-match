@@ -9,6 +9,8 @@ export interface DebugInfo {
 export interface DebugDiscoveryInfo {
   persistenceEnabled: boolean;
   discoveredCount: number;
+  discoveredCatalysts: string[];
+  discoveredLifeforms: string[];
   revealAll: boolean;
 }
 
@@ -51,6 +53,8 @@ export function createDebugPanel(): DebugPanel {
   const revealDiscoveries = get('dbg-reveal-discoveries');
   const presentationMode = get('dbg-presentation-mode');
   const discoveryStatus = get('dbg-discovery-status');
+  const discoveryCatalysts = get('dbg-discovery-catalysts');
+  const discoveryLifeforms = get('dbg-discovery-lifeforms');
 
   const fmt2 = (n: number): string => n.toFixed(2);
   const fmtVec = (v: readonly [number, number]): string =>
@@ -86,6 +90,8 @@ export function createDebugPanel(): DebugPanel {
       const mode = info.persistenceEnabled ? 'saved' : 'run-local';
       const reveal = info.revealAll ? ' / reveal-all' : '';
       discoveryStatus.textContent = `discoveries: ${mode} / ${info.discoveredCount}${reveal}`;
+      discoveryCatalysts.textContent = discoveryListText('catalysts', info.discoveredCatalysts);
+      discoveryLifeforms.textContent = discoveryListText('lifeforms', info.discoveredLifeforms);
     },
     onDiscoveryPersistenceChange(handler) {
       persistDiscoveries.addEventListener('change', () => handler(persistDiscoveries.checked));
@@ -100,4 +106,8 @@ export function createDebugPanel(): DebugPanel {
       presentationMode.addEventListener('click', handler);
     },
   };
+}
+
+function discoveryListText(label: string, values: readonly string[]): string {
+  return `${label}: ${values.length === 0 ? 'none' : values.join(', ')}`;
 }

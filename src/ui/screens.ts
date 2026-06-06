@@ -1,4 +1,5 @@
 import type { AgitationState, ToolState } from '../game/arena';
+import type { ResearchBriefLine } from '../game/researchBrief';
 import type { UpgradeDef } from '../content/upgrades';
 import type { EnemyArchetype } from '../content/enemies';
 import {
@@ -57,6 +58,7 @@ export interface Screens {
   clearTicker(): void;
   setTool(tool: ToolId): void;
   setToolUnlocks(tools: readonly ToolId[]): void;
+  showcaseToolUnlock(tool: ToolId): void;
   updateToolCharges(charges: Record<ToolId, ToolState>): void;
   updateAgitation(state: AgitationState): void;
   onToolSelect(handler: (tool: ToolId) => void): void;
@@ -65,10 +67,12 @@ export interface Screens {
   setEggOptions(options: EggOption[]): void;
   setEggArchetype(archetype: EnemyArchetype): void;
   setLifeformUnlocks(ids: readonly string[]): void;
+  showcaseLifeformUnlock(id: string): void;
   onEggSelect(handler: (archetype: EnemyArchetype) => void): void;
   onLifeformSelect(handler: (id: string) => void): void;
   setSelectedLifeform(id: string | null): void;
   updateHud(info: HudInfo): void;
+  setPickResearchBrief(lines: readonly ResearchBriefLine[]): void;
   setPickChoices(choices: PickChoice[], onPick: (id: string) => void): void;
   updateEnd(info: EndInfo): void;
   onTitleStart(handler: () => void): void;
@@ -89,6 +93,7 @@ export function createScreens(): Screens {
   const screenEnd    = get('screen-end');
   const hud          = get('hud');
   const titleStart   = get('title-start');
+  const pickResearchBrief = get('pick-research-brief');
   const pickChoices  = get('pick-choices');
   const endTitle     = get('end-title');
   const endSummary   = get('end-summary');
@@ -110,7 +115,6 @@ export function createScreens(): Screens {
   const endEpochButton = get('end-epoch-button') as HTMLButtonElement;
   const toolButtons  = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-tool]'));
   const eggTool      = toolButtons.find((btn) => btn.dataset.tool === 'egg');
-  let eggButtons: HTMLButtonElement[] = [];
   const lifeButtons = new Map<string, HTMLButtonElement>();
   let selectedLifeformId: string | null = null;
   let selectedToolId: ToolId = 'egg';
@@ -129,13 +133,35 @@ export function createScreens(): Screens {
   };
 
   function applyLifeformVisibility(): void {
-    for (const button of eggButtons) {
-      const id = button.dataset.eggArchetype;
-      button.hidden = !id || !unlockedLifeformIds.has(id);
-    }
     for (const [id, button] of lifeButtons) {
-      button.hidden = !unlockedLifeformIds.has(id);
+      const locked = !unlockedLifeformIds.has(id);
+      button.hidden = false;
+      setUnknownState(button, locked, 'Unknown lifeform');
+      const selected = !locked && id === selectedLifeformId;
+      setSelectedButtonState(button, selected);
     }
+  }
+
+  function setSelectedLifeform(id: string | null): void {
+    if (id && !unlockedLifeformIds.has(id)) return;
+    selectedLifeformId = id;
+    for (const [buttonId, button] of lifeButtons) {
+      setSelectedButtonState(button, buttonId === id);
+    }
+    if (!id || !(id in LIFEFORM_IDENTITIES)) {
+      lifeSummary.textContent = 'Pick an egg strain to seed the dish.';
+      return;
+    }
+    const identity = LIFEFORM_IDENTITIES[id as LifeformIdentityId];
+    lifeSummary.textContent = `${identity.name} - ${identity.role}. ${identity.behavior} ${identity.origin} Sound: ${identity.soundId}.`;
+  }
+
+  function activateLifeform(id: string): void {
+    if (!unlockedLifeformIds.has(id)) return;
+    setSelectedLifeform(id);
+    lifeformSelectHandler?.(id);
+    const eggOption = optionByArchetype.get(id as EnemyArchetype);
+    if (eggOption) eggSelectHandler?.(eggOption.archetype);
   }
 
   return {
@@ -144,9 +170,11 @@ export function createScreens(): Screens {
     addTicker(message, tone = 'normal') {
       const line = document.createElement('div');
       line.className = `ticker-line ticker-line-${tone}`;
+      const specialClass = tickerSpecialClassFor(message);
+      if (specialClass) line.classList.add(specialClass);
       line.textContent = message;
       tickerLines.prepend(line);
-      while (tickerLines.children.length > 5) {
+      while (tickerLines.children.length > 6) {
         tickerLines.lastElementChild?.remove();
       }
     },
@@ -156,7 +184,7 @@ export function createScreens(): Screens {
     setTool(tool) {
       selectedToolId = tool;
       for (const btn of toolButtons) {
-        btn.classList.toggle('selected', btn.dataset.tool === tool);
+        setSelectedButtonState(btn, btn.dataset.tool === tool);
       }
       updateToolSummary(toolSummary, selectedToolId, selectedEggArchetype, optionByArchetype);
     },
@@ -165,8 +193,21 @@ export function createScreens(): Screens {
       for (const btn of toolButtons) {
         const tool = btn.dataset.tool;
         if (!isToolId(tool)) continue;
-        btn.hidden = !unlockedToolIds.has(tool);
+        const locked = !unlockedToolIds.has(tool);
+        btn.hidden = false;
+        setUnknownState(btn, locked, 'Unknown reagent');
       }
+    },
+    showcaseToolUnlock(tool) {
+      const button = toolButtons.find((btn) => btn.dataset.tool === tool);
+      if (!button || button.disabled) return;
+      button.classList.remove('tool-button-discovered');
+      void button.offsetWidth;
+      button.classList.add('tool-button-discovered');
+      button.scrollIntoView({ block: 'nearest' });
+      window.setTimeout(() => {
+        button.classList.remove('tool-button-discovered');
+      }, 1800);
     },
     updateToolCharges(charges) {
       for (const btn of toolButtons) {
@@ -174,7 +215,12 @@ export function createScreens(): Screens {
         if (!isToolId(tool)) continue;
         const count = btn.querySelector<HTMLElement>('[data-tool-count]');
         const state = charges[tool];
-        btn.disabled = state.charges <= 0;
+        const locked = !unlockedToolIds.has(tool);
+        btn.disabled = locked || state.charges <= 0;
+        if (locked) {
+          if (count) count.textContent = '?';
+          continue;
+        }
         if (count) count.textContent = `${state.charges}/${state.maxCharges}`;
       }
     },
@@ -199,63 +245,63 @@ export function createScreens(): Screens {
     },
     setEggOptions(options) {
       optionByArchetype.clear();
-      eggButtons = [];
       lifeButtons.clear();
       eggOptions.replaceChildren();
       lifeList.replaceChildren();
       for (const option of options) {
         optionByArchetype.set(option.archetype, option);
+        // Lifeform cards own egg selection and discovery inspection in one list.
         const button = document.createElement('button');
-        button.className = 'egg-choice';
+        button.className = 'life-item tool-button';
         button.type = 'button';
+        button.dataset.lifeformId = option.archetype;
         button.dataset.eggArchetype = option.archetype;
         button.setAttribute('aria-label', `${option.name} egg`);
+        button.setAttribute('aria-selected', 'false');
         button.style.setProperty('--life-color', rgb(option.color));
 
         const swatch = document.createElement('span');
-        swatch.className = 'egg-choice-swatch';
-        const label = document.createElement('span');
-        label.className = 'egg-choice-label';
+        swatch.className = 'life-swatch';
+        swatch.style.background = rgb(option.color);
+        const copy = document.createElement('span');
+        const label = document.createElement('strong');
+        label.dataset.unlockedText = option.name;
         label.textContent = option.name;
-        button.append(swatch, label);
-        button.addEventListener('click', () => eggSelectHandler?.(option.archetype));
-        eggButtons.push(button);
-        eggOptions.append(button);
-
-        const item = document.createElement('button');
-        item.className = 'life-item';
-        item.type = 'button';
-        item.dataset.lifeformId = option.archetype;
-        item.style.setProperty('--life-color', rgb(LIFEFORM_IDENTITIES[option.archetype].colors.primary));
-        const itemSwatch = document.createElement('span');
-        itemSwatch.className = 'life-swatch';
-        itemSwatch.style.background = rgb(LIFEFORM_IDENTITIES[option.archetype].colors.primary);
-        const itemText = document.createElement('span');
-        itemText.textContent = option.name;
-        item.append(itemSwatch, itemText);
-        item.addEventListener('click', () => lifeformSelectHandler?.(option.archetype));
-        item.addEventListener('mouseenter', () => lifeformSelectHandler?.(option.archetype));
-        item.addEventListener('focus', () => lifeformSelectHandler?.(option.archetype));
-        lifeButtons.set(option.archetype, item);
-        lifeList.append(item);
+        const detail = document.createElement('small');
+        detail.dataset.unlockedText = option.summary;
+        detail.textContent = option.summary;
+        const tag = document.createElement('b');
+        tag.textContent = 'egg';
+        copy.append(label, detail);
+        button.append(swatch, copy, tag);
+        button.addEventListener('click', () => activateLifeform(option.archetype));
+        lifeButtons.set(option.archetype, button);
+        lifeList.append(button);
       }
       for (const id of Object.keys(LIFEFORM_IDENTITIES) as LifeformIdentityId[]) {
         if (optionByArchetype.has(id as EnemyArchetype)) continue;
         const identity = LIFEFORM_IDENTITIES[id];
         const item = document.createElement('button');
-        item.className = 'life-item life-item-rare';
+        item.className = 'life-item tool-button life-item-rare';
         item.type = 'button';
         item.dataset.lifeformId = id;
+        item.setAttribute('aria-selected', 'false');
         item.style.setProperty('--life-color', rgb(identity.colors.primary));
         const itemSwatch = document.createElement('span');
         itemSwatch.className = `life-swatch life-swatch-${identity.renderStyle}`;
         itemSwatch.style.background = rgb(identity.colors.primary);
         const itemText = document.createElement('span');
-        itemText.textContent = identity.name;
-        item.append(itemSwatch, itemText);
-        item.addEventListener('click', () => lifeformSelectHandler?.(id));
-        item.addEventListener('mouseenter', () => lifeformSelectHandler?.(id));
-        item.addEventListener('focus', () => lifeformSelectHandler?.(id));
+        const itemName = document.createElement('strong');
+        itemName.dataset.unlockedText = identity.name;
+        itemName.textContent = identity.name;
+        const itemDetail = document.createElement('small');
+        itemDetail.dataset.unlockedText = identity.origin;
+        itemDetail.textContent = identity.origin;
+        const itemTag = document.createElement('b');
+        itemTag.textContent = 'rare';
+        itemText.append(itemName, itemDetail);
+        item.append(itemSwatch, itemText, itemTag);
+        item.addEventListener('click', () => activateLifeform(id));
         lifeButtons.set(id, item);
         lifeList.append(item);
       }
@@ -264,17 +310,25 @@ export function createScreens(): Screens {
     setEggArchetype(archetype) {
       selectedEggArchetype = archetype;
       const option = optionByArchetype.get(archetype);
-      for (const btn of eggButtons) {
-        btn.classList.toggle('selected', btn.dataset.eggArchetype === archetype);
-      }
       if (!option) return;
       eggTool?.style.setProperty('--egg-color', rgb(option.color));
       updateToolSummary(toolSummary, selectedToolId, selectedEggArchetype, optionByArchetype);
-      if (!selectedLifeformId) this.setSelectedLifeform(archetype);
+      if (!selectedLifeformId) setSelectedLifeform(archetype);
     },
     setLifeformUnlocks(ids) {
       unlockedLifeformIds = new Set(ids);
       applyLifeformVisibility();
+    },
+    showcaseLifeformUnlock(id) {
+      const button = lifeButtons.get(id);
+      if (!button || button.disabled) return;
+      button.classList.remove('life-item-discovered');
+      void button.offsetWidth;
+      button.classList.add('life-item-discovered');
+      button.scrollIntoView({ block: 'nearest' });
+      window.setTimeout(() => {
+        button.classList.remove('life-item-discovered');
+      }, 1800);
     },
     onEggSelect(handler) {
       eggSelectHandler = handler;
@@ -283,16 +337,7 @@ export function createScreens(): Screens {
       lifeformSelectHandler = handler;
     },
     setSelectedLifeform(id) {
-      selectedLifeformId = id;
-      for (const [buttonId, button] of lifeButtons) {
-        button.setAttribute('aria-selected', String(buttonId === id));
-      }
-      if (!id || !(id in LIFEFORM_IDENTITIES)) {
-        lifeSummary.textContent = 'Pick an egg strain to seed the dish.';
-        return;
-      }
-      const identity = LIFEFORM_IDENTITIES[id as LifeformIdentityId];
-      lifeSummary.textContent = `${identity.name} - ${identity.role}. ${identity.behavior} Sound: ${identity.soundId}.`;
+      setSelectedLifeform(id);
     },
     updateHud(info) {
       hudFight.textContent = `${info.fightIndex + 1} / ${info.totalFights}`;
@@ -303,6 +348,16 @@ export function createScreens(): Screens {
       hudObjective.textContent = `${info.objectiveName}: ${info.objectiveSummary}`;
       hudHint.textContent = info.objectiveHint;
       hudUpgrades.textContent = info.upgrades.length === 0 ? 'none' : info.upgrades.join(', ');
+    },
+    setPickResearchBrief(lines) {
+      pickResearchBrief.replaceChildren();
+      pickResearchBrief.hidden = lines.length === 0;
+      for (const brief of lines) {
+        const line = document.createElement('div');
+        line.className = `pick-research-line pick-research-line-${brief.tone}`;
+        line.textContent = brief.message;
+        pickResearchBrief.append(line);
+      }
     },
     setPickChoices(choices, onPick) {
       pickChoices.replaceChildren();
@@ -369,4 +424,69 @@ function updateToolSummary(
     acid: 'Acid - burns tissue quickly and can trigger volatile reactions.',
   };
   el.textContent = summaries[tool];
+}
+
+function setUnknownState(button: HTMLButtonElement, locked: boolean, label: string): void {
+  const icon = button.querySelector<HTMLElement>('.tool-icon, .egg-choice-swatch, .life-swatch');
+  const text = button.querySelector<HTMLElement>('[data-unlocked-text], strong');
+  const subText = button.querySelector<HTMLElement>('small');
+  const count = button.querySelector<HTMLElement>('[data-tool-count]');
+
+  if (text && !text.dataset.unlockedText) text.dataset.unlockedText = text.textContent ?? '';
+  if (subText && !subText.dataset.unlockedText) subText.dataset.unlockedText = subText.textContent ?? '';
+  if (button.dataset.unlockedAriaLabel === undefined) {
+    button.dataset.unlockedAriaLabel = button.getAttribute('aria-label') ?? '';
+  }
+
+  button.classList.toggle('locked-discovery', locked);
+  button.setAttribute('aria-disabled', String(locked));
+
+  if (locked) {
+    button.disabled = true;
+    setSelectedButtonState(button, false);
+    button.setAttribute('aria-label', label);
+    if (icon) {
+      icon.classList.add('unknown-icon');
+      icon.textContent = '?';
+    }
+    if (text) text.textContent = 'Unknown';
+    if (subText) subText.textContent = 'locked';
+    if (count) count.textContent = '?';
+    return;
+  }
+
+  button.disabled = false;
+  button.removeAttribute('aria-disabled');
+  const ariaLabel = button.dataset.unlockedAriaLabel ?? '';
+  if (ariaLabel) button.setAttribute('aria-label', ariaLabel);
+  else button.removeAttribute('aria-label');
+  if (icon) {
+    icon.classList.remove('unknown-icon');
+    icon.textContent = '';
+  }
+  if (text) text.textContent = text.dataset.unlockedText ?? text.textContent;
+  if (subText) subText.textContent = subText.dataset.unlockedText ?? subText.textContent;
+}
+
+function setSelectedButtonState(button: HTMLButtonElement, selected: boolean): void {
+  button.classList.toggle('selected', selected);
+  button.setAttribute('aria-selected', String(selected));
+}
+
+function tickerSpecialClassFor(message: string): string | null {
+  if (
+    message.startsWith('NEW LIFEFORM CREATED')
+    || message.startsWith('New lifeform discovered')
+    || message.startsWith('New lifeform catalogued')
+  ) {
+    return 'ticker-line-rare-lifeform';
+  }
+  if (
+    message.startsWith('New catalyst discovered')
+    || message.startsWith('CATALYTIC')
+    || message.startsWith('FOLDING FAULT')
+  ) {
+    return 'ticker-line-catalyst';
+  }
+  return null;
 }

@@ -32,6 +32,14 @@ describe('catalysis content', () => {
     }
   });
 
+  it('hints that Static Lattice can be discovered from Foam Lightning patterning', () => {
+    expect(BREED_DEFS.static_lattice.discoveryTrigger).toContain('Foam Lightning');
+  });
+
+  it('hints that Folded Anchor can be discovered from Rule-30 cascade folding', () => {
+    expect(BREED_DEFS.folded_anchor.discoveryTrigger).toContain('Rule-30 Cascade');
+  });
+
   it('defines reaction recipes with caution and effect type', () => {
     for (const recipe of REACTION_RECIPES) {
       expect(recipe.id.length).toBeGreaterThan(4);
@@ -71,6 +79,126 @@ describe('catalysis content', () => {
 
     expect(calm?.id).not.toBe('agitated_chain');
     expect(agitated?.id).toBe('agitated_chain');
+  });
+
+  it('discovers foam inversion when water destabilizes acid near soft tissue', () => {
+    const recipe = reactionRecipeFor(['water', 'acid'], {
+      traits: ['gelatinous'],
+      archetypes: ['bruiser'],
+    });
+
+    expect(recipe?.id).toBe('acid_water_foam');
+    expect(recipe?.caution).toBe('volatile');
+    expect(recipe?.effect.type).toBe('foam');
+    expect(DISCOVERY_NOTES.recipe_acid_water_foam?.title).toBe('Foam Inversion');
+  });
+
+  it('discovers a rule cascade when salt crystallizes unstable foam', () => {
+    const recipe = reactionRecipeFor(['foam', 'salt'], {
+      traits: ['gelatinous'],
+      archetypes: ['bruiser'],
+    });
+
+    expect(recipe?.id).toBe('foam_salt_rule30');
+    expect(recipe?.caution).toBe('critical');
+    expect(recipe?.effect.type).toBe('fold_fault');
+    expect(DISCOVERY_NOTES.recipe_foam_salt_rule30?.title).toBe('Rule-30 Cascade');
+  });
+
+  it('discovers a mist lattice discharge when salt hits toxin mist around starter cultures', () => {
+    const recipe = reactionRecipeFor(['foam', 'salt'], {
+      traits: [],
+      archetypes: ['swarmlet'],
+    });
+
+    expect(recipe?.id).toBe('mist_salt_discharge');
+    expect(recipe?.caution).toBe('critical');
+    expect(recipe?.effect.type).toBe('flare');
+    expect(DISCOVERY_NOTES.recipe_mist_salt_discharge?.title).toBe('Mist Lattice Discharge');
+  });
+
+  it('discovers a prism flare when toxin fractures a crystal field', () => {
+    const recipe = reactionRecipeFor(['toxin', 'crystal'], {
+      traits: ['gelatinous'],
+      archetypes: ['mirror'],
+    });
+
+    expect(recipe?.id).toBe('crystal_toxin_prism');
+    expect(recipe?.caution).toBe('critical');
+    expect(recipe?.effect.type).toBe('flare');
+    expect(DISCOVERY_NOTES.recipe_crystal_toxin_prism?.title).toBe('Prism Flare');
+  });
+
+  it('discovers a brine flash when acid hits salty pressure near soft tissue', () => {
+    const recipe = reactionRecipeFor(['acid', 'brine', 'water', 'salt'], {
+      traits: ['gelatinous'],
+      archetypes: ['bruiser'],
+    });
+
+    expect(recipe?.id).toBe('brine_flash');
+    expect(recipe?.caution).toBe('critical');
+    expect(recipe?.effect.type).toBe('flare');
+    expect(DISCOVERY_NOTES.recipe_brine_flash?.title).toBe('Brine Flash');
+  });
+
+  it('discovers a bitter bloom when toxin spoils an overfed budding culture', () => {
+    const recipe = reactionRecipeFor(['toxin', 'nutrient'], {
+      traits: ['budding'],
+      archetypes: ['splitter'],
+    });
+
+    expect(recipe?.id).toBe('bitter_bloom');
+    expect(recipe?.caution).toBe('volatile');
+    expect(recipe?.effect.type).toBe('lysis');
+    expect(DISCOVERY_NOTES.recipe_bitter_bloom?.title).toBe('Bitter Bloom');
+  });
+
+  it('discovers pressure bloom when toxin hits fed resistant starter cultures', () => {
+    const recipe = reactionRecipeFor(['toxin', 'nutrient'], {
+      traits: ['toxin_resistant'],
+      archetypes: ['swarmlet'],
+    });
+
+    expect(recipe?.id).toBe('pressure_bloom');
+    expect(recipe?.caution).toBe('critical');
+    expect(recipe?.effect.type).toBe('flare');
+    expect(DISCOVERY_NOTES.recipe_pressure_bloom?.title).toBe('Pressure Bloom');
+  });
+
+  it('discovers incubator shock when an egg hatches inside nutrient and toxin pressure', () => {
+    const recipe = reactionRecipeFor(['hatch', 'nutrient', 'toxin'], {
+      traits: ['budding', 'toxin_resistant'],
+      archetypes: ['swarmlet'],
+    });
+
+    expect(recipe?.id).toBe('incubator_shock');
+    expect(recipe?.caution).toBe('critical');
+    expect(recipe?.effect.type).toBe('flare');
+    expect(DISCOVERY_NOTES.recipe_incubator_shock?.title).toBe('Incubator Shock');
+  });
+
+  it('discovers toxin mist when water dilutes toxin around quick starter cultures', () => {
+    const recipe = reactionRecipeFor(['water', 'toxin'], {
+      traits: [],
+      archetypes: ['swarmlet'],
+    });
+
+    expect(recipe?.id).toBe('toxin_water_mist');
+    expect(recipe?.caution).toBe('volatile');
+    expect(recipe?.effect.type).toBe('foam');
+    expect(DISCOVERY_NOTES.recipe_toxin_water_mist?.title).toBe('Toxin Mist');
+  });
+
+  it('discovers foam lightning when water re-enters unstable foam around quick cultures', () => {
+    const recipe = reactionRecipeFor(['water', 'foam'], {
+      traits: ['budding'],
+      archetypes: ['swarmlet'],
+    });
+
+    expect(recipe?.id).toBe('foam_lightning');
+    expect(recipe?.caution).toBe('critical');
+    expect(recipe?.effect.type).toBe('flare');
+    expect(DISCOVERY_NOTES.recipe_foam_lightning?.title).toBe('Foam Lightning');
   });
 
   it('maps every breed to a discovery note', () => {

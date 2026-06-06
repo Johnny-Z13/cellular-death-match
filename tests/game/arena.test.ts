@@ -797,6 +797,7 @@ describe('arena ecosystem mode', () => {
     const conduit = arena.getToolEffects().find((effect) => effect.type === 'conduit');
     expect(conduit).toBeDefined();
     expect(arena.getEcology().signals.some((signal) => signal.includes('water carried nutrient'))).toBe(true);
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_nutrient_conduit');
   });
 
   it('lets water soften acid pressure when used after a flare', () => {
@@ -820,6 +821,401 @@ describe('arena ecosystem mode', () => {
     expect(acidAfter.radius).toBeGreaterThan(acidBefore.radius);
     expect(acidAfter.ttl).toBeLessThanOrEqual(acidBefore.ttl);
     expect(arena.getEcology().signals.some((signal) => signal.includes('water diluted'))).toBe(true);
+    expect(arena.getEcology().discoveries.noteIds).toContain('water_dilutes');
+  });
+
+  it('records water dilution as a one-time discovery even when repeated', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 212,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 120, speed: 8, engulfMultiplier: 4 }],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('acid', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+    expect(arena.applyTool('acid', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+
+    const discoveries = arena.getEcology().discoveries;
+    expect(discoveries.noteIds.filter((id) => id === 'water_dilutes')).toHaveLength(1);
+    expect(discoveries.latest.filter((message) => message.includes('water can soften dangerous fields'))).toHaveLength(1);
+  });
+
+  it('discovers foam inversion when water destabilizes acid around gelatinous tissue', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 212,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        { archetype: 'bruiser' as const, targetVol: 220, speed: 8, engulfMultiplier: 6, traits: ['gelatinous'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('acid', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+
+    expect(arena.getToolEffects().some((effect) => effect.type === 'foam')).toBe(true);
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_acid_water_foam');
+    expect(arena.getEcology().signals.some((signal) => signal.includes('Foam Inversion'))).toBe(true);
+    expect(arena.getDishEvents().some((event) => (
+      event.kind === 'caution' && event.label.includes('FOAM')
+    ))).toBe(true);
+  });
+
+  it('discovers a rule cascade when salt hits unstable foam', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 213,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        { archetype: 'bruiser' as const, targetVol: 220, speed: 8, engulfMultiplier: 6, traits: ['gelatinous'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('acid', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+    expect(arena.applyTool('salt', cell.center)).toBe(true);
+
+    expect(arena.getToolEffects().some((effect) => effect.type === 'fold_fault')).toBe(true);
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_foam_salt_rule30');
+    expect(arena.getEcology().signals.some((signal) => signal.includes('Rule-30 Cascade'))).toBe(true);
+    expect(arena.getDishEvents().some((event) => (
+      event.kind === 'fold' && event.label.includes('Rule-30 Cascade')
+    ))).toBe(true);
+  });
+
+  it('discovers folded anchor when Rule-30 cascade folds gelatinous feeders', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 213,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        { archetype: 'bruiser' as const, targetVol: 220, speed: 8, engulfMultiplier: 6, traits: ['gelatinous'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('acid', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+    expect(arena.applyTool('salt', cell.center)).toBe(true);
+
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_foam_salt_rule30');
+    expect(arena.getEcology().discoveries.breedIds).toContain('folded_anchor');
+    expect(Array.from(arena.archetypes.values()).some((spawn) => spawn.breedId === 'folded_anchor')).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.label.includes('Folded Anchor') && event.kind === 'caution' && event.color === 'amber',
+    )).toBe(true);
+  });
+
+  it('discovers an agitated chain when shaking an overfed budding culture', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 214,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        nutrientCharges: 2,
+        waterCharges: 2,
+        agitationCharges: 1,
+      },
+      enemies: [
+        { archetype: 'splitter' as const, targetVol: 220, speed: 8, engulfMultiplier: 5, traits: ['budding'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('nutrient', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+    expect(arena.getToolEffects().some((effect) => effect.type === 'bloom')).toBe(true);
+    expect(arena.agitate()).toBe(true);
+    expect(arena.applyTool('nutrient', cell.center)).toBe(true);
+
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_agitated_chain');
+    expect(arena.getEcology().signals.some((signal) => signal.includes('Agitated Chain'))).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'caution' && event.label.includes('Agitated Chain'),
+    )).toBe(true);
+  });
+
+  it('discovers bitter bloom when toxin spoils nutrient around budding starter cultures', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 215,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        nutrientCharges: 1,
+        toxinCharges: 1,
+      },
+      enemies: [
+        { archetype: 'splitter' as const, targetVol: 220, speed: 8, engulfMultiplier: 5, traits: ['budding'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('nutrient', cell.center)).toBe(true);
+    expect(arena.applyTool('toxin', cell.center)).toBe(true);
+
+    expect(arena.getToolEffects().some((effect) => effect.type === 'lysis')).toBe(true);
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_bitter_bloom');
+    expect(arena.getEcology().signals.some((signal) => signal.includes('Bitter Bloom'))).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'caution' && event.label.includes('Bitter Bloom'),
+    )).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'caution' && event.label.includes('SPARK') && event.radius < 20,
+    )).toBe(true);
+  });
+
+  it('flashes pressure bloom when toxin overloads a fed resistant starter culture', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 219,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        nutrientCharges: 1,
+        toxinCharges: 1,
+      },
+      enemies: [
+        { archetype: 'swarmlet' as const, targetVol: 160, speed: 12, engulfMultiplier: 4, traits: ['toxin_resistant'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('nutrient', cell.center)).toBe(true);
+    expect(arena.applyTool('toxin', cell.center)).toBe(true);
+
+    expect(arena.getToolEffects().some((effect) => effect.type === 'flare')).toBe(true);
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_pressure_bloom');
+    expect(arena.getEcology().signals.some((signal) => signal.includes('Pressure Bloom'))).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'critical' && event.label.includes('Pressure Bloom'),
+    )).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'critical' && event.label.includes('FLASH'),
+    )).toBe(true);
+  });
+
+  it('flashes incubator shock when an egg hatches inside starter reagent pressure', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 221,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        eggCharges: 1,
+        nutrientCharges: 1,
+        toxinCharges: 1,
+      },
+      enemies: [],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+
+    expect(arena.applyTool('nutrient', [34, 34])).toBe(true);
+    expect(arena.applyTool('toxin', [34, 34])).toBe(true);
+    expect(arena.applyTool('egg', [34, 34], { eggArchetype: 'swarmlet' })).toBe(true);
+
+    expect(arena.getToolEffects().some((effect) => effect.type === 'flare')).toBe(true);
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_incubator_shock');
+    expect(arena.getEcology().signals.some((signal) => signal.includes('Incubator Shock'))).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'critical' && event.label.includes('Incubator Shock'),
+    )).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'critical' && event.label.includes('FLASH'),
+    )).toBe(true);
+  });
+
+  it('discovers toxin mist when water spreads toxin around quick starter cultures', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 216,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        waterCharges: 1,
+        toxinCharges: 1,
+      },
+      enemies: [
+        { archetype: 'swarmlet' as const, targetVol: 160, speed: 12, engulfMultiplier: 4 },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('toxin', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+
+    expect(arena.getToolEffects().some((effect) => effect.type === 'foam')).toBe(true);
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_toxin_water_mist');
+    expect(arena.getEcology().signals.some((signal) => signal.includes('Toxin Mist'))).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'caution' && event.label.includes('Toxin Mist'),
+    )).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'caution' && event.label.includes('SPARK'),
+    )).toBe(true);
+  });
+
+  it('flashes a critical mist lattice discharge when salt hits toxin mist', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 216,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        waterCharges: 1,
+        toxinCharges: 1,
+        saltCharges: 1,
+      },
+      enemies: [
+        { archetype: 'swarmlet' as const, targetVol: 160, speed: 12, engulfMultiplier: 4 },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('toxin', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+    expect(arena.getToolEffects().some((effect) => effect.type === 'foam')).toBe(true);
+    expect(arena.applyTool('salt', cell.center)).toBe(true);
+
+    expect(arena.getToolEffects().some((effect) => effect.type === 'flare')).toBe(true);
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_mist_salt_discharge');
+    expect(arena.getEcology().signals.some((signal) => signal.includes('Mist Lattice Discharge'))).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'critical' && event.label.includes('Mist Lattice Discharge'),
+    )).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'critical' && event.label.includes('FLASH'),
+    )).toBe(true);
+  });
+
+  it('flashes foam lightning when water re-enters toxin mist', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 216,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        waterCharges: 2,
+        toxinCharges: 1,
+      },
+      enemies: [
+        { archetype: 'swarmlet' as const, targetVol: 160, speed: 12, engulfMultiplier: 4 },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('toxin', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+    expect(arena.getToolEffects().some((effect) => effect.type === 'foam')).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+
+    expect(arena.getToolEffects().some((effect) => effect.type === 'flare')).toBe(true);
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_foam_lightning');
+    expect(arena.getEcology().signals.some((signal) => signal.includes('Foam Lightning'))).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'critical' && event.label.includes('Foam Lightning'),
+    )).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'critical' && event.label.includes('FLASH'),
+    )).toBe(true);
+  });
+
+  it('discovers static lattice when foam lightning patterns quick starter cultures', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 216,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        waterCharges: 2,
+        toxinCharges: 1,
+      },
+      enemies: [
+        { archetype: 'swarmlet' as const, targetVol: 160, speed: 12, engulfMultiplier: 4 },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('toxin', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+    expect(arena.getToolEffects().some((effect) => effect.type === 'foam')).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_foam_lightning');
+    expect(arena.getEcology().discoveries.breedIds).toContain('static_lattice');
+    expect(Array.from(arena.archetypes.values()).some((spawn) => spawn.breedId === 'static_lattice')).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.label.includes('Static Lattice') && event.kind === 'caution' && event.color === 'amber',
+    )).toBe(true);
   });
 
   it('creates a critical acid toxin flare near fragile life', () => {
@@ -843,6 +1239,43 @@ describe('arena ecosystem mode', () => {
     expect(arena.getToolEffects().some((effect) => effect.type === 'flare')).toBe(true);
     expect(arena.getEcology().signals.some((signal) => signal.includes('CATALYTIC FLARE'))).toBe(true);
     expect(arena.getEcology().discoveries.noteIds).toContain('recipe_acid_toxin_flare');
+    expect(arena.getDishEvents().filter((event) => (
+      event.kind === 'critical' && event.label.includes('CATALYTIC FLARE')
+    ))).toHaveLength(2);
+  });
+
+  it('records catalyst discovery messages only once per recipe', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 222,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        acidCharges: 2,
+        toxinCharges: 2,
+      },
+      enemies: [
+        { archetype: 'sniper' as const, targetVol: 160, speed: 10, engulfMultiplier: 1, traits: ['fragile'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('acid', cell.center)).toBe(true);
+    expect(arena.applyTool('toxin', cell.center)).toBe(true);
+    expect(arena.applyTool('acid', [cell.center[0] + 2, cell.center[1]])).toBe(true);
+    expect(arena.applyTool('toxin', [cell.center[0] + 2, cell.center[1]])).toBe(true);
+
+    const flareDiscoveries = arena.getEcology().discoveries.latest.filter((message) =>
+      message.includes('CATALYTIC FLARE: Acid-Toxin Flare discovered.'),
+    );
+    expect(flareDiscoveries).toHaveLength(1);
+    expect(arena.getEcology().reactions).toBeGreaterThanOrEqual(2);
   });
 
   it('creates a crystal reaction from salt and water near gelatinous life', () => {
@@ -868,6 +1301,93 @@ describe('arena ecosystem mode', () => {
     expect(cell.intent.speed).toBeLessThanOrEqual(2.6);
   });
 
+  it('discovers static lattice when crystal shock freezes gelatinous tissue', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 223,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        { archetype: 'mirror' as const, targetVol: 260, speed: 8, engulfMultiplier: 5, traits: ['gelatinous'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('salt', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+
+    expect(arena.getToolEffects().some((effect) => effect.type === 'crystal')).toBe(true);
+    expect(arena.getEcology().discoveries.breedIds).toContain('static_lattice');
+    expect(Array.from(arena.archetypes.values()).some((spawn) => spawn.breedId === 'static_lattice')).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.label.includes('Static Lattice') && event.kind === 'caution' && event.color === 'amber',
+    )).toBe(true);
+  });
+
+  it('discovers a prism flare when toxin fractures a crystal field', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 224,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        { archetype: 'mirror' as const, targetVol: 260, speed: 8, engulfMultiplier: 5, traits: ['gelatinous'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('salt', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+    expect(arena.getToolEffects().some((effect) => effect.type === 'crystal')).toBe(true);
+    expect(arena.applyTool('toxin', cell.center)).toBe(true);
+
+    expect(arena.getToolEffects().some((effect) => effect.type === 'flare')).toBe(true);
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_crystal_toxin_prism');
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'critical' && event.label.includes('Prism Flare'),
+    )).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'critical' && event.label.includes('FLASH'),
+    )).toBe(true);
+  });
+
+  it('flashes brine when acid hits salty pressure near gelatinous life', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 225,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        { archetype: 'bruiser' as const, targetVol: 260, speed: 8, engulfMultiplier: 6, traits: ['gelatinous'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('salt', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+    expect(arena.getToolEffects().some((effect) => effect.type === 'brine' || effect.type === 'crystal')).toBe(true);
+    expect(arena.applyTool('acid', cell.center)).toBe(true);
+
+    expect(arena.getToolEffects().some((effect) => effect.type === 'flare')).toBe(true);
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_brine_flash');
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'critical' && event.label.includes('Brine Flash'),
+    )).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.kind === 'critical' && event.label.includes('FLASH'),
+    )).toBe(true);
+  });
+
   it('discovers needle swarm from sniper pressure and swarmlet crowding', () => {
     const arena = createArena({
       LX: 90,
@@ -890,6 +1410,9 @@ describe('arena ecosystem mode', () => {
 
     expect(arena.getEcology().discoveries.breedIds).toContain('needle_swarm');
     expect(Array.from(arena.archetypes.values()).some((spawn) => spawn.breedId === 'needle_swarm')).toBe(true);
+    expect(arena.getDishEvents().some((event) =>
+      event.label.includes('Needle Swarm') && event.kind === 'critical' && event.color === 'red' && event.radius > 20,
+    )).toBe(true);
   });
 
   it('discovers Bloom Mass from close Swarmlet and Splitter cultures in nutrient medium', () => {
@@ -922,6 +1445,9 @@ describe('arena ecosystem mode', () => {
 
     expect(arena.getEcology().discoveries.breedIds).toContain('bloom_mass');
     expect(arena.getEcology().discoveries.latest[0]).toContain('NEW LIFEFORM CREATED: Bloom Mass');
+    expect(arena.getDishEvents().some((event) =>
+      event.label.includes('Bloom Mass') && event.kind === 'discovery' && event.color === 'cyan',
+    )).toBe(true);
   });
 
   it('completes the first discovery objective after showcasing the new lifeform', () => {
@@ -997,6 +1523,36 @@ describe('arena ecosystem mode', () => {
     expect(arena.getEcology().discoveries.breedIds).toContain('glass_antibody');
   });
 
+  it('discovers glass antibody from salt crystal shock through a resistant feeder', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 232,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        {
+          archetype: 'bruiser' as const,
+          targetVol: 260,
+          speed: 8,
+          engulfMultiplier: 6,
+          traits: ['gelatinous', 'toxin_resistant', 'fragile'],
+        },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('salt', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+
+    expect(arena.getToolEffects().some((effect) => effect.type === 'crystal')).toBe(true);
+    expect(arena.getEcology().discoveries.breedIds).toContain('glass_antibody');
+    expect(Array.from(arena.archetypes.values()).some((spawn) => spawn.breedId === 'glass_antibody')).toBe(true);
+  });
+
   it('spawns a folding fault when agitation amplifies overlapping reactions', () => {
     const arena = createArena({
       LX: 90,
@@ -1061,6 +1617,39 @@ describe('arena ecosystem mode', () => {
 
     expect(cell.targetVol).not.toBe(before);
     expect(arena.getEcology().discoveries.noteIds).toContain('recipe_folding_fault');
+  });
+
+  it('discovers folded anchor when a folding fault stabilizes inside anchor tissue', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 242,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        nutrientCharges: 1,
+        waterCharges: 1,
+        agitationCharges: 1,
+      },
+      enemies: [
+        { archetype: 'boss' as const, targetVol: 900, speed: 6, engulfMultiplier: 6, traits: ['gelatinous'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('nutrient', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+    expect(arena.agitate()).toBe(true);
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+
+    expect(arena.getToolEffects().some((effect) => effect.type === 'fold_fault')).toBe(true);
+    expect(arena.getEcology().discoveries.breedIds).toContain('folded_anchor');
+    expect(Array.from(arena.archetypes.values()).some((spawn) => spawn.breedId === 'folded_anchor')).toBe(true);
   });
 
   it('periodically drops random reagent accidents in ecosystem mode', () => {

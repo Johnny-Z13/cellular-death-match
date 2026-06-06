@@ -6,9 +6,9 @@ import {
 } from '../content/upgrades';
 import { createRng, type Rng } from '../sim/rng';
 import { ECOSYSTEM_SCHEDULE, type EnemySpawn } from '../content/enemies';
-import { objectiveForEpoch, type ObjectiveDef } from '../content/objectives';
+import { OBJECTIVES, objectiveForEpoch, type ObjectiveDef } from '../content/objectives';
 
-export const EPOCHS_PER_RUN = 5;
+export const EPOCHS_PER_RUN = OBJECTIVES.length;
 export const FIGHTS_PER_RUN = EPOCHS_PER_RUN;
 export const UPGRADES_PER_PICK = 3;
 

@@ -145,6 +145,14 @@ export function createRenderer(
       // Scale up to display canvas.
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(offscreen!, 0, 0, canvas.width, canvas.height);
+      const flash = dishFlashForEvents(dishEvents, reduceMotion);
+      if (flash) {
+        ctx.save();
+        ctx.globalAlpha = flash.alpha;
+        ctx.fillStyle = flash.color;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
 
       // Draw bullets on top, in display coordinates.
       const sx = canvas.width / LX;
@@ -179,22 +187,42 @@ function drawDishEventMarker(
   frame: number,
   reduceMotion: boolean,
 ): void {
-  const t = Math.max(0, event.ttl / event.maxTtl);
+  const visual = dishEventMarkerVisual(event, frame, reduceMotion);
   const radiusScale = (sx + sy) * 0.5;
   ctx.save();
-  ctx.globalAlpha = 0.18 + 0.55 * t;
-  ctx.strokeStyle = cycledDishEventColor(event, frame, reduceMotion);
-  ctx.lineWidth = 1.5 + (1 - t) * 3;
+  ctx.globalAlpha = visual.globalAlpha;
+  ctx.strokeStyle = visual.strokeStyle;
+  ctx.lineWidth = visual.lineWidth;
   ctx.beginPath();
   ctx.arc(
     event.pos[0] * sx,
     event.pos[1] * sy,
-    (event.radius + (1 - t) * 12) * radiusScale,
+    (event.radius + visual.radiusExpansion) * radiusScale,
     0,
     Math.PI * 2,
   );
   ctx.stroke();
   ctx.restore();
+}
+
+export function dishEventMarkerVisual(
+  event: DishEventMarker,
+  frame: number,
+  reduceMotion: boolean,
+): {
+  globalAlpha: number;
+  strokeStyle: string;
+  lineWidth: number;
+  radiusExpansion: number;
+} {
+  const t = Math.max(0, event.ttl / event.maxTtl);
+  const flashMarker = event.label.includes('FLASH');
+  return {
+    globalAlpha: Math.min(1, 0.18 + 0.55 * t + (flashMarker ? 0.16 : 0)),
+    strokeStyle: flashMarker ? '#ffffff' : cycledDishEventColor(event, frame, reduceMotion),
+    lineWidth: 1.5 + (1 - t) * 3 + (flashMarker ? 1.6 : 0),
+    radiusExpansion: (1 - t) * 12 + (flashMarker ? 8 : 0),
+  };
 }
 
 function cycledDishEventColor(
@@ -214,6 +242,34 @@ function colorForDishEvent(color: DishEventMarker['color']): string {
   if (color === 'red') return '#ff6b4a';
   if (color === 'violet') return '#b771ff';
   return '#f6d365';
+}
+
+export function dishFlashForEvents(
+  dishEvents: readonly DishEventMarker[],
+  reduceMotion: boolean,
+): { color: string; alpha: number } | null {
+  if (reduceMotion) return null;
+  let strongest: { color: string; alpha: number } | null = null;
+  for (const event of dishEvents) {
+    const intensity = flashIntensityForDishEvent(event.kind);
+    if (intensity === 0) continue;
+    const freshness = Math.max(0, Math.min(1, event.ttl / event.maxTtl));
+    if (freshness <= 0) continue;
+    const flashMarker = event.label.includes('FLASH');
+    const alpha = 0.02 + freshness * (flashMarker ? intensity * 1.55 : intensity);
+    const color = flashMarker ? '#ffffff' : event.kind === 'fold' ? '#b771ff' : colorForDishEvent(event.color);
+    if (!strongest || alpha > strongest.alpha) strongest = { color, alpha };
+  }
+  return strongest;
+}
+
+function flashIntensityForDishEvent(kind: DishEventMarker['kind']): number {
+  if (kind === 'critical') return 0.2;
+  if (kind === 'fold') return 0.16;
+  if (kind === 'discovery') return 0.11;
+  if (kind === 'mutation') return 0.08;
+  if (kind === 'caution') return 0.055;
+  return 0;
 }
 
 function buildRenderPalette(
