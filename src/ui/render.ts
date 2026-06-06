@@ -1,7 +1,7 @@
 import type { SimState, CellId } from '../sim/types';
-import { ARCHETYPE_INFO, type EnemySpawn } from '../content/enemies';
+import { type EnemySpawn } from '../content/enemies';
 import type { TraitId } from '../content/ecology';
-import { BREED_DEFS } from '../content/catalysis';
+import { lifeformIdentityForSpawn } from '../content/lifeformIdentity';
 
 export interface Renderer {
   render(state: SimState, archetypes?: ReadonlyMap<CellId, EnemySpawn>): void;
@@ -159,9 +159,8 @@ function buildRenderPalette(
   for (let id = 0; id < size; id++) {
     const fallback = fallbackBase[id] ?? fallbackBase[0]!;
     const spawn = archetypes?.get(id);
-    const archetype = spawn?.archetype;
-    let base = archetype ? rgba(ARCHETYPE_INFO[archetype].color) : fallback;
-    if (spawn?.breedId) base = mixColor(base, BREED_DEFS[spawn.breedId].tint, 0.5);
+    let base = spawn ? rgba(lifeformIdentityForSpawn(spawn).colors.primary) : fallback;
+    if (spawn?.breedId) base = mixColor(base, lifeformIdentityForSpawn(spawn).colors.accent, 0.35);
     out[id] = traitColor(base, spawn?.traits);
   }
   out[0] = fallbackBase[0]!;

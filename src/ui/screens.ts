@@ -1,6 +1,10 @@
 import type { AgitationState, ToolState } from '../game/arena';
 import type { UpgradeDef } from '../content/upgrades';
 import type { EnemyArchetype } from '../content/enemies';
+import {
+  LIFEFORM_IDENTITIES,
+  type LifeformIdentityId,
+} from '../content/lifeformIdentity';
 
 type ScreenName = 'title' | 'pick' | 'end' | 'hud';
 export type ToolId = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid';
@@ -59,6 +63,8 @@ export interface Screens {
   setEggOptions(options: EggOption[]): void;
   setEggArchetype(archetype: EnemyArchetype): void;
   onEggSelect(handler: (archetype: EnemyArchetype) => void): void;
+  onLifeformSelect(handler: (id: string) => void): void;
+  setSelectedLifeform(id: string | null): void;
   updateHud(info: HudInfo): void;
   setPickChoices(choices: PickChoice[], onPick: (id: string) => void): void;
   updateEnd(info: EndInfo): void;
@@ -98,7 +104,10 @@ export function createScreens(): Screens {
   const toolButtons  = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-tool]'));
   const eggTool      = toolButtons.find((btn) => btn.dataset.tool === 'egg');
   let eggButtons: HTMLButtonElement[] = [];
+  const lifeButtons = new Map<string, HTMLButtonElement>();
+  let selectedLifeformId: string | null = null;
   let eggSelectHandler: ((archetype: EnemyArchetype) => void) | null = null;
+  let lifeformSelectHandler: ((id: string) => void) | null = null;
   const optionByArchetype = new Map<EnemyArchetype, EggOption>();
 
   const elFor: Record<ScreenName, HTMLElement> = {
@@ -160,6 +169,7 @@ export function createScreens(): Screens {
     setEggOptions(options) {
       optionByArchetype.clear();
       eggButtons = [];
+      lifeButtons.clear();
       eggOptions.replaceChildren();
       lifeList.replaceChildren();
       for (const option of options) {
@@ -181,14 +191,41 @@ export function createScreens(): Screens {
         eggButtons.push(button);
         eggOptions.append(button);
 
-        const item = document.createElement('div');
+        const item = document.createElement('button');
         item.className = 'life-item';
+        item.type = 'button';
+        item.dataset.lifeformId = option.archetype;
+        item.style.setProperty('--life-color', rgb(LIFEFORM_IDENTITIES[option.archetype].colors.primary));
         const itemSwatch = document.createElement('span');
         itemSwatch.className = 'life-swatch';
-        itemSwatch.style.background = rgb(option.color);
+        itemSwatch.style.background = rgb(LIFEFORM_IDENTITIES[option.archetype].colors.primary);
         const itemText = document.createElement('span');
-        itemText.textContent = `${option.name}: ${option.summary}`;
+        itemText.textContent = option.name;
         item.append(itemSwatch, itemText);
+        item.addEventListener('click', () => lifeformSelectHandler?.(option.archetype));
+        item.addEventListener('mouseenter', () => lifeformSelectHandler?.(option.archetype));
+        item.addEventListener('focus', () => lifeformSelectHandler?.(option.archetype));
+        lifeButtons.set(option.archetype, item);
+        lifeList.append(item);
+      }
+      for (const id of Object.keys(LIFEFORM_IDENTITIES) as LifeformIdentityId[]) {
+        if (optionByArchetype.has(id as EnemyArchetype)) continue;
+        const identity = LIFEFORM_IDENTITIES[id];
+        const item = document.createElement('button');
+        item.className = 'life-item life-item-rare';
+        item.type = 'button';
+        item.dataset.lifeformId = id;
+        item.style.setProperty('--life-color', rgb(identity.colors.primary));
+        const itemSwatch = document.createElement('span');
+        itemSwatch.className = `life-swatch life-swatch-${identity.renderStyle}`;
+        itemSwatch.style.background = rgb(identity.colors.primary);
+        const itemText = document.createElement('span');
+        itemText.textContent = identity.name;
+        item.append(itemSwatch, itemText);
+        item.addEventListener('click', () => lifeformSelectHandler?.(id));
+        item.addEventListener('mouseenter', () => lifeformSelectHandler?.(id));
+        item.addEventListener('focus', () => lifeformSelectHandler?.(id));
+        lifeButtons.set(id, item);
         lifeList.append(item);
       }
     },
@@ -198,11 +235,26 @@ export function createScreens(): Screens {
         btn.classList.toggle('selected', btn.dataset.eggArchetype === archetype);
       }
       if (!option) return;
-      lifeSummary.textContent = `${option.name} egg: ${option.summary}`;
       eggTool?.style.setProperty('--egg-color', rgb(option.color));
+      if (!selectedLifeformId) this.setSelectedLifeform(archetype);
     },
     onEggSelect(handler) {
       eggSelectHandler = handler;
+    },
+    onLifeformSelect(handler) {
+      lifeformSelectHandler = handler;
+    },
+    setSelectedLifeform(id) {
+      selectedLifeformId = id;
+      for (const [buttonId, button] of lifeButtons) {
+        button.setAttribute('aria-selected', String(buttonId === id));
+      }
+      if (!id || !(id in LIFEFORM_IDENTITIES)) {
+        lifeSummary.textContent = 'Pick an egg strain to seed the dish.';
+        return;
+      }
+      const identity = LIFEFORM_IDENTITIES[id as LifeformIdentityId];
+      lifeSummary.textContent = `${identity.name} - ${identity.role}. ${identity.behavior} Sound: ${identity.soundId}.`;
     },
     updateHud(info) {
       hudFight.textContent = `${info.fightIndex + 1} / ${info.totalFights}`;

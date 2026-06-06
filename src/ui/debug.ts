@@ -19,6 +19,7 @@ export interface DebugPanel {
   onDiscoveryPersistenceChange(handler: (enabled: boolean) => void): void;
   onClearDiscoveries(handler: () => void): void;
   onRevealDiscoveries(handler: () => void): void;
+  onPresentationToggle(handler: () => void): void;
 }
 
 export function createDebugPanel(): DebugPanel {
@@ -48,6 +49,7 @@ export function createDebugPanel(): DebugPanel {
   const persistDiscoveries = getInput('dbg-persist-discoveries');
   const clearDiscoveries = get('dbg-clear-discoveries');
   const revealDiscoveries = get('dbg-reveal-discoveries');
+  const presentationMode = get('dbg-presentation-mode');
   const discoveryStatus = get('dbg-discovery-status');
 
   const fmt2 = (n: number): string => n.toFixed(2);
@@ -93,6 +95,9 @@ export function createDebugPanel(): DebugPanel {
     },
     onRevealDiscoveries(handler) {
       revealDiscoveries.addEventListener('click', handler);
+    },
+    onPresentationToggle(handler) {
+      presentationMode.addEventListener('click', handler);
     },
   };
 }

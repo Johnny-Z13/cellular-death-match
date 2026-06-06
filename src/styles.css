@@ -9,6 +9,12 @@ html, body {
   touch-action: manipulation;
 }
 
+:root {
+  --ui-grid: 8px;
+  --ui-gap: 12px;
+  --panel-radius: 8px;
+}
+
 .layout {
   min-height: 100svh;
   display: grid;
@@ -203,6 +209,16 @@ canvas {
   font-size: 12px;
   line-height: 1.45;
   user-select: text;
+}
+
+.debug-open .debug {
+  display: block;
+  position: fixed;
+  right: max(12px, env(safe-area-inset-right));
+  top: max(12px, env(safe-area-inset-top));
+  max-height: calc(100svh - 24px);
+  overflow: auto;
+  z-index: 8;
 }
 
 .debug-title {
@@ -428,19 +444,80 @@ canvas {
 }
 
 .life-item {
+  --life-color: #5bb4e0;
+  font: inherit;
   display: grid;
   grid-template-columns: 12px 1fr;
   gap: 8px;
   align-items: baseline;
+  min-height: 34px;
+  border: 1px solid rgba(38, 48, 56, 0.7);
+  background: rgba(16, 20, 23, 0.36);
   color: #aeb9bc;
   font-size: 10px;
   line-height: 1.3;
+  opacity: 0.82;
+  padding: 6px 7px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, opacity 120ms ease, background 120ms ease;
+}
+
+.life-item[aria-selected="true"],
+.life-item:focus-visible,
+.life-item:hover {
+  opacity: 1;
+  border-color: var(--life-color);
+  background: rgba(26, 34, 37, 0.78);
 }
 
 .life-swatch {
   width: 9px;
   height: 9px;
   border-radius: 50%;
+  animation: life-idle-pulse 2.8s ease-in-out infinite;
+}
+
+.life-swatch-needle {
+  border-radius: 2px;
+}
+
+.life-swatch-crystal {
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+.life-swatch-cycle {
+  animation: life-color-cycle 1.2s steps(4, end) infinite;
+}
+
+@keyframes life-idle-pulse {
+  0%, 100% { opacity: 0.72; }
+  50% { opacity: 1; }
+}
+
+@keyframes life-color-cycle {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(90deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .life-swatch,
+  .life-swatch-cycle {
+    animation: none;
+  }
+}
+
+.presentation-mode .hud,
+.presentation-mode .toolbox,
+.presentation-mode .life-panel,
+.presentation-mode .ticker {
+  display: none;
+}
+
+.presentation-mode canvas {
+  width: min(96svw, 96svh, 900px);
+  height: min(96svw, 96svh, 900px);
 }
 
 /* Overlay screens */
@@ -724,7 +801,7 @@ canvas {
     transform: translateX(4px);
   }
 
-  .debug {
+  .debug-open .debug {
     display: block;
     position: fixed;
     right: 24px;

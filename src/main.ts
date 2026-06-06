@@ -26,6 +26,9 @@ const EPOCH_TICKS = 60 * 55;
 const canvasMaybe = document.getElementById('game') as HTMLCanvasElement | null;
 if (!canvasMaybe) throw new Error('Missing #game canvas');
 const canvas: HTMLCanvasElement = canvasMaybe;
+const layoutMaybe = document.querySelector('.layout');
+if (!(layoutMaybe instanceof HTMLElement)) throw new Error('Missing .layout');
+const layout: HTMLElement = layoutMaybe;
 const commitDebug = document.getElementById('commit-debug');
 if (commitDebug) commitDebug.textContent = `commit: ${__COMMIT_MESSAGE__}`;
 
@@ -48,6 +51,20 @@ let lastFpsTick = performance.now();
 let tickCount = 0;
 let tickerState = createTickerState();
 
+interface RuntimeOverlayState {
+  menuOpen: boolean;
+  debugOpen: boolean;
+  presentationMode: boolean;
+  selectedLifeformId: string | null;
+}
+
+const overlayState: RuntimeOverlayState = {
+  menuOpen: false,
+  debugOpen: false,
+  presentationMode: false,
+  selectedLifeformId: null,
+};
+
 debug.onDiscoveryPersistenceChange((enabled) => {
   discoverySave = setDiscoveryPersistence(discoveryStorage, enabled);
   debug.updateDiscoveries(discoveryDebugInfo());
@@ -60,7 +77,23 @@ debug.onRevealDiscoveries(() => {
   discoverySave = revealAllDiscoveries(discoveryStorage);
   debug.updateDiscoveries(discoveryDebugInfo());
 });
+debug.onPresentationToggle(() => {
+  setPresentationMode(!overlayState.presentationMode);
+});
 debug.updateDiscoveries(discoveryDebugInfo());
+
+screens.onLifeformSelect((id) => {
+  overlayState.selectedLifeformId = id;
+  screens.setSelectedLifeform(id);
+});
+
+window.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  event.preventDefault();
+  overlayState.menuOpen = !overlayState.menuOpen;
+  overlayState.debugOpen = overlayState.menuOpen;
+  applyOverlayState();
+});
 
 canvas.tabIndex = 0;
 canvas.focus();
@@ -114,9 +147,12 @@ screens.onEggSelect((archetype) => {
   selectedTool = 'egg';
   screens.setTool(selectedTool);
   screens.setEggArchetype(archetype);
+  overlayState.selectedLifeformId = archetype;
+  screens.setSelectedLifeform(archetype);
 });
 screens.setTool(selectedTool);
 screens.setEggArchetype(selectedEggArchetype);
+screens.setSelectedLifeform(selectedEggArchetype);
 
 showPhase();
 
@@ -310,6 +346,22 @@ function discoveryDebugInfo(): {
 
 function unique<T>(values: readonly T[]): T[] {
   return [...new Set(values)];
+}
+
+function applyOverlayState(): void {
+  layout.classList.toggle('debug-open', overlayState.debugOpen);
+  layout.classList.toggle('menu-open', overlayState.menuOpen);
+  layout.classList.toggle('presentation-mode', overlayState.presentationMode);
+}
+
+function setPresentationMode(enabled: boolean): void {
+  overlayState.presentationMode = enabled;
+  if (enabled && document.fullscreenEnabled && !document.fullscreenElement) {
+    void layout.requestFullscreen().catch(() => undefined);
+  } else if (!enabled && document.fullscreenElement) {
+    void document.exitFullscreen().catch(() => undefined);
+  }
+  applyOverlayState();
 }
 
 interface TickerState {
