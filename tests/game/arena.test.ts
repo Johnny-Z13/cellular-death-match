@@ -922,6 +922,72 @@ describe('arena ecosystem mode', () => {
     expect(arena.getEcology().discoveries.breedIds).toContain('glass_antibody');
   });
 
+  it('spawns a folding fault when agitation amplifies overlapping reactions', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 240,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        nutrientCharges: 1,
+        waterCharges: 1,
+        agitationCharges: 1,
+      },
+      enemies: [
+        { archetype: 'boss' as const, targetVol: 900, speed: 6, engulfMultiplier: 6, traits: ['gelatinous'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('nutrient', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+    expect(arena.agitate()).toBe(true);
+
+    expect(arena.getToolEffects().some((effect) => effect.type === 'fold_fault')).toBe(true);
+    expect(arena.getEcology().signals.some((signal) => signal.includes('FOLDING FAULT'))).toBe(true);
+  });
+
+  it('folding fault grows asymmetric local structure over time', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 241,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        nutrientCharges: 1,
+        waterCharges: 1,
+        agitationCharges: 1,
+      },
+      enemies: [
+        { archetype: 'bruiser' as const, targetVol: 420, speed: 8, engulfMultiplier: 6, traits: ['gelatinous'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+
+    expect(arena.applyTool('nutrient', cell.center)).toBe(true);
+    expect(arena.applyTool('water', cell.center)).toBe(true);
+    expect(arena.agitate()).toBe(true);
+    const before = cell.targetVol;
+    for (let i = 0; i < 90; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+
+    expect(cell.targetVol).not.toBe(before);
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_folding_fault');
+  });
+
   it('periodically drops random reagent accidents in ecosystem mode', () => {
     const arena = createArena({
       LX: 80,

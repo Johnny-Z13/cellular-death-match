@@ -6,6 +6,7 @@ import { createScreens, type ToolId } from './ui/screens';
 import { getUpgradeDef } from './content/upgrades';
 import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/enemies';
 import { createEcologyAudio } from './audio/ecologyAudio';
+import { hash2 } from './game/hash';
 
 declare const __COMMIT_MESSAGE__: string;
 
@@ -503,12 +504,6 @@ function splodgePixels(seed: number, radius: number): Array<{ x: number; y: numb
     }
   }
   return out;
-}
-
-function hash2(seed: number, x: number, y: number): number {
-  let n = (seed ^ (x * 374761393) ^ (y * 668265263)) | 0;
-  n = Math.imul(n ^ (n >>> 13), 1274126177);
-  return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
 }
 
 // Mirrors the renderer's palette logic so inspector swatches match the dish.

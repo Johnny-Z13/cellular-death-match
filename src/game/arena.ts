@@ -29,6 +29,7 @@ import {
   type ReactionContext,
 } from '../content/catalysis';
 import { type ObjectiveDef, objectiveForEpoch } from '../content/objectives';
+import { hash2 } from './hash';
 import { bruiserStep } from './enemies/bruiser';
 import { sniperStep, type SniperState } from './enemies/sniper';
 import { splitterStep } from './enemies/splitter';
@@ -479,6 +480,20 @@ export function createArena(opts: CreateArenaOpts): Arena {
       }
       if (hadNutrient) pushSignal('Agitation spread nutrient mist.');
       if (hadToxin) pushSignal('Agitation spread toxin pressure.');
+      const overlappingReaction = findOverlappingReaction(toolEffects);
+      if (overlappingReaction && !toolEffects.some((effect) => effect.type === 'fold_fault')) {
+        const fault: ToolEffect = {
+          type: 'fold_fault',
+          pos: [...overlappingReaction.pos],
+          radius: clamp(overlappingReaction.radius + 8, 18, 58),
+          ttl: 60 * 5,
+          maxTtl: 60 * 5,
+          seed: state.rng.randInt(1_000_000),
+        };
+        toolEffects.push(fault);
+        discoverNote('recipe_folding_fault', 'FOLDING FAULT: local rule escaped containment.');
+        while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
+      }
       return true;
     },
     endEpochNow(): ArenaStatus {
@@ -540,6 +555,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
           applyCrisisEffects(state, activeCrisis.id);
           activeCrisis.ttl -= 1;
           if (activeCrisis.ttl <= 0) activeCrisis = null;
+        }
+        for (const effect of toolEffects) {
+          if (effect.type === 'fold_fault') applyFoldingFault(state, effect);
         }
         for (const effect of toolEffects) effect.ttl -= 1;
         for (let i = toolEffects.length - 1; i >= 0; i--) {
@@ -1036,6 +1054,58 @@ function reactionTypeFor(a: ToolEffectType, b: ToolEffectType): ToolEffectType |
 
 function isPair(a: ToolEffectType, b: ToolEffectType, x: ToolEffectType, y: ToolEffectType): boolean {
   return (a === x && b === y) || (a === y && b === x);
+}
+
+function findOverlappingReaction(effects: ToolEffect[]): ToolEffect | null {
+  const reactions = effects.filter((effect) => isReactionEffect(effect.type));
+  for (const reaction of reactions) {
+    if (reactions.some((other) => other !== reaction && Math.hypot(
+      reaction.pos[0] - other.pos[0],
+      reaction.pos[1] - other.pos[1],
+    ) <= reagentOverlapDistance(reaction, other))) {
+      return reaction;
+    }
+  }
+  return reactions[0] ?? null;
+}
+
+function isReactionEffect(type: ToolEffectType): boolean {
+  return type === 'bloom'
+    || type === 'brine'
+    || type === 'lysis'
+    || type === 'foam'
+    || type === 'conduit'
+    || type === 'flare'
+    || type === 'crystal';
+}
+
+function applyFoldingFault(state: SimState, effect: ToolEffect): void {
+  const { LX, LY } = state.grid;
+  const phase = effect.maxTtl - effect.ttl;
+  for (const [, cell] of state.cells) {
+    if (cell.vol <= 0) continue;
+    const v = displacementVec(cell.center, effect.pos, LX, LY, state.grid.wrap);
+    const dist = Math.hypot(v[0], v[1]);
+    if (dist > effect.radius) continue;
+    const x = Math.floor(cell.center[0] + phase);
+    const y = Math.floor(cell.center[1]);
+    const bit = rule30Bit(effect.seed, x, y, phase);
+    const strength = (1 - dist / effect.radius) * (effect.ttl / effect.maxTtl);
+    if (bit === 1) {
+      cell.targetVol = clamp(cell.targetVol + 0.95 * strength, 25, 2400);
+      cell.intent.speed = Math.max(cell.intent.speed, 7 + strength * 6);
+    } else {
+      cell.targetVol = clamp(cell.targetVol - 0.42 * strength, 12, 2400);
+    }
+  }
+}
+
+function rule30Bit(seed: number, x: number, y: number, phase: number): 0 | 1 {
+  const left = hash2(seed, x - 1, y + phase) > 0.5 ? 1 : 0;
+  const center = hash2(seed + 17, x, y + phase) > 0.5 ? 1 : 0;
+  const right = hash2(seed + 31, x + 1, y + phase) > 0.5 ? 1 : 0;
+  const pattern = (left << 2) | (center << 1) | right;
+  return ((30 >> pattern) & 1) as 0 | 1;
 }
 
 function evaluateObjective(
