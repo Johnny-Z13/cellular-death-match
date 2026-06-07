@@ -105,7 +105,7 @@ export const BREED_DEFS: Record<BreedId, BreedDef> = {
     speedMultiplier: 1.28,
     engulfMultiplier: 0.9,
     instabilityMultiplier: 1.35,
-    tint: [255, 86, 154],
+    tint: [255, 226, 80],
     discoveryTrigger: 'Critical flare near a suppressor culture',
   },
   folded_anchor: {
@@ -117,7 +117,7 @@ export const BREED_DEFS: Record<BreedId, BreedDef> = {
     speedMultiplier: 0.72,
     engulfMultiplier: 1.18,
     instabilityMultiplier: 0.68,
-    tint: [142, 118, 255],
+    tint: [48, 90, 255],
     discoveryTrigger: 'Rule-30 Cascade or fold fault stabilizing inside gelatinous tissue',
   },
   glass_antibody: {
@@ -129,7 +129,7 @@ export const BREED_DEFS: Record<BreedId, BreedDef> = {
     speedMultiplier: 1.05,
     engulfMultiplier: 1.24,
     instabilityMultiplier: 1.05,
-    tint: [132, 236, 255],
+    tint: [160, 246, 255],
     discoveryTrigger: 'Salt crystal shock through a resistant feeder',
   },
   bloom_mass: {
@@ -141,7 +141,7 @@ export const BREED_DEFS: Record<BreedId, BreedDef> = {
     speedMultiplier: 0.82,
     engulfMultiplier: 1.08,
     instabilityMultiplier: 0.95,
-    tint: [106, 232, 126],
+    tint: [190, 255, 76],
     discoveryTrigger: 'Nutrient conduit overfeeds a budding propagator',
   },
   static_lattice: {
@@ -153,7 +153,7 @@ export const BREED_DEFS: Record<BreedId, BreedDef> = {
     speedMultiplier: 0.78,
     engulfMultiplier: 0.96,
     instabilityMultiplier: 0.74,
-    tint: [252, 220, 92],
+    tint: [78, 255, 205],
     discoveryTrigger: 'Foam Lightning or crystal shock freezes quick cultures into a repeating pattern',
   },
 };

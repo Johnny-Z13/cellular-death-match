@@ -51,7 +51,7 @@ export function createDebugPanel(): DebugPanel {
   const persistDiscoveries = getInput('dbg-persist-discoveries');
   const clearDiscoveries = get('dbg-clear-discoveries');
   const revealDiscoveries = get('dbg-reveal-discoveries');
-  const presentationMode = get('dbg-presentation-mode');
+  const presentationMode = get('dbg-fullscreen-mode');
   const discoveryStatus = get('dbg-discovery-status');
   const discoveryCatalysts = get('dbg-discovery-catalysts');
   const discoveryLifeforms = get('dbg-discovery-lifeforms');

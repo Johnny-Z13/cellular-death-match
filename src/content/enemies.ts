@@ -36,32 +36,32 @@ export const ARCHETYPE_INFO: Record<EnemyArchetype, ArchetypeInfo> = {
   swarmlet: {
     name: 'Swarmlet',
     summary: 'Small, quick colonies that spread fast and die fast.',
-    color: [91, 180, 224],
+    color: [72, 201, 255],
   },
   bruiser: {
     name: 'Bruiser',
     summary: 'Large, slow feeders that push the dish toward dominance.',
-    color: [42, 150, 214],
+    color: [255, 170, 65],
   },
   splitter: {
     name: 'Splitter',
     summary: 'Midweight cells that shed swarmlets when destroyed.',
-    color: [48, 176, 156],
+    color: [72, 226, 112],
   },
   sniper: {
     name: 'Sniper',
     summary: 'Lean ranged cells that fire through crowded ecosystems.',
-    color: [62, 202, 218],
+    color: [255, 78, 164],
   },
   mirror: {
     name: 'Mirror',
     summary: 'Adaptive imitators that echo the control sample profile.',
-    color: [126, 132, 232],
+    color: [132, 113, 255],
   },
   boss: {
     name: 'Boss',
     summary: 'Huge anchor organisms that reshape the whole ecology.',
-    color: [171, 93, 220],
+    color: [255, 87, 74],
   },
 };
 

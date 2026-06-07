@@ -81,6 +81,7 @@ export interface Screens {
   onEndRestart(handler: () => void): void;
   onNotebookOpen(handler: () => void): void;
   onNotebookClose(handler: () => void): void;
+  onFullscreenOpen(handler: () => void): void;
 }
 
 export type TickerTone = 'normal' | 'discovery' | 'caution' | 'critical';
@@ -99,6 +100,7 @@ export function createScreens(): Screens {
   const hud          = get('hud');
   const titleStart   = get('title-start');
   const notebookButton = get('notebook-button') as HTMLButtonElement;
+  const fullscreenButton = get('fullscreen-button') as HTMLButtonElement;
   const notebookClose = get('notebook-close') as HTMLButtonElement;
   const notebookProgress = get('notebook-progress');
   const notebookList = get('notebook-list');
@@ -442,6 +444,9 @@ export function createScreens(): Screens {
     },
     onNotebookClose(handler) {
       notebookClose.addEventListener('click', handler);
+    },
+    onFullscreenOpen(handler) {
+      fullscreenButton.addEventListener('click', handler);
     },
   };
 }

@@ -28,14 +28,14 @@ function buildPalette(nCells: number): Uint8ClampedArray[] {
   out.push(new Uint8ClampedArray([0, 0, 0, 255]));        // empty
   out.push(new Uint8ClampedArray([186, 32, 42, 255]));    // control sample
   const lifeColors: Array<[number, number, number]> = [
-    [42, 150, 214],
-    [62, 202, 218],
-    [48, 176, 156],
-    [73, 118, 214],
-    [105, 205, 192],
-    [39, 93, 174],
-    [91, 180, 224],
-    [54, 139, 164],
+    [72, 201, 255],
+    [255, 170, 65],
+    [72, 226, 112],
+    [255, 78, 164],
+    [132, 113, 255],
+    [255, 87, 74],
+    [160, 246, 255],
+    [190, 255, 76],
   ];
   for (let i = 0; i < Math.max(1, nCells - 1); i++) {
     out.push(rgba(lifeColors[i % lifeColors.length]!));
@@ -283,9 +283,8 @@ function buildRenderPalette(
   for (let id = 0; id < size; id++) {
     const fallback = fallbackBase[id] ?? fallbackBase[0]!;
     const spawn = archetypes?.get(id);
-    let base = spawn ? rgba(lifeformIdentityForSpawn(spawn).colors.primary) : fallback;
-    if (spawn?.breedId) base = mixColor(base, lifeformIdentityForSpawn(spawn).colors.accent, 0.35);
-    out[id] = traitColor(base, spawn?.traits);
+    const base = spawn ? rgba(lifeformIdentityForSpawn(spawn).colors.primary) : fallback;
+    out[id] = spawn?.breedId ? base : traitColor(base, spawn?.traits);
   }
   out[0] = fallbackBase[0]!;
   out[1] = fallbackBase[1]!;

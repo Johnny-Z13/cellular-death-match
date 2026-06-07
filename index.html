@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cellular Death Match</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="/src/styles.css?v=20260606-notebook-catalogue" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260607-fullscreen-button-v2" />
   </head>
   <body>
     <main class="layout">
       <canvas id="game" width="800" height="800"></canvas>
       <button id="notebook-button" class="notebook-button" type="button" aria-label="Open Discoverer's Notebook">Notebook</button>
+      <button id="fullscreen-button" class="fullscreen-button" type="button" aria-label="Enter full screen">Full screen</button>
       <aside id="toolbox" class="toolbox" aria-label="Petri dish tools">
         <div class="toolbox-head">
           <h2 class="toolbox-title">Reagents</h2>
@@ -115,7 +116,7 @@
           </label>
           <button id="dbg-clear-discoveries" class="debug-mini-button" type="button">clear discoveries</button>
           <button id="dbg-reveal-discoveries" class="debug-mini-button" type="button">reveal all</button>
-          <button id="dbg-presentation-mode" class="debug-mini-button" type="button">presentation mode</button>
+          <button id="dbg-fullscreen-mode" class="debug-mini-button" type="button">full screen</button>
           <div class="debug-help" id="dbg-discovery-status">discoveries: run-local</div>
           <div class="debug-help" id="dbg-discovery-catalysts">catalysts: none</div>
           <div class="debug-help" id="dbg-discovery-lifeforms">lifeforms: none</div>
@@ -187,6 +188,6 @@
         <div id="ticker-lines" class="ticker-lines"></div>
       </aside>
     </main>
-    <script type="module" src="/src/main.ts?v=20260606-notebook-catalogue"></script>
+    <script type="module" src="/src/main.ts?v=20260607-fullscreen-button-v2"></script>
   </body>
 </html>

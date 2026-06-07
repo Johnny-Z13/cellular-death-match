@@ -49,14 +49,15 @@ canvas {
 .hud,
 .ticker,
 .screen,
-.notebook-button {
+.notebook-button,
+.fullscreen-button {
   user-select: none;
   -webkit-user-select: none;
 }
 
-.notebook-button {
+.notebook-button,
+.fullscreen-button {
   position: fixed;
-  right: max(12px, env(safe-area-inset-right));
   top: max(10px, env(safe-area-inset-top));
   z-index: 6;
   border: 1px solid #2d4f55;
@@ -69,12 +70,23 @@ canvas {
   font-size: 11px;
   line-height: 1;
   padding: 8px 10px;
+  white-space: nowrap;
   cursor: pointer;
   box-shadow: inset 0 0 14px rgba(87, 216, 255, 0.04), 0 6px 18px rgba(0, 0, 0, 0.28);
 }
 
+.notebook-button {
+  right: max(12px, env(safe-area-inset-right));
+}
+
+.fullscreen-button {
+  right: calc(92px + env(safe-area-inset-right));
+}
+
 .notebook-button:hover,
-.notebook-button:focus-visible {
+.notebook-button:focus-visible,
+.fullscreen-button:hover,
+.fullscreen-button:focus-visible {
   border-color: #6bcfe8;
   color: #ffffff;
 }
@@ -865,6 +877,7 @@ canvas {
 .presentation-mode .life-panel,
 .presentation-mode .ticker,
 .presentation-mode .notebook-button,
+.presentation-mode .fullscreen-button,
 .presentation-mode .debug,
 .presentation-mode .screen {
   display: none !important;
@@ -1238,63 +1251,6 @@ canvas {
   display: none;
 }
 
-@media (max-height: 700px) and (max-width: 899px) {
-  .layout {
-    padding-top: calc(66px + env(safe-area-inset-top));
-    padding-bottom: calc(170px + env(safe-area-inset-bottom));
-  }
-
-  canvas {
-    width: min(92vw, calc(100svh - 270px), 800px);
-    height: min(92vw, calc(100svh - 270px), 800px);
-  }
-
-  .toolbox {
-    padding-top: 8px;
-  }
-
-  .screen {
-    padding: 12px;
-  }
-
-  .screen-card {
-    position: fixed;
-    left: 12px;
-    right: 12px;
-    width: auto;
-    padding: 24px 16px;
-  }
-
-  .screen-title {
-    font-size: 23px;
-  }
-
-  .tool-button {
-    min-height: 58px;
-    padding: 7px 5px;
-  }
-
-  .life-panel {
-    bottom: calc(173px + env(safe-area-inset-bottom));
-    max-height: 132px;
-    overflow: auto;
-    padding: 6px 8px;
-  }
-
-  .life-panel-head {
-    display: none;
-  }
-
-  .life-summary {
-    display: none;
-  }
-
-  .life-panel .life-item.tool-button {
-    min-height: 44px;
-    padding: 6px 8px;
-  }
-}
-
 @media (min-width: 520px) {
   .tool-button {
     grid-template-columns: 30px 1fr auto;
@@ -1328,6 +1284,117 @@ canvas {
   }
 }
 
+@media (max-width: 899px) {
+  .layout {
+    padding: calc(72px + env(safe-area-inset-top)) 10px calc(224px + env(safe-area-inset-bottom));
+  }
+
+  canvas {
+    width: min(94vw, calc(100svh - 340px), 800px);
+    height: min(94vw, calc(100svh - 340px), 800px);
+  }
+
+  .toolbox {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(72px, 1fr);
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .toolbox::-webkit-scrollbar,
+  .life-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tool-button {
+    min-width: 72px;
+    min-height: 68px;
+    padding: 8px 6px;
+  }
+
+  .life-panel {
+    bottom: calc(96px + env(safe-area-inset-bottom));
+    max-height: 126px;
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow: hidden;
+    padding: 8px;
+  }
+
+  .life-panel-title {
+    display: none;
+  }
+
+  .life-summary {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .life-list {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(154px, 74vw);
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .life-panel .life-item.tool-button {
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    min-width: 154px;
+    min-height: 48px;
+    padding: 7px 8px;
+  }
+}
+
+@media (max-width: 899px) and (max-height: 700px) {
+  .layout {
+    padding: calc(62px + env(safe-area-inset-top)) 10px calc(204px + env(safe-area-inset-bottom));
+  }
+
+  canvas {
+    width: min(92vw, calc(100svh - 326px), 800px);
+    height: min(92vw, calc(100svh - 326px), 800px);
+  }
+
+  .screen {
+    padding: 12px;
+  }
+
+  .screen-card {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    padding: 24px 16px;
+  }
+
+  .screen-title {
+    font-size: 23px;
+  }
+
+  .tool-button {
+    min-height: 58px;
+    padding: 7px 5px;
+  }
+
+  .life-panel {
+    bottom: calc(94px + env(safe-area-inset-bottom));
+    max-height: 112px;
+    padding: 6px 8px;
+  }
+
+  .life-panel .life-item.tool-button {
+    min-height: 44px;
+    padding: 6px 8px;
+  }
+}
+
 @media (min-width: 900px) {
   .layout {
     min-height: 100%;
@@ -1348,11 +1415,15 @@ canvas {
     transform: translateY(-50%);
     width: 190px;
     grid-template-columns: 1fr;
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
     gap: 10px;
     padding: 0;
     background: none;
     border-top: 0;
     box-shadow: none;
+    overflow-x: visible;
+    overflow-y: visible;
   }
 
   .tool-button.selected {
@@ -1428,6 +1499,11 @@ canvas {
   }
 
   .life-list {
+    grid-template-columns: 1fr;
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
     gap: 7px;
     padding-top: 6px;
     border-top: 1px solid #1d1d1d;

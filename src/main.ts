@@ -115,6 +115,9 @@ screens.onNotebookOpen(() => {
 screens.onNotebookClose(() => {
   closeNotebook();
 });
+screens.onFullscreenOpen(() => {
+  setPresentationMode(true);
+});
 
 screens.onLifeformSelect((id) => {
   overlayState.selectedLifeformId = id;
@@ -135,6 +138,12 @@ window.addEventListener('keydown', (event) => {
   overlayState.menuOpen = !overlayState.menuOpen;
   overlayState.debugOpen = overlayState.menuOpen;
   applyOverlayState();
+});
+
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement && overlayState.presentationMode) {
+    setPresentationMode(false);
+  }
 });
 
 canvas.tabIndex = 0;
