@@ -82,6 +82,7 @@ export interface Screens {
   onNotebookOpen(handler: () => void): void;
   onNotebookClose(handler: () => void): void;
   onFullscreenOpen(handler: () => void): void;
+  setFullscreenActive(active: boolean): void;
 }
 
 export type TickerTone = 'normal' | 'discovery' | 'caution' | 'critical';
@@ -410,17 +411,19 @@ export function createScreens(): Screens {
       notebookProgress.textContent = `${view.discoveredCount} / ${view.totalCount} entries logged`;
       notebookList.replaceChildren();
       for (const entry of view.entries) {
+        if (!entry.discovered) continue;
         const card = document.createElement('article');
         card.className = [
           'notebook-entry',
           `notebook-entry-${entry.category}`,
           `notebook-entry-${entry.caution}`,
-          entry.discovered ? 'notebook-entry-discovered' : 'notebook-entry-locked',
+          'notebook-entry-discovered',
+          entry.isNew ? 'notebook-entry-new' : '',
         ].join(' ');
 
         const marker = document.createElement('span');
         marker.className = 'notebook-marker';
-        marker.textContent = entry.discovered ? markerForCategory(entry.category) : '?';
+        marker.textContent = markerForCategory(entry.category);
 
         const copy = document.createElement('div');
         const header = document.createElement('div');
@@ -430,6 +433,12 @@ export function createScreens(): Screens {
         const meta = document.createElement('span');
         meta.textContent = `${entry.category.replace('_', ' ')} / ${entry.caution}`;
         header.append(title, meta);
+        if (entry.isNew) {
+          const newBadge = document.createElement('b');
+          newBadge.className = 'notebook-entry-new-badge';
+          newBadge.textContent = 'new';
+          header.append(newBadge);
+        }
 
         const body = document.createElement('p');
         body.textContent = entry.displayBody;
@@ -482,6 +491,10 @@ export function createScreens(): Screens {
     },
     onFullscreenOpen(handler) {
       fullscreenButton.addEventListener('click', handler);
+    },
+    setFullscreenActive(active) {
+      fullscreenButton.setAttribute('aria-label', active ? 'Exit full screen' : 'Enter full screen');
+      fullscreenButton.title = active ? 'Exit full screen' : 'Enter full screen';
     },
   };
 }

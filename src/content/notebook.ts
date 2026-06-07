@@ -27,6 +27,7 @@ export interface NotebookEntry {
 
 export interface NotebookViewEntry extends NotebookEntry {
   discovered: boolean;
+  isNew: boolean;
   displayTitle: string;
   displayBody: string;
   displayClue: string;
@@ -36,6 +37,10 @@ export interface NotebookView {
   discoveredCount: number;
   totalCount: number;
   entries: NotebookViewEntry[];
+}
+
+export interface NotebookViewOptions {
+  newEntryIds?: readonly string[];
 }
 
 const STARTER_LIFEFORMS: readonly LifeformIdentityId[] = ['swarmlet', 'bruiser', 'splitter'];
@@ -85,9 +90,11 @@ export const NOTEBOOK_ENTRIES: readonly NotebookEntry[] = [
 
 export function notebookViewForProgression(
   progression: DiscoveryProgressionState,
+  options: NotebookViewOptions = {},
 ): NotebookView {
   const discoveredBreeds = new Set(progression.discoveredBreedIds);
   const discoveredNotes = new Set(progression.discoveredNoteIds);
+  const newEntryIds = new Set(options.newEntryIds ?? []);
   const entries = NOTEBOOK_ENTRIES.map((entry): NotebookViewEntry => {
     const discovered = progression.revealAll
       || entry.unlock.starter === true
@@ -97,6 +104,7 @@ export function notebookViewForProgression(
     return {
       ...entry,
       discovered,
+      isNew: discovered && newEntryIds.has(entry.id),
       displayTitle: discovered ? entry.title : entry.lockedTitle,
       displayBody: discovered ? entry.body : lockedBodyFor(entry.category),
       displayClue: discovered ? entry.clue : lockedClueFor(entry.category),

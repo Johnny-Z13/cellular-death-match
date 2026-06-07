@@ -61,6 +61,21 @@ describe('notebook catalogue content', () => {
     expect(view.discoveredCount).toBe(6);
   });
 
+  it('marks selected discovered entries as new for notebook highlighting', () => {
+    const progression = updateDiscoveryProgression(createDiscoveryProgression(), {
+      breedIds: ['bloom_mass'],
+      noteIds: ['recipe_nutrient_conduit'],
+    });
+
+    const view = notebookViewForProgression(progression, {
+      newEntryIds: ['lifeform_bloom_mass', 'catalyst_recipe_nutrient_conduit'],
+    });
+
+    expect(view.entries.find((entry) => entry.id === 'lifeform_bloom_mass')?.isNew).toBe(true);
+    expect(view.entries.find((entry) => entry.id === 'catalyst_recipe_nutrient_conduit')?.isNew).toBe(true);
+    expect(view.entries.find((entry) => entry.id === 'lifeform_swarmlet')?.isNew).toBe(false);
+  });
+
   it('reveals every entry in reveal-all mode and returns to starters after clear', () => {
     const revealed = notebookViewForProgression(revealAllDiscoveryProgression(createDiscoveryProgression()));
     expect(revealed.discoveredCount).toBe(revealed.totalCount);

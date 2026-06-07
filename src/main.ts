@@ -6,7 +6,7 @@ import { createScreens, type ToolId } from './ui/screens';
 import { getUpgradeDef } from './content/upgrades';
 import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/enemies';
 import { BREED_DEFS, DISCOVERY_NOTES } from './content/catalysis';
-import { notebookViewForProgression } from './content/notebook';
+import { NOTEBOOK_ENTRIES, notebookViewForProgression } from './content/notebook';
 import { createEcologyAudio } from './audio/ecologyAudio';
 import { soundEventForDishSignal, type SoundEventId } from './audio/soundDesign';
 import { hash2 } from './game/hash';
@@ -67,6 +67,7 @@ let tickCount = 0;
 let tickerState = createTickerState();
 let heardDishEventIds = new Set<number>();
 let pendingResearchBrief: ResearchBriefLine[] = [];
+let newNotebookEntryIds = new Set<string>();
 
 interface RuntimeOverlayState {
   menuOpen: boolean;
@@ -92,12 +93,14 @@ debug.onDiscoveryPersistenceChange((enabled) => {
 debug.onClearDiscoveries(() => {
   discoverySave = clearDiscoverySave(discoveryStorage);
   discoveryProgression = clearDiscoveryProgression(discoveryProgression);
+  newNotebookEntryIds.clear();
   applyDiscoveryProgressionUi();
   refreshArenaToolUi();
   debug.updateDiscoveries(discoveryDebugInfo());
 });
 debug.onRevealDiscoveries(() => {
   discoveryProgression = revealAllDiscoveryProgression(discoveryProgression);
+  newNotebookEntryIds.clear();
   saveRuntimeDiscoveryState();
   applyDiscoveryProgressionUi();
   refreshArenaToolUi();
@@ -116,7 +119,7 @@ screens.onNotebookClose(() => {
   closeNotebook();
 });
 screens.onFullscreenOpen(() => {
-  setPresentationMode(true);
+  setPresentationMode(!overlayState.presentationMode);
 });
 
 screens.onLifeformSelect((id) => {
@@ -391,6 +394,7 @@ function persistArenaDiscoveries(ar: Arena): void {
 }
 
 function awardCompletionResearchGrant(): void {
+  const previousProgression = discoveryProgression;
   const previousTools = discoveryProgression.unlockedTools;
   const previousLifeforms = discoveryProgression.unlockedLifeforms;
   const result = applyCompletionResearchGrant(discoveryProgression);
@@ -401,6 +405,7 @@ function awardCompletionResearchGrant(): void {
   }
 
   discoveryProgression = result.progression;
+  markNewNotebookEntries(previousProgression, discoveryProgression);
   applyDiscoveryProgressionUi();
   announceUnlocks(previousTools, previousLifeforms, discoveryProgression);
   pendingResearchBrief = researchBriefForGrant(result.grant);
@@ -429,12 +434,33 @@ function advanceDiscoveryProgression(delta: DiscoveryDelta): boolean {
   if (!changed) return false;
 
   discoveryProgression = nextProgression;
+  markNewNotebookEntries(previousProgression, nextProgression);
   applyDiscoveryProgressionUi();
   announceDiscoveryProgressionChange(previousProgression, nextProgression);
   announceUnlocks(previousTools, previousLifeforms, discoveryProgression);
   saveRuntimeDiscoveryState();
   debug.updateDiscoveries(discoveryDebugInfo());
   return true;
+}
+
+function markNewNotebookEntries(
+  previous: DiscoveryProgressionState,
+  next: DiscoveryProgressionState,
+): void {
+  const previousBreeds = new Set(previous.discoveredBreedIds);
+  const nextBreeds = new Set(next.discoveredBreedIds);
+  const previousNotes = new Set(previous.discoveredNoteIds);
+  const nextNotes = new Set(next.discoveredNoteIds);
+
+  for (const entry of NOTEBOOK_ENTRIES) {
+    if (entry.unlock.starter) continue;
+    if (entry.unlock.breedId && !previousBreeds.has(entry.unlock.breedId) && nextBreeds.has(entry.unlock.breedId)) {
+      newNotebookEntryIds.add(entry.id);
+    }
+    if (entry.unlock.noteId && !previousNotes.has(entry.unlock.noteId) && nextNotes.has(entry.unlock.noteId)) {
+      newNotebookEntryIds.add(entry.id);
+    }
+  }
 }
 
 function discoveryDebugInfo(): {
@@ -547,14 +573,19 @@ function applyOverlayState(): void {
 }
 
 function refreshNotebook(): void {
-  screens.updateNotebook(notebookViewForProgression(discoveryProgression));
+  screens.updateNotebook(notebookViewForProgression(discoveryProgression, {
+    newEntryIds: [...newNotebookEntryIds],
+  }));
+  if (overlayState.notebookOpen) {
+    newNotebookEntryIds.clear();
+  }
 }
 
 function openNotebook(): void {
-  refreshNotebook();
   overlayState.notebookOpen = true;
   overlayState.menuOpen = false;
   overlayState.debugOpen = false;
+  refreshNotebook();
   screens.show('notebook');
   applyOverlayState();
 }
@@ -567,6 +598,7 @@ function closeNotebook(): void {
 
 function setPresentationMode(enabled: boolean): void {
   overlayState.presentationMode = enabled;
+  screens.setFullscreenActive(enabled);
   if (enabled) {
     overlayState.menuOpen = false;
     overlayState.debugOpen = false;

@@ -24,24 +24,30 @@ describe('discoverer notebook UI wiring', () => {
     expect(screensSource).toContain('onNotebookClose(handler: () => void): void;');
     expect(screensSource).toContain("const notebookButton = get('notebook-button')");
     expect(screensSource).toContain("const notebookList = get('notebook-list')");
-    expect(screensSource).toContain('notebook-entry-locked');
+    expect(screensSource).toContain('if (!entry.discovered) continue;');
+    expect(screensSource).toContain('notebook-entry-new');
+    expect(screensSource).toContain("newBadge.textContent = 'new';");
     expect(screensSource).toContain('entry.displayTitle');
     expect(screensSource).toContain('entry.displayClue');
   });
 
   it('wires notebook rendering to discovery progression changes in main', () => {
-    expect(mainSource).toContain("import { notebookViewForProgression } from './content/notebook';");
+    expect(mainSource).toContain('notebookViewForProgression');
+    expect(mainSource).toContain('newNotebookEntryIds');
+    expect(mainSource).toContain('markNewNotebookEntries');
     expect(mainSource).toContain('screens.onNotebookOpen(() => {');
     expect(mainSource).toContain('screens.onNotebookClose(() => {');
     expect(mainSource).toContain('refreshNotebook();');
-    expect(mainSource).toContain('screens.updateNotebook(notebookViewForProgression(discoveryProgression));');
+    expect(mainSource).toContain('screens.updateNotebook(notebookViewForProgression(discoveryProgression, {');
+    expect(mainSource).toContain('newEntryIds: [...newNotebookEntryIds]');
   });
 
   it('styles the notebook as an overlay and hides it in presentation mode', () => {
     expect(css).toContain('.notebook-button');
     expect(css).toContain('.notebook-card');
     expect(css).toContain('.notebook-entry');
-    expect(css).toContain('.notebook-entry-locked');
+    expect(css).toContain('.notebook-entry-new');
+    expect(css).toContain('.notebook-entry-new-badge');
     expect(css).toContain('.presentation-mode .notebook-button');
     expect(css).toContain('.presentation-mode .screen');
   });
