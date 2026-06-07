@@ -23,5 +23,7 @@ describe('desktop layout CSS', () => {
     expect(css).not.toContain('width: var(--desktop-rack-width);\n  }\n\n  .hud-val');
     expect(css).toContain('top: calc(50svh + (var(--desktop-dish-size) / 2) + var(--desktop-gap))');
     expect(css).toContain('width: var(--desktop-dish-size)');
+    expect(css).toContain('@media (min-width: 900px) {');
+    expect(css).toContain('.mobile-shell {\n    display: none;\n  }');
   });
 });

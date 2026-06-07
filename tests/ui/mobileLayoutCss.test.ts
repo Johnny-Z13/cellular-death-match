@@ -25,9 +25,15 @@ describe('mobile layout CSS', () => {
   it('switches phones to compact horizontal trays instead of desktop-length fixed lists', () => {
     const mobile = mediaBlock('(max-width: 899px)');
 
-    expect(mobile).toContain('padding: calc(72px + env(safe-area-inset-top)) 10px calc(224px + env(safe-area-inset-bottom))');
-    expect(mobile).toContain('width: min(94vw, calc(100svh - 340px), 800px)');
-    expect(mobile).toContain('height: min(94vw, calc(100svh - 340px), 800px)');
+    expect(mobile).toContain('padding: calc(70px + env(safe-area-inset-top)) 10px calc(146px + env(safe-area-inset-bottom))');
+    expect(mobile).toContain('width: min(94vw, calc(100svh - 236px), 800px)');
+    expect(mobile).toContain('height: min(94vw, calc(100svh - 236px), 800px)');
+
+    expect(mobile).toContain('.mobile-shell {');
+    expect(mobile).toContain('display: grid');
+    expect(mobile).toContain('grid-template-columns: minmax(72px, auto) minmax(0, 1fr) minmax(72px, auto)');
+    expect(mobile).toContain('.mobile-tool-readout {');
+    expect(mobile).toContain('bottom: calc(92px + env(safe-area-inset-bottom))');
 
     expect(mobile).toContain('.toolbox {');
     expect(mobile).toContain('grid-template-columns: none');
@@ -37,9 +43,12 @@ describe('mobile layout CSS', () => {
     expect(mobile).toContain('overflow-y: hidden');
 
     expect(mobile).toContain('.life-panel {');
-    expect(mobile).toContain('bottom: calc(96px + env(safe-area-inset-bottom))');
-    expect(mobile).toContain('max-height: 126px');
+    expect(mobile).toContain('bottom: calc(146px + env(safe-area-inset-bottom))');
+    expect(mobile).toContain('max-height: min(42svh, 284px)');
     expect(mobile).toContain('overflow: hidden');
+    expect(mobile).toContain('transform: translateY(calc(100% + 18px))');
+    expect(mobile).toContain('.mobile-lifeforms-open .life-panel {');
+    expect(mobile).toContain('transform: translateY(0)');
 
     expect(mobile).toContain('.life-list {');
     expect(mobile).toContain('grid-template-columns: none');
@@ -47,16 +56,23 @@ describe('mobile layout CSS', () => {
     expect(mobile).toContain('grid-auto-columns: minmax(154px, 74vw)');
     expect(mobile).toContain('overflow-x: auto');
     expect(mobile).toContain('overflow-y: hidden');
+
+    expect(mobile).toContain('.ticker {');
+    expect(mobile).toContain('transform: translateY(calc(100% + 18px))');
+    expect(mobile).toContain('.mobile-log-open .ticker {');
+    expect(mobile).toContain('pointer-events: auto');
   });
 
   it('has a tighter small-phone breakpoint for short portrait screens', () => {
     const smallPhone = mediaBlock('(max-width: 899px) and (max-height: 700px)');
 
-    expect(smallPhone).toContain('padding: calc(62px + env(safe-area-inset-top)) 10px calc(204px + env(safe-area-inset-bottom))');
-    expect(smallPhone).toContain('width: min(92vw, calc(100svh - 326px), 800px)');
-    expect(smallPhone).toContain('height: min(92vw, calc(100svh - 326px), 800px)');
-    expect(smallPhone).toContain('bottom: calc(94px + env(safe-area-inset-bottom))');
-    expect(smallPhone).toContain('max-height: 112px');
+    expect(smallPhone).toContain('padding: calc(60px + env(safe-area-inset-top)) 10px calc(132px + env(safe-area-inset-bottom))');
+    expect(smallPhone).toContain('width: min(92vw, calc(100svh - 218px), 800px)');
+    expect(smallPhone).toContain('height: min(92vw, calc(100svh - 218px), 800px)');
+    expect(smallPhone).toContain('bottom: calc(82px + env(safe-area-inset-bottom))');
+    expect(smallPhone).toContain('grid-auto-columns: minmax(64px, 1fr)');
+    expect(smallPhone).toContain('bottom: calc(132px + env(safe-area-inset-bottom))');
+    expect(smallPhone).toContain('max-height: min(45svh, 232px)');
   });
 
   it('resets desktop controls back to rack flow so the desktop layout remains unchanged', () => {
