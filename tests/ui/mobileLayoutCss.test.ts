@@ -34,6 +34,11 @@ describe('mobile layout CSS', () => {
     expect(mobile).toContain('grid-template-columns: minmax(72px, auto) minmax(0, 1fr) minmax(72px, auto)');
     expect(mobile).toContain('.mobile-tool-readout {');
     expect(mobile).toContain('bottom: calc(92px + env(safe-area-inset-bottom))');
+    expect(mobile).toContain('.hud {');
+    expect(mobile).toContain('font-size: 10px');
+    expect(mobile).toContain('.hud-hint-row,');
+    expect(mobile).toContain('.hud .hud-row:nth-child(5)');
+    expect(mobile).toContain('display: none');
 
     expect(mobile).toContain('.toolbox {');
     expect(mobile).toContain('grid-template-columns: none');
@@ -46,7 +51,8 @@ describe('mobile layout CSS', () => {
     expect(mobile).toContain('bottom: calc(146px + env(safe-area-inset-bottom))');
     expect(mobile).toContain('max-height: min(42svh, 284px)');
     expect(mobile).toContain('overflow: hidden');
-    expect(mobile).toContain('transform: translateY(calc(100% + 18px))');
+    expect(mobile).toContain('transform: translateY(calc(100% + 160px))');
+    expect(mobile).toContain('pointer-events: none');
     expect(mobile).toContain('.mobile-lifeforms-open .life-panel {');
     expect(mobile).toContain('transform: translateY(0)');
 
@@ -58,7 +64,7 @@ describe('mobile layout CSS', () => {
     expect(mobile).toContain('overflow-y: hidden');
 
     expect(mobile).toContain('.ticker {');
-    expect(mobile).toContain('transform: translateY(calc(100% + 18px))');
+    expect(mobile).toContain('transform: translateY(calc(100% + 160px))');
     expect(mobile).toContain('.mobile-log-open .ticker {');
     expect(mobile).toContain('pointer-events: auto');
   });

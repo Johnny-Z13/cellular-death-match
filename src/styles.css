@@ -1387,6 +1387,21 @@ canvas {
     min-width: 0;
   }
 
+  .hud {
+    padding: 6px 8px;
+    font-size: 10px;
+  }
+
+  .hud-objective-row .hud-val {
+    font-size: 11px;
+    line-height: 1.15;
+  }
+
+  .hud-hint-row,
+  .hud .hud-row:nth-child(5) {
+    display: none;
+  }
+
   .toolbox {
     grid-template-columns: none;
     grid-auto-flow: column;
@@ -1417,13 +1432,15 @@ canvas {
     grid-template-rows: auto minmax(0, 1fr);
     overflow: hidden;
     padding: 8px;
-    transform: translateY(calc(100% + 18px));
+    transform: translateY(calc(100% + 160px));
     transition: transform 180ms ease;
+    pointer-events: none;
     box-shadow: 0 -18px 38px rgba(0, 0, 0, 0.42);
   }
 
   .mobile-lifeforms-open .life-panel {
     transform: translateY(0);
+    pointer-events: auto;
   }
 
   .life-panel-title {
@@ -1458,7 +1475,7 @@ canvas {
     left: 10px;
     right: 10px;
     bottom: calc(146px + env(safe-area-inset-bottom));
-    transform: translateY(calc(100% + 18px));
+    transform: translateY(calc(100% + 160px));
     transition: transform 180ms ease;
     pointer-events: none;
     z-index: 6;
@@ -1726,6 +1743,14 @@ canvas {
     width: var(--desktop-dish-size);
     max-height: calc(50svh - (var(--desktop-dish-size) / 2) - var(--desktop-gap) - 12px);
     overflow: hidden;
+  }
+}
+
+@media (min-width: 1181px) and (max-height: 780px) {
+  .hud {
+    top: 8px;
+    bottom: auto;
+    height: 84px;
   }
 }
 
