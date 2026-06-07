@@ -16,4 +16,9 @@ describe('mobile shell DOM', () => {
     expect(html.match(/id="life-panel"/g)?.length).toBe(1);
     expect(html.match(/id="ticker"/g)?.length).toBe(1);
   });
+
+  it('starts mobile drawer toggles collapsed for touch play', () => {
+    expect(html).toContain('id="mobile-lifeforms-toggle" class="mobile-shell-button" type="button" aria-expanded="false" aria-controls="life-panel"');
+    expect(html).toContain('id="mobile-log-toggle" class="mobile-shell-button" type="button" aria-expanded="false" aria-controls="ticker"');
+  });
 });

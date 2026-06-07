@@ -93,6 +93,9 @@ export function createScreens(): Screens {
     return el;
   };
 
+  const maybeLayout = document.querySelector<HTMLElement>('.layout');
+  if (!maybeLayout) throw new Error('screens: missing .layout');
+  const layout = maybeLayout;
   const screenTitle  = get('screen-title');
   const screenPick   = get('screen-pick');
   const screenEnd    = get('screen-end');
@@ -117,6 +120,10 @@ export function createScreens(): Screens {
   const hudHint      = get('hud-hint');
   const hudUpgrades  = get('hud-upgrades');
   const toolSummary  = get('tool-summary');
+  const mobileLifeformsToggle = get('mobile-lifeforms-toggle') as HTMLButtonElement;
+  const mobileLogToggle = get('mobile-log-toggle') as HTMLButtonElement;
+  const mobileToolName = get('mobile-tool-name');
+  const mobileToolSummary = get('mobile-tool-summary');
   const eggOptions   = get('egg-options');
   const lifeSummary  = get('life-summary');
   const lifeList     = get('life-list');
@@ -127,6 +134,8 @@ export function createScreens(): Screens {
   const toolButtons  = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-tool]'));
   const eggTool      = toolButtons.find((btn) => btn.dataset.tool === 'egg');
   const lifeButtons = new Map<string, HTMLButtonElement>();
+  type MobileDrawer = 'none' | 'lifeforms' | 'log';
+  let mobileDrawer: MobileDrawer = 'none';
   let selectedLifeformId: string | null = null;
   let selectedToolId: ToolId = 'egg';
   let selectedEggArchetype: EnemyArchetype = 'swarmlet';
@@ -143,6 +152,19 @@ export function createScreens(): Screens {
     notebook: screenNotebook,
     hud,
   };
+
+  function setMobileDrawer(next: MobileDrawer): void {
+    mobileDrawer = next;
+    layout.dataset.mobileDrawer = mobileDrawer;
+    layout.classList.toggle('mobile-lifeforms-open', mobileDrawer === 'lifeforms');
+    layout.classList.toggle('mobile-log-open', mobileDrawer === 'log');
+    mobileLifeformsToggle.setAttribute('aria-expanded', String(mobileDrawer === 'lifeforms'));
+    mobileLogToggle.setAttribute('aria-expanded', String(mobileDrawer === 'log'));
+  }
+
+  function closeMobileDrawers(): void {
+    setMobileDrawer('none');
+  }
 
   function applyLifeformVisibility(): void {
     for (const [id, button] of lifeButtons) {
@@ -176,8 +198,19 @@ export function createScreens(): Screens {
     if (eggOption) eggSelectHandler?.(eggOption.archetype);
   }
 
+  mobileLifeformsToggle.addEventListener('click', () => {
+    setMobileDrawer(mobileDrawer === 'lifeforms' ? 'none' : 'lifeforms');
+  });
+  mobileLogToggle.addEventListener('click', () => {
+    setMobileDrawer(mobileDrawer === 'log' ? 'none' : 'log');
+  });
+  setMobileDrawer('none');
+
   return {
-    show(name) { elFor[name].classList.add('visible'); },
+    show(name) {
+      if (name === 'title' || name === 'pick' || name === 'end' || name === 'notebook') closeMobileDrawers();
+      elFor[name].classList.add('visible');
+    },
     hide(name) { elFor[name].classList.remove('visible'); },
     addTicker(message, tone = 'normal') {
       const line = document.createElement('div');
@@ -199,6 +232,7 @@ export function createScreens(): Screens {
         setSelectedButtonState(btn, btn.dataset.tool === tool);
       }
       updateToolSummary(toolSummary, selectedToolId, selectedEggArchetype, optionByArchetype);
+      updateMobileToolReadout(mobileToolName, mobileToolSummary, selectedToolId, selectedEggArchetype, optionByArchetype);
     },
     setToolUnlocks(tools) {
       unlockedToolIds = new Set(tools);
@@ -325,6 +359,7 @@ export function createScreens(): Screens {
       if (!option) return;
       eggTool?.style.setProperty('--egg-color', rgb(option.color));
       updateToolSummary(toolSummary, selectedToolId, selectedEggArchetype, optionByArchetype);
+      updateMobileToolReadout(mobileToolName, mobileToolSummary, selectedToolId, selectedEggArchetype, optionByArchetype);
       if (!selectedLifeformId) setSelectedLifeform(archetype);
     },
     setLifeformUnlocks(ids) {
@@ -480,6 +515,34 @@ function updateToolSummary(
     acid: 'Acid - burns tissue quickly and can trigger volatile reactions.',
   };
   el.textContent = summaries[tool];
+}
+
+function updateMobileToolReadout(
+  nameEl: HTMLElement,
+  summaryEl: HTMLElement,
+  tool: ToolId,
+  eggArchetype: EnemyArchetype,
+  eggOptions: Map<EnemyArchetype, EggOption>,
+): void {
+  const eggName = eggOptions.get(eggArchetype)?.name ?? 'selected culture';
+  const names: Record<ToolId, string> = {
+    egg: 'Egg',
+    nutrient: 'Nutrient',
+    toxin: 'Toxin',
+    water: 'Water',
+    salt: 'Salt',
+    acid: 'Acid',
+  };
+  const summaries: Record<ToolId, string> = {
+    egg: `${eggName} seed`,
+    nutrient: 'feed and attract',
+    toxin: 'repel and thin',
+    water: 'dilute and spread',
+    salt: 'slow and dry',
+    acid: 'burn tissue',
+  };
+  nameEl.textContent = names[tool];
+  summaryEl.textContent = summaries[tool];
 }
 
 function setUnknownState(button: HTMLButtonElement, locked: boolean, label: string): void {
