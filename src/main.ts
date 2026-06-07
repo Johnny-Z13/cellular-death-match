@@ -219,6 +219,9 @@ function showPhase() {
   screens.hide('hud');
   overlayState.notebookOpen = false;
   const state = run.getState();
+  if (overlayState.presentationMode && state.phase !== 'arena') {
+    setPresentationMode(false);
+  }
   if (state.phase === 'title') {
     screens.show('title');
   } else if (state.phase === 'arena') {

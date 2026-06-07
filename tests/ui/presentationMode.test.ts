@@ -41,4 +41,9 @@ describe('full screen mode', () => {
     expect(mainSource).toContain('if (!document.fullscreenElement && overlayState.presentationMode)');
     expect(mainSource).toContain('return;');
   });
+
+  it('leaves full screen mode before showing non-arena phase screens', () => {
+    expect(mainSource).toContain("if (overlayState.presentationMode && state.phase !== 'arena')");
+    expect(mainSource).toContain('setPresentationMode(false);');
+  });
 });
