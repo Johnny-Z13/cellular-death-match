@@ -917,6 +917,13 @@ canvas {
   .ticker-line-rare-lifeform {
     animation: none;
   }
+
+  .life-panel,
+  .ticker,
+  .mobile-shell-button {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 
 .layout.presentation-mode {

@@ -83,4 +83,17 @@ describe('mobile layout CSS', () => {
     expect(desktop).toContain('overflow-x: visible');
     expect(desktop).toContain('overflow-y: visible');
   });
+
+  it('keeps mobile drawer transitions scoped and reduced-motion friendly', () => {
+    const mobile = mediaBlock('(max-width: 899px)');
+    const reducedMotion = mediaBlock('(prefers-reduced-motion: reduce)');
+
+    expect(mobile).toContain('transition: transform 180ms ease');
+    expect(mobile).toContain('.mobile-lifeforms-open .life-panel {');
+    expect(mobile).toContain('.mobile-log-open .ticker {');
+    expect(reducedMotion).toContain('.life-panel,');
+    expect(reducedMotion).toContain('.ticker,');
+    expect(reducedMotion).toContain('.mobile-shell-button');
+    expect(reducedMotion).toContain('transition: none !important');
+  });
 });
