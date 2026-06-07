@@ -339,6 +339,32 @@ describe('arena ecosystem mode', () => {
     expect(arena.getAgitationState()).toEqual({ charges: 3, maxCharges: 3, activeTicks: 0 });
   });
 
+  it('spawns splitter offspring at its last living center instead of the origin', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 12,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [{ archetype: 'splitter' as const, targetVol: 120, speed: 8, engulfMultiplier: 6 }],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const splitter = arena.state.cells.get(2)!;
+    const lastLivingCenter = [...splitter.center] as [number, number];
+
+    splitter.vol = 0;
+    splitter.center = [0, 0];
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+
+    const offspringCenters = Array.from(arena.state.cells)
+      .filter(([id, cell]) => id > 2 && cell.vol > 0)
+      .map(([, cell]) => cell.center);
+    expect(offspringCenters.length).toBe(2);
+    expect(offspringCenters.every(([x, y]) => x > lastLivingCenter[0] - 12 && y > lastLivingCenter[1] - 12)).toBe(true);
+    expect(offspringCenters.every(([x, y]) => x > 20 && y > 20)).toBe(true);
+  });
+
   it('seeds an egg near the click when the clicked cell is occupied', () => {
     const arena = createArena({
       LX: 50,

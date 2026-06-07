@@ -241,6 +241,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
 
   const archetypes = new Map<CellId, EnemySpawn>();
   const aiStates = new Map<CellId, AiState>();
+  const lastLivingCenters = new Map<CellId, [number, number]>();
   let nextCellId = 2 + nEnemies;          // ids beyond initial spawns
   let tickNo = 0;
   let mutationCount = 0;
@@ -349,6 +350,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
 
   const player = state.cells.get(PLAYER_ID);
   if (player) player.intent.speed = opts.player.speed;
+  rememberLivingCenters();
 
   function dispatchAi(self: Cell, target: Cell, ar: Arena): void {
     const spawn = archetypes.get(self.id);
@@ -619,6 +621,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
     tick(input: ArenaInput): void {
       if (this.getStatus() !== 'running') return;
       tickNo += 1;
+      rememberLivingCenters();
 
       // The control sample is no longer directly piloted in ecosystem mode. It
       // remains a visible anchor organism, influenced by the same dish tools.
@@ -726,7 +729,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         if (!cell || cell.vol > 0) continue;
         // Splitter died — spawn 2 swarmlets at its last known center.
         ai.splitter.didSpawn = true;
-        const pos = cell.center;
+        const pos = lastLivingCenters.get(id) ?? cell.center;
         const swarmletSpawn = { ...ARCHETYPE_DEFAULTS.swarmlet };
         this.spawnEnemy({ spawn: swarmletSpawn, pos: [pos[0] - 3, pos[1]] });
         this.spawnEnemy({ spawn: swarmletSpawn, pos: [pos[0] + 3, pos[1]] });
@@ -741,6 +744,10 @@ export function createArena(opts: CreateArenaOpts): Arena {
         targetVol: spawnOpts.spawn.targetVol,
         pos: spawnOpts.pos,
       });
+      const spawnedCell = state.cells.get(id);
+      if (spawnedCell && spawnedCell.vol > 0) {
+        lastLivingCenters.set(id, [...spawnedCell.center]);
+      }
       archetypes.set(id, spawnOpts.spawn);
       const ai: AiState = {};
       if (spawnOpts.spawn.archetype === 'sniper')   ai.sniper = { shootTimer: spawnOpts.spawn.shootCooldown ?? 30 };
@@ -750,6 +757,14 @@ export function createArena(opts: CreateArenaOpts): Arena {
       return id;
     },
   };
+
+  function rememberLivingCenters(): void {
+    for (const [id, cell] of state.cells) {
+      if (cell.vol <= 0) continue;
+      lastLivingCenters.set(id, [...cell.center]);
+    }
+  }
+
   return arena;
 }
 
