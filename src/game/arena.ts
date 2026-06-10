@@ -161,6 +161,10 @@ export interface SpawnEnemyOpts {
 
 export interface ApplyToolOpts {
   eggArchetype?: EnemyArchetype;
+  // When set, the egg hatches this discovered breed (carrying its breedId and
+  // tint) instead of a plain base archetype, so the dish cell matches the rack
+  // icon the player picked.
+  eggBreedId?: BreedId;
 }
 
 export interface CreateArenaOpts {
@@ -508,7 +512,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
         const seedPos = findEggSeedPos(state, pos);
         if (!seedPos) return false;
         toolState.charges -= 1;
-        const spawn = eggSpawnFor(applyOpts.eggArchetype ?? 'swarmlet', state.rng.random());
+        const spawn = applyOpts.eggBreedId
+          ? breedSpawnFor(applyOpts.eggBreedId)
+          : eggSpawnFor(applyOpts.eggArchetype ?? 'swarmlet', state.rng.random());
         applyEggSynergies(state, toolEffects, seedPos, spawn, pushSignal);
         this.spawnEnemy({ spawn, pos: seedPos });
         const hatchEffect: ToolEffect = {

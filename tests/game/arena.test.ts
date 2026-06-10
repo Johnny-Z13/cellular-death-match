@@ -345,6 +345,27 @@ describe('arena ecosystem mode', () => {
     expect(arena.endEpochNow()).toBe('won');
   });
 
+  it('hatches a chosen discovered breed so the dish cell carries its breed identity', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 31,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 80, speed: 8, engulfMultiplier: 4 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const before = new Set(arena.archetypes.keys());
+    // Drop a Vitric Anchor egg (a hybrid). The spawned cell must carry the
+    // breedId so the renderer tints it with the breed's identity, not the
+    // base archetype's palette.
+    expect(arena.applyTool('egg', [40, 40], { eggBreedId: 'vitric_anchor' })).toBe(true);
+    const newId = [...arena.archetypes.keys()].find((id) => !before.has(id));
+    expect(newId).toBeDefined();
+    expect(arena.archetypes.get(newId!)?.breedId).toBe('vitric_anchor');
+  });
+
   it('paste draws a spaced trail of nutrient stamps without evicting catalysis effects', () => {
     const arena = createArena({
       LX: 80,

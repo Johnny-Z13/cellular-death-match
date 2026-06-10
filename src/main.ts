@@ -5,7 +5,7 @@ import { createDebugPanel } from './ui/debug';
 import { createScreens, type ToolId } from './ui/screens';
 import { getUpgradeDef } from './content/upgrades';
 import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/enemies';
-import { BREED_DEFS, DISCOVERY_NOTES } from './content/catalysis';
+import { BREED_DEFS, DISCOVERY_NOTES, type BreedId } from './content/catalysis';
 import { notebookViewForProgression } from './content/notebook';
 import { createEcologyAudio } from './audio/ecologyAudio';
 import { createUiAudio } from './audio/uiAudio';
@@ -72,6 +72,8 @@ let arena: Arena | null = null;
 let renderer: Renderer | null = null;
 let selectedTool: ToolId = 'egg';
 let selectedEggArchetype: EnemyArchetype = 'swarmlet';
+// When a discovered breed is the active lifeform, the egg hatches that breed.
+let selectedBreedId: BreedId | null = null;
 let displayedFps = 0;
 let framesSinceTick = 0;
 let lastFpsTick = performance.now();
@@ -151,6 +153,11 @@ screens.setAudioMuted(uiAudio.isMuted());
 screens.onLifeformSelect((id) => {
   overlayState.selectedLifeformId = id;
   screens.setSelectedLifeform(id);
+  // Picking any lifeform arms the egg tool so the player can drop it straight
+  // away. A discovered breed hatches as that breed; a base strain as its egg.
+  selectedBreedId = id in BREED_DEFS ? (id as BreedId) : null;
+  selectedTool = 'egg';
+  screens.setTool('egg');
 });
 
 window.addEventListener('keydown', (event) => {
@@ -197,7 +204,10 @@ canvas.addEventListener('pointerdown', (event) => {
     }
     return;
   }
-  if (arena.applyTool(selectedTool, pos, { eggArchetype: selectedEggArchetype })) {
+  if (arena.applyTool(selectedTool, pos, {
+    eggArchetype: selectedEggArchetype,
+    eggBreedId: selectedBreedId ?? undefined,
+  })) {
     uiAudio.play('ui_tap');
     screens.updateToolCharges(arena.getToolStates());
   }
