@@ -23,5 +23,11 @@ describe('desktop layout CSS', () => {
     expect(css).not.toContain('width: var(--desktop-rack-width);\n  }\n\n  .hud-val');
     expect(css).toContain('top: calc(50svh + (var(--desktop-dish-size) / 2) + var(--desktop-gap))');
     expect(css).toContain('width: var(--desktop-dish-size)');
+    expect(css).toContain('@media (min-width: 900px) {');
+    expect(css).toContain('.mobile-shell {\n    display: none;\n  }');
+    expect(css).toContain('@media (min-width: 1181px) and (max-height: 780px) {');
+    expect(css).toContain('top: 8px');
+    expect(css).toContain('height: 84px');
+    expect(css).toContain('bottom: auto');
   });
 });

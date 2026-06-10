@@ -724,7 +724,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
         if (!ai?.splitter || ai.splitter.didSpawn) continue;
         const cell = state.cells.get(id);
         if (!cell || cell.vol > 0) continue;
-        // Splitter died — spawn 2 swarmlets at its last known center.
+        // Splitter died — spawn 2 swarmlets at its last known center. The sim
+        // retains a dead cell's center, so this is its true death position.
         ai.splitter.didSpawn = true;
         const pos = cell.center;
         const swarmletSpawn = { ...ARCHETYPE_DEFAULTS.swarmlet };
@@ -750,6 +751,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       return id;
     },
   };
+
   return arena;
 }
 

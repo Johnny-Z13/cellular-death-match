@@ -1,4 +1,4 @@
-import { createRun, EPOCHS_PER_RUN } from './game/run';
+﻿import { createRun, EPOCHS_PER_RUN } from './game/run';
 import { createArena, type Arena, type ArenaStatus } from './game/arena';
 import { createRenderer, type Renderer } from './ui/render';
 import { createDebugPanel } from './ui/debug';
@@ -117,7 +117,7 @@ screens.onNotebookClose(() => {
   closeNotebook();
 });
 screens.onFullscreenOpen(() => {
-  setPresentationMode(true);
+  setPresentationMode(!overlayState.presentationMode);
 });
 
 screens.onLifeformSelect((id) => {
@@ -220,6 +220,9 @@ function showPhase() {
   screens.hide('hud');
   overlayState.notebookOpen = false;
   const state = run.getState();
+  if (overlayState.presentationMode && state.phase !== 'arena') {
+    setPresentationMode(false);
+  }
   if (state.phase === 'title') {
     screens.show('title');
   } else if (state.phase === 'arena') {
@@ -551,6 +554,8 @@ function refreshNotebook(): void {
 }
 
 function openNotebook(): void {
+  // Render with fresh-discovery badges first, then acknowledge them so the
+  // NEW markers show this open and clear (persistently) for the next one.
   refreshNotebook();
   const acknowledged = acknowledgeNotebookDiscoveries(discoveryProgression);
   if (acknowledged !== discoveryProgression) {
@@ -573,6 +578,7 @@ function closeNotebook(): void {
 
 function setPresentationMode(enabled: boolean): void {
   overlayState.presentationMode = enabled;
+  screens.setFullscreenActive(enabled);
   if (enabled) {
     overlayState.menuOpen = false;
     overlayState.debugOpen = false;

@@ -19,16 +19,20 @@ describe('full screen mode', () => {
 
   it('wires the main UI full screen button through createScreens', () => {
     expect(screensSource).toContain('onFullscreenOpen(handler: () => void): void;');
+    expect(screensSource).toContain('setFullscreenActive(active: boolean): void;');
     expect(screensSource).toContain("const fullscreenButton = get('fullscreen-button') as HTMLButtonElement;");
     expect(screensSource).toContain('fullscreenButton.addEventListener');
     expect(mainSource).toContain('screens.onFullscreenOpen(() => {');
-    expect(mainSource).toContain('setPresentationMode(true);');
+    expect(mainSource).toContain('setPresentationMode(!overlayState.presentationMode);');
   });
 
-  it('hides every UI layer and lets the dish fill the viewport', () => {
+  it('hides every UI layer except a tiny exit button and lets the dish fill the viewport', () => {
     expect(css).toContain('.presentation-mode .debug');
     expect(css).toContain('.presentation-mode .screen');
-    expect(css).toContain('.presentation-mode .fullscreen-button');
+    expect(css).toContain('.presentation-mode .mobile-shell');
+    expect(css).toContain('.presentation-mode .fullscreen-button {');
+    expect(css).toContain('.presentation-mode .fullscreen-button::before');
+    expect(css).toContain('content: "X"');
     expect(css).toContain('width: min(100svw, 100svh)');
     expect(css).toContain('height: min(100svw, 100svh)');
     expect(css).not.toContain('width: min(96svw, 96svh, 900px)');
@@ -40,5 +44,10 @@ describe('full screen mode', () => {
     expect(mainSource).toContain("document.addEventListener('fullscreenchange'");
     expect(mainSource).toContain('if (!document.fullscreenElement && overlayState.presentationMode)');
     expect(mainSource).toContain('return;');
+  });
+
+  it('leaves full screen mode before showing non-arena phase screens', () => {
+    expect(mainSource).toContain("if (overlayState.presentationMode && state.phase !== 'arena')");
+    expect(mainSource).toContain('setPresentationMode(false);');
   });
 });

@@ -24,6 +24,7 @@ describe('discoverer notebook UI wiring', () => {
     expect(screensSource).toContain('onNotebookClose(handler: () => void): void;');
     expect(screensSource).toContain("const notebookButton = get('notebook-button')");
     expect(screensSource).toContain("const notebookList = get('notebook-list')");
+    expect(screensSource).toContain('if (!entry.discovered) continue;');
     expect(screensSource).toContain('notebook-entry-new');
     expect(screensSource).toContain('entry.displayTitle');
     expect(screensSource).toContain('entry.discoveredAtLabel');
@@ -31,7 +32,7 @@ describe('discoverer notebook UI wiring', () => {
   });
 
   it('wires notebook rendering to discovery progression changes in main', () => {
-    expect(mainSource).toContain("import { notebookViewForProgression } from './content/notebook';");
+    expect(mainSource).toContain('notebookViewForProgression');
     expect(mainSource).toContain('screens.onNotebookOpen(() => {');
     expect(mainSource).toContain('screens.onNotebookClose(() => {');
     expect(mainSource).toContain('refreshNotebook();');

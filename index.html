@@ -5,13 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cellular Death Match</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="/src/styles.css?v=20260607-notebook-achievements" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260610-discovery-mobile-merge" />
   </head>
   <body>
     <main class="layout">
       <canvas id="game" width="800" height="800"></canvas>
       <button id="notebook-button" class="notebook-button" type="button" aria-label="Open Discoverer's Notebook">Notebook</button>
       <button id="fullscreen-button" class="fullscreen-button" type="button" aria-label="Enter full screen">Full screen</button>
+      <div id="mobile-shell" class="mobile-shell" aria-label="Mobile dish controls">
+        <button id="mobile-lifeforms-toggle" class="mobile-shell-button" type="button" aria-expanded="false" aria-controls="life-panel">Lifeforms</button>
+        <div id="mobile-tool-readout" class="mobile-tool-readout" aria-live="polite">
+          <strong id="mobile-tool-name">Egg</strong>
+          <span id="mobile-tool-summary">plants the selected lifeform strain</span>
+        </div>
+        <button id="mobile-log-toggle" class="mobile-shell-button" type="button" aria-expanded="false" aria-controls="ticker">Log</button>
+      </div>
       <aside id="toolbox" class="toolbox" aria-label="Petri dish tools">
         <div class="toolbox-head">
           <h2 class="toolbox-title">Reagents</h2>
@@ -188,6 +196,6 @@
         <div id="ticker-lines" class="ticker-lines"></div>
       </aside>
     </main>
-    <script type="module" src="/src/main.ts?v=20260607-notebook-achievements"></script>
+    <script type="module" src="/src/main.ts?v=20260610-discovery-mobile-merge"></script>
   </body>
 </html>
