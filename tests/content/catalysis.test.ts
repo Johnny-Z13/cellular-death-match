@@ -8,14 +8,36 @@ import {
 } from '../../src/content/catalysis';
 
 describe('catalysis content', () => {
-  it('defines the initial hidden breed set', () => {
-    expect(Object.keys(BREED_DEFS).sort()).toEqual([
+  it('defines the base hidden breed set discovered straight from reagents', () => {
+    const baseBreeds = Object.values(BREED_DEFS)
+      .filter((def) => !def.parents)
+      .map((def) => def.id)
+      .sort();
+    expect(baseBreeds).toEqual([
       'bloom_mass',
       'folded_anchor',
       'glass_antibody',
       'needle_swarm',
       'static_lattice',
     ]);
+  });
+
+  it('defines hybrid breeds bred from two discovered parents', () => {
+    const hybrids = Object.values(BREED_DEFS).filter((def) => def.parents);
+    expect(hybrids.map((def) => def.id).sort()).toEqual([
+      'mire_lattice',
+      'quill_bloom',
+      'vitric_anchor',
+    ]);
+    for (const hybrid of hybrids) {
+      const [a, b] = hybrid.parents!;
+      // Parents must be distinct, real, and non-hybrid base breeds.
+      expect(a).not.toBe(b);
+      expect(BREED_DEFS[a]).toBeDefined();
+      expect(BREED_DEFS[b]).toBeDefined();
+      expect(BREED_DEFS[a].parents).toBeUndefined();
+      expect(BREED_DEFS[b].parents).toBeUndefined();
+    }
   });
 
   it('keeps hidden breed definitions mechanically complete', () => {

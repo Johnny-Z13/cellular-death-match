@@ -50,6 +50,9 @@ const RARE_LIFEFORMS: readonly BreedId[] = [
   'needle_swarm',
   'static_lattice',
   'folded_anchor',
+  'quill_bloom',
+  'vitric_anchor',
+  'mire_lattice',
 ];
 
 const CATALYST_NOTES: readonly DiscoveryNoteId[] = [
@@ -68,6 +71,7 @@ const CATALYST_NOTES: readonly DiscoveryNoteId[] = [
   'recipe_acid_toxin_flare',
   'recipe_salt_water_crystal',
   'recipe_agitated_chain',
+  'recipe_brine_channel',
 ];
 
 const EVENT_NOTES: readonly DiscoveryNoteId[] = [

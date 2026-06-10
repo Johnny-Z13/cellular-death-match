@@ -711,7 +711,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           accidentCount += 1;
           while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
         }
-        evaluateBreedDiscoveries(state, archetypes, toolEffects, (id, sourceCell) => {
+        evaluateBreedDiscoveries(state, archetypes, toolEffects, discoveredBreedIds, (id, sourceCell) => {
           discoverBreed(this, id, sourceCell);
         });
       }
@@ -1166,7 +1166,9 @@ function outbreakHunterSpawn(sourceArchetype: string): EnemySpawn {
 
 function breedSpawnFor(id: BreedId, base?: EnemySpawn): EnemySpawn {
   const def = BREED_DEFS[id];
-  const source = base ?? ARCHETYPE_DEFAULTS[def.baseArchetype];
+  // Hybrids derive from their base archetype defaults, not the parent cell that
+  // triggered them, so their stats don't compound off an already-bred parent.
+  const source = def.parents ? ARCHETYPE_DEFAULTS[def.baseArchetype] : (base ?? ARCHETYPE_DEFAULTS[def.baseArchetype]);
   return {
     ...source,
     archetype: def.baseArchetype,
@@ -1183,8 +1185,19 @@ function evaluateBreedDiscoveries(
   state: SimState,
   archetypes: Map<CellId, EnemySpawn>,
   effects: ToolEffect[],
+  discoveredBreeds: ReadonlySet<BreedId>,
   discover: (id: BreedId, sourceCell?: Cell) => void,
 ): void {
+  // Cross-breeding: any breed whose two parents are both discovered and present
+  // as adjacent cells under a nutrient field hybridizes into its offspring.
+  for (const def of Object.values(BREED_DEFS)) {
+    if (!def.parents) continue;
+    const [a, b] = def.parents;
+    if (!discoveredBreeds.has(a) || !discoveredBreeds.has(b)) continue;
+    const source = hybridPairSource(state, archetypes, effects, a, b);
+    if (source) discover(def.id, source);
+  }
+
   const bloomMassSource = bloomMassPairSource(state, archetypes, effects);
   if (bloomMassSource) discover('bloom_mass', bloomMassSource);
 
@@ -1253,6 +1266,44 @@ function bloomMassPairSource(
         return swarmletDistance <= effect.radius + 6 && splitterDistance <= effect.radius + 6;
       });
       if (inNutrient) return splitter;
+    }
+  }
+
+  return null;
+}
+
+// Find a breed-A cell and a breed-B cell that sit adjacent inside a shared
+// nutrient field. Returns the larger of the pair as the hybrid's spawn source.
+function hybridPairSource(
+  state: SimState,
+  archetypes: Map<CellId, EnemySpawn>,
+  effects: ToolEffect[],
+  breedA: BreedId,
+  breedB: BreedId,
+): Cell | null {
+  const nutrientFields = effects.filter((effect) =>
+    effect.type === 'nutrient' || effect.type === 'bloom' || effect.type === 'conduit',
+  );
+  if (nutrientFields.length === 0) return null;
+
+  const aCells: Cell[] = [];
+  const bCells: Cell[] = [];
+  for (const [id, spawn] of archetypes) {
+    if (spawn.breedId !== breedA && spawn.breedId !== breedB) continue;
+    const cell = state.cells.get(id);
+    if (!cell || cell.vol <= 0) continue;
+    if (spawn.breedId === breedA) aCells.push(cell);
+    else bCells.push(cell);
+  }
+
+  for (const a of aCells) {
+    for (const b of bCells) {
+      if (distanceBetween(state, a.center, b.center) > 16) continue;
+      const inNutrient = nutrientFields.some((effect) =>
+        distanceBetween(state, a.center, effect.pos) <= effect.radius + 6
+        && distanceBetween(state, b.center, effect.pos) <= effect.radius + 6,
+      );
+      if (inNutrient) return a.vol >= b.vol ? a : b;
     }
   }
 

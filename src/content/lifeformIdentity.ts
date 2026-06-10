@@ -129,6 +129,36 @@ export const LIFEFORM_IDENTITIES: Record<LifeformIdentityId, LifeformIdentity> =
     soundId: 'static-lattice',
     renderStyle: 'cycle',
   },
+  quill_bloom: {
+    id: 'quill_bloom',
+    name: BREED_DEFS.quill_bloom.name,
+    role: 'Hybrid bloom-suppressor',
+    behavior: 'A swelling propagator that keeps firing prickly needles as it spreads.',
+    origin: `Hybrid: ${BREED_DEFS.quill_bloom.discoveryTrigger}.`,
+    colors: { primary: BREED_DEFS.quill_bloom.tint, accent: [240, 255, 120] },
+    soundId: 'needle-swarm',
+    renderStyle: 'needle',
+  },
+  vitric_anchor: {
+    id: 'vitric_anchor',
+    name: BREED_DEFS.vitric_anchor.name,
+    role: 'Hybrid brittle fortress',
+    behavior: 'A toxin-proof anchor that crystallizes and drags nearby motion to a crawl.',
+    origin: `Hybrid: ${BREED_DEFS.vitric_anchor.discoveryTrigger}.`,
+    colors: { primary: BREED_DEFS.vitric_anchor.tint, accent: [225, 215, 255] },
+    soundId: 'folded-bass',
+    renderStyle: 'crystal',
+  },
+  mire_lattice: {
+    id: 'mire_lattice',
+    name: BREED_DEFS.mire_lattice.name,
+    role: 'Hybrid self-copying mass',
+    behavior: 'A pattern mass that keeps budding fresh tiles of itself across the dish.',
+    origin: `Hybrid: ${BREED_DEFS.mire_lattice.discoveryTrigger}.`,
+    colors: { primary: BREED_DEFS.mire_lattice.tint, accent: [150, 255, 190] },
+    soundId: 'bloom-throb',
+    renderStyle: 'cycle',
+  },
 };
 
 export function lifeformIdentityForSpawn(spawn: EnemySpawn): LifeformIdentity {

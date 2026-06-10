@@ -28,9 +28,11 @@ describe('lifeform identity', () => {
     }
   });
 
-  it('labels rare lifeform origins as discovery clues', () => {
+  it('labels rare lifeform origins as discovery or hybrid clues', () => {
     for (const id of Object.keys(BREED_DEFS) as Array<keyof typeof BREED_DEFS>) {
-      expect(LIFEFORM_IDENTITIES[id].origin).toBe(`Discovery: ${BREED_DEFS[id].discoveryTrigger}.`);
+      const breed = BREED_DEFS[id];
+      const prefix = breed.parents ? 'Hybrid' : 'Discovery';
+      expect(LIFEFORM_IDENTITIES[id].origin).toBe(`${prefix}: ${breed.discoveryTrigger}.`);
     }
   });
 

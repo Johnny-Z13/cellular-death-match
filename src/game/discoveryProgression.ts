@@ -75,6 +75,9 @@ export const ALL_PROGRESSION_LIFEFORMS: readonly ProgressionLifeformId[] = [
   'needle_swarm',
   'static_lattice',
   'folded_anchor',
+  'quill_bloom',
+  'vitric_anchor',
+  'mire_lattice',
 ];
 
 const VALID_BREEDS = new Set(Object.keys(BREED_DEFS));

@@ -38,14 +38,18 @@ export type ReactionRecipeId =
   | 'acid_toxin_flare'
   | 'salt_water_crystal'
   | 'agitated_chain'
-  | 'folding_fault';
+  | 'folding_fault'
+  | 'brine_channel';
 
 export type BreedId =
   | 'needle_swarm'
   | 'folded_anchor'
   | 'glass_antibody'
   | 'bloom_mass'
-  | 'static_lattice';
+  | 'static_lattice'
+  | 'quill_bloom'
+  | 'vitric_anchor'
+  | 'mire_lattice';
 
 export type DiscoveryNoteId =
   | `recipe_${ReactionRecipeId}`
@@ -86,6 +90,9 @@ export interface BreedDef {
   instabilityMultiplier: number;
   tint: [number, number, number];
   discoveryTrigger: string;
+  // Hybrids are bred by bringing two discovered parent breeds together under a
+  // nutrient field, rather than discovered straight from a reagent reaction.
+  parents?: readonly [BreedId, BreedId];
 }
 
 export interface DiscoveryNote {
@@ -155,6 +162,45 @@ export const BREED_DEFS: Record<BreedId, BreedDef> = {
     instabilityMultiplier: 0.74,
     tint: [78, 255, 205],
     discoveryTrigger: 'Foam Lightning or crystal shock freezes quick cultures into a repeating pattern',
+  },
+  quill_bloom: {
+    id: 'quill_bloom',
+    name: 'Quill Bloom',
+    baseArchetype: 'splitter',
+    traits: ['budding', 'fleet', 'fragile'],
+    targetVolMultiplier: 1.12,
+    speedMultiplier: 1.14,
+    engulfMultiplier: 1.0,
+    instabilityMultiplier: 1.2,
+    tint: [210, 255, 30],
+    discoveryTrigger: 'A Needle Swarm and a Bloom Mass bred together in a nutrient field',
+    parents: ['needle_swarm', 'bloom_mass'],
+  },
+  vitric_anchor: {
+    id: 'vitric_anchor',
+    name: 'Vitric Anchor',
+    baseArchetype: 'boss',
+    traits: ['toxin_resistant', 'gelatinous', 'fragile'],
+    targetVolMultiplier: 1.04,
+    speedMultiplier: 0.7,
+    engulfMultiplier: 1.22,
+    instabilityMultiplier: 0.7,
+    tint: [170, 150, 255],
+    discoveryTrigger: 'A Glass Antibody and a Folded Anchor bred together in a nutrient field',
+    parents: ['glass_antibody', 'folded_anchor'],
+  },
+  mire_lattice: {
+    id: 'mire_lattice',
+    name: 'Mire Lattice',
+    baseArchetype: 'mirror',
+    traits: ['budding', 'toxin_resistant', 'gelatinous'],
+    targetVolMultiplier: 1.18,
+    speedMultiplier: 0.74,
+    engulfMultiplier: 1.04,
+    instabilityMultiplier: 0.8,
+    tint: [150, 235, 120],
+    discoveryTrigger: 'A Static Lattice and a Bloom Mass bred together in a nutrient field',
+    parents: ['static_lattice', 'bloom_mass'],
   },
 };
 
@@ -351,6 +397,17 @@ export const REACTION_RECIPES: readonly ReactionRecipe[] = [
     discoveryNoteId: 'recipe_folding_fault',
     effect: { type: 'fold_fault', radiusBonus: 28, ttl: 60 * 8 },
   },
+  {
+    id: 'brine_channel',
+    name: 'Brine Channel',
+    inputs: ['salt', 'water', 'nutrient'],
+    trigger: 'water',
+    traits: ['budding'],
+    archetypes: ['splitter', 'swarmlet', 'mirror'],
+    caution: 'stable',
+    discoveryNoteId: 'recipe_brine_channel',
+    effect: { type: 'conduit', radiusBonus: 20, ttl: 60 * 7 },
+  },
 ];
 
 export const DISCOVERY_NOTES: Record<DiscoveryNoteId, DiscoveryNote> = {
@@ -468,6 +525,12 @@ export const DISCOVERY_NOTES: Record<DiscoveryNoteId, DiscoveryNote> = {
     body: 'A stressed gel culture can fold into a repeating rule pattern.',
     caution: 'critical',
   },
+  recipe_brine_channel: {
+    id: 'recipe_brine_channel',
+    title: 'Brine Channel',
+    body: 'Salt, water, and food can open a long feeding conduit through budding cultures — ideal for coaxing two breeds together.',
+    caution: 'stable',
+  },
   breed_needle_swarm: {
     id: 'breed_needle_swarm',
     title: 'New Breed: Needle Swarm',
@@ -496,6 +559,24 @@ export const DISCOVERY_NOTES: Record<DiscoveryNoteId, DiscoveryNote> = {
     id: 'breed_static_lattice',
     title: 'New Breed: Static Lattice',
     body: 'A flickering pattern culture that prefers loops over direct growth.',
+    caution: 'volatile',
+  },
+  breed_quill_bloom: {
+    id: 'breed_quill_bloom',
+    title: 'Hybrid Breed: Quill Bloom',
+    body: 'Needle Swarm crossed with Bloom Mass: a swelling propagator that keeps a fast, prickly edge as it spreads.',
+    caution: 'critical',
+  },
+  breed_vitric_anchor: {
+    id: 'breed_vitric_anchor',
+    title: 'Hybrid Breed: Vitric Anchor',
+    body: 'Glass Antibody crossed with Folded Anchor: a brittle, toxin-proof fortress that drags local motion to a crawl.',
+    caution: 'volatile',
+  },
+  breed_mire_lattice: {
+    id: 'breed_mire_lattice',
+    title: 'Hybrid Breed: Mire Lattice',
+    body: 'Static Lattice crossed with Bloom Mass: a self-copying pattern mass that keeps budding new tiles of itself.',
     caution: 'volatile',
   },
   water_carries: {

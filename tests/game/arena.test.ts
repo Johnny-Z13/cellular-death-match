@@ -1292,6 +1292,77 @@ describe('arena ecosystem mode', () => {
     )).toBe(true);
   });
 
+  it('cross-breeds a hybrid when two discovered breeds meet in a nutrient field', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 314,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        nutrientCharges: 6,
+      },
+      // A sniper beside two swarmlets discovers Needle Swarm; a swarmlet beside a
+      // splitter under nutrient discovers Bloom Mass. Both parents of Quill Bloom.
+      enemies: [
+        { archetype: 'sniper' as const, targetVol: 160, speed: 12, engulfMultiplier: 1 },
+        { archetype: 'swarmlet' as const, targetVol: 150, speed: 12, engulfMultiplier: 4 },
+        { archetype: 'swarmlet' as const, targetVol: 150, speed: 12, engulfMultiplier: 4, traits: ['budding'] },
+        { archetype: 'splitter' as const, targetVol: 300, speed: 8, engulfMultiplier: 6, traits: ['budding'] },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 30,
+    });
+
+    const swarmlet = arena.state.cells.get(3)!;
+    const splitter = arena.state.cells.get(5)!;
+    // Pin the budding swarmlet onto the splitter so the bloom-mass pairing fires
+    // inside a nutrient field, then feed both pairing sites.
+    swarmlet.center = [...splitter.center] as [number, number];
+
+    // Drive a couple of ticks so base-breed discoveries register and their cells
+    // appear. Re-pin and re-feed each tick because the sim drifts centers and
+    // nutrient fields decay as cells move.
+    for (let i = 0; i < 3; i++) {
+      swarmlet.center = [...splitter.center] as [number, number];
+      arena.applyTool('nutrient', splitter.center);
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+    const discovered = arena.getEcology().discoveries.breedIds;
+    expect(discovered).toContain('needle_swarm');
+    expect(discovered).toContain('bloom_mass');
+
+    // With both parents discovered, place fresh parent-breed cells adjacent in a
+    // clear part of the dish and feed them so the hybrid can form.
+    const meetingPoint: [number, number] = [20, 20];
+    const needleId = arena.spawnEnemy({
+      spawn: { archetype: 'sniper', breedId: 'needle_swarm', targetVol: 140, speed: 14, engulfMultiplier: 1 },
+      pos: [meetingPoint[0] - 8, meetingPoint[1]],
+    });
+    const bloomId = arena.spawnEnemy({
+      spawn: { archetype: 'splitter', breedId: 'bloom_mass', targetVol: 320, speed: 8, engulfMultiplier: 6, traits: ['budding'] },
+      pos: [meetingPoint[0] + 8, meetingPoint[1]],
+    });
+    const needleCell = arena.state.cells.get(needleId)!;
+    const bloomCell = arena.state.cells.get(bloomId)!;
+    expect(needleCell.vol).toBeGreaterThan(0);
+    expect(bloomCell.vol).toBeGreaterThan(0);
+
+    for (let i = 0; i < 2; i++) {
+      needleCell.center = [...meetingPoint] as [number, number];
+      bloomCell.center = [...meetingPoint] as [number, number];
+      arena.applyTool('nutrient', meetingPoint);
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+      if (arena.getEcology().discoveries.breedIds.includes('quill_bloom')) break;
+    }
+
+    expect(arena.getEcology().discoveries.breedIds).toContain('quill_bloom');
+    expect(Array.from(arena.archetypes.values()).some((spawn) => spawn.breedId === 'quill_bloom')).toBe(true);
+  });
+
   it('forms a velvet prison when salt and toxin trap gelatinous anchors', () => {
     const arena = createArena({
       LX: 80,
