@@ -567,16 +567,27 @@ function announceUnlocks(
     screens.addTicker(`Research unlocked: ${capitalize(tool)} reagent available.`, 'discovery');
     fx.showToast('catalyst', 'Reagent Unlocked', `${capitalize(tool)} now available`);
   }
+  // A breed unlock is the headline moment; if several things unlock at once,
+  // the breed banner wins the center screen over a plain strain banner.
+  let bannerBreed: string | null = null;
+  let bannerStrain: string | null = null;
   for (const lifeform of next.unlockedLifeforms) {
     if (previousLifeforms.includes(lifeform)) continue;
     screens.showcaseLifeformUnlock(lifeform);
     if (isBaseArchetype(lifeform)) {
       screens.addTicker(`Research unlocked: ${ARCHETYPE_INFO[lifeform].name} eggs available.`, 'discovery');
       fx.showToast('discovery', 'Strain Unlocked', `${ARCHETYPE_INFO[lifeform].name} eggs`);
+      bannerStrain ??= ARCHETYPE_INFO[lifeform].name;
     } else if (lifeform in BREED_DEFS) {
       screens.addTicker(`New lifeform catalogued: ${BREED_DEFS[lifeform].name}.`, 'discovery');
       fx.showToast('lifeform', 'New Lifeform', BREED_DEFS[lifeform].name);
+      bannerBreed ??= BREED_DEFS[lifeform].name;
     }
+  }
+  if (bannerBreed) {
+    fx.showUnlockBanner('Breed Unlocked', bannerBreed, 'Catalogued in the Notebook', 'violet');
+  } else if (bannerStrain) {
+    fx.showUnlockBanner('Strain Unlocked', bannerStrain, 'New egg available', 'bio');
   }
 }
 

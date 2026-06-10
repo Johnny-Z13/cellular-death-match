@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest';
 const screensSource = readFileSync('src/ui/screens.ts', 'utf8');
 const css = readFileSync('src/styles.css', 'utf8');
 const html = readFileSync('index.html', 'utf8');
+const fxSource = readFileSync('src/ui/fx.ts', 'utf8');
+const mainSource = readFileSync('src/main.ts', 'utf8');
 
 describe('discovery menu placeholders', () => {
   it('keeps locked discovery slots visible as disabled unknown entries', () => {
@@ -177,5 +179,34 @@ describe('discovery menu placeholders', () => {
     expect(screensSource).toContain("button.classList.remove('tool-button-discovered');");
     expect(css).toContain('.toolbox .tool-button-discovered');
     expect(css).toContain('@keyframes tool-discovery-pulse');
+  });
+
+  it('knocks undiscovered lifeform specimens back to inert gray', () => {
+    // The identity color is stashed so it can be cleared while locked and
+    // restored on discovery; CSS desaturates the whole locked card.
+    expect(screensSource).toContain('swatch.dataset.lifeColor = rgb(option.color)');
+    expect(screensSource).toContain('itemSwatch.dataset.lifeColor = rgb(identity.colors.primary)');
+    expect(screensSource).toContain("icon.style.removeProperty('background')");
+    expect(screensSource).toContain('icon.style.background = icon.dataset.lifeColor');
+    expect(css).toContain('.life-panel .life-item.locked-discovery {');
+    expect(css).toContain('grayscale(1)');
+    expect(css).toContain('.life-panel .life-item.locked-discovery .life-swatch {');
+  });
+
+  it('auto-sorts discovered lifeforms above locked specimens', () => {
+    expect(screensSource).toContain('function sortLifeList(): void {');
+    expect(screensSource).toContain("b.classList.contains('locked-discovery')");
+    expect(screensSource).toContain('sortLifeList();');
+  });
+
+  it('fires neon echo rings and an arcade unlock banner', () => {
+    expect(css).toContain('@keyframes life-echo-ring');
+    expect(css).toContain('.life-panel .life-item-discovered::before');
+    expect(css).toContain('.fx-banner.fx-banner-arcade.fx-banner-show');
+    expect(css).toContain('@keyframes fx-arcade-title');
+    expect(fxSource).toContain('showUnlockBanner(eyebrow: string, title: string, sub: string, accent: BannerAccent): void;');
+    expect(fxSource).toContain('fx-banner-arcade');
+    expect(mainSource).toContain("fx.showUnlockBanner('Breed Unlocked'");
+    expect(mainSource).toContain("fx.showUnlockBanner('Strain Unlocked'");
   });
 });

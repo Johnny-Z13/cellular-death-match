@@ -23,7 +23,8 @@ Cellular Death Match is now a mobile-first Petri dish ecosystem game. The origin
 - Objectives: epoch objective definitions in `src/content/objectives.ts`.
 - UI: DOM overlays in `src/ui/screens.ts`, canvas renderer in `src/ui/render.ts`, responsive CSS in `src/styles.css`.
 - Visual identity: "Bioluminescence: Deep Lab" — glass instrument panels, Michroma display / IBM Plex Mono data / Newsreader notebook fonts, bio-cyan/amber/violet accent system. Title key art at `public/art/title-keyart-1024.png`.
-- Game feel: `src/ui/fx.ts` drives the epoch intro banner, discovery toasts, and phase transition wipes (DOM/CSS, reduced-motion aware).
+- Game feel: `src/ui/fx.ts` drives the epoch intro banner, the arcade unlock banner ("Breed/Strain Unlocked"), discovery toasts, and phase transition wipes (DOM/CSS, reduced-motion aware).
+- Discovery rack: undiscovered lifeforms render as inert gray specimens (identity color stashed on the swatch, cleared while locked, restored on discovery). On discovery the card fires neon echo rings and auto-sorts above the still-locked specimens; the rack keeps discovered cards on top.
 - UI audio: `src/audio/uiAudio.ts` plays button taps, epoch begin/win/fail stingers, and a looping ambience bed with a persisted mute toggle (the "Sound" chrome button). Distinct from `src/audio/ecologyAudio.ts`, which tracks the simulation.
 
 ## Gameplay Loop

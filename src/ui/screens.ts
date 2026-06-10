@@ -178,6 +178,19 @@ export function createScreens(): Screens {
       const selected = !locked && id === selectedLifeformId;
       setSelectedButtonState(button, selected);
     }
+    sortLifeList();
+  }
+
+  // Float discovered lifeforms to the top of the rack; undiscovered "Unknown"
+  // specimens sink below. Stable within each group, so a freshly unlocked
+  // breed rises right under the other unlocked cards instead of staying buried.
+  function sortLifeList(): void {
+    const cards = Array.from(lifeButtons.values());
+    const unlocked = cards.filter((b) => !b.classList.contains('locked-discovery'));
+    const locked = cards.filter((b) => b.classList.contains('locked-discovery'));
+    for (const card of [...unlocked, ...locked]) {
+      lifeList.append(card); // append in order; moves existing nodes, no reflow churn
+    }
   }
 
   function setSelectedLifeform(id: string | null): void {
@@ -312,6 +325,7 @@ export function createScreens(): Screens {
 
         const swatch = document.createElement('span');
         swatch.className = 'life-swatch';
+        swatch.dataset.lifeColor = rgb(option.color);
         swatch.style.background = rgb(option.color);
         const copy = document.createElement('span');
         const label = document.createElement('strong');
@@ -339,6 +353,7 @@ export function createScreens(): Screens {
         item.style.setProperty('--life-color', rgb(identity.colors.primary));
         const itemSwatch = document.createElement('span');
         itemSwatch.className = `life-swatch life-swatch-${identity.renderStyle}`;
+        itemSwatch.dataset.lifeColor = rgb(identity.colors.primary);
         itemSwatch.style.background = rgb(identity.colors.primary);
         const itemText = document.createElement('span');
         const itemName = document.createElement('strong');
@@ -595,6 +610,12 @@ function setUnknownState(button: HTMLButtonElement, locked: boolean, label: stri
     if (icon) {
       icon.classList.add('unknown-icon');
       icon.textContent = '?';
+      // Clear the identity color so the CSS gray specimen styling wins; the
+      // inline background would otherwise override it and leave it colorful.
+      if (icon.dataset.lifeColor) {
+        icon.style.removeProperty('background');
+        icon.style.removeProperty('box-shadow');
+      }
     }
     if (text) text.textContent = 'Unknown';
     if (subText) subText.textContent = 'locked';
@@ -610,6 +631,8 @@ function setUnknownState(button: HTMLButtonElement, locked: boolean, label: stri
   if (icon) {
     icon.classList.remove('unknown-icon');
     icon.textContent = '';
+    // Restore the identity color now that it's discovered.
+    if (icon.dataset.lifeColor) icon.style.background = icon.dataset.lifeColor;
   }
   if (text) text.textContent = text.dataset.unlockedText ?? text.textContent;
   if (subText) subText.textContent = subText.dataset.unlockedText ?? subText.textContent;

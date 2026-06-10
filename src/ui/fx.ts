@@ -3,9 +3,11 @@
 // fire-and-forget and self-cleans; reduced-motion users get instant states.
 
 export type ToastKind = 'discovery' | 'catalyst' | 'lifeform';
+export type BannerAccent = 'bio' | 'amber' | 'violet';
 
 export interface Fx {
   showEpochBanner(eyebrow: string, title: string, sub?: string): void;
+  showUnlockBanner(eyebrow: string, title: string, sub: string, accent: BannerAccent): void;
   showToast(kind: ToastKind, kicker: string, title: string): void;
   playWipe(): void;
 }
@@ -23,21 +25,30 @@ export function createFx(): Fx {
   const wipe = document.getElementById('fx-wipe');
 
   let bannerTimer = 0;
+  const accentClasses = ['fx-banner-accent-bio', 'fx-banner-accent-amber', 'fx-banner-accent-violet'];
+
+  function playBanner(eyebrow: string, title: string, sub: string, accent: BannerAccent | null): void {
+    if (!banner || !bannerEyebrow || !bannerTitle || !bannerSub) return;
+    bannerEyebrow.textContent = eyebrow;
+    bannerTitle.textContent = title;
+    bannerSub.textContent = sub;
+    banner.classList.remove('fx-banner-show', 'fx-banner-arcade', ...accentClasses);
+    if (accent) banner.classList.add('fx-banner-arcade', `fx-banner-accent-${accent}`);
+    // Force reflow so re-triggering the animation restarts it.
+    void banner.offsetWidth;
+    banner.classList.add('fx-banner-show');
+    if (reduceMotion) {
+      window.clearTimeout(bannerTimer);
+      bannerTimer = window.setTimeout(() => banner.classList.remove('fx-banner-show'), accent ? 1900 : 1600);
+    }
+  }
 
   return {
     showEpochBanner(eyebrow, title, sub = '') {
-      if (!banner || !bannerEyebrow || !bannerTitle || !bannerSub) return;
-      bannerEyebrow.textContent = eyebrow;
-      bannerTitle.textContent = title;
-      bannerSub.textContent = sub;
-      banner.classList.remove('fx-banner-show');
-      // Force reflow so re-triggering the animation restarts it.
-      void banner.offsetWidth;
-      banner.classList.add('fx-banner-show');
-      if (reduceMotion) {
-        window.clearTimeout(bannerTimer);
-        bannerTimer = window.setTimeout(() => banner.classList.remove('fx-banner-show'), 1600);
-      }
+      playBanner(eyebrow, title, sub, null);
+    },
+    showUnlockBanner(eyebrow, title, sub, accent) {
+      playBanner(eyebrow, title, sub, accent);
     },
     showToast(kind, kicker, title) {
       if (!toasts) return;
