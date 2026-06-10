@@ -27,6 +27,18 @@ The game layer leans into that by asking the player to cultivate conditions inst
   - Boss: huge anchor organisms.
 - Between epochs, pick one upgrade from a small research set.
 
+## Discovery And Breeding
+
+Reagents combine into **catalytic reactions** when their fields overlap near the right cultures. Some reactions reveal **rare breeds** — distinct lifeforms with their own traits, colors, and behavior — logged in the discoverer's notebook.
+
+Once you have discovered two different breeds, you can **cross-breed** them: bring a cell of each together inside a nutrient (or conduit/bloom) field and they hybridize into a new offspring breed. Current hybrids:
+
+- **Quill Bloom** — Needle Swarm × Bloom Mass: a swelling propagator that keeps firing.
+- **Vitric Anchor** — Glass Antibody × Folded Anchor: a brittle, toxin-proof fortress.
+- **Mire Lattice** — Static Lattice × Bloom Mass: a self-copying pattern mass.
+
+Every lifeform draws with a distinct silhouette in the dish (needle, crystal, glitter, anchor, cycle, or cellular) plus a soft glow, so new and bred cultures are recognizable at a glance.
+
 ## Run Locally
 
 ```bash

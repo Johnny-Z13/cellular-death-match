@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-05-25
+Last updated: 2026-06-10
 
 ## Summary
 
@@ -8,7 +8,9 @@ Cellular Death Match is now a mobile-first Petri dish ecosystem game. The origin
 
 - Five objective-driven epochs.
 - Selectable egg strains.
-- Nutrient and toxin tools.
+- Five reagent tools (nutrient, toxin, water, salt, acid) plus agitation.
+- Catalytic reactions, rare breed discovery, and cross-breeding of hybrids.
+- Distinct per-lifeform dish rendering (`renderStyle` silhouettes) with a glow pass.
 - Mobile portrait layout with bottom tool controls.
 - Desktop layout with side panels, lifeform guide, inspector, and dish log.
 
@@ -33,6 +35,8 @@ Cellular Death Match is now a mobile-first Petri dish ecosystem game. The origin
 
 ## Current Lifeforms
 
+Base strains (egg-seedable):
+
 - Swarmlet: quick, small, fragile.
 - Bruiser: large and slow.
 - Splitter: can shed swarmlets on death.
@@ -40,11 +44,29 @@ Cellular Death Match is now a mobile-first Petri dish ecosystem game. The origin
 - Mirror: imitates the red lineage profile.
 - Boss: large anchor organism.
 
+Base breeds (discovered from reactions): needle_swarm, folded_anchor, glass_antibody, bloom_mass, static_lattice.
+
+Hybrid breeds (cross-bred from two discovered base breeds under a nutrient field):
+
+- Quill Bloom: needle_swarm × bloom_mass.
+- Vitric Anchor: glass_antibody × folded_anchor.
+- Mire Lattice: static_lattice × bloom_mass.
+
 ## Current Tools
 
 - Egg: places the selected lifeform strain.
 - Nutrient: attracts nearby lifeforms and strongly increases their target volume.
 - Toxin: pushes nearby lifeforms away, shrinking and eroding matter in its radius.
+- Water, Salt, Acid: research-unlocked reagents that drive further reactions.
+- Agitate: spreads active fields and can fold overlapping reactions into a fault.
+
+## Rendering
+
+`src/ui/render.ts` draws the cellular Potts grid as a fast per-pixel base layer, then runs an O(cells) accent pass: each living non-control cell gets a silhouette matching its lifeform `renderStyle` (needle/crystal/glitter/anchor/cycle/cellular) scaled by volume, with a soft glow. Breeds glow more strongly; the glow (shadowBlur) is budgeted per frame to stay smooth on mobile. Dish-event markers and bullets draw on top.
+
+## Cross-Breeding
+
+`evaluateBreedDiscoveries` in `src/game/arena.ts` checks, each ecosystem tick, every `BreedDef` that declares a `parents` pair. If both parents are already discovered and a cell of each sits within ~16px of the other inside a nutrient/conduit/bloom field, the hybrid is discovered and a hybrid cell spawns. Hybrid stats derive from the hybrid's own base archetype (not the runtime parent) so they do not compound.
 
 ## Verification Baseline
 

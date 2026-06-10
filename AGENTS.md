@@ -8,8 +8,10 @@ This repository is a Vite + TypeScript browser game. Agents should keep changes 
 npm install
 npm test
 npm run build
-npm run dev -- --host 0.0.0.0
+npm run dev -- --port 5199 --strictPort
 ```
+
+Note: port `5173` is currently occupied by an unrelated project ("Death Match Pool"). Use a free port (e.g. `5199`) and confirm the page title reads "Cellular Death Match" before trusting any browser check. Add `--host 0.0.0.0` to expose it to a phone on the same network.
 
 ## Expected Verification
 
@@ -65,4 +67,6 @@ npm run build
 
 ## Known Product Shape
 
-This is currently an ecosystem-cultivation game rather than the older keyboard shooter described in early planning docs. Current play revolves around selecting egg strains, placing nutrients/toxins, and completing five ecology objectives.
+This is currently an ecosystem-cultivation game rather than the older keyboard shooter described in early planning docs. Current play revolves around selecting egg strains, placing reagents, triggering catalytic reactions, discovering and cross-breeding rare breeds, and completing five ecology objectives.
+
+Discovery/breeding content lives in `src/content/catalysis.ts` (recipes, breeds, hybrids, notes) and `src/content/lifeformIdentity.ts` (per-lifeform identity + `renderStyle`). Cross-breeding logic is in `src/game/arena.ts` (`evaluateBreedDiscoveries`/`hybridPairSource`). The dish renderer is `src/ui/render.ts`. Adding a breed means updating its `BreedDef`, identity, notebook list, and the progression lifeform list — the content tests enforce that these stay in sync.
