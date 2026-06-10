@@ -1948,6 +1948,26 @@ canvas {
   box-shadow: 0 0 16px rgba(214, 200, 94, 0.38);
 }
 
+/* Chimera specimen portrait: a wider framed thumbnail in place of the chip. */
+.notebook-entry-chimera {
+  grid-template-columns: 60px minmax(0, 1fr);
+}
+
+.notebook-portrait {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--bio) 45%, transparent);
+  background: #04080a;
+  box-shadow: 0 0 14px rgba(91, 233, 214, 0.22), inset 0 0 12px rgba(0, 0, 0, 0.6);
+}
+
+.notebook-entry-new .notebook-portrait {
+  border-color: var(--amber);
+  box-shadow: 0 0 16px rgba(214, 200, 94, 0.4);
+}
+
 .notebook-entry-head {
   display: flex;
   justify-content: space-between;

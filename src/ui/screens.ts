@@ -472,11 +472,24 @@ export function createScreens(): Screens {
           `notebook-entry-${entry.category}`,
           `notebook-entry-${entry.caution}`,
           entry.isFresh ? 'notebook-entry-new' : 'notebook-entry-discovered',
-        ].join(' ');
+          entry.chimeraPortrait ? 'notebook-entry-chimera' : '',
+        ].filter(Boolean).join(' ');
 
-        const marker = document.createElement('span');
-        marker.className = 'notebook-marker';
-        marker.textContent = entry.isFresh ? 'NEW' : 'OK';
+        // Chimera breeds show a generated specimen portrait; others a label chip.
+        let marker: HTMLElement;
+        if (entry.chimeraPortrait) {
+          const img = document.createElement('img');
+          img.className = 'notebook-marker notebook-portrait';
+          img.src = entry.chimeraPortrait;
+          img.alt = `${entry.displayTitle} specimen`;
+          img.loading = 'lazy';
+          marker = img;
+        } else {
+          const span = document.createElement('span');
+          span.className = 'notebook-marker';
+          span.textContent = entry.isFresh ? 'NEW' : 'OK';
+          marker = span;
+        }
 
         const copy = document.createElement('div');
         const header = document.createElement('div');
@@ -490,7 +503,9 @@ export function createScreens(): Screens {
 
         const meta = document.createElement('div');
         meta.className = 'notebook-meta';
-        meta.textContent = `${entry.category.replace('_', ' ')} / ${entry.caution}`;
+        meta.textContent = entry.chimeraSplice
+          ? `${entry.chimeraSplice} · ${entry.caution}`
+          : `${entry.category.replace('_', ' ')} / ${entry.caution}`;
 
         const discoveredAt = document.createElement('div');
         discoveredAt.className = 'notebook-discovered-at';

@@ -6,6 +6,7 @@ import {
   type DiscoveryNoteId,
 } from './catalysis';
 import { LIFEFORM_IDENTITIES, type LifeformIdentityId } from './lifeformIdentity';
+import { CHIMERA_LORE } from './chimeras';
 import type { DiscoveryProgressionState } from '../game/discoveryProgression';
 
 export type NotebookCategory = 'lifeform' | 'catalyst' | 'lab_note' | 'event';
@@ -31,6 +32,9 @@ export interface NotebookViewEntry extends NotebookEntry {
   displayRecipe: string;
   discoveredAtLabel: string;
   isFresh: boolean;
+  // Chimera reframe (breeds only): spliced-DNA label + specimen portrait.
+  chimeraSplice: string | null;
+  chimeraPortrait: string | null;
 }
 
 export interface NotebookView {
@@ -109,14 +113,17 @@ export function notebookViewForProgression(
         ? noteRecords.get(entry.unlock.noteId)
         : null;
 
+    const chimera = entry.unlock.breedId ? CHIMERA_LORE[entry.unlock.breedId] : null;
     return [{
       ...entry,
       discovered,
       displayTitle: entry.title,
-      displayNotes: `Notes: ${entry.body}`,
+      displayNotes: `Notes: ${chimera ? `${chimera.lore} ` : ''}${entry.body}`,
       displayRecipe: recipeLabelFor(entry.category, entry.clue),
       discoveredAtLabel: `Discovered on ${formatDiscoveryDate(record?.discoveredAt ?? viewedAt)}`,
       isFresh: record?.fresh === true,
+      chimeraSplice: chimera ? chimera.splice : null,
+      chimeraPortrait: chimera ? chimera.portrait : null,
     }];
   });
 

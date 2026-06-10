@@ -11,6 +11,10 @@ The script generates, then recompresses to a 1024² web-friendly PNG via `sharp`
 |---|---|---|
 | Title background | `public/art/title-keyart-1024.png` | Bioluminescent colony blooming across a black petri dish, cyan filaments with amber/violet accents, dark center for title text, lens vignette. Style prefix: premium dark scientific macro, deep-sea bioluminescence, microscope view, no text. |
 
+### Chimera specimen portraits
+
+Script: `scripts/generate-chimera-art.mjs` (`--force` to regenerate, or pass a breed key for one). Output `public/art/chimera/<breed>.png`, 384² (recompressed via `sharp`). Microscope-specimen style matching the deep-lab look; shown in notebook breed entries. One per breed: bloom_mass, glass_antibody, needle_swarm, static_lattice, folded_anchor, quill_bloom, vitric_anchor, mire_lattice. Chimera concepts live in `src/content/chimeras.ts`.
+
 ## Audio (ElevenLabs — `eleven_text_to_sound_v2`)
 
 Script: `scripts/generate-audio-assets.mjs` (`--force` to regenerate, `--dry-run` to preview).

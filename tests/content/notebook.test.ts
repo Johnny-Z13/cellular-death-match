@@ -115,6 +115,23 @@ describe('notebook catalogue content', () => {
   });
 });
 
+describe('chimera reframe', () => {
+  it('gives every breed a chimera splice + portrait surfaced in the notebook view', () => {
+    const view = notebookViewForProgression(revealAllDiscoveryProgression(createDiscoveryProgression()));
+    const breedEntries = view.entries.filter((e) => e.category === 'lifeform' && e.unlock.breedId);
+    expect(breedEntries.length).toBeGreaterThan(0);
+    for (const entry of breedEntries) {
+      expect(entry.chimeraSplice).toMatch(/ × /); // "Real × Fantastical"
+      expect(entry.chimeraPortrait).toContain('/art/chimera/');
+      expect(entry.displayNotes.length).toBeGreaterThan(20);
+    }
+    // Starter (non-breed) lifeforms carry no chimera data.
+    const starter = view.entries.find((e) => e.id === 'lifeform_swarmlet');
+    expect(starter?.chimeraSplice).toBeNull();
+    expect(starter?.chimeraPortrait).toBeNull();
+  });
+});
+
 describe('notebook atlas (progression map)', () => {
   it('shows every entry as a locked-or-discovered node, grouped by category', () => {
     const atlas = atlasViewForProgression(createDiscoveryProgression());
