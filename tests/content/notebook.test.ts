@@ -3,6 +3,7 @@ import { DISCOVERY_NOTES } from '../../src/content/catalysis';
 import {
   NOTEBOOK_ENTRIES,
   notebookViewForProgression,
+  atlasViewForProgression,
   type NotebookCategory,
 } from '../../src/content/notebook';
 import {
@@ -111,5 +112,34 @@ describe('notebook catalogue content', () => {
     expect(entryIds).toContain('catalyst_recipe_lattice_bloom');
     expect(entryIds).toContain('event_recipe_spore_comet');
     expect(entryIds).toContain('catalyst_recipe_velvet_prison');
+  });
+});
+
+describe('notebook atlas (progression map)', () => {
+  it('shows every entry as a locked-or-discovered node, grouped by category', () => {
+    const atlas = atlasViewForProgression(createDiscoveryProgression());
+
+    expect(atlas.totalCount).toBe(NOTEBOOK_ENTRIES.length);
+    // Starters are discovered; the rest are locked but still visible (teasers).
+    expect(atlas.discoveredCount).toBe(3);
+    const allNodes = atlas.groups.flatMap((g) => g.nodes);
+    expect(allNodes).toHaveLength(NOTEBOOK_ENTRIES.length);
+    expect(allNodes.some((n) => n.state === 'locked')).toBe(true);
+    // Locked nodes hide their title but keep a hint to drive discovery.
+    const locked = allNodes.filter((n) => n.state === 'locked');
+    expect(locked.every((n) => n.title === 'Undiscovered' && n.hint.length > 0)).toBe(true);
+    // Group tallies are internally consistent.
+    for (const group of atlas.groups) {
+      expect(group.nodes.length).toBe(group.total);
+      expect(group.nodes.filter((n) => n.state === 'discovered').length).toBe(group.discovered);
+    }
+  });
+
+  it('reveals all atlas nodes in reveal-all mode with identity colours on lifeforms', () => {
+    const atlas = atlasViewForProgression(revealAllDiscoveryProgression(createDiscoveryProgression()));
+    expect(atlas.discoveredCount).toBe(atlas.totalCount);
+    const lifeforms = atlas.groups.find((g) => g.key === 'lifeform');
+    expect(lifeforms?.nodes.every((n) => n.state === 'discovered')).toBe(true);
+    expect(lifeforms?.nodes.every((n) => Array.isArray(n.color))).toBe(true);
   });
 });

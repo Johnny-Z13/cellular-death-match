@@ -127,6 +127,88 @@ export function notebookViewForProgression(
   };
 }
 
+// ---- Atlas: the full progression map (discovered + still-locked) -----------
+
+export type AtlasNodeState = 'discovered' | 'locked';
+
+export interface AtlasNode {
+  id: string;
+  state: AtlasNodeState;
+  title: string;        // real title when discovered; teaser when locked
+  hint: string;         // how to reach it (always shown to drive discovery)
+  caution: CautionLevel;
+  color: [number, number, number] | null; // identity tint for lifeform nodes
+}
+
+export interface AtlasGroup {
+  key: NotebookCategory;
+  label: string;
+  discovered: number;
+  total: number;
+  nodes: AtlasNode[];
+}
+
+export interface AtlasView {
+  discoveredCount: number;
+  totalCount: number;
+  groups: AtlasGroup[];
+}
+
+const ATLAS_GROUP_LABELS: Record<NotebookCategory, string> = {
+  lifeform: 'Lifeforms',
+  catalyst: 'Catalysts',
+  event: 'Lab Events',
+  lab_note: 'Field Notes',
+};
+
+const ATLAS_GROUP_ORDER: readonly NotebookCategory[] = ['lifeform', 'catalyst', 'event', 'lab_note'];
+
+function atlasColorFor(entry: NotebookEntry): [number, number, number] | null {
+  if (entry.category !== 'lifeform') return null;
+  if (entry.unlock.breedId) return BREED_DEFS[entry.unlock.breedId].tint;
+  const id = entry.id.replace(/^lifeform_/, '') as LifeformIdentityId;
+  return LIFEFORM_IDENTITIES[id]?.colors.primary ?? null;
+}
+
+export function atlasViewForProgression(progression: DiscoveryProgressionState): AtlasView {
+  const discoveredBreeds = new Set(progression.discoveredBreedIds);
+  const discoveredNotes = new Set(progression.discoveredNoteIds);
+
+  const groups: AtlasGroup[] = ATLAS_GROUP_ORDER.map((key) => ({
+    key,
+    label: ATLAS_GROUP_LABELS[key],
+    discovered: 0,
+    total: 0,
+    nodes: [],
+  }));
+  const groupByKey = new Map(groups.map((g) => [g.key, g]));
+
+  let discoveredCount = 0;
+  for (const entry of NOTEBOOK_ENTRIES) {
+    const discovered = progression.revealAll
+      || entry.unlock.starter === true
+      || Boolean(entry.unlock.breedId && discoveredBreeds.has(entry.unlock.breedId))
+      || Boolean(entry.unlock.noteId && discoveredNotes.has(entry.unlock.noteId));
+    const group = groupByKey.get(entry.category);
+    if (!group) continue;
+    group.total += 1;
+    if (discovered) {
+      group.discovered += 1;
+      discoveredCount += 1;
+    }
+    group.nodes.push({
+      id: entry.id,
+      state: discovered ? 'discovered' : 'locked',
+      title: discovered ? entry.title : 'Undiscovered',
+      hint: entry.clue,
+      caution: entry.caution,
+      color: discovered ? atlasColorFor(entry) : null,
+    });
+  }
+
+  return { discoveredCount, totalCount: NOTEBOOK_ENTRIES.length, groups };
+}
+
 function lifeformEntry(id: LifeformIdentityId): NotebookEntry {
   const identity = LIFEFORM_IDENTITIES[id];
   return {

@@ -2047,6 +2047,156 @@ canvas {
   }
 }
 
+/* ---- Notebook tabs + Atlas page ---------------------------------------- */
+.notebook-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.notebook-tab-button {
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: 1px solid var(--hairline);
+  border-radius: 8px 8px 0 0;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: color 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.notebook-tab-button:hover {
+  color: var(--ink-dim);
+}
+
+.notebook-tab-button.is-active {
+  color: var(--bio);
+  border-color: var(--hairline);
+  border-bottom-color: transparent;
+  background: rgba(91, 233, 214, 0.06);
+}
+
+/* Pages share the grid row; only the active one shows. */
+.notebook-page {
+  display: none;
+}
+
+.notebook-page.is-active {
+  display: grid;
+}
+
+.notebook-atlas {
+  min-height: 0;
+  overflow: auto;
+  align-content: start;
+  gap: 18px;
+  padding-right: 2px;
+}
+
+.atlas-group {
+  display: grid;
+  gap: 10px;
+}
+
+.atlas-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 6px;
+}
+
+.atlas-group-head strong {
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+}
+
+.atlas-group-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--bio);
+  font-variant-numeric: tabular-nums;
+}
+
+.atlas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.atlas-node {
+  --node-color: var(--bio);
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 11px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 11px;
+  background: rgba(16, 20, 23, 0.55);
+  min-height: 64px;
+  box-sizing: border-box;
+}
+
+.atlas-node-dot {
+  width: 12px;
+  height: 12px;
+  margin-top: 3px;
+  border-radius: 50%;
+  background: var(--node-color);
+  box-shadow: 0 0 12px var(--node-color);
+}
+
+.atlas-node-text {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.atlas-node-text strong {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.atlas-node-text small {
+  font-family: var(--font-serif);
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--ink-dim);
+}
+
+.atlas-node-discovered {
+  border-color: color-mix(in srgb, var(--node-color) 45%, transparent);
+  box-shadow: inset 3px 0 0 var(--node-color);
+}
+
+/* Locked nodes are teased silhouettes — present but inert, to pull the player
+   toward "if I keep researching I'll get there". */
+.atlas-node-locked {
+  filter: grayscale(0.7);
+  opacity: 0.62;
+  border-style: dashed;
+}
+
+.atlas-node-locked .atlas-node-dot {
+  background: #3a4347;
+  box-shadow: none;
+}
+
+.atlas-node-locked .atlas-node-text strong {
+  color: var(--ink-faint);
+  letter-spacing: 0.2em;
+}
+
 /* ---- Upgrade pick ------------------------------------------------------ */
 .pick-choices {
   display: grid;

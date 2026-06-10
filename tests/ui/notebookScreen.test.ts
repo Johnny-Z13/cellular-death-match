@@ -54,6 +54,18 @@ describe('discoverer notebook UI wiring', () => {
     expect(screensSource).toContain('entry.displayRecipe');
   });
 
+  it('adds a tabbed atlas page that maps discovered + locked progression', () => {
+    expect(html).toContain('id="notebook-tab-log"');
+    expect(html).toContain('id="notebook-tab-atlas"');
+    expect(html).toContain('id="notebook-atlas"');
+    expect(screensSource).toContain('updateAtlas(view: AtlasView): void;');
+    expect(screensSource).toContain("function setNotebookTab(tab: 'log' | 'atlas')");
+    expect(screensSource).toContain('atlas-node-${node.state}');
+    expect(mainSource).toContain('atlasViewForProgression');
+    expect(css).toContain('.atlas-node-locked');
+    expect(css).toContain('.notebook-tab-button.is-active');
+  });
+
   it('wires notebook rendering to discovery progression changes in main', () => {
     expect(mainSource).toContain('notebookViewForProgression');
     expect(mainSource).toContain('screens.onNotebookOpen(() => {');

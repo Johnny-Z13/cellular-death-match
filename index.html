@@ -203,7 +203,12 @@
               </div>
               <button id="notebook-close" class="notebook-close" type="button" aria-label="Close notebook">Close</button>
             </header>
-            <div id="notebook-list" class="notebook-list"></div>
+            <div class="notebook-tabs" role="tablist">
+              <button id="notebook-tab-log" class="notebook-tab-button is-active" type="button" role="tab" aria-selected="true">Log</button>
+              <button id="notebook-tab-atlas" class="notebook-tab-button" type="button" role="tab" aria-selected="false">Atlas</button>
+            </div>
+            <div id="notebook-list" class="notebook-list notebook-page is-active"></div>
+            <div id="notebook-atlas" class="notebook-atlas notebook-page"></div>
           </div>
         </section>
       </div>

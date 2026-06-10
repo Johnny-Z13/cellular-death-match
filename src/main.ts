@@ -6,7 +6,7 @@ import { createScreens, type ToolId } from './ui/screens';
 import { getUpgradeDef } from './content/upgrades';
 import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/enemies';
 import { BREED_DEFS, DISCOVERY_NOTES, type BreedId } from './content/catalysis';
-import { notebookViewForProgression } from './content/notebook';
+import { notebookViewForProgression, atlasViewForProgression } from './content/notebook';
 import { createEcologyAudio } from './audio/ecologyAudio';
 import { createUiAudio, DROP_SOUND_FOR_TOOL } from './audio/uiAudio';
 import { createFx } from './ui/fx';
@@ -701,6 +701,7 @@ function applyOverlayState(): void {
 
 function refreshNotebook(): void {
   screens.updateNotebook(notebookViewForProgression(discoveryProgression));
+  screens.updateAtlas(atlasViewForProgression(discoveryProgression));
 }
 
 function openNotebook(): void {

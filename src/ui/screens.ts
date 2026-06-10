@@ -2,7 +2,7 @@ import type { AgitationState, ToolState } from '../game/arena';
 import type { ResearchBriefLine } from '../game/researchBrief';
 import type { UpgradeDef } from '../content/upgrades';
 import type { EnemyArchetype } from '../content/enemies';
-import type { NotebookView } from '../content/notebook';
+import type { NotebookView, AtlasView } from '../content/notebook';
 import {
   LIFEFORM_IDENTITIES,
   type LifeformIdentityId,
@@ -77,6 +77,7 @@ export interface Screens {
   updateHud(info: HudInfo): void;
   setPickResearchBrief(lines: readonly ResearchBriefLine[]): void;
   updateNotebook(view: NotebookView): void;
+  updateAtlas(view: AtlasView): void;
   setPickChoices(choices: PickChoice[], onPick: (id: string) => void): void;
   updateEnd(info: EndInfo): void;
   onTitleStart(handler: () => void): void;
@@ -114,6 +115,9 @@ export function createScreens(): Screens {
   const notebookClose = get('notebook-close') as HTMLButtonElement;
   const notebookProgress = get('notebook-progress');
   const notebookList = get('notebook-list');
+  const notebookAtlas = get('notebook-atlas');
+  const notebookTabLog = get('notebook-tab-log') as HTMLButtonElement;
+  const notebookTabAtlas = get('notebook-tab-atlas') as HTMLButtonElement;
   const pickResearchBrief = get('pick-research-brief');
   const pickChoices  = get('pick-choices');
   const endTitle     = get('end-title');
@@ -243,6 +247,18 @@ export function createScreens(): Screens {
     setMobileDrawer(mobileDrawer === 'log' ? 'none' : 'log');
   });
   setMobileDrawer('none');
+
+  function setNotebookTab(tab: 'log' | 'atlas'): void {
+    const atlas = tab === 'atlas';
+    notebookTabLog.classList.toggle('is-active', !atlas);
+    notebookTabAtlas.classList.toggle('is-active', atlas);
+    notebookTabLog.setAttribute('aria-selected', String(!atlas));
+    notebookTabAtlas.setAttribute('aria-selected', String(atlas));
+    notebookList.classList.toggle('is-active', !atlas);
+    notebookAtlas.classList.toggle('is-active', atlas);
+  }
+  notebookTabLog.addEventListener('click', () => setNotebookTab('log'));
+  notebookTabAtlas.addEventListener('click', () => setNotebookTab('atlas'));
 
   return {
     show(name) {
@@ -490,6 +506,42 @@ export function createScreens(): Screens {
         copy.append(header, meta, discoveredAt, body, clue);
         card.append(marker, copy);
         notebookList.append(card);
+      }
+    },
+    updateAtlas(view) {
+      notebookAtlas.replaceChildren();
+      for (const group of view.groups) {
+        const section = document.createElement('section');
+        section.className = 'atlas-group';
+        const head = document.createElement('div');
+        head.className = 'atlas-group-head';
+        const label = document.createElement('strong');
+        label.textContent = group.label;
+        const count = document.createElement('span');
+        count.className = 'atlas-group-count';
+        count.textContent = `${group.discovered} / ${group.total}`;
+        head.append(label, count);
+
+        const grid = document.createElement('div');
+        grid.className = 'atlas-grid';
+        for (const node of group.nodes) {
+          const tile = document.createElement('div');
+          tile.className = `atlas-node atlas-node-${node.state} atlas-node-${node.caution}`;
+          if (node.color) tile.style.setProperty('--node-color', rgb(node.color));
+          const dot = document.createElement('span');
+          dot.className = 'atlas-node-dot';
+          const text = document.createElement('div');
+          text.className = 'atlas-node-text';
+          const title = document.createElement('strong');
+          title.textContent = node.state === 'discovered' ? node.title : '? ? ?';
+          const hint = document.createElement('small');
+          hint.textContent = node.hint;
+          text.append(title, hint);
+          tile.append(dot, text);
+          grid.append(tile);
+        }
+        section.append(head, grid);
+        notebookAtlas.append(section);
       }
     },
     setPickChoices(choices, onPick) {
