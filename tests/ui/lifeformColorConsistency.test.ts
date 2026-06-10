@@ -15,11 +15,10 @@ describe('lifeform color consistency', () => {
   it('sets lifeform rack swatches from archetype and rare identity colors', () => {
     expect(screensSource).toContain("button.style.setProperty('--life-color', rgb(option.color));");
     expect(screensSource).toContain("item.style.setProperty('--life-color', rgb(identity.colors.primary));");
-    // Swatches render as a bloom of the identity color so the rack icon reads
-    // like the same organism that blooms in the dish (matching the renderer's
-    // lightened-core glow), not a flat paint chip.
-    expect(screensSource).toContain('swatch.style.background = bloomGradient(option.color);');
-    expect(screensSource).toContain('itemSwatch.style.background = bloomGradient(identity.colors.primary);');
+    // Swatches are built by makeSwatch from the identity color so the rack icon
+    // reads like the same organism that blooms in the dish, not a flat chip.
+    expect(screensSource).toContain('makeSwatch(\'\', option.color,');
+    expect(screensSource).toContain('makeSwatch(`life-swatch-${identity.renderStyle}`, identity.colors.primary,');
   });
 
   it('builds the swatch bloom from the identity color with a lightened core', () => {
@@ -28,5 +27,14 @@ describe('lifeform color consistency', () => {
     expect(screensSource).toContain('function bloomGradient(color: [number, number, number]): string {');
     expect(screensSource).toContain('radial-gradient(circle at 42% 38%');
     expect(screensSource).toContain('${rgb(color)} 58%');
+    // makeSwatch stamps the bloom onto the swatch and tracks it for unlock.
+    expect(screensSource).toContain('swatch.dataset.lifeColor = bloomGradient(color)');
+    expect(screensSource).toContain('swatch.style.background = bloomGradient(color)');
+  });
+
+  it('overlays a live cellular-automata canvas on each swatch tinted to its color', () => {
+    expect(screensSource).toContain("import { createIconCells } from './iconCells'");
+    expect(screensSource).toContain('iconCells.register(cv, color, seed)');
+    expect(screensSource).toContain("cv.className = 'life-swatch-cells'");
   });
 });

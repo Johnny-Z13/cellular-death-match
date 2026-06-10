@@ -393,6 +393,11 @@ canvas {
   animation: none !important;
 }
 
+/* Hide the living cells on locked specimens so they read as inert. */
+.life-panel .life-item.locked-discovery .life-swatch-cells {
+  display: none;
+}
+
 .tool-button:hover,
 .tool-button.selected,
 .tool-button[aria-selected="true"] {
@@ -1071,11 +1076,25 @@ canvas {
   background: rgba(17, 20, 22, 0.84);
 }
 
+/* Live cellular-automata canvas sitting on top of the swatch bloom. */
+.life-swatch-cells {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  image-rendering: pixelated;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
 .life-swatch {
+  position: relative;
   justify-self: center;
   width: 20px;
   height: 20px;
   border-radius: 50%;
+  overflow: hidden;
   /* A living micro-colony: a glow halo in the identity color plus an organic
      blob that wobbles on the spot like a tiny cellular automaton. */
   box-shadow: 0 0 10px 1px color-mix(in srgb, var(--life-color) 60%, transparent);

@@ -7,6 +7,7 @@ import {
   LIFEFORM_IDENTITIES,
   type LifeformIdentityId,
 } from '../content/lifeformIdentity';
+import { createIconCells } from './iconCells';
 
 type ScreenName = 'title' | 'pick' | 'end' | 'hud' | 'notebook';
 export type ToolId = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' | 'paste';
@@ -150,6 +151,24 @@ export function createScreens(): Screens {
   let eggSelectHandler: ((archetype: EnemyArchetype) => void) | null = null;
   let lifeformSelectHandler: ((id: string) => void) | null = null;
   const optionByArchetype = new Map<EnemyArchetype, EggOption>();
+  const iconCells = createIconCells();
+
+  // A lifeform swatch is the colour bloom (halo + locked-gray fallback) with a
+  // tiny live cellular-automata canvas on top, so the icon reads as a living
+  // specimen in the organism's colour.
+  function makeSwatch(extraClass: string, color: [number, number, number], seed: number): HTMLSpanElement {
+    const swatch = document.createElement('span');
+    swatch.className = extraClass ? `life-swatch ${extraClass}` : 'life-swatch';
+    swatch.dataset.lifeColor = bloomGradient(color);
+    swatch.style.background = bloomGradient(color);
+    const cv = document.createElement('canvas');
+    cv.className = 'life-swatch-cells';
+    cv.width = 22;
+    cv.height = 22;
+    swatch.append(cv);
+    iconCells.register(cv, color, seed);
+    return swatch;
+  }
 
   const elFor: Record<ScreenName, HTMLElement> = {
     title: screenTitle,
@@ -309,6 +328,7 @@ export function createScreens(): Screens {
       endEpochButton.addEventListener('click', handler);
     },
     setEggOptions(options) {
+      iconCells.reset();
       optionByArchetype.clear();
       lifeButtons.clear();
       eggOptions.replaceChildren();
@@ -325,10 +345,7 @@ export function createScreens(): Screens {
         button.setAttribute('aria-selected', 'false');
         button.style.setProperty('--life-color', rgb(option.color));
 
-        const swatch = document.createElement('span');
-        swatch.className = 'life-swatch';
-        swatch.dataset.lifeColor = bloomGradient(option.color);
-        swatch.style.background = bloomGradient(option.color);
+        const swatch = makeSwatch('', option.color, hashId(option.archetype));
         const copy = document.createElement('span');
         const label = document.createElement('strong');
         label.dataset.unlockedText = option.name;
@@ -353,10 +370,7 @@ export function createScreens(): Screens {
         item.dataset.lifeformId = id;
         item.setAttribute('aria-selected', 'false');
         item.style.setProperty('--life-color', rgb(identity.colors.primary));
-        const itemSwatch = document.createElement('span');
-        itemSwatch.className = `life-swatch life-swatch-${identity.renderStyle}`;
-        itemSwatch.dataset.lifeColor = bloomGradient(identity.colors.primary);
-        itemSwatch.style.background = bloomGradient(identity.colors.primary);
+        const itemSwatch = makeSwatch(`life-swatch-${identity.renderStyle}`, identity.colors.primary, hashId(id));
         const itemText = document.createElement('span');
         const itemName = document.createElement('strong');
         itemName.dataset.unlockedText = identity.name;
@@ -547,6 +561,17 @@ function rgb(color: [number, number, number]): string {
   return `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
 }
 
+// Stable per-lifeform seed so each icon's cellular jiggle differs but is
+// deterministic across renders.
+function hashId(id: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
 // A swatch bloom that mirrors how the cell actually renders in the dish: a
 // lightened luminous core fading to the true identity color, so the rack icon
 // and the cultured colony read as the same organism. `lighten` matches the
@@ -643,7 +668,12 @@ function setUnknownState(button: HTMLButtonElement, locked: boolean, label: stri
     button.setAttribute('aria-label', label);
     if (icon) {
       icon.classList.add('unknown-icon');
-      icon.textContent = '?';
+      // Life swatches carry a live CA <canvas> child, so never overwrite their
+      // textContent (it would destroy the canvas); they show gray via CSS. Only
+      // the tool/egg glyph icons get the '?'.
+      if (!icon.classList.contains('life-swatch')) {
+        icon.textContent = '?';
+      }
       // Clear the identity color so the CSS gray specimen styling wins; the
       // inline background would otherwise override it and leave it colorful.
       if (icon.dataset.lifeColor) {
@@ -664,7 +694,8 @@ function setUnknownState(button: HTMLButtonElement, locked: boolean, label: stri
   else button.removeAttribute('aria-label');
   if (icon) {
     icon.classList.remove('unknown-icon');
-    icon.textContent = '';
+    // Don't clear life-swatch text — it would remove the live CA canvas child.
+    if (!icon.classList.contains('life-swatch')) icon.textContent = '';
     // Restore the identity color now that it's discovered.
     if (icon.dataset.lifeColor) icon.style.background = icon.dataset.lifeColor;
   }
