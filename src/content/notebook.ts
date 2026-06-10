@@ -28,8 +28,6 @@ export interface NotebookEntry {
 export interface NotebookViewEntry extends NotebookEntry {
   discovered: boolean;
   displayTitle: string;
-  displayBody: string;
-  displayClue: string;
   displayNotes: string;
   displayRecipe: string;
   discoveredAtLabel: string;
@@ -116,11 +114,9 @@ export function notebookViewForProgression(
       ...entry,
       discovered,
       displayTitle: entry.title,
-      displayBody: entry.body,
-      displayClue: entry.clue,
       displayNotes: `Notes: ${entry.body}`,
       displayRecipe: recipeLabelFor(entry.category, entry.clue),
-      discoveredAtLabel: `Discovery discovered on ${formatDiscoveryDate(record?.discoveredAt ?? viewedAt)}`,
+      discoveredAtLabel: `Discovered on ${formatDiscoveryDate(record?.discoveredAt ?? viewedAt)}`,
       isFresh: record?.fresh === true,
     }];
   });
@@ -209,9 +205,7 @@ function clueForNote(noteId: DiscoveryNoteId, category: NotebookCategory): strin
 }
 
 function recipeLabelFor(category: NotebookCategory, clue: string): string {
-  if (category === 'lifeform') return `Recipe: ${clue}`;
-  if (category === 'lab_note') return `Evidence: ${clue}`;
-  return `Recipe: ${clue}`;
+  return category === 'lab_note' ? `Evidence: ${clue}` : `Recipe: ${clue}`;
 }
 
 function formatDiscoveryDate(isoDate: string): string {

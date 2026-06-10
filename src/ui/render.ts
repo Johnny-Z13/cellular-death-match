@@ -195,6 +195,20 @@ function cellRadiusPx(vol: number, sx: number, sy: number): number {
   return gridR * (sx + sy) * 0.5;
 }
 
+// The accent pass runs per cell per frame; cache rgb() strings so the hot path
+// doesn't allocate. The palette is small, so the cache stays tiny.
+const rgbCssCache = new Map<number, string>();
+
+function rgbCss(r: number, g: number, b: number): string {
+  const key = (r << 16) | (g << 8) | b;
+  let css = rgbCssCache.get(key);
+  if (!css) {
+    css = `rgb(${r}, ${g}, ${b})`;
+    rgbCssCache.set(key, css);
+  }
+  return css;
+}
+
 // Draw a style-specific accent + glow at each living cell's center. Breeds get
 // a stronger glow so newly bred cultures pop out of the dish immediately.
 function drawLifeformAccents(
@@ -254,8 +268,8 @@ function drawAccentForStyle(
   frame: number,
   reduceMotion: boolean,
 ): void {
-  const accentCss = `rgb(${accent[0]}, ${accent[1]}, ${accent[2]})`;
-  const coreCss = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+  const accentCss = rgbCss(accent[0], accent[1], accent[2]);
+  const coreCss = rgbCss(color[0]!, color[1]!, color[2]!);
   const pulse = reduceMotion ? 0 : Math.sin(frame / 18) * 0.5 + 0.5;
 
   ctx.shadowBlur = glowing ? r * 1.4 : 0;

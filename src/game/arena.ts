@@ -1237,39 +1237,64 @@ function evaluateBreedDiscoveries(
   }
 }
 
-function bloomMassPairSource(
+// Find a cell matching A and a cell matching B that sit adjacent inside a
+// shared nutrient/bloom/conduit field. `pick` chooses which of the pair
+// becomes the discovery's spawn source.
+function nutrientPairSource(
   state: SimState,
   archetypes: Map<CellId, EnemySpawn>,
   effects: ToolEffect[],
+  matchA: (spawn: EnemySpawn) => boolean,
+  matchB: (spawn: EnemySpawn) => boolean,
+  maxPairDistance: number,
+  pick: (a: Cell, b: Cell) => Cell,
 ): Cell | null {
   const nutrientFields = effects.filter((effect) =>
     effect.type === 'nutrient' || effect.type === 'bloom' || effect.type === 'conduit',
   );
   if (nutrientFields.length === 0) return null;
 
-  const swarmlets: Cell[] = [];
-  const splitters: Cell[] = [];
+  const aCells: Cell[] = [];
+  const bCells: Cell[] = [];
   for (const [id, spawn] of archetypes) {
+    const wantsA = matchA(spawn);
+    const wantsB = matchB(spawn);
+    if (!wantsA && !wantsB) continue;
     const cell = state.cells.get(id);
     if (!cell || cell.vol <= 0) continue;
-    if (spawn.archetype === 'swarmlet') swarmlets.push(cell);
-    if (spawn.archetype === 'splitter') splitters.push(cell);
+    if (wantsA) aCells.push(cell);
+    if (wantsB) bCells.push(cell);
   }
 
-  for (const swarmlet of swarmlets) {
-    for (const splitter of splitters) {
-      const pairDistance = distanceBetween(state, swarmlet.center, splitter.center);
-      if (pairDistance > 18) continue;
-      const inNutrient = nutrientFields.some((effect) => {
-        const swarmletDistance = distanceBetween(state, swarmlet.center, effect.pos);
-        const splitterDistance = distanceBetween(state, splitter.center, effect.pos);
-        return swarmletDistance <= effect.radius + 6 && splitterDistance <= effect.radius + 6;
-      });
-      if (inNutrient) return splitter;
+  for (const a of aCells) {
+    for (const b of bCells) {
+      if (a === b) continue;
+      if (distanceBetween(state, a.center, b.center) > maxPairDistance) continue;
+      const inNutrient = nutrientFields.some((effect) =>
+        distanceBetween(state, a.center, effect.pos) <= effect.radius + 6
+        && distanceBetween(state, b.center, effect.pos) <= effect.radius + 6,
+      );
+      if (inNutrient) return pick(a, b);
     }
   }
 
   return null;
+}
+
+function bloomMassPairSource(
+  state: SimState,
+  archetypes: Map<CellId, EnemySpawn>,
+  effects: ToolEffect[],
+): Cell | null {
+  return nutrientPairSource(
+    state,
+    archetypes,
+    effects,
+    (spawn) => spawn.archetype === 'swarmlet',
+    (spawn) => spawn.archetype === 'splitter',
+    18,
+    (_, splitter) => splitter,
+  );
 }
 
 // Find a breed-A cell and a breed-B cell that sit adjacent inside a shared
@@ -1281,33 +1306,15 @@ function hybridPairSource(
   breedA: BreedId,
   breedB: BreedId,
 ): Cell | null {
-  const nutrientFields = effects.filter((effect) =>
-    effect.type === 'nutrient' || effect.type === 'bloom' || effect.type === 'conduit',
+  return nutrientPairSource(
+    state,
+    archetypes,
+    effects,
+    (spawn) => spawn.breedId === breedA,
+    (spawn) => spawn.breedId === breedB,
+    16,
+    (a, b) => (a.vol >= b.vol ? a : b),
   );
-  if (nutrientFields.length === 0) return null;
-
-  const aCells: Cell[] = [];
-  const bCells: Cell[] = [];
-  for (const [id, spawn] of archetypes) {
-    if (spawn.breedId !== breedA && spawn.breedId !== breedB) continue;
-    const cell = state.cells.get(id);
-    if (!cell || cell.vol <= 0) continue;
-    if (spawn.breedId === breedA) aCells.push(cell);
-    else bCells.push(cell);
-  }
-
-  for (const a of aCells) {
-    for (const b of bCells) {
-      if (distanceBetween(state, a.center, b.center) > 16) continue;
-      const inNutrient = nutrientFields.some((effect) =>
-        distanceBetween(state, a.center, effect.pos) <= effect.radius + 6
-        && distanceBetween(state, b.center, effect.pos) <= effect.radius + 6,
-      );
-      if (inNutrient) return a.vol >= b.vol ? a : b;
-    }
-  }
-
-  return null;
 }
 
 function needleSwarmSource(

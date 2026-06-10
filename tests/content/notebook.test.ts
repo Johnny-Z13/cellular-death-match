@@ -45,7 +45,7 @@ describe('notebook catalogue content', () => {
     expect(view.entries.map((entry) => entry.title).sort()).toEqual(['Bruiser', 'Splitter', 'Swarmlet']);
     expect(view.entries.every((entry) => entry.discovered)).toBe(true);
     expect(view.entries.every((entry) => entry.displayTitle.startsWith('Unknown') === false)).toBe(true);
-    expect(view.entries[0]?.discoveredAtLabel).toBe('Discovery discovered on Jun 7, 2026');
+    expect(view.entries[0]?.discoveredAtLabel).toBe('Discovered on Jun 7, 2026');
   });
 
   it('reveals breed and catalyst entries from progression discoveries with notes and recipes', () => {
@@ -60,7 +60,7 @@ describe('notebook catalogue content', () => {
     expect(view.entries.find((entry) => entry.id === 'lifeform_bloom_mass')?.discovered).toBe(true);
     expect(catalyst?.discovered).toBe(true);
     expect(catalyst?.isFresh).toBe(true);
-    expect(catalyst?.discoveredAtLabel).toBe('Discovery discovered on Jun 7, 2026');
+    expect(catalyst?.discoveredAtLabel).toBe('Discovered on Jun 7, 2026');
     expect(catalyst?.displayNotes).toContain(DISCOVERY_NOTES.recipe_nutrient_conduit.body);
     expect(catalyst?.displayRecipe).toContain('Water plus Nutrient');
     expect(view.entries.find((entry) => entry.id === 'lab_note_water_carries')?.discovered).toBe(true);
