@@ -47,7 +47,8 @@ const layoutMaybe = document.querySelector('.layout');
 if (!(layoutMaybe instanceof HTMLElement)) throw new Error('Missing .layout');
 const layout: HTMLElement = layoutMaybe;
 const commitDebug = document.getElementById('commit-debug');
-if (commitDebug) commitDebug.textContent = `commit: ${__COMMIT_MESSAGE__}`;
+// Build identity readout — lets us confirm a deploy is the latest at a glance.
+if (commitDebug) commitDebug.textContent = `build · ${__COMMIT_MESSAGE__}`;
 
 const run = createRun(Date.now() & 0xffffffff);
 const screens = createScreens();
