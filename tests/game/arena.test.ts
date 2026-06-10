@@ -392,6 +392,27 @@ describe('arena ecosystem mode', () => {
     expect(arena.applyTool('paste', [40, 40])).toBe(true);
   });
 
+  it('sparks a catalytic reaction when a reagent is dropped onto a paste trail', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 41,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3, waterCharges: 2 },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 80, speed: 8, engulfMultiplier: 4 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    // Draw a paste (nutrient) trail, then drop Water on it → bloom reaction.
+    arena.applyTool('paste', [40, 40]);
+    arena.applyTool('paste', [46, 40]);
+    const reactionsBefore = arena.getEcology().reactions;
+    expect(arena.applyTool('water', [43, 40])).toBe(true);
+    expect(arena.getEcology().reactions).toBeGreaterThan(reactionsBefore);
+    // A bloom reaction effect should now exist among the tool effects.
+    expect(arena.getToolEffects().some((e) => e.type === 'bloom')).toBe(true);
+  });
+
   it('paste trail gently feeds a colony along the drawn line', () => {
     const arena = createArena({
       LX: 80,

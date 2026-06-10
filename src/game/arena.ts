@@ -642,6 +642,18 @@ export function createArena(opts: CreateArenaOpts): Arena {
         toolEffects.push(reaction);
         addDishEventForEffect(reaction, addDishEvent);
       }
+      // Dropping a reagent onto a drawn nutrient trail sparks a reaction along
+      // the painted line — steer life with paste, then catalyse the path.
+      const trailReaction = reactionFor(effect, trailEffects, state.rng.randInt(1_000_000));
+      if (trailReaction) {
+        reactionCount += 1;
+        pulseToolEffect(state, trailReaction, archetypes);
+        toolEffects.push(trailReaction);
+        addDishEventForEffect(trailReaction, addDishEvent);
+        discoverNote('paste_catalysed', 'Lab note: reagents react along a nutrient paste trail.');
+        pushSignal('Paste trail catalysed by reagent.');
+        while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
+      }
       if (catalyticReaction) {
         reactionCount += 1;
         pulseToolEffect(state, catalyticReaction.effect, archetypes);

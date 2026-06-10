@@ -78,7 +78,7 @@ const EVENT_NOTES: readonly DiscoveryNoteId[] = [
   'recipe_folding_fault',
 ];
 
-const LAB_NOTES: readonly DiscoveryNoteId[] = ['water_carries', 'water_dilutes'];
+const LAB_NOTES: readonly DiscoveryNoteId[] = ['water_carries', 'water_dilutes', 'paste_catalysed'];
 
 export const NOTEBOOK_ENTRIES: readonly NotebookEntry[] = [
   ...STARTER_LIFEFORMS.map(lifeformEntry),
@@ -170,6 +170,7 @@ function noteEntry(category: Exclude<NotebookCategory, 'lifeform'>, noteId: Disc
 function clueForNote(noteId: DiscoveryNoteId, category: NotebookCategory): string {
   if (noteId === 'water_carries') return 'Try Water on Nutrient fields near budding cultures.';
   if (noteId === 'water_dilutes') return 'Try Water after Acid or Toxin if the dish is getting too sharp.';
+  if (noteId === 'paste_catalysed') return 'Draw a Paste trail, then drop Acid or Water onto the line.';
   if (noteId === 'recipe_nutrient_conduit') return 'Water plus Nutrient carries food through budding cultures.';
   if (noteId === 'recipe_bitter_bloom') return 'Feed a budding culture, then sour it with Toxin.';
   if (noteId === 'recipe_pressure_bloom') return 'Put Toxin pressure into a resistant fed culture.';

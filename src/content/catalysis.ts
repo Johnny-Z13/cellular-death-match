@@ -55,7 +55,8 @@ export type DiscoveryNoteId =
   | `recipe_${ReactionRecipeId}`
   | `breed_${BreedId}`
   | 'water_carries'
-  | 'water_dilutes';
+  | 'water_dilutes'
+  | 'paste_catalysed';
 
 export interface ReactionContext {
   traits: readonly TraitId[];
@@ -590,6 +591,12 @@ export const DISCOVERY_NOTES: Record<DiscoveryNoteId, DiscoveryNote> = {
     title: 'Water Dilutes',
     body: 'Water can soften dangerous fields, but it also spreads the mess.',
     caution: 'stable',
+  },
+  paste_catalysed: {
+    id: 'paste_catalysed',
+    title: 'Catalysed Trail',
+    body: 'Drop a reagent onto a drawn nutrient-paste trail and the reaction runs along the painted line — steer life, then spark the path.',
+    caution: 'volatile',
   },
 };
 
