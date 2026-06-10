@@ -37,7 +37,7 @@ Once you have discovered two different breeds, you can **cross-breed** them: bri
 - **Vitric Anchor** — Glass Antibody × Folded Anchor: a brittle, toxin-proof fortress.
 - **Mire Lattice** — Static Lattice × Bloom Mass: a self-copying pattern mass.
 
-Every lifeform draws with a distinct silhouette in the dish (needle, crystal, glitter, anchor, cycle, or cellular) plus a soft glow, so new and bred cultures are recognizable at a glance.
+Every culture's pixels glow in their own color: the dish renders with a bloom pass (blurred glow under the crisp Potts pixels plus a faint additive layer), so colonies read as living, bioluminescent masses rather than flat blobs.
 
 ## Run Locally
 

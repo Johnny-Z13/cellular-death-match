@@ -10,7 +10,7 @@ Cellular Death Match is now a mobile-first Petri dish ecosystem game. The origin
 - Selectable egg strains.
 - Five reagent tools (nutrient, toxin, water, salt, acid) plus agitation.
 - Catalytic reactions, rare breed discovery, and cross-breeding of hybrids.
-- Distinct per-lifeform dish rendering (`renderStyle` silhouettes) with a glow pass.
+- Pixel-bloom dish rendering: every culture's own pixels glow in their color.
 - Mobile portrait layout with bottom tool controls.
 - Desktop layout with side panels, lifeform guide, inspector, and dish log.
 
@@ -62,7 +62,7 @@ Hybrid breeds (cross-bred from two discovered base breeds under a nutrient field
 
 ## Rendering
 
-`src/ui/render.ts` draws the cellular Potts grid as a fast per-pixel base layer, then runs an O(cells) accent pass: each living non-control cell gets a silhouette matching its lifeform `renderStyle` (needle/crystal/glitter/anchor/cycle/cellular) scaled by volume, with a soft glow. Breeds glow more strongly; the glow (shadowBlur) is budgeted per frame to stay smooth on mobile. Dish-event markers and bullets draw on top.
+`src/ui/render.ts` draws the cellular Potts grid in three GPU-friendly layers: a blurred glow underlay (the same grid image, smoothed and blur-filtered, so light bleeds past each culture's edges), the crisp per-pixel layer on top (empty pixels are transparent so the halo shows through), and a faint additive pass for inner luminosity that keeps hues true. Every culture glows in its own palette color automatically. `renderStyle` still drives the lifeform swatches in the side panels. Dish-event markers, the dish flash, and bullets draw on top.
 
 ## Cross-Breeding
 
