@@ -117,9 +117,12 @@ debug.updateDiscoveries(discoveryDebugInfo());
 refreshNotebook();
 
 screens.onNotebookOpen(() => {
+  uiAudio.unlock();
+  uiAudio.play('ui_select');
   openNotebook();
 });
 screens.onNotebookClose(() => {
+  uiAudio.play('ui_tap');
   closeNotebook();
 });
 screens.onFullscreenOpen(() => {
@@ -650,7 +653,18 @@ function openNotebook(): void {
 
 function closeNotebook(): void {
   overlayState.notebookOpen = false;
-  screens.hide('notebook');
+  // Let the tablet slide out before hiding; reduced-motion closes instantly.
+  const notebookScreen = document.getElementById('screen-notebook');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (notebookScreen && !reduceMotion && notebookScreen.classList.contains('visible')) {
+    notebookScreen.classList.add('notebook-screen-closing');
+    window.setTimeout(() => {
+      notebookScreen.classList.remove('notebook-screen-closing');
+      screens.hide('notebook');
+    }, 210);
+  } else {
+    screens.hide('notebook');
+  }
   applyOverlayState();
 }
 

@@ -17,6 +17,29 @@ describe('discoverer notebook UI wiring', () => {
     expect(html).toContain('Discoverer');
   });
 
+  it('docks the notebook tab onto the dish stage and styles it as a lab tablet', () => {
+    // The tab lives inside .dish-stage so it tracks the dish at every
+    // breakpoint; the notebook itself is a sliding tablet device.
+    const stageStart = html.indexOf('class="dish-stage"');
+    const stageEnd = html.indexOf('</div>', html.indexOf('id="notebook-button"'));
+    expect(stageStart).toBeGreaterThan(-1);
+    expect(html.indexOf('id="notebook-button"')).toBeGreaterThan(stageStart);
+    expect(html.indexOf('id="notebook-button"')).toBeLessThan(stageEnd);
+    expect(html).toContain('class="tablet-sensor-strip"');
+    expect(html).toContain('class="tablet-screen"');
+    expect(css).toContain('.notebook-button.notebook-tab {');
+    expect(css).toContain('writing-mode: vertical-rl');
+    expect(css).toContain('@keyframes tablet-slide-in');
+    expect(css).toContain('@keyframes tablet-slide-out');
+    expect(mainSource).toContain("notebookScreen.classList.add('notebook-screen-closing')");
+  });
+
+  it('keeps notebook cards a constant footprint regardless of discovery count', () => {
+    expect(css).toContain('grid-template-columns: repeat(auto-fill, minmax(260px, 1fr))');
+    expect(css).toContain('grid-auto-rows: 196px');
+    expect(css).not.toContain('repeat(auto-fit, minmax(260px, 1fr))');
+  });
+
   it('exposes notebook screen controls through createScreens', () => {
     expect(screensSource).toContain("type ScreenName = 'title' | 'pick' | 'end' | 'hud' | 'notebook';");
     expect(screensSource).toContain('updateNotebook(view: NotebookView): void;');
