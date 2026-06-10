@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-10T19:31:40.645Z",
+  "generatedAt": "2026-06-10T22:48:44.217Z",
   "assets": [
     {
       "id": "hatch",
@@ -69,12 +69,42 @@
     {
       "id": "experiment_ready",
       "file": "/audio/generated/experiment_ready.mp3",
-      "skipped": false
+      "skipped": true
     },
     {
       "id": "ambience_loop",
       "file": "/audio/generated/ambience_loop.mp3",
       "skipped": true
+    },
+    {
+      "id": "drop_nutrient",
+      "file": "/audio/generated/drop_nutrient.mp3",
+      "skipped": false
+    },
+    {
+      "id": "drop_water",
+      "file": "/audio/generated/drop_water.mp3",
+      "skipped": false
+    },
+    {
+      "id": "drop_toxin",
+      "file": "/audio/generated/drop_toxin.mp3",
+      "skipped": false
+    },
+    {
+      "id": "drop_salt",
+      "file": "/audio/generated/drop_salt.mp3",
+      "skipped": false
+    },
+    {
+      "id": "drop_acid",
+      "file": "/audio/generated/drop_acid.mp3",
+      "skipped": false
+    },
+    {
+      "id": "drop_paste",
+      "file": "/audio/generated/drop_paste.mp3",
+      "skipped": false
     }
   ]
 }

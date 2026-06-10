@@ -22,6 +22,8 @@ export interface DebugPanel {
   onClearDiscoveries(handler: () => void): void;
   onRevealDiscoveries(handler: () => void): void;
   onPresentationToggle(handler: () => void): void;
+  onReverbToggle(handler: (enabled: boolean) => void): void;
+  setReverbEnabled(enabled: boolean): void;
 }
 
 export function createDebugPanel(): DebugPanel {
@@ -49,6 +51,7 @@ export function createDebugPanel(): DebugPanel {
   const eTvol      = get('dbg-e-tvol');
   const eCenter    = get('dbg-e-center');
   const persistDiscoveries = getInput('dbg-persist-discoveries');
+  const reverbToggle = getInput('dbg-reverb');
   const clearDiscoveries = get('dbg-clear-discoveries');
   const revealDiscoveries = get('dbg-reveal-discoveries');
   const presentationMode = get('dbg-fullscreen-mode');
@@ -104,6 +107,12 @@ export function createDebugPanel(): DebugPanel {
     },
     onPresentationToggle(handler) {
       presentationMode.addEventListener('click', handler);
+    },
+    onReverbToggle(handler) {
+      reverbToggle.addEventListener('change', () => handler(reverbToggle.checked));
+    },
+    setReverbEnabled(enabled) {
+      reverbToggle.checked = enabled;
     },
   };
 }

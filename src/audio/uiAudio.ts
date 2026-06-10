@@ -3,7 +3,19 @@
 // toggle and ambience lifecycle stay simple. Generated assets load lazily with
 // a quiet procedural fallback if a file is missing.
 
-export type UiSoundId = 'ui_tap' | 'ui_select' | 'epoch_begin' | 'epoch_win' | 'epoch_fail' | 'experiment_ready';
+export type UiSoundId =
+  | 'ui_tap' | 'ui_select' | 'epoch_begin' | 'epoch_win' | 'epoch_fail' | 'experiment_ready'
+  | 'drop_nutrient' | 'drop_water' | 'drop_toxin' | 'drop_salt' | 'drop_acid' | 'drop_paste';
+
+// Maps a lab tool to its bespoke drop sound (paste uses its own smear voice).
+export const DROP_SOUND_FOR_TOOL: Record<string, UiSoundId> = {
+  nutrient: 'drop_nutrient',
+  water: 'drop_water',
+  toxin: 'drop_toxin',
+  salt: 'drop_salt',
+  acid: 'drop_acid',
+  paste: 'drop_paste',
+};
 
 interface UiSoundDef {
   asset: string;
@@ -18,10 +30,17 @@ const UI_SOUND_DEFS: Record<UiSoundId, UiSoundDef> = {
   epoch_win: { asset: '/audio/generated/epoch_win.mp3', gain: 0.66, cooldownMs: 400 },
   epoch_fail: { asset: '/audio/generated/epoch_fail.mp3', gain: 0.62, cooldownMs: 400 },
   experiment_ready: { asset: '/audio/generated/experiment_ready.mp3', gain: 0.6, cooldownMs: 600 },
+  drop_nutrient: { asset: '/audio/generated/drop_nutrient.mp3', gain: 0.5, cooldownMs: 50 },
+  drop_water: { asset: '/audio/generated/drop_water.mp3', gain: 0.5, cooldownMs: 50 },
+  drop_toxin: { asset: '/audio/generated/drop_toxin.mp3', gain: 0.5, cooldownMs: 50 },
+  drop_salt: { asset: '/audio/generated/drop_salt.mp3', gain: 0.5, cooldownMs: 50 },
+  drop_acid: { asset: '/audio/generated/drop_acid.mp3', gain: 0.52, cooldownMs: 50 },
+  drop_paste: { asset: '/audio/generated/drop_paste.mp3', gain: 0.4, cooldownMs: 90 },
 };
 
 const AMBIENCE_ASSET = '/audio/generated/ambience_loop.mp3';
 const MUTE_KEY = 'cdm.audio.muted';
+const REVERB_KEY = 'cdm.audio.reverb';
 // The generated clip has no loop-friendly head/tail, so a native loop clicks at
 // the seam. We re-trigger it with this much equal-power crossfade overlap so the
 // boundary is masked instead.
@@ -35,6 +54,9 @@ export interface UiAudio {
   isMuted(): boolean;
   setMuted(muted: boolean): void;
   toggleMuted(): boolean;
+  isReverbEnabled(): boolean;
+  setReverbEnabled(enabled: boolean): void;
+  toggleReverb(): boolean;
 }
 
 export function createUiAudio(): UiAudio {
@@ -47,6 +69,8 @@ export function createUiAudio(): UiAudio {
   const ambienceVoices = new Set<AudioBufferSourceNode>();
   let didPreload = false;
   let muted = readMutedPreference();
+  let reverbEnabled = readReverbPreference();
+  let reverbWet: GainNode | null = null;
   const buffers = new Map<UiSoundId, AudioBuffer>();
   const lastAt = new Map<UiSoundId, number>();
 
@@ -59,11 +83,33 @@ export function createUiAudio(): UiAudio {
     master = ctx.createGain();
     master.gain.value = muted ? 0 : 1;
     master.connect(ctx.destination);
+    // Parallel reverb send to glue the mix: master also feeds a convolver with a
+    // procedurally-built impulse response, mixed back in via reverbWet.
+    const convolver = ctx.createConvolver();
+    convolver.buffer = makeImpulseResponse(ctx, 1.8, 2.4);
+    reverbWet = ctx.createGain();
+    reverbWet.gain.value = reverbEnabled ? 0.22 : 0;
+    master.connect(convolver).connect(reverbWet).connect(ctx.destination);
     ambienceGain = ctx.createGain();
     ambienceGain.gain.value = 0.0001;
     ambienceGain.connect(master);
     void preload(ctx);
     return ctx;
+  }
+
+  // A decaying noise burst makes a convincing, cheap room/hall impulse without
+  // shipping an IR file. seconds = tail length, decay = how fast it fades.
+  function makeImpulseResponse(c: AudioContext, seconds: number, decay: number): AudioBuffer {
+    const rate = c.sampleRate;
+    const len = Math.floor(rate * seconds);
+    const ir = c.createBuffer(2, len, rate);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = ir.getChannelData(ch);
+      for (let i = 0; i < len; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+      }
+    }
+    return ir;
   }
 
   async function preload(c: AudioContext): Promise<void> {
@@ -207,7 +253,41 @@ export function createUiAudio(): UiAudio {
       this.setMuted(!muted);
       return muted;
     },
+    isReverbEnabled() {
+      return reverbEnabled;
+    },
+    setReverbEnabled(next) {
+      reverbEnabled = next;
+      writeReverbPreference(next);
+      if (reverbWet && ctx) {
+        const now = ctx.currentTime;
+        reverbWet.gain.cancelScheduledValues(now);
+        reverbWet.gain.setValueAtTime(reverbWet.gain.value, now);
+        reverbWet.gain.linearRampToValueAtTime(next ? 0.22 : 0, now + 0.25);
+      }
+    },
+    toggleReverb() {
+      this.setReverbEnabled(!reverbEnabled);
+      return reverbEnabled;
+    },
   };
+}
+
+function readReverbPreference(): boolean {
+  try {
+    // Default ON — the glue is subtle and helps the whole mix sit together.
+    return window.localStorage.getItem(REVERB_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
+
+function writeReverbPreference(enabled: boolean): void {
+  try {
+    window.localStorage.setItem(REVERB_KEY, enabled ? '1' : '0');
+  } catch {
+    // Ignore storage failures.
+  }
 }
 
 function readMutedPreference(): boolean {

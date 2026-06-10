@@ -32,4 +32,12 @@ Output: `public/audio/generated/`. Note: ElevenLabs requires `duration_seconds >
 | epoch_win | epoch_win.mp3 | epoch success stinger |
 | epoch_fail | epoch_fail.mp3 | epoch collapse stinger |
 | experiment_ready | experiment_ready.mp3 | objective-complete ready chime |
-| ambience_loop | ambience_loop.mp3 | looping lab ambience bed |
+| ambience_loop | ambience_loop.mp3 | looping lab ambience bed (crossfaded in uiAudio) |
+| drop_nutrient | drop_nutrient.mp3 | nutrient drop (wet squelch) |
+| drop_water | drop_water.mp3 | water drop (splish) |
+| drop_toxin | drop_toxin.mp3 | toxin drop (hiss) |
+| drop_salt | drop_salt.mp3 | salt drop (scatter) |
+| drop_acid | drop_acid.mp3 | acid drop (sizzle) |
+| drop_paste | drop_paste.mp3 | paste smear (drawn trail) |
+
+A subtle global convolution reverb (procedural impulse, default on) glues the mix; toggle via the dish inspector's "reverb glue".

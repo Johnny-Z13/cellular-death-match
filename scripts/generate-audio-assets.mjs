@@ -96,6 +96,43 @@ const ASSETS = [
     duration_seconds: 12,
     text: 'Seamless looping deep laboratory ambience, low warm humming drone, faint liquid bubbling and distant glassy resonances, calm hypnotic underwater bioluminescent mood, no music, no melody, evolving texture suitable for looping.',
   },
+  // Bespoke per-reagent drop sounds — each tool gets its own voice.
+  {
+    id: 'drop_nutrient',
+    file: 'drop_nutrient.mp3',
+    duration_seconds: 0.6,
+    text: 'Soft wet nutrient gel squelch dropped into a petri dish, gentle organic plop with a faint feeding shimmer, clean lab one-shot, no music.',
+  },
+  {
+    id: 'drop_water',
+    file: 'drop_water.mp3',
+    duration_seconds: 0.6,
+    text: 'A single clean water droplet splish into a shallow glass dish, bright liquid plip with a small spreading ripple, premium and short, no music.',
+  },
+  {
+    id: 'drop_toxin',
+    file: 'drop_toxin.mp3',
+    duration_seconds: 0.6,
+    text: 'A venomous toxin reagent hiss as it hits living tissue, dark bubbling fizz with an uneasy edge, short sci-fi lab one-shot, no music.',
+  },
+  {
+    id: 'drop_salt',
+    file: 'drop_salt.mp3',
+    duration_seconds: 0.6,
+    text: 'Dry salt crystals scattered onto a glass slide, brittle granular tick-and-rattle, crisp and short laboratory sound, no music.',
+  },
+  {
+    id: 'drop_acid',
+    file: 'drop_acid.mp3',
+    duration_seconds: 0.7,
+    text: 'A corrosive acid sizzle eating into tissue, sharp effervescent burn-fizz, punchy but not painful, short sci-fi lab one-shot, no music.',
+  },
+  {
+    id: 'drop_paste',
+    file: 'drop_paste.mp3',
+    duration_seconds: 0.6,
+    text: 'A thick nutrient paste smear drawn across glass, soft sticky spread with a wet trailing tail, gentle organic lab one-shot, no music.',
+  },
 ];
 
 const args = new Set(process.argv.slice(2));

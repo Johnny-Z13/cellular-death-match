@@ -8,7 +8,7 @@ import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/e
 import { BREED_DEFS, DISCOVERY_NOTES, type BreedId } from './content/catalysis';
 import { notebookViewForProgression } from './content/notebook';
 import { createEcologyAudio } from './audio/ecologyAudio';
-import { createUiAudio } from './audio/uiAudio';
+import { createUiAudio, DROP_SOUND_FOR_TOOL } from './audio/uiAudio';
 import { createFx } from './ui/fx';
 import { soundEventForDishSignal, type SoundEventId } from './audio/soundDesign';
 import { hash2 } from './game/hash';
@@ -125,6 +125,11 @@ debug.onRevealDiscoveries(() => {
 debug.onPresentationToggle(() => {
   setPresentationMode(!overlayState.presentationMode);
 });
+debug.onReverbToggle((enabled) => {
+  uiAudio.unlock();
+  uiAudio.setReverbEnabled(enabled);
+});
+debug.setReverbEnabled(uiAudio.isReverbEnabled());
 debug.updateDiscoveries(discoveryDebugInfo());
 refreshNotebook();
 
@@ -205,7 +210,7 @@ canvas.addEventListener('pointerdown', (event) => {
     pasteCursor = pos;
     canvas.setPointerCapture(event.pointerId);
     if (arena.applyTool('paste', pos)) {
-      uiAudio.play('ui_tap');
+      uiAudio.play('drop_paste');
       screens.updateToolCharges(arena.getToolStates());
     }
     return;
@@ -214,7 +219,8 @@ canvas.addEventListener('pointerdown', (event) => {
     eggArchetype: selectedEggArchetype,
     eggBreedId: selectedBreedId ?? undefined,
   })) {
-    uiAudio.play('ui_tap');
+    // Egg keeps the soft UI tap; reagents get their own bespoke drop sound.
+    uiAudio.play(DROP_SOUND_FOR_TOOL[selectedTool] ?? 'ui_tap');
     screens.updateToolCharges(arena.getToolStates());
   }
 });
@@ -225,11 +231,11 @@ canvas.addEventListener('pointermove', (event) => {
   pasteCursor = pos;
   if (arena.applyTool('paste', pos)) {
     screens.updateToolCharges(arena.getToolStates());
-    // Soft tick while drawing, rate-limited so a drag doesn't machine-gun it.
+    // Soft smear while drawing, rate-limited so a drag doesn't machine-gun it.
     const now = performance.now();
-    if (now - lastPasteSoundAt > 110) {
+    if (now - lastPasteSoundAt > 150) {
       lastPasteSoundAt = now;
-      uiAudio.play('ui_tap');
+      uiAudio.play('drop_paste');
     }
   }
 });
