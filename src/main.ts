@@ -39,6 +39,10 @@ const LX = 160;
 const LY = 160;
 const PLAYER_ID = 1;
 const EPOCH_TICKS = 60 * 55;
+const PASTE_CURSOR_RADIUS = 9; // grid units; mirrors TOOL_TUNING.paste.radius for the draw cursor glow
+const reduceMotionPref = typeof window !== 'undefined'
+  && typeof window.matchMedia === 'function'
+  && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const canvasMaybe = document.getElementById('game') as HTMLCanvasElement | null;
 if (!canvasMaybe) throw new Error('Missing #game canvas');
@@ -189,6 +193,7 @@ canvas.addEventListener('animationend', () => {
 });
 let pasteStrokeActive = false;
 let lastPasteSoundAt = 0;
+let pasteCursor: [number, number] | null = null;
 
 canvas.addEventListener('pointerdown', (event) => {
   if (!arena || run.getState().phase !== 'arena') return;
@@ -197,6 +202,7 @@ canvas.addEventListener('pointerdown', (event) => {
   if (selectedTool === 'paste') {
     // Begin a drawn stroke; subsequent pointermove events lay the trail.
     pasteStrokeActive = true;
+    pasteCursor = pos;
     canvas.setPointerCapture(event.pointerId);
     if (arena.applyTool('paste', pos)) {
       uiAudio.play('ui_tap');
@@ -216,6 +222,7 @@ canvas.addEventListener('pointerdown', (event) => {
 canvas.addEventListener('pointermove', (event) => {
   if (!pasteStrokeActive || !arena || run.getState().phase !== 'arena') return;
   const pos = canvasEventToGridPos(event);
+  pasteCursor = pos;
   if (arena.applyTool('paste', pos)) {
     screens.updateToolCharges(arena.getToolStates());
     // Soft tick while drawing, rate-limited so a drag doesn't machine-gun it.
@@ -230,6 +237,7 @@ canvas.addEventListener('pointermove', (event) => {
 function endPasteStroke(event?: PointerEvent): void {
   if (!pasteStrokeActive) return;
   pasteStrokeActive = false;
+  pasteCursor = null;
   arena?.endPasteStroke();
   if (event) {
     try { canvas.releasePointerCapture(event.pointerId); } catch { /* already released */ }
@@ -963,6 +971,30 @@ function renderToolEffects(ar: Arena): void {
         Math.ceil(sy),
       );
     }
+    ctx.restore();
+  }
+
+  // Glowing leading marker at the paste cursor while drawing a trail.
+  if (pasteCursor && !reduceMotionPref) {
+    const cx = (pasteCursor[0] + 0.5) * sx;
+    const cy = (pasteCursor[1] + 0.5) * sy;
+    const pulse = 0.5 + 0.5 * Math.sin(tickCount * 0.25);
+    const baseR = PASTE_CURSOR_RADIUS * ((sx + sy) / 2);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, baseR);
+    grad.addColorStop(0, `rgba(182, 227, 106, ${0.34 + 0.18 * pulse})`);
+    grad.addColorStop(0.6, 'rgba(120, 190, 90, 0.12)');
+    grad.addColorStop(1, 'rgba(120, 190, 90, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, baseR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = `rgba(214, 255, 170, ${0.5 + 0.3 * pulse})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, baseR * (0.5 + 0.16 * pulse), 0, Math.PI * 2);
+    ctx.stroke();
     ctx.restore();
   }
 }
