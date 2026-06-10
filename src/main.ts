@@ -48,7 +48,13 @@ if (!(layoutMaybe instanceof HTMLElement)) throw new Error('Missing .layout');
 const layout: HTMLElement = layoutMaybe;
 const commitDebug = document.getElementById('commit-debug');
 // Build identity readout — lets us confirm a deploy is the latest at a glance.
-if (commitDebug) commitDebug.textContent = `build · ${__COMMIT_MESSAGE__}`;
+// Cap to a gist; the full subject can be long.
+if (commitDebug) {
+  const gist = __COMMIT_MESSAGE__.length > 50
+    ? `${__COMMIT_MESSAGE__.slice(0, 50).trimEnd()}…`
+    : __COMMIT_MESSAGE__;
+  commitDebug.textContent = `build · ${gist}`;
+}
 
 const run = createRun(Date.now() & 0xffffffff);
 const screens = createScreens();
