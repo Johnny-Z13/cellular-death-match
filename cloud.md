@@ -80,4 +80,4 @@ Open the printed `Network:` URL on an iPhone on the same Wi-Fi. Check:
 - Run state resets on reload. Discovery progress can persist via localStorage when the player enables the persistence toggle in the dish inspector; no server-side saves.
 - No analytics or telemetry.
 - No service worker or offline cache.
-- No automated cloud CI is configured yet (tests run locally only).
+- GitHub Actions runs tests and the build on every push to `main`; Railway deploys independently of CI status (no deploy gate).

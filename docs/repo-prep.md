@@ -25,6 +25,8 @@ git status --short
 - `src/`
 - `tests/`
 - `docs/current-state.md`
+- `LICENSE`
+- `.github/workflows/ci.yml`
 
 ## Files And Folders That Should Not Be Committed
 
@@ -58,5 +60,5 @@ Mobile:
 
 - The app is static and client-only.
 - No secrets are required.
-- No license file has been chosen yet.
-- No CI workflow has been configured yet.
+- Licensed under MIT (see `LICENSE`).
+- CI runs `npm test` and `npm run build` on pushes and PRs to `main` via GitHub Actions.
