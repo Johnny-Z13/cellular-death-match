@@ -17,6 +17,7 @@ import {
   ARENA_TIMING,
   ECOSYSTEM_LIMITS,
   OBJECTIVE_TUNING,
+  PASTE_TUNING,
   TOOL_EFFECT_TUNING,
   TOOL_TUNING,
 } from '../content/ecologyTuning';
@@ -48,10 +49,11 @@ export interface ArenaInput {
 }
 
 export type ArenaStatus = 'running' | 'won' | 'lost';
-export type LabTool = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid';
+export type LabTool = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' | 'paste';
 export type ObjectiveStatus = 'running' | 'satisfied' | 'failed';
 export type ToolEffectType =
-  | Exclude<LabTool, 'egg'>
+  // 'paste' is a tool, not an effect — its stamps are stored as 'nutrient'.
+  | Exclude<LabTool, 'egg' | 'paste'>
   | 'bloom'
   | 'brine'
   | 'lysis'
@@ -75,6 +77,7 @@ export interface Arena {
   getToolEffects(): ToolEffect[];
   getDishEvents(): DishEventMarker[];
   applyTool(tool: LabTool, pos: [number, number], opts?: ApplyToolOpts): boolean;
+  endPasteStroke(): void;
   agitate(): boolean;
   endEpochNow(): ArenaStatus;
   tick(input: ArenaInput): void;
@@ -269,6 +272,12 @@ export function createArena(opts: CreateArenaOpts): Arena {
   let lastEmergencyEggTick = 0;
   let activeCrisis: { id: CrisisId; ttl: number } | null = null;
   const toolEffects: ToolEffect[] = [];
+  // Paste trail: small nutrient-type stamps drawn along a drag. Kept separate
+  // from toolEffects so a long trail never evicts catalysis effects (and so it
+  // isn't mistaken for a placed reagent during reaction/accident checks).
+  const trailEffects: ToolEffect[] = [];
+  let lastTrailStamp: [number, number] | null = null;
+  let pasteDrawnSinceCharge = 0;
   const dishEvents: DishEventMarker[] = [];
   let nextDishEventId = 1;
   const toolStates: Record<LabTool, ToolState> = toolLoadoutFor(opts.player);
@@ -465,6 +474,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         water: { ...toolStates.water },
         salt: { ...toolStates.salt },
         acid: { ...toolStates.acid },
+        paste: { ...toolStates.paste },
       };
     },
     getAgitationState(): AgitationState {
@@ -475,10 +485,15 @@ export function createArena(opts: CreateArenaOpts): Arena {
       };
     },
     getToolEffects(): ToolEffect[] {
-      return toolEffects.map((effect) => ({
+      return [...toolEffects, ...trailEffects].map((effect) => ({
         ...effect,
         pos: [...effect.pos],
       }));
+    },
+    endPasteStroke(): void {
+      // Called on pointerup so the next drawn stroke starts fresh (and pays its
+      // opening charge) rather than continuing the previous line.
+      lastTrailStamp = null;
     },
     getDishEvents(): DishEventMarker[] {
       return dishEvents.map((event) => ({
@@ -522,6 +537,38 @@ export function createArena(opts: CreateArenaOpts): Arena {
         }
         while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
         birthCount += 1;
+        return true;
+      }
+
+      if (tool === 'paste') {
+        // Drawing a trail: stamp a small nutrient field, but only once the
+        // pointer has travelled stampSpacing from the last stamp, so a drag
+        // lays an even line. A charge is spent per unitsPerCharge of path.
+        if (lastTrailStamp) {
+          const dx = pos[0] - lastTrailStamp[0];
+          const dy = pos[1] - lastTrailStamp[1];
+          const moved = Math.hypot(dx, dy);
+          if (moved < PASTE_TUNING.stampSpacing) return false;
+          pasteDrawnSinceCharge += moved;
+          if (pasteDrawnSinceCharge >= PASTE_TUNING.unitsPerCharge) {
+            pasteDrawnSinceCharge = 0;
+            toolState.charges -= 1;
+          }
+        } else {
+          // First stamp of a stroke always costs the opening charge.
+          if (toolState.charges <= 0) return false;
+        }
+        lastTrailStamp = [pos[0], pos[1]];
+        const maxTtl = TOOL_TUNING.paste.ttl;
+        trailEffects.push({
+          type: 'nutrient',
+          pos: [pos[0], pos[1]],
+          radius: TOOL_TUNING.paste.radius,
+          ttl: maxTtl,
+          maxTtl,
+          seed: state.rng.randInt(1_000_000),
+        });
+        while (trailEffects.length > PASTE_TUNING.maxTrailStamps) trailEffects.shift();
         return true;
       }
 
@@ -678,6 +725,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
 
       if (mode === 'ecosystem') {
         applyToolEffects(state, toolEffects, archetypes);
+        // Trail stamps pull + feed cells exactly like nutrient drops, so a drawn
+        // line becomes a gentle gradient colonies drift along.
+        applyToolEffects(state, trailEffects, archetypes);
         if (agitationTicksRemaining > 0) {
           applyAgitation(state, agitationTicksRemaining / AGITATION_DURATION_TICKS);
           agitationTicksRemaining -= 1;
@@ -699,6 +749,10 @@ export function createArena(opts: CreateArenaOpts): Arena {
         for (const effect of toolEffects) effect.ttl -= 1;
         for (let i = toolEffects.length - 1; i >= 0; i--) {
           if (toolEffects[i]!.ttl <= 0) toolEffects.splice(i, 1);
+        }
+        for (const effect of trailEffects) effect.ttl -= 1;
+        for (let i = trailEffects.length - 1; i >= 0; i--) {
+          if (trailEffects[i]!.ttl <= 0) trailEffects.splice(i, 1);
         }
         if (tickNo % MUTATION_INTERVAL_TICKS === 0) {
           const mutation = mutateEcology(state, archetypes, pushSignal);
@@ -790,6 +844,7 @@ function toolLoadoutFor(player: PlayerConfig): Record<LabTool, ToolState> {
   const waterCharges = player.waterCharges ?? TOOL_TUNING.water.charges;
   const saltCharges = player.saltCharges ?? TOOL_TUNING.salt.charges;
   const acidCharges = player.acidCharges ?? TOOL_TUNING.acid.charges;
+  const pasteCharges = player.pasteCharges ?? TOOL_TUNING.paste.charges;
   return {
     egg: { charges: eggCharges, maxCharges: eggCharges },
     nutrient: { charges: nutrientCharges, maxCharges: nutrientCharges },
@@ -797,11 +852,12 @@ function toolLoadoutFor(player: PlayerConfig): Record<LabTool, ToolState> {
     water: { charges: waterCharges, maxCharges: waterCharges },
     salt: { charges: saltCharges, maxCharges: saltCharges },
     acid: { charges: acidCharges, maxCharges: acidCharges },
+    paste: { charges: pasteCharges, maxCharges: pasteCharges },
   };
 }
 
 function toolEffectFor(
-  tool: Exclude<LabTool, 'egg'>,
+  tool: Exclude<LabTool, 'egg' | 'paste'>,
   pos: [number, number],
   player: PlayerConfig,
   seed: number,
@@ -1103,7 +1159,7 @@ function derivedEffect(
 }
 
 function randomAccidentEffect(state: SimState): ToolEffect {
-  const accidentTools: Array<Exclude<LabTool, 'egg' | 'nutrient' | 'toxin'>> = ['water', 'salt', 'acid'];
+  const accidentTools: Array<Exclude<LabTool, 'egg' | 'nutrient' | 'toxin' | 'paste'>> = ['water', 'salt', 'acid'];
   const tool = accidentTools[state.rng.randInt(accidentTools.length)]!;
   return toolEffectFor(
     tool,

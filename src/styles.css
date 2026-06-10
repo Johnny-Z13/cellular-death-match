@@ -473,6 +473,15 @@ canvas {
   background: radial-gradient(circle at 35% 32%, #ffffbf, #d4d65e 48%, #66aa60 100%);
 }
 
+/* Paste: nutrient-family hue with a diagonal brush-stroke cue to read as a
+   drawable trail rather than a single drop. */
+.paste-icon {
+  color: #b6e36a;
+  background:
+    linear-gradient(48deg, transparent 38%, rgba(255, 255, 200, 0.85) 44%, rgba(120, 190, 90, 0.85) 52%, transparent 58%),
+    radial-gradient(circle at 35% 32%, #f3ffce, #b6e36a 50%, #4f8f44 100%);
+}
+
 .toxin-icon {
   color: #b084eb;
   background: radial-gradient(circle at 35% 32%, #f1e5ff, #b084eb 48%, #68429e 100%);

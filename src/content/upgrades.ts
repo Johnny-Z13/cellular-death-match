@@ -11,6 +11,7 @@ export interface PlayerConfig {
   waterCharges?: number;
   saltCharges?: number;
   acidCharges?: number;
+  pasteCharges?: number;
   nutrientRadius?: number;
   toxinRadius?: number;
   waterRadius?: number;

@@ -13,7 +13,7 @@ describe('early unlock cadence', () => {
       noteIds: ['breed_bloom_mass', 'recipe_incubator_shock'],
     });
 
-    expect(progression.unlockedTools).toEqual(['egg', 'nutrient', 'toxin', 'water', 'salt']);
+    expect(progression.unlockedTools).toEqual(['egg', 'nutrient', 'toxin', 'water', 'salt', 'paste']);
 
     const first = applyCompletionResearchGrant(progression);
     expect(first?.grant.id).toBe('grant_salt_water_crystal');

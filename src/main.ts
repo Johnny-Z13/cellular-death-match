@@ -174,15 +174,54 @@ canvas.focus();
 canvas.addEventListener('animationend', () => {
   canvas.classList.remove('dish-shake');
 });
+let pasteStrokeActive = false;
+let lastPasteSoundAt = 0;
+
 canvas.addEventListener('pointerdown', (event) => {
   if (!arena || run.getState().phase !== 'arena') return;
   ecologyAudio.unlock();
   const pos = canvasEventToGridPos(event);
+  if (selectedTool === 'paste') {
+    // Begin a drawn stroke; subsequent pointermove events lay the trail.
+    pasteStrokeActive = true;
+    canvas.setPointerCapture(event.pointerId);
+    if (arena.applyTool('paste', pos)) {
+      uiAudio.play('ui_tap');
+      screens.updateToolCharges(arena.getToolStates());
+    }
+    return;
+  }
   if (arena.applyTool(selectedTool, pos, { eggArchetype: selectedEggArchetype })) {
     uiAudio.play('ui_tap');
     screens.updateToolCharges(arena.getToolStates());
   }
 });
+
+canvas.addEventListener('pointermove', (event) => {
+  if (!pasteStrokeActive || !arena || run.getState().phase !== 'arena') return;
+  const pos = canvasEventToGridPos(event);
+  if (arena.applyTool('paste', pos)) {
+    screens.updateToolCharges(arena.getToolStates());
+    // Soft tick while drawing, rate-limited so a drag doesn't machine-gun it.
+    const now = performance.now();
+    if (now - lastPasteSoundAt > 110) {
+      lastPasteSoundAt = now;
+      uiAudio.play('ui_tap');
+    }
+  }
+});
+
+function endPasteStroke(event?: PointerEvent): void {
+  if (!pasteStrokeActive) return;
+  pasteStrokeActive = false;
+  arena?.endPasteStroke();
+  if (event) {
+    try { canvas.releasePointerCapture(event.pointerId); } catch { /* already released */ }
+  }
+}
+
+canvas.addEventListener('pointerup', endPasteStroke);
+canvas.addEventListener('pointercancel', endPasteStroke);
 
 screens.onTitleStart(() => {
   ecologyAudio.unlock();

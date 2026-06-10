@@ -19,7 +19,7 @@ describe('discovery progression', () => {
     const progression = createDiscoveryProgression();
 
     expect(progression.unlockedLifeforms).toEqual(['swarmlet', 'bruiser', 'splitter']);
-    expect(progression.unlockedTools).toEqual(['egg', 'nutrient', 'toxin']);
+    expect(progression.unlockedTools).toEqual(['egg', 'nutrient', 'toxin', 'paste']);
     expect(progression.discoveredBreedIds).toEqual([]);
     expect(progression.discoveredNoteIds).toEqual([]);
     expect(progression.breedDiscoveryRecords).toEqual([]);
@@ -67,7 +67,7 @@ describe('discovery progression', () => {
 
     const cleared = clearDiscoveryProgression(revealed);
     expect(cleared.revealAll).toBe(false);
-    expect(cleared.unlockedTools).toEqual(['egg', 'nutrient', 'toxin']);
+    expect(cleared.unlockedTools).toEqual(['egg', 'nutrient', 'toxin', 'paste']);
     expect(cleared.unlockedLifeforms).toEqual(['swarmlet', 'bruiser', 'splitter']);
   });
 

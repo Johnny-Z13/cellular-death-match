@@ -27,6 +27,15 @@ export const TOOL_TUNING = {
   water: { charges: 6, radius: 28, ttl: 60 * 6 },
   salt: { charges: 4, radius: 18, ttl: 60 * 9 },
   acid: { charges: 3, radius: 17, ttl: 60 * 5 },
+  // Paste draws a trail: each charge buys a length of drawn path. Stamps are
+  // small, long-lived nutrient fields so colonies gently drift along the line.
+  paste: { charges: 3, radius: 9, ttl: 60 * 7 } as const,
+} as const;
+
+export const PASTE_TUNING = {
+  maxTrailStamps: 28,    // own budget, separate from catalysis tool effects
+  stampSpacing: 5,       // grid units between stamps along a drag
+  unitsPerCharge: 64,    // drawn path length one charge buys
 } as const;
 
 export const TOOL_EFFECT_TUNING = {

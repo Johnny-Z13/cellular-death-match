@@ -345,6 +345,55 @@ describe('arena ecosystem mode', () => {
     expect(arena.endEpochNow()).toBe('won');
   });
 
+  it('paste draws a spaced trail of nutrient stamps without evicting catalysis effects', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 21,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 120, speed: 8, engulfMultiplier: 4 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+
+    // First stamp starts the stroke; a too-close move is ignored; a far move stamps.
+    expect(arena.applyTool('paste', [10, 10])).toBe(true);
+    expect(arena.applyTool('paste', [11, 10])).toBe(false); // within stampSpacing
+    expect(arena.applyTool('paste', [18, 10])).toBe(true);
+    expect(arena.applyTool('paste', [26, 10])).toBe(true);
+
+    const trailStamps = arena.getToolEffects().filter((e) => e.type === 'nutrient');
+    expect(trailStamps.length).toBeGreaterThanOrEqual(3);
+
+    // A new stroke starts fresh and pays its opening charge again.
+    arena.endPasteStroke();
+    expect(arena.applyTool('paste', [40, 40])).toBe(true);
+  });
+
+  it('paste trail gently feeds a colony along the drawn line', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 22,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 60, speed: 8, engulfMultiplier: 4 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+    const before = cell.targetVol;
+    // Draw a trail across the colony's position.
+    const cx = Math.round(cell.center[0]);
+    const cy = Math.round(cell.center[1]);
+    for (let i = 0; i < 4; i++) arena.applyTool('paste', [cx + i * 6, cy]);
+    for (let i = 0; i < 30; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+    expect(arena.state.cells.get(2)!.targetVol).toBeGreaterThan(before);
+  });
+
   it('agitation spends a charge and mixes living cell movement for a short pulse', () => {
     const arena = createArena({
       LX: 80,

@@ -67,6 +67,7 @@ Hybrid breeds (cross-bred from two discovered base breeds under a nutrient field
 
 - Egg: places the selected lifeform strain.
 - Nutrient: attracts nearby lifeforms and strongly increases their target volume.
+- Paste: drag on the dish to draw a continuous nutrient trail (a chain of small, long-lived nutrient-type stamps). Colonies gently drift and feed along the painted line, so you can steer them, link clusters, or surround one lifeform with another. Unlocked from the start; one charge buys a length of drawn path. Trail stamps live in their own budget in `arena.ts` so a long line never evicts catalysis effects. Drawing is wired via pointer capture in `main.ts` (`endPasteStroke` resets between strokes).
 - Toxin: pushes nearby lifeforms away, shrinking and eroding matter in its radius.
 - Water, Salt, Acid: research-unlocked reagents that drive further reactions.
 - Agitate: spreads active fields and can fold overlapping reactions into a fault.

@@ -9,7 +9,7 @@ import {
 } from '../content/lifeformIdentity';
 
 type ScreenName = 'title' | 'pick' | 'end' | 'hud' | 'notebook';
-export type ToolId = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid';
+export type ToolId = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' | 'paste';
 
 export interface HudInfo {
   fightIndex: number;          // 0-based; HUD shows fightIndex+1
@@ -569,7 +569,8 @@ function isToolId(tool: string | undefined): tool is ToolId {
     || tool === 'toxin'
     || tool === 'water'
     || tool === 'salt'
-    || tool === 'acid';
+    || tool === 'acid'
+    || tool === 'paste';
 }
 
 function updateToolSummary(
@@ -586,6 +587,7 @@ function updateToolSummary(
     water: 'Water - dilutes pressure, spreads reactions, and pushes cultures outward.',
     salt: 'Salt - slows local movement and dries cultures into brittle patterns.',
     acid: 'Acid - burns tissue quickly and can trigger volatile reactions.',
+    paste: 'Paste - drag to draw a nutrient trail; colonies drift along the line you paint.',
   };
   el.textContent = summaries[tool];
 }
@@ -605,6 +607,7 @@ function updateMobileToolReadout(
     water: 'Water',
     salt: 'Salt',
     acid: 'Acid',
+    paste: 'Paste',
   };
   const summaries: Record<ToolId, string> = {
     egg: `${eggName} seed`,
@@ -613,6 +616,7 @@ function updateMobileToolReadout(
     water: 'dilute and spread',
     salt: 'slow and dry',
     acid: 'burn tissue',
+    paste: 'draw a trail',
   };
   nameEl.textContent = names[tool];
   summaryEl.textContent = summaries[tool];

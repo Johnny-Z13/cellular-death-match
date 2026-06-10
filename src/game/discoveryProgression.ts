@@ -8,7 +8,7 @@ import {
 } from '../content/catalysis';
 import type { DiscoverySaveRecord, DiscoverySaveState } from './discoverySave';
 
-export type ProgressionToolId = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid';
+export type ProgressionToolId = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' | 'paste';
 export type ProgressionLifeformId = EnemyArchetype | BreedId;
 export type DiscoveryRecord<Id extends string> = DiscoverySaveRecord<Id>;
 
@@ -47,7 +47,7 @@ export interface DiscoveryAnnouncement {
   tone: GrantTickerTone;
 }
 
-export const STARTER_PROGRESSION_TOOLS: readonly ProgressionToolId[] = ['egg', 'nutrient', 'toxin'];
+export const STARTER_PROGRESSION_TOOLS: readonly ProgressionToolId[] = ['egg', 'nutrient', 'toxin', 'paste'];
 export const STARTER_PROGRESSION_LIFEFORMS: readonly ProgressionLifeformId[] = [
   'swarmlet',
   'bruiser',
@@ -61,6 +61,7 @@ export const ALL_PROGRESSION_TOOLS: readonly ProgressionToolId[] = [
   'water',
   'salt',
   'acid',
+  'paste',
 ];
 
 export const ALL_PROGRESSION_LIFEFORMS: readonly ProgressionLifeformId[] = [
