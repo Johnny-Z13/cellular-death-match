@@ -22,6 +22,10 @@ const UI_SOUND_DEFS: Record<UiSoundId, UiSoundDef> = {
 
 const AMBIENCE_ASSET = '/audio/generated/ambience_loop.mp3';
 const MUTE_KEY = 'cdm.audio.muted';
+// The generated clip has no loop-friendly head/tail, so a native loop clicks at
+// the seam. We re-trigger it with this much equal-power crossfade overlap so the
+// boundary is masked instead.
+const AMBIENCE_CROSSFADE = 1.4;
 
 export interface UiAudio {
   unlock(): void;
@@ -37,9 +41,10 @@ export function createUiAudio(): UiAudio {
   let ctx: AudioContext | null = null;
   let master: GainNode | null = null;
   let ambienceGain: GainNode | null = null;
-  let ambienceSource: AudioBufferSourceNode | null = null;
   let ambienceBuffer: AudioBuffer | null = null;
   let ambienceWanted = false;
+  let ambienceTimer = 0;
+  const ambienceVoices = new Set<AudioBufferSourceNode>();
   let didPreload = false;
   let muted = readMutedPreference();
   const buffers = new Map<UiSoundId, AudioBuffer>();
@@ -87,17 +92,40 @@ export function createUiAudio(): UiAudio {
   }
 
   function startAmbienceNow(): void {
-    if (!ctx || !ambienceGain || !ambienceBuffer || ambienceSource) return;
-    const src = ctx.createBufferSource();
-    src.buffer = ambienceBuffer;
-    src.loop = true;
-    src.connect(ambienceGain);
-    src.start();
-    ambienceSource = src;
+    if (!ctx || !ambienceGain || !ambienceBuffer || ambienceVoices.size > 0) return;
     const now = ctx.currentTime;
+    // Fade the overall ambience bed up gently.
     ambienceGain.gain.cancelScheduledValues(now);
     ambienceGain.gain.setValueAtTime(Math.max(0.0001, ambienceGain.gain.value), now);
     ambienceGain.gain.linearRampToValueAtTime(0.5, now + 2.5);
+    scheduleAmbienceVoice(now);
+  }
+
+  // Play one pass of the clip with an equal-power fade at both ends, and queue
+  // the next pass to start during this one's tail so the seam never clicks.
+  function scheduleAmbienceVoice(startAt: number): void {
+    if (!ctx || !ambienceGain || !ambienceBuffer) return;
+    const dur = ambienceBuffer.duration;
+    const fade = Math.min(AMBIENCE_CROSSFADE, dur / 2);
+    const src = ctx.createBufferSource();
+    src.buffer = ambienceBuffer;
+    const voiceGain = ctx.createGain();
+    voiceGain.gain.setValueAtTime(0.0001, startAt);
+    voiceGain.gain.linearRampToValueAtTime(1, startAt + fade);
+    voiceGain.gain.setValueAtTime(1, startAt + dur - fade);
+    voiceGain.gain.linearRampToValueAtTime(0.0001, startAt + dur);
+    src.connect(voiceGain).connect(ambienceGain);
+    src.start(startAt);
+    src.stop(startAt + dur + 0.05);
+    ambienceVoices.add(src);
+    src.onended = () => { ambienceVoices.delete(src); };
+
+    // Queue the next pass to overlap this one's tail by `fade`.
+    const nextAt = startAt + dur - fade;
+    const delayMs = Math.max(0, (nextAt - ctx.currentTime - 0.2) * 1000);
+    ambienceTimer = window.setTimeout(() => {
+      if (ambienceWanted && ctx) scheduleAmbienceVoice(ctx.currentTime + 0.2);
+    }, delayMs);
   }
 
   function playProceduralTap(strong: boolean): void {
@@ -149,14 +177,17 @@ export function createUiAudio(): UiAudio {
     },
     stopAmbience() {
       ambienceWanted = false;
-      if (ctx && ambienceGain && ambienceSource) {
+      window.clearTimeout(ambienceTimer);
+      if (ctx && ambienceGain) {
         const now = ctx.currentTime;
         ambienceGain.gain.cancelScheduledValues(now);
         ambienceGain.gain.setValueAtTime(ambienceGain.gain.value, now);
         ambienceGain.gain.linearRampToValueAtTime(0.0001, now + 0.8);
-        const src = ambienceSource;
-        ambienceSource = null;
-        window.setTimeout(() => { try { src.stop(); } catch { /* already stopped */ } }, 900);
+        const voices = [...ambienceVoices];
+        ambienceVoices.clear();
+        window.setTimeout(() => {
+          for (const src of voices) { try { src.stop(); } catch { /* already stopped */ } }
+        }, 900);
       }
     },
     isMuted() {
