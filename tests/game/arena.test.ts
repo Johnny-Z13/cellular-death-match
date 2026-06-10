@@ -1,5 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { createArena } from '../../src/game/arena';
+import { createArena, type Arena } from '../../src/game/arena';
+import { getCell, setCell, updateBoundaryAround } from '../../src/sim/grid';
+import { removePixel } from '../../src/sim/cell';
+
+// Drain every pixel a cell owns, simulating its death mid-epoch.
+function killCell(arena: Arena, id: number): void {
+  const { grid } = arena.state;
+  const cell = arena.state.cells.get(id)!;
+  for (let x = 0; x < grid.LX; x++) {
+    for (let y = 0; y < grid.LY; y++) {
+      if (getCell(grid, x, y) !== id) continue;
+      setCell(grid, x, y, 0);
+      removePixel(cell, x, y, grid.LX, grid.LY, grid.wrap);
+      updateBoundaryAround(grid, x, y);
+    }
+  }
+}
 
 describe('createArena — initial state', () => {
   it('starts with status "running"', () => {
@@ -1361,6 +1377,69 @@ describe('arena ecosystem mode', () => {
 
     expect(arena.getEcology().discoveries.breedIds).toContain('quill_bloom');
     expect(Array.from(arena.archetypes.values()).some((spawn) => spawn.breedId === 'quill_bloom')).toBe(true);
+  });
+
+  it('spawns splitter offspring at the death site, not the dish origin', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 410,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        { archetype: 'splitter' as const, targetVol: 300, speed: 8, engulfMultiplier: 6 },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const splitter = arena.state.cells.get(2)!;
+    const deathPos = [...splitter.center] as [number, number];
+    expect(Math.hypot(deathPos[0], deathPos[1])).toBeGreaterThan(20);
+
+    killCell(arena, 2);
+    expect(splitter.vol).toBe(0);
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+
+    const offspring = [...arena.archetypes.entries()]
+      .filter(([id, spawn]) => id > 2 && spawn.archetype === 'swarmlet')
+      .map(([id]) => arena.state.cells.get(id)!);
+    expect(offspring.length).toBe(2);
+    for (const child of offspring) {
+      const fromDeathSite = Math.hypot(child.center[0] - deathPos[0], child.center[1] - deathPos[1]);
+      const fromOrigin = Math.hypot(child.center[0], child.center[1]);
+      expect(fromDeathSite).toBeLessThanOrEqual(8);
+      expect(fromOrigin).toBeGreaterThan(20);
+    }
+  });
+
+  it('stops targeting the control sample once it is dead', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 411,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        { archetype: 'bruiser' as const, targetVol: 200, speed: 8, engulfMultiplier: 6 },
+        { archetype: 'swarmlet' as const, targetVol: 140, speed: 12, engulfMultiplier: 4 },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const player = arena.state.cells.get(1)!;
+    const bruiser = arena.state.cells.get(2)!;
+    const swarmlet = arena.state.cells.get(3)!;
+
+    killCell(arena, 1);
+    expect(player.vol).toBe(0);
+    // Bruiser sits right next to the corpse; living prey is far to the +x side.
+    player.center = [30, 30];
+    bruiser.center = [34, 30];
+    swarmlet.center = [70, 30];
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+
+    // Intent must point at the living swarmlet (+x), not back at the corpse (-x).
+    expect(bruiser.intent.vec[0]).toBeGreaterThan(0.9);
   });
 
   it('forms a velvet prison when salt and toxin trap gelatinous anchors', () => {

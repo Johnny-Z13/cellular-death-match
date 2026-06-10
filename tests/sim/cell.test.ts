@@ -64,4 +64,16 @@ describe('addPixel / removePixel', () => {
     expect(c.center[0]).toBeCloseTo((LX - 1) / 2, 5);
     expect(c.center[1]).toBeCloseTo(0, 5);
   });
+
+  it('retains the last known center when the cell dies', () => {
+    // A dead cell's center must NOT reset to [0, 0]: game systems read a dead
+    // cell's position (splitter death-spawns, targeting), and a zeroed center
+    // teleports the corpse to the top-left corner of the dish.
+    const c = fresh();
+    addPixel(c, 7, 6, LX, LY, false);
+    removePixel(c, 7, 6, LX, LY, false);
+    expect(c.vol).toBe(0);
+    expect(c.center[0]).toBeCloseTo(7, 5);
+    expect(c.center[1]).toBeCloseTo(6, 5);
+  });
 });

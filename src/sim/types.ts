@@ -3,7 +3,7 @@ export type CellId = number;
 export interface Grid {
   LX: number;
   LY: number;
-  cells: Uint8Array;        // length LX * LY; cells[idx(x, y)] = CellId
+  cells: Uint16Array;       // length LX * LY; cells[idx(x, y)] = CellId
   boundary: Set<number>;    // flat indices of pixels on a cell boundary
   wrap: boolean;
 }

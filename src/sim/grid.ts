@@ -4,7 +4,10 @@ export function createGrid(LX: number, LY: number, wrap: boolean): Grid {
   return {
     LX,
     LY,
-    cells: new Uint8Array(LX * LY),
+    // Uint16: cell ids grow without reuse during an epoch (births, reseeds,
+    // outbreaks). A Uint8Array would wrap id 256 to 0 (empty) and 257 to 1
+    // (the control sample), silently corrupting pixel ownership.
+    cells: new Uint16Array(LX * LY),
     boundary: new Set<number>(),
     wrap,
   };

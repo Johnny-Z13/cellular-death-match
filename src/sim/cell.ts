@@ -44,7 +44,9 @@ function applyContribution(
 
 function recomputeCenter(c: Cell, LX: number, LY: number, wrap: boolean): void {
   if (c.vol <= 0) {
-    c.center = [0, 0];
+    // Keep the last known center. Resetting to [0, 0] teleports the corpse to
+    // the top-left corner, and game systems that read a dead cell's position
+    // (death-spawns, targeting) would drag the whole dish there.
     return;
   }
   if (!wrap) {

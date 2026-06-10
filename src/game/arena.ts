@@ -1645,9 +1645,13 @@ function chooseEcosystemTarget(
   archetypes: Map<CellId, EnemySpawn>,
 ): Cell {
   const { LX, LY } = state.grid;
-  const playerVec = displacementVec(self.center, player.center, LX, LY, state.grid.wrap);
-  const playerDist = Math.hypot(playerVec[0], playerVec[1]);
-  if (playerDist <= PLAYER_THREAT_RANGE) return player;
+  // Only a living control sample is a threat worth reacting to — a dead one
+  // must never be targeted, or cells pile up around the corpse forever.
+  if (player.vol > 0) {
+    const playerVec = displacementVec(self.center, player.center, LX, LY, state.grid.wrap);
+    const playerDist = Math.hypot(playerVec[0], playerVec[1]);
+    if (playerDist <= PLAYER_THREAT_RANGE) return player;
+  }
 
   let best: Cell | null = null;
   let bestScore = Infinity;
