@@ -18,6 +18,7 @@ import {
   type DiscoverySaveState,
 } from './game/discoverySave';
 import {
+  acknowledgeNotebookDiscoveries,
   clearDiscoveryProgression,
   createDiscoveryProgression,
   discoveryAnnouncementsForProgressionChange,
@@ -462,6 +463,8 @@ function saveRuntimeDiscoveryState(): void {
     ...discoverySave,
     discoveredBreedIds: discoveryProgression.discoveredBreedIds,
     discoveredNoteIds: discoveryProgression.discoveredNoteIds,
+    breedDiscoveryRecords: discoveryProgression.breedDiscoveryRecords,
+    noteDiscoveryRecords: discoveryProgression.noteDiscoveryRecords,
     revealAll: discoveryProgression.revealAll,
   });
 }
@@ -549,6 +552,12 @@ function refreshNotebook(): void {
 
 function openNotebook(): void {
   refreshNotebook();
+  const acknowledged = acknowledgeNotebookDiscoveries(discoveryProgression);
+  if (acknowledged !== discoveryProgression) {
+    discoveryProgression = acknowledged;
+    saveRuntimeDiscoveryState();
+    debug.updateDiscoveries(discoveryDebugInfo());
+  }
   overlayState.notebookOpen = true;
   overlayState.menuOpen = false;
   overlayState.debugOpen = false;

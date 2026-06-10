@@ -16,6 +16,8 @@ describe('discovery save', () => {
       persistenceEnabled: false,
       discoveredBreedIds: [],
       discoveredNoteIds: [],
+      breedDiscoveryRecords: [],
+      noteDiscoveryRecords: [],
       revealAll: false,
     });
   });
@@ -53,6 +55,8 @@ describe('discovery save', () => {
       persistenceEnabled: true,
       discoveredBreedIds: [],
       discoveredNoteIds: [],
+      breedDiscoveryRecords: [],
+      noteDiscoveryRecords: [],
       revealAll: false,
     });
   });
@@ -79,6 +83,16 @@ describe('discovery save', () => {
       persistenceEnabled: true,
       discoveredBreedIds: ['needle_swarm'],
       discoveredNoteIds: ['breed_needle_swarm'],
+      breedDiscoveryRecords: [{
+        id: 'needle_swarm',
+        discoveredAt: expect.any(String),
+        fresh: false,
+      }],
+      noteDiscoveryRecords: [{
+        id: 'breed_needle_swarm',
+        discoveredAt: expect.any(String),
+        fresh: false,
+      }],
       revealAll: false,
     });
   });

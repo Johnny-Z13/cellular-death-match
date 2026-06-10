@@ -24,9 +24,10 @@ describe('discoverer notebook UI wiring', () => {
     expect(screensSource).toContain('onNotebookClose(handler: () => void): void;');
     expect(screensSource).toContain("const notebookButton = get('notebook-button')");
     expect(screensSource).toContain("const notebookList = get('notebook-list')");
-    expect(screensSource).toContain('notebook-entry-locked');
+    expect(screensSource).toContain('notebook-entry-new');
     expect(screensSource).toContain('entry.displayTitle');
-    expect(screensSource).toContain('entry.displayClue');
+    expect(screensSource).toContain('entry.discoveredAtLabel');
+    expect(screensSource).toContain('entry.displayRecipe');
   });
 
   it('wires notebook rendering to discovery progression changes in main', () => {
@@ -35,13 +36,16 @@ describe('discoverer notebook UI wiring', () => {
     expect(mainSource).toContain('screens.onNotebookClose(() => {');
     expect(mainSource).toContain('refreshNotebook();');
     expect(mainSource).toContain('screens.updateNotebook(notebookViewForProgression(discoveryProgression));');
+    expect(mainSource).toContain('acknowledgeNotebookDiscoveries(discoveryProgression)');
   });
 
   it('styles the notebook as an overlay and hides it in presentation mode', () => {
     expect(css).toContain('.notebook-button');
     expect(css).toContain('.notebook-card');
     expect(css).toContain('.notebook-entry');
-    expect(css).toContain('.notebook-entry-locked');
+    expect(css).toContain('.notebook-entry-new');
+    expect(css).toContain('.notebook-status-new');
+    expect(css).toContain('.notebook-recipe');
     expect(css).toContain('.presentation-mode .notebook-button');
     expect(css).toContain('.presentation-mode .screen');
   });

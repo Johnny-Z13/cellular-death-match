@@ -6,14 +6,17 @@ import {
   type CautionLevel,
   type DiscoveryNoteId,
 } from '../content/catalysis';
-import type { DiscoverySaveState } from './discoverySave';
+import type { DiscoverySaveRecord, DiscoverySaveState } from './discoverySave';
 
 export type ProgressionToolId = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid';
 export type ProgressionLifeformId = EnemyArchetype | BreedId;
+export type DiscoveryRecord<Id extends string> = DiscoverySaveRecord<Id>;
 
 export interface DiscoveryProgressionState {
   discoveredBreedIds: BreedId[];
   discoveredNoteIds: DiscoveryNoteId[];
+  breedDiscoveryRecords: DiscoveryRecord<BreedId>[];
+  noteDiscoveryRecords: DiscoveryRecord<DiscoveryNoteId>[];
   unlockedTools: ProgressionToolId[];
   unlockedLifeforms: ProgressionLifeformId[];
   revealAll: boolean;
@@ -148,46 +151,106 @@ export const RESEARCH_GRANT_SEQUENCE: readonly ResearchGrant[] = [
 ];
 
 export function createDiscoveryProgression(
-  saved?: Pick<DiscoverySaveState, 'discoveredBreedIds' | 'discoveredNoteIds' | 'revealAll'>,
+  saved?: Pick<
+    DiscoverySaveState,
+    'discoveredBreedIds'
+    | 'discoveredNoteIds'
+    | 'breedDiscoveryRecords'
+    | 'noteDiscoveryRecords'
+    | 'revealAll'
+  >,
 ): DiscoveryProgressionState {
-  if (saved?.revealAll) return revealAllDiscoveryProgression();
-  return buildProgression({
-    discoveredBreedIds: uniqueValid(saved?.discoveredBreedIds ?? [], VALID_BREEDS) as BreedId[],
-    discoveredNoteIds: uniqueValid(saved?.discoveredNoteIds ?? [], VALID_NOTES) as DiscoveryNoteId[],
+  const discoveredAt = new Date().toISOString();
+  const discoveredBreedIds = uniqueValid(saved?.discoveredBreedIds ?? [], VALID_BREEDS) as BreedId[];
+  const discoveredNoteIds = uniqueValid(saved?.discoveredNoteIds ?? [], VALID_NOTES) as DiscoveryNoteId[];
+  const progression = buildProgression({
+    discoveredBreedIds,
+    discoveredNoteIds,
+    breedDiscoveryRecords: discoveryRecordsForIds(
+      saved?.breedDiscoveryRecords,
+      discoveredBreedIds,
+      discoveredAt,
+      false,
+      VALID_BREEDS,
+    ),
+    noteDiscoveryRecords: discoveryRecordsForIds(
+      saved?.noteDiscoveryRecords,
+      discoveredNoteIds,
+      discoveredAt,
+      false,
+      VALID_NOTES,
+    ),
     revealAll: false,
   });
+  if (saved?.revealAll) return revealAllDiscoveryProgression(progression, discoveredAt, false);
+  return progression;
 }
 
 export function updateDiscoveryProgression(
   state: DiscoveryProgressionState,
   delta: DiscoveryDelta,
+  discoveredAt = new Date().toISOString(),
 ): DiscoveryProgressionState {
-  if (state.revealAll) return revealAllDiscoveryProgression();
+  if (state.revealAll) return revealAllDiscoveryProgression(state, discoveredAt);
+  const discoveredBreedIds = uniqueValid([
+    ...state.discoveredBreedIds,
+    ...(delta.breedIds ?? []),
+  ], VALID_BREEDS) as BreedId[];
+  const discoveredNoteIds = uniqueValid([
+    ...state.discoveredNoteIds,
+    ...(delta.noteIds ?? []),
+  ], VALID_NOTES) as DiscoveryNoteId[];
   return buildProgression({
-    discoveredBreedIds: uniqueValid([
-      ...state.discoveredBreedIds,
-      ...(delta.breedIds ?? []),
-    ], VALID_BREEDS) as BreedId[],
-    discoveredNoteIds: uniqueValid([
-      ...state.discoveredNoteIds,
-      ...(delta.noteIds ?? []),
-    ], VALID_NOTES) as DiscoveryNoteId[],
+    discoveredBreedIds,
+    discoveredNoteIds,
+    breedDiscoveryRecords: discoveryRecordsForIds(
+      state.breedDiscoveryRecords,
+      discoveredBreedIds,
+      discoveredAt,
+      true,
+      VALID_BREEDS,
+    ),
+    noteDiscoveryRecords: discoveryRecordsForIds(
+      state.noteDiscoveryRecords,
+      discoveredNoteIds,
+      discoveredAt,
+      true,
+      VALID_NOTES,
+    ),
     revealAll: false,
   });
 }
 
 export function revealAllDiscoveryProgression(
   state?: DiscoveryProgressionState,
+  discoveredAt = new Date().toISOString(),
+  freshForMissing = true,
 ): DiscoveryProgressionState {
+  const discoveredBreedIds = uniqueValid([
+    ...(state?.discoveredBreedIds ?? []),
+    ...Object.keys(BREED_DEFS),
+  ], VALID_BREEDS) as BreedId[];
+  const discoveredNoteIds = uniqueValid([
+    ...(state?.discoveredNoteIds ?? []),
+    ...Object.keys(DISCOVERY_NOTES),
+  ], VALID_NOTES) as DiscoveryNoteId[];
   return {
-    discoveredBreedIds: uniqueValid([
-      ...(state?.discoveredBreedIds ?? []),
-      ...Object.keys(BREED_DEFS),
-    ], VALID_BREEDS) as BreedId[],
-    discoveredNoteIds: uniqueValid([
-      ...(state?.discoveredNoteIds ?? []),
-      ...Object.keys(DISCOVERY_NOTES),
-    ], VALID_NOTES) as DiscoveryNoteId[],
+    discoveredBreedIds,
+    discoveredNoteIds,
+    breedDiscoveryRecords: discoveryRecordsForIds(
+      state?.breedDiscoveryRecords,
+      discoveredBreedIds,
+      discoveredAt,
+      freshForMissing,
+      VALID_BREEDS,
+    ),
+    noteDiscoveryRecords: discoveryRecordsForIds(
+      state?.noteDiscoveryRecords,
+      discoveredNoteIds,
+      discoveredAt,
+      freshForMissing,
+      VALID_NOTES,
+    ),
     unlockedTools: [...ALL_PROGRESSION_TOOLS],
     unlockedLifeforms: [...ALL_PROGRESSION_LIFEFORMS],
     revealAll: true,
@@ -198,8 +261,23 @@ export function clearDiscoveryProgression(_state?: DiscoveryProgressionState): D
   return buildProgression({
     discoveredBreedIds: [],
     discoveredNoteIds: [],
+    breedDiscoveryRecords: [],
+    noteDiscoveryRecords: [],
     revealAll: false,
   });
+}
+
+export function acknowledgeNotebookDiscoveries(
+  state: DiscoveryProgressionState,
+): DiscoveryProgressionState {
+  const hasFreshBreed = state.breedDiscoveryRecords.some((record) => record.fresh);
+  const hasFreshNote = state.noteDiscoveryRecords.some((record) => record.fresh);
+  if (!hasFreshBreed && !hasFreshNote) return state;
+  return {
+    ...state,
+    breedDiscoveryRecords: state.breedDiscoveryRecords.map((record) => ({ ...record, fresh: false })),
+    noteDiscoveryRecords: state.noteDiscoveryRecords.map((record) => ({ ...record, fresh: false })),
+  };
 }
 
 export function nextResearchGrant(state: DiscoveryProgressionState): ResearchGrant | null {
@@ -257,6 +335,8 @@ export function discoveryAnnouncementsForProgressionChange(
 function buildProgression(base: {
   discoveredBreedIds: BreedId[];
   discoveredNoteIds: DiscoveryNoteId[];
+  breedDiscoveryRecords: DiscoveryRecord<BreedId>[];
+  noteDiscoveryRecords: DiscoveryRecord<DiscoveryNoteId>[];
   revealAll: boolean;
 }): DiscoveryProgressionState {
   const toolSet = new Set<ProgressionToolId>(STARTER_PROGRESSION_TOOLS);
@@ -307,6 +387,8 @@ function buildProgression(base: {
   return {
     discoveredBreedIds: base.discoveredBreedIds,
     discoveredNoteIds: base.discoveredNoteIds,
+    breedDiscoveryRecords: base.breedDiscoveryRecords,
+    noteDiscoveryRecords: base.noteDiscoveryRecords,
     unlockedTools: ALL_PROGRESSION_TOOLS.filter((tool) => toolSet.has(tool)),
     unlockedLifeforms: ALL_PROGRESSION_LIFEFORMS.filter((lifeform) => lifeformSet.has(lifeform)),
     revealAll: base.revealAll,
@@ -315,6 +397,37 @@ function buildProgression(base: {
 
 function uniqueValid(values: readonly string[], allowed: Set<string>): string[] {
   return [...new Set(values.filter((value) => allowed.has(value)))];
+}
+
+function discoveryRecordsForIds<Id extends string>(
+  existingRecords: readonly DiscoveryRecord<Id>[] | undefined,
+  ids: readonly Id[],
+  discoveredAt: string,
+  freshForMissing: boolean,
+  allowed: Set<string>,
+): DiscoveryRecord<Id>[] {
+  const wantedIds = new Set<string>(ids);
+  const records = new Map<string, DiscoveryRecord<Id>>();
+
+  for (const record of existingRecords ?? []) {
+    if (!allowed.has(record.id) || !wantedIds.has(record.id)) continue;
+    records.set(record.id, {
+      id: record.id,
+      discoveredAt: record.discoveredAt || discoveredAt,
+      fresh: record.fresh === true,
+    });
+  }
+
+  for (const id of ids) {
+    if (records.has(id)) continue;
+    records.set(id, {
+      id,
+      discoveredAt,
+      fresh: freshForMissing,
+    });
+  }
+
+  return ids.map((id) => records.get(id)!);
 }
 
 function grantAddsVisibleUnlock(state: DiscoveryProgressionState, grant: ResearchGrant): boolean {

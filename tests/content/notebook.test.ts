@@ -34,31 +34,38 @@ describe('notebook catalogue content', () => {
     expect([...categories].sort()).toEqual(['catalyst', 'event', 'lab_note', 'lifeform']);
   });
 
-  it('starts with starter lifeforms visible and mysteries locked', () => {
-    const view = notebookViewForProgression(createDiscoveryProgression());
-    const visible = view.entries.filter((entry) => entry.discovered);
-    const locked = view.entries.filter((entry) => !entry.discovered);
+  it('starts with starter lifeforms visible and hides undiscovered entries', () => {
+    const view = notebookViewForProgression(
+      createDiscoveryProgression(),
+      '2026-06-07T10:00:00.000Z',
+    );
 
     expect(view.discoveredCount).toBe(3);
     expect(view.totalCount).toBe(NOTEBOOK_ENTRIES.length);
-    expect(visible.map((entry) => entry.title).sort()).toEqual(['Bruiser', 'Splitter', 'Swarmlet']);
-    expect(locked.length).toBeGreaterThan(8);
-    expect(locked.every((entry) => entry.displayTitle.startsWith('Unknown'))).toBe(true);
-    expect(locked.some((entry) => entry.category === 'catalyst')).toBe(true);
+    expect(view.entries.map((entry) => entry.title).sort()).toEqual(['Bruiser', 'Splitter', 'Swarmlet']);
+    expect(view.entries.every((entry) => entry.discovered)).toBe(true);
+    expect(view.entries.every((entry) => entry.displayTitle.startsWith('Unknown') === false)).toBe(true);
+    expect(view.entries[0]?.discoveredAtLabel).toBe('Discovery discovered on Jun 7, 2026');
   });
 
-  it('reveals breed and catalyst entries from progression discoveries', () => {
+  it('reveals breed and catalyst entries from progression discoveries with notes and recipes', () => {
     const progression = updateDiscoveryProgression(createDiscoveryProgression(), {
       breedIds: ['bloom_mass'],
       noteIds: ['breed_bloom_mass', 'recipe_nutrient_conduit', 'water_carries'],
-    });
+    }, '2026-06-07T13:20:00.000Z');
 
-    const view = notebookViewForProgression(progression);
+    const view = notebookViewForProgression(progression, '2026-06-07T14:00:00.000Z');
+    const catalyst = view.entries.find((entry) => entry.id === 'catalyst_recipe_nutrient_conduit');
 
     expect(view.entries.find((entry) => entry.id === 'lifeform_bloom_mass')?.discovered).toBe(true);
-    expect(view.entries.find((entry) => entry.id === 'catalyst_recipe_nutrient_conduit')?.discovered).toBe(true);
+    expect(catalyst?.discovered).toBe(true);
+    expect(catalyst?.isFresh).toBe(true);
+    expect(catalyst?.discoveredAtLabel).toBe('Discovery discovered on Jun 7, 2026');
+    expect(catalyst?.displayNotes).toContain(DISCOVERY_NOTES.recipe_nutrient_conduit.body);
+    expect(catalyst?.displayRecipe).toContain('Water plus Nutrient');
     expect(view.entries.find((entry) => entry.id === 'lab_note_water_carries')?.discovered).toBe(true);
     expect(view.discoveredCount).toBe(6);
+    expect(view.entries).toHaveLength(6);
   });
 
   it('reveals every entry in reveal-all mode and returns to starters after clear', () => {
@@ -68,7 +75,7 @@ describe('notebook catalogue content', () => {
 
     const cleared = notebookViewForProgression(clearDiscoveryProgression());
     expect(cleared.discoveredCount).toBe(3);
-    expect(cleared.entries.filter((entry) => entry.discovered).map((entry) => entry.title).sort()).toEqual([
+    expect(cleared.entries.map((entry) => entry.title).sort()).toEqual([
       'Bruiser',
       'Splitter',
       'Swarmlet',

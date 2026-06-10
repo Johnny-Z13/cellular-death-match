@@ -11,21 +11,27 @@ export interface DiscoveryStorage {
   removeItem(key: string): void;
 }
 
+export interface DiscoverySaveRecord<Id extends string> {
+  id: Id;
+  discoveredAt: string;
+  fresh: boolean;
+}
+
 export interface DiscoverySaveState {
   persistenceEnabled: boolean;
   discoveredBreedIds: BreedId[];
   discoveredNoteIds: DiscoveryNoteId[];
+  breedDiscoveryRecords: DiscoverySaveRecord<BreedId>[];
+  noteDiscoveryRecords: DiscoverySaveRecord<DiscoveryNoteId>[];
   revealAll: boolean;
 }
 
-export const DISCOVERY_SAVE_KEY = 'cellular-death-match.discovery.v1';
+export type DiscoverySaveInput = Omit<
+  DiscoverySaveState,
+  'breedDiscoveryRecords' | 'noteDiscoveryRecords'
+> & Partial<Pick<DiscoverySaveState, 'breedDiscoveryRecords' | 'noteDiscoveryRecords'>>;
 
-const EMPTY_SAVE: DiscoverySaveState = {
-  persistenceEnabled: false,
-  discoveredBreedIds: [],
-  discoveredNoteIds: [],
-  revealAll: false,
-};
+export const DISCOVERY_SAVE_KEY = 'cellular-death-match.discovery.v1';
 
 const BREED_IDS = new Set(Object.keys(BREED_DEFS));
 const NOTE_IDS = new Set(Object.keys(DISCOVERY_NOTES));
@@ -45,18 +51,18 @@ export function createMemoryStorage(): DiscoveryStorage {
 
 export function loadDiscoverySave(storage: DiscoveryStorage): DiscoverySaveState {
   const raw = storage.getItem(DISCOVERY_SAVE_KEY);
-  if (!raw) return { ...EMPTY_SAVE };
+  if (!raw) return emptySave();
 
   try {
     return sanitizeState(JSON.parse(raw));
   } catch {
-    return { ...EMPTY_SAVE };
+    return emptySave();
   }
 }
 
 export function saveDiscoveryState(
   storage: DiscoveryStorage,
-  state: DiscoverySaveState,
+  state: DiscoverySaveInput,
 ): DiscoverySaveState {
   const sanitized = sanitizeState(state);
   const stateToStore = sanitized.persistenceEnabled
@@ -65,6 +71,8 @@ export function saveDiscoveryState(
       ...sanitized,
       discoveredBreedIds: [],
       discoveredNoteIds: [],
+      breedDiscoveryRecords: [],
+      noteDiscoveryRecords: [],
       revealAll: false,
     };
   storage.setItem(DISCOVERY_SAVE_KEY, JSON.stringify(stateToStore));
@@ -88,32 +96,98 @@ export function clearDiscoverySave(storage: DiscoveryStorage): DiscoverySaveStat
     persistenceEnabled: current.persistenceEnabled,
     discoveredBreedIds: [],
     discoveredNoteIds: [],
+    breedDiscoveryRecords: [],
+    noteDiscoveryRecords: [],
     revealAll: false,
   });
 }
 
 export function revealAllDiscoveries(storage: DiscoveryStorage): DiscoverySaveState {
   const current = loadDiscoverySave(storage);
+  const discoveredAt = new Date().toISOString();
+  const discoveredBreedIds = Object.keys(BREED_DEFS) as BreedId[];
+  const discoveredNoteIds = Object.keys(DISCOVERY_NOTES) as DiscoveryNoteId[];
   return saveDiscoveryState(storage, {
     persistenceEnabled: current.persistenceEnabled,
-    discoveredBreedIds: Object.keys(BREED_DEFS) as BreedId[],
-    discoveredNoteIds: Object.keys(DISCOVERY_NOTES) as DiscoveryNoteId[],
+    discoveredBreedIds,
+    discoveredNoteIds,
+    breedDiscoveryRecords: discoveredBreedIds.map((id) => ({ id, discoveredAt, fresh: true })),
+    noteDiscoveryRecords: discoveredNoteIds.map((id) => ({ id, discoveredAt, fresh: true })),
     revealAll: true,
   });
 }
 
 function sanitizeState(value: unknown): DiscoverySaveState {
-  if (!isObject(value)) return { ...EMPTY_SAVE };
+  if (!isObject(value)) return emptySave();
 
   const persistenceEnabled = value.persistenceEnabled === true;
-  if (!persistenceEnabled) return { ...EMPTY_SAVE };
+  if (!persistenceEnabled) return emptySave();
+
+  const discoveredBreedIds = uniqueValidIds(value.discoveredBreedIds, BREED_IDS) as BreedId[];
+  const discoveredNoteIds = uniqueValidIds(value.discoveredNoteIds, NOTE_IDS) as DiscoveryNoteId[];
 
   return {
     persistenceEnabled,
-    discoveredBreedIds: uniqueValidIds(value.discoveredBreedIds, BREED_IDS) as BreedId[],
-    discoveredNoteIds: uniqueValidIds(value.discoveredNoteIds, NOTE_IDS) as DiscoveryNoteId[],
+    discoveredBreedIds,
+    discoveredNoteIds,
+    breedDiscoveryRecords: sanitizeRecords(
+      value.breedDiscoveryRecords,
+      discoveredBreedIds,
+      BREED_IDS,
+      false,
+    ),
+    noteDiscoveryRecords: sanitizeRecords(
+      value.noteDiscoveryRecords,
+      discoveredNoteIds,
+      NOTE_IDS,
+      false,
+    ),
     revealAll: value.revealAll === true,
   };
+}
+
+function emptySave(): DiscoverySaveState {
+  return {
+    persistenceEnabled: false,
+    discoveredBreedIds: [],
+    discoveredNoteIds: [],
+    breedDiscoveryRecords: [],
+    noteDiscoveryRecords: [],
+    revealAll: false,
+  };
+}
+
+function sanitizeRecords<Id extends string>(
+  value: unknown,
+  ids: readonly Id[],
+  allowed: Set<string>,
+  fallbackFresh: boolean,
+): DiscoverySaveRecord<Id>[] {
+  const allowedIds = new Set<string>(ids);
+  const records = new Map<string, DiscoverySaveRecord<Id>>();
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (!isObject(item) || typeof item.id !== 'string') continue;
+      if (!allowed.has(item.id) || !allowedIds.has(item.id)) continue;
+      records.set(item.id, {
+        id: item.id as Id,
+        discoveredAt: validDateString(item.discoveredAt),
+        fresh: item.fresh === true,
+      });
+    }
+  }
+
+  for (const id of ids) {
+    if (records.has(id)) continue;
+    records.set(id, {
+      id,
+      discoveredAt: new Date().toISOString(),
+      fresh: fallbackFresh,
+    });
+  }
+
+  return ids.map((id) => records.get(id)!);
 }
 
 function uniqueValidIds(value: unknown, allowed: Set<string>): string[] {
@@ -125,4 +199,10 @@ function uniqueValidIds(value: unknown, allowed: Set<string>): string[] {
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+function validDateString(value: unknown): string {
+  return typeof value === 'string' && value.length > 0
+    ? value
+    : new Date().toISOString();
 }

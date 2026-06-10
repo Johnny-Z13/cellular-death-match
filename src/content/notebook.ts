@@ -30,6 +30,10 @@ export interface NotebookViewEntry extends NotebookEntry {
   displayTitle: string;
   displayBody: string;
   displayClue: string;
+  displayNotes: string;
+  displayRecipe: string;
+  discoveredAtLabel: string;
+  isFresh: boolean;
 }
 
 export interface NotebookView {
@@ -85,27 +89,41 @@ export const NOTEBOOK_ENTRIES: readonly NotebookEntry[] = [
 
 export function notebookViewForProgression(
   progression: DiscoveryProgressionState,
+  viewedAt = new Date().toISOString(),
 ): NotebookView {
   const discoveredBreeds = new Set(progression.discoveredBreedIds);
   const discoveredNotes = new Set(progression.discoveredNoteIds);
-  const entries = NOTEBOOK_ENTRIES.map((entry): NotebookViewEntry => {
+  const breedRecords = new Map(progression.breedDiscoveryRecords.map((record) => [record.id, record]));
+  const noteRecords = new Map(progression.noteDiscoveryRecords.map((record) => [record.id, record]));
+  const entries = NOTEBOOK_ENTRIES.flatMap((entry): NotebookViewEntry[] => {
     const discovered = progression.revealAll
       || entry.unlock.starter === true
       || Boolean(entry.unlock.breedId && discoveredBreeds.has(entry.unlock.breedId))
       || Boolean(entry.unlock.noteId && discoveredNotes.has(entry.unlock.noteId));
+    if (!discovered) return [];
 
-    return {
+    const record = entry.unlock.breedId
+      ? breedRecords.get(entry.unlock.breedId)
+      : entry.unlock.noteId
+        ? noteRecords.get(entry.unlock.noteId)
+        : null;
+
+    return [{
       ...entry,
       discovered,
-      displayTitle: discovered ? entry.title : entry.lockedTitle,
-      displayBody: discovered ? entry.body : lockedBodyFor(entry.category),
-      displayClue: discovered ? entry.clue : lockedClueFor(entry.category),
-    };
+      displayTitle: entry.title,
+      displayBody: entry.body,
+      displayClue: entry.clue,
+      displayNotes: `Notes: ${entry.body}`,
+      displayRecipe: recipeLabelFor(entry.category, entry.clue),
+      discoveredAtLabel: `Discovery discovered on ${formatDiscoveryDate(record?.discoveredAt ?? viewedAt)}`,
+      isFresh: record?.fresh === true,
+    }];
   });
 
   return {
-    discoveredCount: entries.filter((entry) => entry.discovered).length,
-    totalCount: entries.length,
+    discoveredCount: entries.length,
+    totalCount: NOTEBOOK_ENTRIES.length,
     entries,
   };
 }
@@ -159,20 +177,6 @@ function lockedTitleFor(category: Exclude<NotebookCategory, 'lifeform'>): string
   return 'Unknown lab note';
 }
 
-function lockedBodyFor(category: NotebookCategory): string {
-  if (category === 'lifeform') return 'A culture silhouette is missing from the lab record.';
-  if (category === 'catalyst') return 'A reaction has been predicted, but nobody has made it behave yet.';
-  if (category === 'event') return 'The monitor has a reserved line for a strange dish event.';
-  return 'A lab note slot is waiting for enough evidence.';
-}
-
-function lockedClueFor(category: NotebookCategory): string {
-  if (category === 'lifeform') return 'Try creating new strains from living cultures and reagent pressure.';
-  if (category === 'catalyst') return 'Combine unlocked reagents near active lifeforms and watch the dish log.';
-  if (category === 'event') return 'Push volatile reactions near unusual cultures.';
-  return 'Use reagents in different orders and observe what changes.';
-}
-
 function clueForNote(noteId: DiscoveryNoteId, category: NotebookCategory): string {
   if (noteId === 'water_carries') return 'Try Water on Nutrient fields near budding cultures.';
   if (noteId === 'water_dilutes') return 'Try Water after Acid or Toxin if the dish is getting too sharp.';
@@ -198,4 +202,34 @@ function clueForNote(noteId: DiscoveryNoteId, category: NotebookCategory): strin
   return category === 'event'
     ? 'Look for the dish event ring that matches this notebook entry.'
     : 'Repeat the experiment and watch the dish log.';
+}
+
+function recipeLabelFor(category: NotebookCategory, clue: string): string {
+  if (category === 'lifeform') return `Recipe: ${clue}`;
+  if (category === 'lab_note') return `Evidence: ${clue}`;
+  return `Recipe: ${clue}`;
+}
+
+function formatDiscoveryDate(isoDate: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(isoDate);
+  if (!match) return 'date unknown';
+  const [, year, monthText, dayText] = match;
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const monthName = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ][month - 1];
+  if (!year || !monthName || !Number.isFinite(day)) return 'date unknown';
+  return `${monthName} ${day}, ${year}`;
 }

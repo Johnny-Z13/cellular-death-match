@@ -3,6 +3,7 @@ import {
   ALL_PROGRESSION_LIFEFORMS,
   ALL_PROGRESSION_TOOLS,
   RESEARCH_GRANT_SEQUENCE,
+  acknowledgeNotebookDiscoveries,
   applyCompletionResearchGrant,
   clearDiscoveryProgression,
   createDiscoveryProgression,
@@ -21,6 +22,30 @@ describe('discovery progression', () => {
     expect(progression.unlockedTools).toEqual(['egg', 'nutrient', 'toxin']);
     expect(progression.discoveredBreedIds).toEqual([]);
     expect(progression.discoveredNoteIds).toEqual([]);
+    expect(progression.breedDiscoveryRecords).toEqual([]);
+    expect(progression.noteDiscoveryRecords).toEqual([]);
+  });
+
+  it('records when new discoveries were found and clears fresh flags after notebook acknowledgement', () => {
+    const progression = updateDiscoveryProgression(createDiscoveryProgression(), {
+      breedIds: ['bloom_mass'],
+      noteIds: ['breed_bloom_mass', 'recipe_pressure_bloom'],
+    }, '2026-06-07T13:20:00.000Z');
+
+    expect(progression.breedDiscoveryRecords).toEqual([{
+      id: 'bloom_mass',
+      discoveredAt: '2026-06-07T13:20:00.000Z',
+      fresh: true,
+    }]);
+    expect(progression.noteDiscoveryRecords.find((record) => record.id === 'recipe_pressure_bloom')).toEqual({
+      id: 'recipe_pressure_bloom',
+      discoveredAt: '2026-06-07T13:20:00.000Z',
+      fresh: true,
+    });
+
+    const acknowledged = acknowledgeNotebookDiscoveries(progression);
+    expect(acknowledged.breedDiscoveryRecords.every((record) => record.fresh === false)).toBe(true);
+    expect(acknowledged.noteDiscoveryRecords.every((record) => record.fresh === false)).toBe(true);
   });
 
   it('unlocks Bloom Mass and Water when Bloom Mass is discovered', () => {

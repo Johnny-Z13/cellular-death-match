@@ -372,7 +372,7 @@ export function createScreens(): Screens {
       }
     },
     updateNotebook(view) {
-      notebookProgress.textContent = `${view.discoveredCount} / ${view.totalCount} entries logged`;
+      notebookProgress.textContent = `${view.discoveredCount} ${view.discoveredCount === 1 ? 'discovery' : 'discoveries'} logged`;
       notebookList.replaceChildren();
       for (const entry of view.entries) {
         const card = document.createElement('article');
@@ -380,28 +380,39 @@ export function createScreens(): Screens {
           'notebook-entry',
           `notebook-entry-${entry.category}`,
           `notebook-entry-${entry.caution}`,
-          entry.discovered ? 'notebook-entry-discovered' : 'notebook-entry-locked',
+          entry.isFresh ? 'notebook-entry-new' : 'notebook-entry-discovered',
         ].join(' ');
 
         const marker = document.createElement('span');
         marker.className = 'notebook-marker';
-        marker.textContent = entry.discovered ? markerForCategory(entry.category) : '?';
+        marker.textContent = entry.isFresh ? 'NEW' : 'OK';
 
         const copy = document.createElement('div');
         const header = document.createElement('div');
         header.className = 'notebook-entry-head';
         const title = document.createElement('strong');
         title.textContent = entry.displayTitle;
-        const meta = document.createElement('span');
+        const status = document.createElement('span');
+        status.className = entry.isFresh ? 'notebook-status notebook-status-new' : 'notebook-status';
+        status.textContent = entry.isFresh ? 'NEW DISCOVERY' : 'DISCOVERED';
+        header.append(title, status);
+
+        const meta = document.createElement('div');
+        meta.className = 'notebook-meta';
         meta.textContent = `${entry.category.replace('_', ' ')} / ${entry.caution}`;
-        header.append(title, meta);
+
+        const discoveredAt = document.createElement('div');
+        discoveredAt.className = 'notebook-discovered-at';
+        discoveredAt.textContent = entry.discoveredAtLabel;
 
         const body = document.createElement('p');
-        body.textContent = entry.displayBody;
+        body.className = 'notebook-notes';
+        body.textContent = entry.displayNotes;
         const clue = document.createElement('small');
-        clue.textContent = entry.displayClue;
+        clue.className = 'notebook-recipe';
+        clue.textContent = entry.displayRecipe;
 
-        copy.append(header, body, clue);
+        copy.append(header, meta, discoveredAt, body, clue);
         card.append(marker, copy);
         notebookList.append(card);
       }
@@ -527,13 +538,6 @@ function setUnknownState(button: HTMLButtonElement, locked: boolean, label: stri
 function setSelectedButtonState(button: HTMLButtonElement, selected: boolean): void {
   button.classList.toggle('selected', selected);
   button.setAttribute('aria-selected', String(selected));
-}
-
-function markerForCategory(category: string): string {
-  if (category === 'lifeform') return 'L';
-  if (category === 'catalyst') return 'C';
-  if (category === 'event') return '!';
-  return 'N';
 }
 
 function tickerSpecialClassFor(message: string): string | null {
