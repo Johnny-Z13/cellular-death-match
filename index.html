@@ -4,14 +4,26 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cellular Death Match</title>
+    <meta name="theme-color" content="#04080a" />
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="/src/styles.css?v=20260610-cleanup-pass" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/styles.css?v=20260610-premium-pass" />
   </head>
   <body>
     <main class="layout">
-      <canvas id="game" width="800" height="800"></canvas>
-      <button id="notebook-button" class="notebook-button" type="button" aria-label="Open Discoverer's Notebook">Notebook</button>
-      <button id="fullscreen-button" class="fullscreen-button" type="button" aria-label="Enter full screen">Full screen</button>
+      <div class="dish-stage" aria-hidden="true">
+        <div class="dish-frame"></div>
+        <canvas id="game" width="800" height="800"></canvas>
+        <div class="dish-glass"></div>
+      </div>
+      <button id="audio-button" class="chrome-button audio-button" type="button" aria-label="Mute audio" aria-pressed="false">Sound</button>
+      <button id="notebook-button" class="chrome-button notebook-button" type="button" aria-label="Open Discoverer's Notebook">Notebook</button>
+      <button id="fullscreen-button" class="chrome-button fullscreen-button" type="button" aria-label="Enter full screen">Full screen</button>
       <div id="mobile-shell" class="mobile-shell" aria-label="Mobile dish controls">
         <button id="mobile-lifeforms-toggle" class="mobile-shell-button" type="button" aria-expanded="false" aria-controls="life-panel">Lifeforms</button>
         <div id="mobile-tool-readout" class="mobile-tool-readout" aria-live="polite">
@@ -132,12 +144,17 @@
       </aside>
 
       <!-- Overlay screens. Hidden by default; shown by .visible. -->
-      <div id="screen-title" class="screen visible">
-        <div class="screen-card">
-          <h1 class="screen-title">Cellular Death Match</h1>
+      <div id="screen-title" class="screen screen-title-screen visible">
+        <div class="title-art" aria-hidden="true"></div>
+        <div class="screen-card title-card">
+          <p class="title-eyebrow">Bioluminescent Culture Lab</p>
+          <h1 class="screen-title title-wordmark">Cellular<br /><span>Death Match</span></h1>
           <p class="screen-sub">Run unstable ecosystem trials. Breed organisms, flood reagents, shake the dish, and trigger strange reactions before the dish clock expires.</p>
+          <button id="title-start" class="screen-button title-start-button">
+            <span class="screen-button-glyph" aria-hidden="true"></span>
+            Enter Ecosystem
+          </button>
           <p id="commit-debug" class="commit-debug">commit: loading</p>
-          <button id="title-start" class="screen-button">Enter Ecosystem</button>
         </div>
       </div>
 
@@ -152,10 +169,14 @@
       </div>
 
       <div id="screen-end" class="screen">
-        <div class="screen-card">
+        <div class="screen-card end-card">
+          <p class="title-eyebrow end-eyebrow">Trial Concluded</p>
           <h2 id="end-title" class="screen-title">—</h2>
           <p id="end-summary" class="screen-sub">—</p>
-          <button id="end-restart" class="screen-button">Begin Again</button>
+          <button id="end-restart" class="screen-button">
+            <span class="screen-button-glyph" aria-hidden="true"></span>
+            Begin Again
+          </button>
         </div>
       </div>
 
@@ -195,7 +216,17 @@
         <div class="ticker-title">DISH LOG</div>
         <div id="ticker-lines" class="ticker-lines"></div>
       </aside>
+
+      <div id="fx-banner" class="fx-banner" aria-hidden="true">
+        <div class="fx-banner-inner">
+          <span id="fx-banner-eyebrow" class="fx-banner-eyebrow">Epoch 1 / 5</span>
+          <strong id="fx-banner-title" class="fx-banner-title">Objective</strong>
+          <span id="fx-banner-sub" class="fx-banner-sub"></span>
+        </div>
+      </div>
+      <div id="fx-toasts" class="fx-toasts" aria-live="polite"></div>
+      <div id="fx-wipe" class="fx-wipe" aria-hidden="true"></div>
     </main>
-    <script type="module" src="/src/main.ts?v=20260610-cleanup-pass"></script>
+    <script type="module" src="/src/main.ts?v=20260610-premium-pass"></script>
   </body>
 </html>

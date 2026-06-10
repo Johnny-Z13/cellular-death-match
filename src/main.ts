@@ -8,6 +8,8 @@ import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/e
 import { BREED_DEFS, DISCOVERY_NOTES } from './content/catalysis';
 import { notebookViewForProgression } from './content/notebook';
 import { createEcologyAudio } from './audio/ecologyAudio';
+import { createUiAudio } from './audio/uiAudio';
+import { createFx } from './ui/fx';
 import { soundEventForDishSignal, type SoundEventId } from './audio/soundDesign';
 import { hash2 } from './game/hash';
 import {
@@ -51,6 +53,8 @@ const run = createRun(Date.now() & 0xffffffff);
 const screens = createScreens();
 const debug = createDebugPanel();
 const ecologyAudio = createEcologyAudio();
+const uiAudio = createUiAudio();
+const fx = createFx();
 const discoveryStorage = window.localStorage;
 let discoverySave: DiscoverySaveState = loadDiscoverySave(discoveryStorage);
 let discoveryProgression = createDiscoveryProgression(discoverySave);
@@ -117,8 +121,21 @@ screens.onNotebookClose(() => {
   closeNotebook();
 });
 screens.onFullscreenOpen(() => {
+  uiAudio.unlock();
+  uiAudio.play('ui_tap');
   setPresentationMode(!overlayState.presentationMode);
 });
+
+screens.onAudioToggle(() => {
+  uiAudio.unlock();
+  const nowMuted = uiAudio.toggleMuted();
+  screens.setAudioMuted(nowMuted);
+  if (!nowMuted) {
+    uiAudio.play('ui_select');
+    if (run.getState().phase === 'arena') uiAudio.startAmbience();
+  }
+});
+screens.setAudioMuted(uiAudio.isMuted());
 
 screens.onLifeformSelect((id) => {
   overlayState.selectedLifeformId = id;
@@ -157,27 +174,34 @@ canvas.addEventListener('pointerdown', (event) => {
   ecologyAudio.unlock();
   const pos = canvasEventToGridPos(event);
   if (arena.applyTool(selectedTool, pos, { eggArchetype: selectedEggArchetype })) {
+    uiAudio.play('ui_tap');
     screens.updateToolCharges(arena.getToolStates());
   }
 });
 
 screens.onTitleStart(() => {
   ecologyAudio.unlock();
+  uiAudio.unlock();
+  uiAudio.play('ui_select');
   run.start();
   startNewFight();
 });
 screens.onEndRestart(() => {
+  uiAudio.play('ui_select');
+  fx.playWipe();
   run.restart();
   showPhase();
 });
 screens.onToolSelect((tool) => {
   if (!discoveryProgression.unlockedTools.includes(tool)) return;
+  uiAudio.play('ui_select');
   selectedTool = tool;
   screens.setTool(tool);
 });
 screens.onAgitate(() => {
   if (!arena || run.getState().phase !== 'arena') return;
   ecologyAudio.unlock();
+  uiAudio.play('ui_tap');
   if (!arena.agitate()) return;
   screens.updateAgitation(arena.getAgitationState());
   screens.addTicker('Dish agitated: lifeforms are mixing.');
@@ -188,6 +212,7 @@ screens.onAgitate(() => {
 screens.onEndEpoch(() => {
   if (!arena || run.getState().phase !== 'arena') return;
   ecologyAudio.unlock();
+  uiAudio.play('ui_tap');
   const status = arena.endEpochNow();
   resolveArenaStatus(status);
 });
@@ -198,6 +223,7 @@ screens.setEggOptions(EGG_ARCHETYPES.map((archetype) => ({
 applyDiscoveryProgressionUi();
 screens.onEggSelect((archetype) => {
   if (!isUnlockedEggArchetype(archetype)) return;
+  uiAudio.play('ui_select');
   selectedEggArchetype = archetype;
   selectedTool = 'egg';
   screens.setTool(selectedTool);
@@ -231,6 +257,8 @@ function showPhase() {
   } else if (state.phase === 'upgrade_pick') {
     const choices = state.pendingPickChoices.map((id) => ({ id, def: getUpgradeDef(id)! }));
     screens.setPickChoices(choices, (id) => {
+      uiAudio.play('ui_select');
+      fx.playWipe();
       run.pickUpgrade(id);
       startNewFight();
     });
@@ -270,8 +298,16 @@ function startNewFight() {
   heardDishEventIds = new Set<number>();
   screens.clearTicker();
   screens.setPickResearchBrief([]);
-  screens.addTicker(`Objective received: ${run.getObjective().name}.`);
+  const objective = run.getObjective();
+  screens.addTicker(`Objective received: ${objective.name}.`);
   replayPendingResearchBrief();
+  if (!uiAudio.isMuted()) uiAudio.startAmbience();
+  uiAudio.play('epoch_begin');
+  fx.showEpochBanner(
+    `Epoch ${run.getState().fightIndex + 1} / ${EPOCHS_PER_RUN}`,
+    objective.name,
+    objective.description,
+  );
   screens.updateToolCharges(arena.getToolStates());
   screens.updateAgitation(arena.getAgitationState());
   debug.updateDiscoveries(discoveryDebugInfo());
@@ -366,11 +402,17 @@ function resolveArenaStatus(status: ArenaStatus): boolean {
       persistArenaDiscoveries(arena);
       awardCompletionResearchGrant();
     }
+    uiAudio.play('epoch_win');
+    fx.playWipe();
     run.completeEpoch();
+    if (run.getState().phase === 'run_end') uiAudio.stopAmbience();
     showPhase();
     return true;
   }
   if (status === 'lost') {
+    uiAudio.play('epoch_fail');
+    uiAudio.stopAmbience();
+    fx.playWipe();
     run.failEpoch();
     showPhase();
     return true;
@@ -523,14 +565,17 @@ function announceUnlocks(
     if (previousTools.includes(tool)) continue;
     screens.showcaseToolUnlock(tool);
     screens.addTicker(`Research unlocked: ${capitalize(tool)} reagent available.`, 'discovery');
+    fx.showToast('catalyst', 'Reagent Unlocked', `${capitalize(tool)} now available`);
   }
   for (const lifeform of next.unlockedLifeforms) {
     if (previousLifeforms.includes(lifeform)) continue;
     screens.showcaseLifeformUnlock(lifeform);
     if (isBaseArchetype(lifeform)) {
       screens.addTicker(`Research unlocked: ${ARCHETYPE_INFO[lifeform].name} eggs available.`, 'discovery');
+      fx.showToast('discovery', 'Strain Unlocked', `${ARCHETYPE_INFO[lifeform].name} eggs`);
     } else if (lifeform in BREED_DEFS) {
       screens.addTicker(`New lifeform catalogued: ${BREED_DEFS[lifeform].name}.`, 'discovery');
+      fx.showToast('lifeform', 'New Lifeform', BREED_DEFS[lifeform].name);
     }
   }
 }

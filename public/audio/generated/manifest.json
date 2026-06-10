@@ -1,44 +1,74 @@
 {
-  "generatedAt": "2026-06-06T00:30:15.147Z",
+  "generatedAt": "2026-06-10T18:20:05.370Z",
   "assets": [
     {
       "id": "hatch",
       "file": "/audio/generated/hatch.mp3",
-      "skipped": false
+      "skipped": true
     },
     {
       "id": "visible_mutation",
       "file": "/audio/generated/visible_mutation.mp3",
-      "skipped": false
+      "skipped": true
     },
     {
       "id": "catalytic_flare",
       "file": "/audio/generated/catalytic_flare.mp3",
-      "skipped": false
+      "skipped": true
     },
     {
       "id": "water_stabilize",
       "file": "/audio/generated/water_stabilize.mp3",
-      "skipped": false
+      "skipped": true
     },
     {
       "id": "salt_crystal",
       "file": "/audio/generated/salt_crystal.mp3",
-      "skipped": false
+      "skipped": true
     },
     {
       "id": "folding_fault",
       "file": "/audio/generated/folding_fault.mp3",
-      "skipped": false
+      "skipped": true
     },
     {
       "id": "hidden_breed",
       "file": "/audio/generated/hidden_breed.mp3",
-      "skipped": false
+      "skipped": true
     },
     {
       "id": "objective_warning",
       "file": "/audio/generated/objective_warning.mp3",
+      "skipped": true
+    },
+    {
+      "id": "ui_tap",
+      "file": "/audio/generated/ui_tap.mp3",
+      "skipped": true
+    },
+    {
+      "id": "ui_select",
+      "file": "/audio/generated/ui_select.mp3",
+      "skipped": false
+    },
+    {
+      "id": "epoch_begin",
+      "file": "/audio/generated/epoch_begin.mp3",
+      "skipped": false
+    },
+    {
+      "id": "epoch_win",
+      "file": "/audio/generated/epoch_win.mp3",
+      "skipped": false
+    },
+    {
+      "id": "epoch_fail",
+      "file": "/audio/generated/epoch_fail.mp3",
+      "skipped": false
+    },
+    {
+      "id": "ambience_loop",
+      "file": "/audio/generated/ambience_loop.mp3",
       "skipped": false
     }
   ]

@@ -54,6 +54,42 @@ const ASSETS = [
     duration_seconds: 0.8,
     text: 'Restrained retro lab warning blip, amber monitor alert, short and not alarming.',
   },
+  {
+    id: 'ui_tap',
+    file: 'ui_tap.mp3',
+    duration_seconds: 0.5,
+    text: 'Soft premium glass UI tap, a single short muted bubble click on a touchscreen lab instrument, clean and subtle, no music.',
+  },
+  {
+    id: 'ui_select',
+    file: 'ui_select.mp3',
+    duration_seconds: 0.5,
+    text: 'Crisp confirming UI selection tone, a gentle rising glassy ping for choosing a tool on a sci-fi lab panel, premium and short.',
+  },
+  {
+    id: 'epoch_begin',
+    file: 'epoch_begin.mp3',
+    duration_seconds: 1.6,
+    text: 'Cinematic mission-start swell for a science game, a deep warm rising drone with a soft bioluminescent shimmer at the end, premium and hopeful, no melody.',
+  },
+  {
+    id: 'epoch_win',
+    file: 'epoch_win.mp3',
+    duration_seconds: 1.8,
+    text: 'Elegant success stinger, a warm resolving chord with a sparkling bioluminescent shimmer tail, premium science discovery reward, no spoken voice.',
+  },
+  {
+    id: 'epoch_fail',
+    file: 'epoch_fail.mp3',
+    duration_seconds: 1.8,
+    text: 'Somber collapse stinger, a low descending drone with a hollow dying-out resonance, restrained and cinematic, not harsh, no melody.',
+  },
+  {
+    id: 'ambience_loop',
+    file: 'ambience_loop.mp3',
+    duration_seconds: 12,
+    text: 'Seamless looping deep laboratory ambience, low warm humming drone, faint liquid bubbling and distant glassy resonances, calm hypnotic underwater bioluminescent mood, no music, no melody, evolving texture suitable for looping.',
+  },
 ];
 
 const args = new Set(process.argv.slice(2));

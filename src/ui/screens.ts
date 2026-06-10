@@ -83,6 +83,8 @@ export interface Screens {
   onNotebookClose(handler: () => void): void;
   onFullscreenOpen(handler: () => void): void;
   setFullscreenActive(active: boolean): void;
+  onAudioToggle(handler: () => void): void;
+  setAudioMuted(muted: boolean): void;
 }
 
 export type TickerTone = 'normal' | 'discovery' | 'caution' | 'critical';
@@ -105,6 +107,7 @@ export function createScreens(): Screens {
   const titleStart   = get('title-start');
   const notebookButton = get('notebook-button') as HTMLButtonElement;
   const fullscreenButton = get('fullscreen-button') as HTMLButtonElement;
+  const audioButton = get('audio-button') as HTMLButtonElement;
   const notebookClose = get('notebook-close') as HTMLButtonElement;
   const notebookProgress = get('notebook-progress');
   const notebookList = get('notebook-list');
@@ -499,6 +502,14 @@ export function createScreens(): Screens {
     setFullscreenActive(active) {
       fullscreenButton.setAttribute('aria-label', active ? 'Exit full screen' : 'Enter full screen');
       fullscreenButton.title = active ? 'Exit full screen' : 'Enter full screen';
+    },
+    onAudioToggle(handler) {
+      audioButton.addEventListener('click', handler);
+    },
+    setAudioMuted(muted) {
+      audioButton.setAttribute('aria-pressed', String(muted));
+      audioButton.setAttribute('aria-label', muted ? 'Unmute audio' : 'Mute audio');
+      audioButton.textContent = muted ? 'Muted' : 'Sound';
     },
   };
 }
