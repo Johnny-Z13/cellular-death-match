@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-10T18:20:05.370Z",
+  "generatedAt": "2026-06-10T19:31:40.645Z",
   "assets": [
     {
       "id": "hatch",
@@ -49,27 +49,32 @@
     {
       "id": "ui_select",
       "file": "/audio/generated/ui_select.mp3",
-      "skipped": false
+      "skipped": true
     },
     {
       "id": "epoch_begin",
       "file": "/audio/generated/epoch_begin.mp3",
-      "skipped": false
+      "skipped": true
     },
     {
       "id": "epoch_win",
       "file": "/audio/generated/epoch_win.mp3",
-      "skipped": false
+      "skipped": true
     },
     {
       "id": "epoch_fail",
       "file": "/audio/generated/epoch_fail.mp3",
+      "skipped": true
+    },
+    {
+      "id": "experiment_ready",
+      "file": "/audio/generated/experiment_ready.mp3",
       "skipped": false
     },
     {
       "id": "ambience_loop",
       "file": "/audio/generated/ambience_loop.mp3",
-      "skipped": false
+      "skipped": true
     }
   ]
 }

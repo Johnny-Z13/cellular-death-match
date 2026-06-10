@@ -311,6 +311,40 @@ describe('arena ecosystem mode', () => {
     expect(arena.getStatus()).toBe('lost');
   });
 
+  it('marks an objective complete but keeps running so the player can keep cultivating', () => {
+    const arena = createArena({
+      LX: 60,
+      LY: 60,
+      seed: 7,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        { archetype: 'swarmlet' as const, targetVol: 90, speed: 12, engulfMultiplier: 4 },
+        { archetype: 'swarmlet' as const, targetVol: 90, speed: 12, engulfMultiplier: 4 },
+        { archetype: 'swarmlet' as const, targetVol: 90, speed: 12, engulfMultiplier: 4 },
+        { archetype: 'swarmlet' as const, targetVol: 90, speed: 12, engulfMultiplier: 4 },
+      ],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+      objective: {
+        kind: 'breed_archetype',
+        name: 'Breed Swarmlets',
+        description: 'Raise swarmlets.',
+        target: '4 living Swarmlets',
+        archetype: 'swarmlet',
+        targetCount: 4,
+      },
+    });
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    const progress = arena.getObjectiveProgress();
+    // Objective is met well before the deadline, but the epoch keeps running —
+    // the player is not yanked out of a flourishing dish.
+    expect(progress.complete).toBe(true);
+    expect(arena.getStatus()).toBe('running');
+    // They bank the win whenever they choose.
+    expect(arena.endEpochNow()).toBe('won');
+  });
+
   it('agitation spends a charge and mixes living cell movement for a short pulse', () => {
     const arena = createArena({
       LX: 80,
@@ -695,11 +729,16 @@ describe('arena ecosystem mode', () => {
     const target = arena.state.cells.get(2)!;
     expect(arena.applyTool('nutrient', target.center)).toBe(true);
     expect(arena.applyTool('water', target.center)).toBe(true);
-    for (let i = 0; i < 60 * 25 && arena.getStatus() === 'running'; i++) {
+    // The objective now marks the experiment complete rather than ending the
+    // epoch instantly — the player banks it via End or rides out the deadline.
+    for (let i = 0; i < 60 * 25 && !arena.getObjectiveProgress().complete; i++) {
       arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     }
     expect(arena.getObjectiveProgress().summary).toContain('reaction');
-    expect(arena.getStatus()).toBe('won');
+    expect(arena.getObjectiveProgress().complete).toBe(true);
+    // Still running (not yet at the deadline); banking via End wins it.
+    expect(arena.getStatus()).toBe('running');
+    expect(arena.endEpochNow()).toBe('won');
   });
 
   it('loads extra reagent tools so the player has activity after eggs run low', () => {
@@ -1781,8 +1820,45 @@ describe('arena ecosystem mode', () => {
       arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     }
 
+    // The breed objective is now complete, but the epoch stays running so the
+    // player can keep cultivating; they bank the win via End (or the deadline).
     expect(arena.getObjectiveProgress().status).toBe('satisfied');
-    expect(arena.getStatus()).toBe('won');
+    expect(arena.getObjectiveProgress().complete).toBe(true);
+    expect(arena.getStatus()).toBe('running');
+    expect(arena.endEpochNow()).toBe('won');
+  });
+
+  it('latches a created-breed objective as complete even if the breed later dies off', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 261,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3, nutrientCharges: 1 },
+      enemies: [
+        { archetype: 'swarmlet' as const, targetVol: 120, speed: 12, engulfMultiplier: 4 },
+        { archetype: 'splitter' as const, targetVol: 260, speed: 8, engulfMultiplier: 6 },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+      objective: {
+        kind: 'discover_breed',
+        name: 'Create a New Lifeform',
+        description: 'Create Bloom Mass.',
+        target: 'Bloom Mass created',
+        breedId: 'bloom_mass',
+      },
+    });
+    arena.state.cells.get(2)!.center = [42, 44];
+    arena.state.cells.get(3)!.center = [50, 44];
+    expect(arena.applyTool('nutrient', [46, 44])).toBe(true);
+    for (let i = 0; i < 100; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+    expect(arena.getObjectiveProgress().complete).toBe(true);
+    // Wipe every culture: a creation objective stays complete (it happened).
+    for (const [, cell] of arena.state.cells) cell.vol = 0;
+    expect(arena.getObjectiveProgress().complete).toBe(true);
   });
 
   it('discovers glass antibody from acid toxin flare survivors', () => {

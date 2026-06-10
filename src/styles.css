@@ -473,6 +473,36 @@ canvas {
   border-color: #d99188;
 }
 
+/* Experiment complete: the End button becomes the signposted next step. It
+   glows and breathes so the player notices they can finish — without being
+   forced out of a dish they want to keep cultivating. */
+.end-action.end-action-ready {
+  border-color: var(--bio);
+  color: var(--ink);
+  background: linear-gradient(180deg, rgba(91, 233, 214, 0.16), var(--panel-raised));
+  animation: end-ready-pulse 1.9s ease-in-out infinite;
+}
+
+.end-action.end-action-ready .end-icon {
+  background: linear-gradient(135deg, #c9fff4, #2fbfa6 55%, #14706a);
+  box-shadow: 0 0 16px rgba(91, 233, 214, 0.8);
+}
+
+.end-action.end-action-ready b {
+  color: var(--bio);
+}
+
+@keyframes end-ready-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(91, 233, 214, 0); }
+  50% { box-shadow: 0 0 0 2px rgba(91, 233, 214, 0.28), 0 0 22px rgba(91, 233, 214, 0.32); }
+}
+
+/* HUD objective line picks up the bio accent when the experiment is complete. */
+.hud-complete .hud-objective-row .hud-val {
+  color: var(--bio);
+  text-shadow: 0 0 14px rgba(91, 233, 214, 0.3);
+}
+
 .dish-shake {
   animation: dish-shake 720ms cubic-bezier(0.2, 0.9, 0.2, 1);
   transform-origin: center;
@@ -1401,6 +1431,7 @@ canvas {
   .life-panel .life-item-discovered::after,
   .fx-toast,
   .fx-wipe.fx-wipe-play,
+  .end-action.end-action-ready,
   .notebook-entry-new {
     animation: none;
   }

@@ -30,6 +30,7 @@ export interface HudInfo {
   objectiveName: string;
   objectiveSummary: string;
   objectiveHint: string;
+  objectiveComplete: boolean;
   upgrades: string[];          // upgrade names, e.g. ["Bigger Cell", "Faster Engulf x2"]
 }
 
@@ -85,6 +86,7 @@ export interface Screens {
   setFullscreenActive(active: boolean): void;
   onAudioToggle(handler: () => void): void;
   setAudioMuted(muted: boolean): void;
+  setEpochComplete(complete: boolean): void;
 }
 
 export type TickerTone = 'normal' | 'discovery' | 'caution' | 'critical';
@@ -411,8 +413,12 @@ export function createScreens(): Screens {
       hudProgress.textContent = `${info.secondsRemaining}s`;
       const crisis = info.crisis === 'none' ? '' : `, ${info.crisis} active`;
       hudEco.textContent = `${info.livingEnemies} lifeforms, ${info.outbreaks} outbreaks, ${info.reactions} reactions, ${info.accidents} accidents, ${info.mutations} mutations, ${info.births} births, ${info.supplyDrops} drops, ${info.dominant} dominant${crisis}`;
-      hudObjective.textContent = `${info.objectiveName}: ${info.objectiveSummary}`;
-      hudHint.textContent = info.objectiveHint;
+      hudObjective.textContent = info.objectiveComplete
+        ? `${info.objectiveName}: complete — finish when ready`
+        : `${info.objectiveName}: ${info.objectiveSummary}`;
+      hudHint.textContent = info.objectiveComplete
+        ? 'Experiment complete. Press End to bank it, or keep cultivating.'
+        : info.objectiveHint;
       hudUpgrades.textContent = info.upgrades.length === 0 ? 'none' : info.upgrades.join(', ');
     },
     setPickResearchBrief(lines) {
@@ -525,6 +531,14 @@ export function createScreens(): Screens {
       audioButton.setAttribute('aria-pressed', String(muted));
       audioButton.setAttribute('aria-label', muted ? 'Unmute audio' : 'Mute audio');
       audioButton.textContent = muted ? 'Muted' : 'Sound';
+    },
+    setEpochComplete(complete) {
+      // Glow the End button + flag the HUD so the player sees the experiment is
+      // ready to bank, without forcing them out of a flourishing dish.
+      endEpochButton.classList.toggle('end-action-ready', complete);
+      const endLabel = endEpochButton.querySelector<HTMLElement>('small');
+      if (endLabel) endLabel.textContent = complete ? 'ready' : 'score dish';
+      hud.classList.toggle('hud-complete', complete);
     },
   };
 }

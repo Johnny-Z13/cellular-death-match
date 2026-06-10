@@ -71,6 +71,7 @@ let framesSinceTick = 0;
 let lastFpsTick = performance.now();
 let tickCount = 0;
 let tickerState = createTickerState();
+let didAnnounceCompletion = false;
 let heardDishEventIds = new Set<number>();
 let pendingResearchBrief: ResearchBriefLine[] = [];
 
@@ -297,6 +298,8 @@ function startNewFight() {
   tickCount = 0;
   tickerState = createTickerState();
   heardDishEventIds = new Set<number>();
+  didAnnounceCompletion = false;
+  screens.setEpochComplete(false);
   screens.clearTicker();
   screens.setPickResearchBrief([]);
   const objective = run.getObjective();
@@ -371,6 +374,7 @@ function loop() {
       objectiveName: objective.def.name,
       objectiveSummary: objective.summary,
       objectiveHint: objective.def.hint ?? '',
+      objectiveComplete: objective.complete,
       upgrades: runState.upgrades.map((u) => {
         const def = getUpgradeDef(u.id);
         if (!def) return u.id;
@@ -379,6 +383,8 @@ function loop() {
     });
     screens.updateToolCharges(arena.getToolStates());
     screens.updateAgitation(arena.getAgitationState());
+    screens.setEpochComplete(objective.complete);
+    announceEpochCompletion(objective.complete, objective.def.name);
   }
   updateTicker(arena);
   persistArenaDiscoveries(arena);
@@ -589,6 +595,21 @@ function announceUnlocks(
     fx.showUnlockBanner('Breed Unlocked', bannerBreed, 'Catalogued in the Notebook', 'violet');
   } else if (bannerStrain) {
     fx.showUnlockBanner('Strain Unlocked', bannerStrain, 'New egg available', 'bio');
+  }
+}
+
+// Fire a one-time "experiment complete" signpost the first moment the dish
+// satisfies its objective, so the player knows they can finish (or keep
+// cultivating). Latched objectives stay complete; balance objectives can flip
+// back to incomplete, so we re-arm the announcement if completion is lost.
+function announceEpochCompletion(complete: boolean, objectiveName: string): void {
+  if (complete && !didAnnounceCompletion) {
+    didAnnounceCompletion = true;
+    uiAudio.play('experiment_ready');
+    fx.showToast('discovery', 'Experiment Complete', `${objectiveName} — finish when ready`);
+    screens.addTicker('Experiment complete: press End to finish, or keep cultivating.', 'discovery');
+  } else if (!complete && didAnnounceCompletion) {
+    didAnnounceCompletion = false;
   }
 }
 

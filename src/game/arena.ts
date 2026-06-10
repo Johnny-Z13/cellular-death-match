@@ -108,6 +108,15 @@ export interface ObjectiveProgress {
   status: ObjectiveStatus;
   summary: string;
   urgency: 'safe' | 'warning' | 'critical';
+  // `met`: the objective's condition holds right now (deadline-independent).
+  // `latches`: once met, this objective stays complete even if conditions drift
+  //   (creation/breeding objectives). Balance objectives do not latch — they
+  //   reflect the live state, so a collapsed dish reads as not-complete again.
+  // `complete`: the player-facing "experiment complete" signal the arena fills
+  //   in (latched or live depending on `latches`).
+  met: boolean;
+  latches: boolean;
+  complete: boolean;
 }
 
 export interface ToolState {
@@ -250,6 +259,10 @@ export function createArena(opts: CreateArenaOpts): Arena {
   let accidentCount = 0;
   let outbreakCount = 0;
   let forcedStatus: ArenaStatus | null = null;
+  // Latched once a "create / breed / cultivate" objective is achieved, so the
+  // experiment reads as Complete even if the player keeps cultivating after.
+  // Deadline-balance objectives report live completion instead (see below).
+  let objectiveAchieved = false;
   const maxAgitationCharges = opts.player.agitationCharges ?? DEFAULT_AGITATE_CHARGES;
   let agitationCharges = maxAgitationCharges;
   let agitationTicksRemaining = 0;
@@ -372,14 +385,23 @@ export function createArena(opts: CreateArenaOpts): Arena {
     getStatus(): ArenaStatus {
       if (forcedStatus) return forcedStatus;
       const p = state.cells.get(PLAYER_ID);
-      if (!p || p.vol === 0) return mode === 'ecosystem' ? 'running' : 'lost';
+      // Ecosystem epochs resolve on the objective/deadline even if the control
+      // sample dies — otherwise a dead dish would idle forever with no verdict.
+      if ((!p || p.vol === 0) && mode !== 'ecosystem') return 'lost';
       if (mode === 'ecosystem') {
-        const status = evaluateObjective(state, archetypes, objective, tickNo, epochTicks, {
+        const progress = evaluateObjective(state, archetypes, objective, tickNo, epochTicks, {
           reactions: reactionCount,
           discoveredBreedTicks,
-        }).status;
-        if (status === 'satisfied') return 'won';
-        if (status === 'failed') return 'lost';
+        });
+        // Latch achievement for "create / breed" objectives so the dish stays
+        // Complete after the moment of success.
+        if (progress.met && progress.latches) objectiveAchieved = true;
+        const complete = progress.latches ? objectiveAchieved : progress.met;
+        // The experiment no longer auto-wins the instant it succeeds: the
+        // player banks it via endEpochNow(), or the deadline banks it for them.
+        // The deadline is a soft backstop — complete at the deadline wins,
+        // otherwise an unmet objective fails as before.
+        if (tickNo >= epochTicks) return complete || progress.status === 'satisfied' ? 'won' : 'lost';
         return 'running';
       }
       for (const [id, cell] of state.cells) {
@@ -427,10 +449,13 @@ export function createArena(opts: CreateArenaOpts): Arena {
       };
     },
     getObjectiveProgress(): ObjectiveProgress {
-      return evaluateObjective(state, archetypes, objective, tickNo, epochTicks, {
+      const progress = evaluateObjective(state, archetypes, objective, tickNo, epochTicks, {
         reactions: reactionCount,
         discoveredBreedTicks,
       });
+      if (progress.met && progress.latches) objectiveAchieved = true;
+      const complete = progress.latches ? objectiveAchieved : progress.met;
+      return { ...progress, complete };
     },
     getToolStates(): Record<LabTool, ToolState> {
       return {
@@ -607,12 +632,15 @@ export function createArena(opts: CreateArenaOpts): Arena {
       const current = this.getStatus();
       if (current !== 'running') return current;
       if (mode !== 'ecosystem') return current;
-      const status = evaluateObjective(state, archetypes, objective, epochTicks, epochTicks, {
+      // The player is banking the experiment early. Evaluate as if at the
+      // deadline: a complete/satisfied dish wins; an unmet one ends as a loss.
+      const progress = evaluateObjective(state, archetypes, objective, epochTicks, epochTicks, {
         reactions: reactionCount,
         discoveredBreedTicks,
         forceShowcase: true,
-      }).status;
-      forcedStatus = status === 'satisfied' ? 'won' : 'lost';
+      });
+      const complete = progress.latches ? objectiveAchieved || progress.met : progress.met;
+      forcedStatus = complete || progress.status === 'satisfied' ? 'won' : 'lost';
       tickNo = Math.max(tickNo, epochTicks);
       return forcedStatus;
     },
@@ -1473,6 +1501,9 @@ function evaluateObjective(
       status: showcased ? 'satisfied' : deadline && !discovered ? 'failed' : 'running',
       summary: discovered ? `${name} created - logging sample` : `${name} not yet created`,
       urgency,
+      met: showcased,
+      latches: true,
+      complete: showcased,
     };
   }
 
@@ -1484,6 +1515,9 @@ function evaluateObjective(
       status: deadline ? ok ? 'satisfied' : 'failed' : 'running',
       summary: `${metrics.protectedCultureCount} / ${minCount} protected cultures`,
       urgency,
+      met: ok,
+      latches: false,
+      complete: ok,
     };
   }
 
@@ -1498,6 +1532,9 @@ function evaluateObjective(
       status: ok ? 'satisfied' : failed ? 'failed' : 'running',
       summary: `${count} / ${targetCount} ${archetype} cultures`,
       urgency,
+      met: ok,
+      latches: true,
+      complete: ok,
     };
   }
 
@@ -1510,6 +1547,9 @@ function evaluateObjective(
       status: ok ? 'satisfied' : deadline ? 'failed' : 'running',
       summary: `${context.reactions} / ${targetCount} reactions, ${Math.round(metrics.coverage * 100)}% living coverage`,
       urgency,
+      met: ok,
+      latches: true,
+      complete: ok,
     };
   }
 
@@ -1522,6 +1562,9 @@ function evaluateObjective(
       status: ok ? 'satisfied' : deadline ? 'failed' : 'running',
       summary: `${metrics.dominantArchetype ?? 'none'} dominant, ${Math.round(metrics.coverage * 100)}% living coverage`,
       urgency,
+      met: ok,
+      latches: false,
+      complete: ok,
     };
   }
 
@@ -1534,6 +1577,9 @@ function evaluateObjective(
     status: deadline ? ok ? 'satisfied' : 'failed' : 'running',
     summary: `${Math.round(dominancePct * 100)}% / ${Math.round(maxDominance * 100)}% dominance, ${metrics.livingLifeforms} cultures`,
     urgency,
+    met: ok,
+    latches: false,
+    complete: ok,
   };
 }
 

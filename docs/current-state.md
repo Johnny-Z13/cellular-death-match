@@ -34,7 +34,12 @@ Cellular Death Match is now a mobile-first Petri dish ecosystem game. The origin
 2. Read the current objective and deadline.
 3. Select an egg strain or lab tool.
 4. Tap the dish to seed life, feed growth, or repel colonies.
-5. Survive or satisfy the objective.
+5. Satisfy the objective: the experiment is marked Complete (ready chime, toast,
+   glowing End button) but the epoch keeps running — bank the win with End
+   whenever you like, or keep cultivating. The deadline is a soft backstop:
+   complete at the deadline banks the win; incomplete fails as before.
+   Creation objectives latch once achieved; balance objectives reflect the
+   live dish state and can drift back to incomplete.
 6. Pick an upgrade between epochs.
 7. Complete all six epochs or collapse.
 

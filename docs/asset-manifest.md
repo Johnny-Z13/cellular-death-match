@@ -31,4 +31,5 @@ Output: `public/audio/generated/`. Note: ElevenLabs requires `duration_seconds >
 | epoch_begin | epoch_begin.mp3 | epoch intro swell |
 | epoch_win | epoch_win.mp3 | epoch success stinger |
 | epoch_fail | epoch_fail.mp3 | epoch collapse stinger |
+| experiment_ready | experiment_ready.mp3 | objective-complete ready chime |
 | ambience_loop | ambience_loop.mp3 | looping lab ambience bed |

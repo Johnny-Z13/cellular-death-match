@@ -85,6 +85,12 @@ const ASSETS = [
     text: 'Somber collapse stinger, a low descending drone with a hollow dying-out resonance, restrained and cinematic, not harsh, no melody.',
   },
   {
+    id: 'experiment_ready',
+    file: 'experiment_ready.mp3',
+    duration_seconds: 1.4,
+    text: 'Warm two-note ready chime from a premium lab instrument, gentle rising glassy notification, pleasant and satisfying, not alarming, no music.',
+  },
+  {
     id: 'ambience_loop',
     file: 'ambience_loop.mp3',
     duration_seconds: 12,

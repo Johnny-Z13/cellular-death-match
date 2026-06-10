@@ -3,7 +3,7 @@
 // toggle and ambience lifecycle stay simple. Generated assets load lazily with
 // a quiet procedural fallback if a file is missing.
 
-export type UiSoundId = 'ui_tap' | 'ui_select' | 'epoch_begin' | 'epoch_win' | 'epoch_fail';
+export type UiSoundId = 'ui_tap' | 'ui_select' | 'epoch_begin' | 'epoch_win' | 'epoch_fail' | 'experiment_ready';
 
 interface UiSoundDef {
   asset: string;
@@ -17,6 +17,7 @@ const UI_SOUND_DEFS: Record<UiSoundId, UiSoundDef> = {
   epoch_begin: { asset: '/audio/generated/epoch_begin.mp3', gain: 0.6, cooldownMs: 400 },
   epoch_win: { asset: '/audio/generated/epoch_win.mp3', gain: 0.66, cooldownMs: 400 },
   epoch_fail: { asset: '/audio/generated/epoch_fail.mp3', gain: 0.62, cooldownMs: 400 },
+  experiment_ready: { asset: '/audio/generated/experiment_ready.mp3', gain: 0.6, cooldownMs: 600 },
 };
 
 const AMBIENCE_ASSET = '/audio/generated/ambience_loop.mp3';
