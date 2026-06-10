@@ -102,4 +102,16 @@ describe('mobile layout CSS', () => {
     expect(reducedMotion).toContain('.mobile-shell-button');
     expect(reducedMotion).toContain('transition: none !important');
   });
+
+  it('repositions chrome buttons and lifts discovery toasts clear of the bottom shell on phones', () => {
+    const mobile = mediaBlock('(max-width: 899px)');
+    // Sound + Full screen tuck to the top-right; the Notebook tab is on the dish.
+    expect(mobile).toContain('.fullscreen-button {');
+    expect(mobile).toContain('.audio-button {');
+    expect(mobile).toContain('.notebook-button.notebook-tab {');
+    // Toasts sit above the toolbar zone so completion/discovery messages are
+    // never hidden behind the bottom controls.
+    expect(mobile).toContain('.fx-toasts {');
+    expect(mobile).toContain('bottom: calc(212px + env(safe-area-inset-bottom))');
+  });
 });

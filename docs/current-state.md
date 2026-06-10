@@ -96,6 +96,12 @@ Responsive smoke checks should include:
 - `375x667` small mobile portrait.
 - `1280x720` desktop.
 
+The premium-pass features were verified responsive at all three: the arcade
+unlock banner, experiment-complete signpost/toast, glowing End button, and the
+notebook tablet + dish-docked tab all hold up in phone portrait. Discovery
+toasts are lifted clear of the bottom mobile shell. The loved desktop layout is
+unchanged; mobile keeps the bottom-shell + horizontal-tray + drawer schema.
+
 ## Historical Docs
 
 The files under `docs/superpowers/plans/` and the original spec are retained as historical implementation records. They are useful for understanding how the project got here, but `README.md`, `AGENTS.md`, `CLAUDE.md`, `cloud.md`, and this file describe the current product shape.
