@@ -325,8 +325,8 @@ export function createScreens(): Screens {
 
         const swatch = document.createElement('span');
         swatch.className = 'life-swatch';
-        swatch.dataset.lifeColor = rgb(option.color);
-        swatch.style.background = rgb(option.color);
+        swatch.dataset.lifeColor = bloomGradient(option.color);
+        swatch.style.background = bloomGradient(option.color);
         const copy = document.createElement('span');
         const label = document.createElement('strong');
         label.dataset.unlockedText = option.name;
@@ -353,8 +353,8 @@ export function createScreens(): Screens {
         item.style.setProperty('--life-color', rgb(identity.colors.primary));
         const itemSwatch = document.createElement('span');
         itemSwatch.className = `life-swatch life-swatch-${identity.renderStyle}`;
-        itemSwatch.dataset.lifeColor = rgb(identity.colors.primary);
-        itemSwatch.style.background = rgb(identity.colors.primary);
+        itemSwatch.dataset.lifeColor = bloomGradient(identity.colors.primary);
+        itemSwatch.style.background = bloomGradient(identity.colors.primary);
         const itemText = document.createElement('span');
         const itemName = document.createElement('strong');
         itemName.dataset.unlockedText = identity.name;
@@ -531,6 +531,22 @@ export function createScreens(): Screens {
 
 function rgb(color: [number, number, number]): string {
   return `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+}
+
+// A swatch bloom that mirrors how the cell actually renders in the dish: a
+// lightened luminous core fading to the true identity color, so the rack icon
+// and the cultured colony read as the same organism. `lighten` matches the
+// renderer's 0.3 boundary lift so the perceived hue lines up.
+function shade(color: [number, number, number], f: number): string {
+  // f > 0 lightens toward white; f < 0 darkens toward black. Clamped 0..255.
+  const t = f >= 0 ? 255 : 0;
+  const a = Math.abs(f);
+  const mix = (c: number) => Math.round(Math.max(0, Math.min(255, t * a + c * (1 - a))));
+  return rgb([mix(color[0]), mix(color[1]), mix(color[2])]);
+}
+
+function bloomGradient(color: [number, number, number]): string {
+  return `radial-gradient(circle at 42% 38%, ${shade(color, 0.55)}, ${rgb(color)} 58%, ${shade(color, -0.4)} 100%)`;
 }
 
 function isToolId(tool: string | undefined): tool is ToolId {

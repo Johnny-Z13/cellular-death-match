@@ -1012,20 +1012,42 @@ canvas {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  animation: life-idle-pulse 2.8s ease-in-out infinite;
+  /* A living micro-colony: a glow halo in the identity color plus an organic
+     blob that wobbles on the spot like a tiny cellular automaton. */
+  box-shadow: 0 0 10px 1px color-mix(in srgb, var(--life-color) 60%, transparent);
+  animation: life-swatch-wobble 3.6s ease-in-out infinite, life-idle-pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes life-swatch-wobble {
+  0%, 100% { border-radius: 56% 44% 52% 48% / 50% 54% 46% 50%; transform: rotate(0deg) scale(1); }
+  25% { border-radius: 46% 54% 44% 56% / 56% 46% 54% 44%; transform: rotate(2deg) scale(1.04); }
+  50% { border-radius: 52% 48% 56% 44% / 44% 56% 48% 52%; transform: rotate(-1deg) scale(0.98); }
+  75% { border-radius: 48% 52% 46% 54% / 52% 48% 56% 44%; transform: rotate(1.5deg) scale(1.03); }
 }
 
 .life-swatch-needle {
   border-radius: 2px;
+  animation: life-swatch-needle-wobble 2.4s ease-in-out infinite, life-idle-pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes life-swatch-needle-wobble {
+  0%, 100% { transform: scaleY(1) skewX(0deg); }
+  50% { transform: scaleY(1.12) skewX(-4deg); }
 }
 
 .life-swatch-crystal {
   transform: rotate(45deg);
   border-radius: 1px;
+  animation: life-swatch-crystal-wobble 3s ease-in-out infinite, life-idle-pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes life-swatch-crystal-wobble {
+  0%, 100% { transform: rotate(45deg) scale(1); }
+  50% { transform: rotate(52deg) scale(1.06); }
 }
 
 .life-swatch-cycle {
-  animation: life-color-cycle 1.2s steps(4, end) infinite;
+  animation: life-swatch-wobble 3.6s ease-in-out infinite, life-color-cycle 1.2s steps(4, end) infinite;
 }
 
 @keyframes life-idle-pulse {
@@ -1363,6 +1385,8 @@ canvas {
 
 @media (prefers-reduced-motion: reduce) {
   .life-swatch,
+  .life-swatch-needle,
+  .life-swatch-crystal,
   .life-swatch-cycle,
   .life-panel .life-item-discovered,
   .life-panel .life-item-discovered .life-swatch,

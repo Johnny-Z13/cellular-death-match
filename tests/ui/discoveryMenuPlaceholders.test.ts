@@ -184,8 +184,8 @@ describe('discovery menu placeholders', () => {
   it('knocks undiscovered lifeform specimens back to inert gray', () => {
     // The identity color is stashed so it can be cleared while locked and
     // restored on discovery; CSS desaturates the whole locked card.
-    expect(screensSource).toContain('swatch.dataset.lifeColor = rgb(option.color)');
-    expect(screensSource).toContain('itemSwatch.dataset.lifeColor = rgb(identity.colors.primary)');
+    expect(screensSource).toContain('swatch.dataset.lifeColor = bloomGradient(option.color)');
+    expect(screensSource).toContain('itemSwatch.dataset.lifeColor = bloomGradient(identity.colors.primary)');
     expect(screensSource).toContain("icon.style.removeProperty('background')");
     expect(screensSource).toContain('icon.style.background = icon.dataset.lifeColor');
     expect(css).toContain('.life-panel .life-item.locked-discovery {');
