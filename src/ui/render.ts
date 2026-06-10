@@ -1,7 +1,10 @@
 import type { SimState, CellId } from '../sim/types';
 import { type EnemySpawn } from '../content/enemies';
 import type { TraitId } from '../content/ecology';
-import { lifeformIdentityForSpawn } from '../content/lifeformIdentity';
+import {
+  lifeformIdentityForSpawn,
+  type LifeformRenderStyle,
+} from '../content/lifeformIdentity';
 import type { DishEventMarker } from '../game/arena';
 
 export interface Renderer {
@@ -145,6 +148,13 @@ export function createRenderer(
       // Scale up to display canvas.
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(offscreen!, 0, 0, canvas.width, canvas.height);
+
+      // Per-lifeform accent pass: give each renderStyle a distinct silhouette
+      // and a soft glow on top of the flat Potts pixels. O(cells), so cheap.
+      const sxCell = canvas.width / LX;
+      const syCell = canvas.height / LY;
+      drawLifeformAccents(ctx, state, archetypes, base, sxCell, syCell, frame, reduceMotion);
+
       const flash = dishFlashForEvents(dishEvents, reduceMotion);
       if (flash) {
         ctx.save();
@@ -177,6 +187,177 @@ export function createRenderer(
       }
     },
   };
+}
+
+// Estimate a cell's on-screen radius from its volume (vol ≈ area of a disc).
+function cellRadiusPx(vol: number, sx: number, sy: number): number {
+  const gridR = Math.sqrt(Math.max(vol, 1) / Math.PI);
+  return gridR * (sx + sy) * 0.5;
+}
+
+// Draw a style-specific accent + glow at each living cell's center. Breeds get
+// a stronger glow so newly bred cultures pop out of the dish immediately.
+function drawLifeformAccents(
+  ctx: CanvasRenderingContext2D,
+  state: SimState,
+  archetypes: ReadonlyMap<CellId, EnemySpawn> | undefined,
+  base: Uint8ClampedArray[],
+  sx: number,
+  sy: number,
+  frame: number,
+  reduceMotion: boolean,
+): void {
+  if (!archetypes) return;
+  ctx.save();
+  // shadowBlur is the costly part, so only breeds get it. In a crowded dish we
+  // also cap how many breeds glow per frame to keep mobile framerates steady.
+  let glowBudget = 12;
+  for (const [id, cell] of state.cells) {
+    if (id <= 1 || cell.vol <= 0) continue;            // skip empty + control sample
+    const spawn = archetypes.get(id);
+    if (!spawn) continue;
+    const identity = lifeformIdentityForSpawn(spawn);
+    const r = cellRadiusPx(cell.vol, sx, sy);
+    if (r < 2.5) continue;                              // too small to accent
+    const cx = cell.center[0] * sx;
+    const cy = cell.center[1] * sy;
+    const color = base[id] ?? base[0]!;
+    const accent = identity.colors.accent;
+    const isBreed = Boolean(spawn.breedId);
+    const glowing = isBreed && glowBudget > 0;
+    if (glowing) glowBudget -= 1;
+    drawAccentForStyle(
+      ctx,
+      identity.renderStyle,
+      cx,
+      cy,
+      r,
+      color,
+      accent,
+      glowing,
+      frame,
+      reduceMotion,
+    );
+  }
+  ctx.restore();
+}
+
+function drawAccentForStyle(
+  ctx: CanvasRenderingContext2D,
+  style: LifeformRenderStyle,
+  cx: number,
+  cy: number,
+  r: number,
+  color: Uint8ClampedArray,
+  accent: [number, number, number],
+  glowing: boolean,
+  frame: number,
+  reduceMotion: boolean,
+): void {
+  const accentCss = `rgb(${accent[0]}, ${accent[1]}, ${accent[2]})`;
+  const coreCss = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+  const pulse = reduceMotion ? 0 : Math.sin(frame / 18) * 0.5 + 0.5;
+
+  ctx.shadowBlur = glowing ? r * 1.4 : 0;
+  ctx.shadowColor = accentCss;
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = Math.max(1, r * 0.16);
+  ctx.strokeStyle = accentCss;
+  ctx.fillStyle = accentCss;
+
+  switch (style) {
+    case 'needle': {
+      // Radiating spikes — sharp ranged suppressors.
+      const spikes = 6;
+      const len = r * 1.5;
+      const spin = reduceMotion ? 0 : frame / 40;
+      ctx.beginPath();
+      for (let i = 0; i < spikes; i++) {
+        const a = spin + (Math.PI * 2 * i) / spikes;
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(a) * len, cy + Math.sin(a) * len);
+      }
+      ctx.stroke();
+      dot(ctx, cx, cy, r * 0.35, coreCss);
+      break;
+    }
+    case 'crystal': {
+      // Faceted diamond — brittle resistant feeders.
+      const a = reduceMotion ? Math.PI / 4 : Math.PI / 4 + frame / 90;
+      ctx.beginPath();
+      for (let i = 0; i < 4; i++) {
+        const t = a + (Math.PI / 2) * i;
+        const px = cx + Math.cos(t) * r * 1.2;
+        const py = cy + Math.sin(t) * r * 1.2;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.stroke();
+      ctx.globalAlpha = 0.35 + 0.3 * pulse;
+      ctx.fill();
+      break;
+    }
+    case 'glitter': {
+      // Scattered sparkles — fast-shedding propagators.
+      const sparks = 5;
+      for (let i = 0; i < sparks; i++) {
+        const a = (Math.PI * 2 * i) / sparks + (reduceMotion ? 0 : frame / 22);
+        const rr = r * (0.5 + 0.5 * ((i % 2) === 0 ? pulse : 1 - pulse));
+        const sx2 = cx + Math.cos(a) * rr;
+        const sy2 = cy + Math.sin(a) * rr;
+        dot(ctx, sx2, sy2, Math.max(1, r * 0.18), accentCss);
+      }
+      break;
+    }
+    case 'anchor': {
+      // Heavy concentric rings — slow dominant masses.
+      ctx.globalAlpha = 0.85;
+      ring(ctx, cx, cy, r * 1.15, accentCss, ctx.lineWidth);
+      ctx.globalAlpha = 0.5;
+      ring(ctx, cx, cy, r * 0.7, accentCss, ctx.lineWidth * 0.8);
+      break;
+    }
+    case 'cycle': {
+      // Hue-shifting ring — mimics / pattern loops.
+      const hue = reduceMotion ? 0 : (frame * 4) % 360;
+      const cyc = reduceMotion ? accentCss : `hsl(${hue}, 90%, 65%)`;
+      ctx.shadowColor = cyc;
+      ring(ctx, cx, cy, r * 1.1, cyc, ctx.lineWidth);
+      break;
+    }
+    case 'cellular':
+    default: {
+      // Soft grazer halo — subtle so the dish doesn't get noisy.
+      ctx.globalAlpha = 0.55 + 0.25 * pulse;
+      ring(ctx, cx, cy, r * 1.05, accentCss, ctx.lineWidth * 0.8);
+      break;
+    }
+  }
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+}
+
+function dot(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, fill: string): void {
+  ctx.beginPath();
+  ctx.fillStyle = fill;
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function ring(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  stroke: string,
+  width: number,
+): void {
+  ctx.beginPath();
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = width;
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.stroke();
 }
 
 function drawDishEventMarker(
