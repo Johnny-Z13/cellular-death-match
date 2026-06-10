@@ -1136,12 +1136,6 @@ canvas {
   animation: notebook-discovery-pop 1.25s ease-out 1;
 }
 
-.notebook-entry-locked {
-  color: #7f8a8d;
-  border-color: rgba(92, 104, 110, 0.62);
-  background: rgba(13, 16, 18, 0.76);
-}
-
 .notebook-marker {
   width: 34px;
   height: 34px;
@@ -1159,13 +1153,6 @@ canvas {
   border-color: #d6c85e;
   color: #fff4bd;
   box-shadow: 0 0 16px rgba(214, 200, 94, 0.38);
-}
-
-.notebook-entry-locked .notebook-marker {
-  color: #9aa3a7;
-  border-color: rgba(128, 140, 146, 0.46);
-  background: radial-gradient(circle at 50% 48%, #343b3f, #171b1e 68%);
-  box-shadow: 0 0 8px rgba(140, 154, 160, 0.2);
 }
 
 .notebook-entry-head {

@@ -67,6 +67,6 @@ npm run build
 
 ## Known Product Shape
 
-This is currently an ecosystem-cultivation game rather than the older keyboard shooter described in early planning docs. Current play revolves around selecting egg strains, placing reagents, triggering catalytic reactions, discovering and cross-breeding rare breeds, and completing five ecology objectives.
+This is currently an ecosystem-cultivation game rather than the older keyboard shooter described in early planning docs. Current play revolves around selecting egg strains, placing reagents, triggering catalytic reactions, discovering and cross-breeding rare breeds, and completing six ecology objectives.
 
 Discovery/breeding content lives in `src/content/catalysis.ts` (recipes, breeds, hybrids, notes) and `src/content/lifeformIdentity.ts` (per-lifeform identity + `renderStyle`). Cross-breeding logic is in `src/game/arena.ts` (`evaluateBreedDiscoveries`/`hybridPairSource`). The dish renderer is `src/ui/render.ts`. Adding a breed means updating its `BreedDef`, identity, notebook list, and the progression lifeform list — the content tests enforce that these stay in sync.

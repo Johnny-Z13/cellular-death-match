@@ -12,12 +12,14 @@ The game layer leans into that by asking the player to cultivate conditions inst
 
 ## Current Gameplay
 
-- Five ecosystem epochs per run.
-- Objectives include preserving blue lineages, culling the red invasive lineage, inducing blooms, sterilizing samples, and preventing monoculture.
+- Six ecosystem epochs per run, one per objective.
+- Objectives: create a new lifeform, protect grazer cultures, breed swarmlets, trigger catalysis, prevent monoculture, and cultivate boss anchors.
 - Tools:
   - Egg: choose a lifeform strain, then seed it into the dish.
   - Nutrient: attracts nearby lifeforms and strongly catalyzes growth.
   - Toxin: repels lifeforms and can be used to push colonies around the dish.
+  - Water, Salt, Acid: research-unlocked reagents that drive deeper reactions.
+  - Agitate: shakes active fields together and can chain reactions.
 - Egg strains:
   - Swarmlet: small, quick, fragile colonies.
   - Bruiser: large, slow feeders.

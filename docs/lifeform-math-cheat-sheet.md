@@ -6,9 +6,11 @@ Captured from `http://localhost:5175/?v=centroid-cheat-sheet-20260606` on 2026-0
 
 ## Top-left pooling diagnosis
 
-The repeated top-left coalescing pattern was very likely a math bug, not intentional emergent behavior.
+The repeated top-left coalescing pattern was a math bug, not intentional emergent behavior. It had **two** root causes, fixed separately:
 
-The live dish is non-wrapping, but cell centers were still calculated with toroidal circular-mean math. That is correct for a wraparound world, where pixels at `x = 0` and `x = LX - 1` are neighbors. In the Petri dish, those pixels are opposite edges, so the center must be the linear centroid. When fragmented organisms touched opposite sides, their reported center could jump to the coordinate seam. Targeting, tool fields, bullets, and split spawns then used that false center, which can read visually as top-left gravity.
+**Cause 1 (fixed 2026-06-06):** the live dish is non-wrapping, but cell centers were still calculated with toroidal circular-mean math. That is correct for a wraparound world, where pixels at `x = 0` and `x = LX - 1` are neighbors. In the Petri dish, those pixels are opposite edges, so the center must be the linear centroid. When fragmented organisms touched opposite sides, their reported center could jump to the coordinate seam.
+
+**Cause 2 (fixed 2026-06-10):** `recomputeCenter` reset a dead cell's center to `[0, 0]` — the top-left corner — and two systems consumed that corpse coordinate. The splitter on-death handler read the already-zeroed center, so every dead splitter spawned its offspring at the corner. And `chooseEcosystemTarget` never checked that the control sample was alive, so once it died its corpse sat at `[0, 0]` and anything within threat range locked onto it forever. Fixes: dead cells retain their last known center, and targeting ignores a dead control sample. (The same pass widened the grid to `Uint16Array`; a `Uint8Array` wrapped cell id 256 to empty and 257 to the control sample.)
 
 Fixed rule:
 
@@ -50,6 +52,16 @@ Discovered breeds do not have separate controller files. Each breed inherits its
 | Glass Antibody | Base Bruiser; `targetVol x 0.82`, `speed x 1.05`, `engulf x 1.24`, instability `x 1.05`; traits Toxin Resistant + Fragile. | Brittle resistant feeder produced by crystal or flare stress. | Sharp counter-culture that cracks lanes open without being a pure boss. |
 | Bloom Mass | Base Splitter; `targetVol x 1.32`, `speed x 0.82`, `engulf x 1.08`, instability `x 0.95`; traits Budding + Gelatinous. | Soft overfed propagator from nutrient conduit reactions. | Big squishy reproduction engine. Reward curiosity more than punish it. |
 | Static Lattice | Base Mirror; `targetVol x 0.94`, `speed x 0.78`, `engulf x 0.96`, instability `x 0.74`; traits Toxin Resistant + Budding. | Flickering mimic born from agitated chain patterns. | Repeating color-cycle / old computer pattern organism. |
+
+## Hybrid breeds
+
+Hybrids declare a `parents` pair on their `BreedDef`. Once both parents are discovered, a cell of each sitting within `16` px of the other inside a nutrient/conduit/bloom field hybridizes into the offspring. Hybrid stats multiply off the hybrid's own `baseArchetype` defaults (not the runtime parent) so they never compound off an already-bred cell.
+
+| Name | Maths | Behavior | What we expect |
+| --- | --- | --- | --- |
+| Quill Bloom | Needle Swarm x Bloom Mass; base Splitter; `targetVol x 1.12`, `speed x 1.14`, instability `x 1.2`; traits Budding + Fleet + Fragile. | Swelling propagator with a fast, prickly edge. | Reward for breeding the two most discoverable parents. |
+| Vitric Anchor | Glass Antibody x Folded Anchor; base Boss; `targetVol x 1.04`, `speed x 0.7`, `engulf x 1.22`, instability `x 0.7`; traits Toxin Resistant + Gelatinous + Fragile. | Brittle, toxin-proof fortress that slows local motion. | Late-game anchor for players who chase both crystal lines. |
+| Mire Lattice | Static Lattice x Bloom Mass; base Mirror; `targetVol x 1.18`, `speed x 0.74`, instability `x 0.8`; traits Budding + Toxin Resistant + Gelatinous. | Self-copying pattern mass that keeps budding tiles of itself. | Pattern-organism payoff for the lattice discovery chain. |
 
 ## Mutation traits
 

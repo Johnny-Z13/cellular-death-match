@@ -6,12 +6,12 @@ Last updated: 2026-06-10
 
 Cellular Death Match is now a mobile-first Petri dish ecosystem game. The original implementation plans targeted an 8-fight keyboard shooter. The current branch has moved toward touch-friendly ecology control:
 
-- Five objective-driven epochs.
+- Six objective-driven epochs, one per objective.
 - Selectable egg strains.
 - Five reagent tools (nutrient, toxin, water, salt, acid) plus agitation.
 - Catalytic reactions, rare breed discovery, and cross-breeding of hybrids.
 - Pixel-bloom dish rendering: every culture's own pixels glow in their color.
-- Mobile portrait layout with bottom tool controls.
+- Mobile portrait touch shell: Lifeforms/Log drawers, tool readout, bottom tool bar.
 - Desktop layout with side panels, lifeform guide, inspector, and dish log.
 
 ## Main Systems
@@ -31,7 +31,7 @@ Cellular Death Match is now a mobile-first Petri dish ecosystem game. The origin
 4. Tap the dish to seed life, feed growth, or repel colonies.
 5. Survive or satisfy the objective.
 6. Pick an upgrade between epochs.
-7. Complete all five epochs or collapse.
+7. Complete all six epochs or collapse.
 
 ## Current Lifeforms
 

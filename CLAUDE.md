@@ -4,7 +4,7 @@ This project is a Vite + TypeScript browser game. Use `AGENTS.md` as the canonic
 
 ## Current Direction
 
-Cellular Death Match is currently a mobile-first Petri dish ecosystem game, not the older keyboard shooter described in the historical Superpowers plans. Current play revolves around selecting egg strains, applying reagents (nutrient, toxin, water, salt, acid), combining them into catalytic reactions, and completing five ecology objectives. The heart of the game is emergent discovery: reactions reveal rare **breeds**, and bringing two discovered breeds together under a nutrient field **cross-breeds** them into **hybrid** offspring. Every lifeform has a distinct dish silhouette (its `renderStyle`) and a discoverer's-notebook entry.
+Cellular Death Match is currently a mobile-first Petri dish ecosystem game, not the older keyboard shooter described in the historical Superpowers plans. Current play revolves around selecting egg strains, applying reagents (nutrient, toxin, water, salt, acid), combining them into catalytic reactions, and completing six ecology objectives. The heart of the game is emergent discovery: reactions reveal rare **breeds**, and bringing two discovered breeds together under a nutrient field **cross-breeds** them into **hybrid** offspring. Every lifeform has a distinct dish silhouette (its `renderStyle`) and a discoverer's-notebook entry.
 
 ## Verification
 

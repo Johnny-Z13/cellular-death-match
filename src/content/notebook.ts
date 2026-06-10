@@ -14,7 +14,6 @@ export interface NotebookEntry {
   id: string;
   category: NotebookCategory;
   title: string;
-  lockedTitle: string;
   body: string;
   clue: string;
   caution: CautionLevel;
@@ -134,7 +133,6 @@ function lifeformEntry(id: LifeformIdentityId): NotebookEntry {
     id: `lifeform_${id}`,
     category: 'lifeform',
     title: identity.name,
-    lockedTitle: 'Unknown lifeform',
     body: `${identity.role}. ${identity.behavior}`,
     clue: identity.origin,
     caution: 'stable',
@@ -149,7 +147,6 @@ function rareLifeformEntry(id: BreedId): NotebookEntry {
     id: `lifeform_${id}`,
     category: 'lifeform',
     title: identity.name,
-    lockedTitle: 'Unknown lifeform',
     body: note.body,
     clue: BREED_DEFS[id].discoveryTrigger,
     caution: note.caution,
@@ -163,18 +160,11 @@ function noteEntry(category: Exclude<NotebookCategory, 'lifeform'>, noteId: Disc
     id: `${category}_${noteId}`,
     category,
     title: note.title,
-    lockedTitle: lockedTitleFor(category),
     body: note.body,
     clue: clueForNote(noteId, category),
     caution: note.caution,
     unlock: { noteId },
   };
-}
-
-function lockedTitleFor(category: Exclude<NotebookCategory, 'lifeform'>): string {
-  if (category === 'catalyst') return 'Unknown catalyst';
-  if (category === 'event') return 'Unknown event';
-  return 'Unknown lab note';
 }
 
 function clueForNote(noteId: DiscoveryNoteId, category: NotebookCategory): string {

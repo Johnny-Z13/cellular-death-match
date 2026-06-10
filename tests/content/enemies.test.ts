@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   ECOSYSTEM_SCHEDULE,
-  FIGHT_SCHEDULE,
   ARCHETYPE_DEFAULTS,
   ARCHETYPE_INFO,
   type EnemyArchetype,
@@ -10,10 +9,6 @@ import {
 describe('ECOSYSTEM_SCHEDULE', () => {
   it('has exactly 6 longer ecosystems', () => {
     expect(ECOSYSTEM_SCHEDULE.length).toBe(6);
-  });
-
-  it('keeps the old export as a compatibility alias', () => {
-    expect(FIGHT_SCHEDULE).toBe(ECOSYSTEM_SCHEDULE);
   });
 
   it('every ecosystem starts with a mixed population', () => {

@@ -140,6 +140,3 @@ export const ECOSYSTEM_SCHEDULE: ReadonlyArray<ReadonlyArray<EnemySpawn>> = [
     ...colony(2, ARCHETYPE_DEFAULTS.swarmlet),
   ],
 ];
-
-// Back-compat export for older tests/docs that still refer to fights.
-export const FIGHT_SCHEDULE = ECOSYSTEM_SCHEDULE;

@@ -20,7 +20,6 @@ describe('notebook catalogue content', () => {
       categories.add(entry.category);
       expect(entry.id.length).toBeGreaterThan(3);
       expect(entry.title.length).toBeGreaterThan(3);
-      expect(entry.lockedTitle.length).toBeGreaterThan(3);
       expect(entry.body.length).toBeGreaterThan(12);
       expect(entry.clue.length).toBeGreaterThan(12);
       expect(['stable', 'volatile', 'critical']).toContain(entry.caution);
