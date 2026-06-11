@@ -21,6 +21,9 @@ export interface RunState {
   outcome: null | 'won' | 'lost';
   pendingPickChoices: string[];
   seed: number;
+  // One entry per finished epoch: did the player achieve its objective, or did
+  // it lapse at the deadline? Drives an honest end-of-run summary.
+  epochResults: Array<'completed' | 'lapsed'>;
 }
 
 export interface Run {
@@ -57,6 +60,7 @@ export function createRun(seed: number): Run {
   const upgrades: UpgradeRef[] = [];
   let outcome: null | 'won' | 'lost' = null;
   let pendingPickChoices: string[] = [];
+  let epochResults: Array<'completed' | 'lapsed'> = [];
   const rng: Rng = createRng(seed);
 
   function pickThreeChoices(): string[] {
@@ -83,6 +87,7 @@ export function createRun(seed: number): Run {
         outcome,
         pendingPickChoices: [...pendingPickChoices],
         seed,
+        epochResults: [...epochResults],
       };
     },
     start() {
@@ -91,9 +96,11 @@ export function createRun(seed: number): Run {
       upgrades.length = 0;
       outcome = null;
       pendingPickChoices = [];
+      epochResults = [];
     },
     completeEpoch() {
       if (phase !== 'arena') return;
+      epochResults.push('completed');
       if (fightIndex >= EPOCHS_PER_RUN - 1) {
         phase = 'run_end';
         outcome = 'won';
@@ -108,6 +115,7 @@ export function createRun(seed: number): Run {
     // The run only ends after the final epoch.
     skipEpoch() {
       if (phase !== 'arena') return;
+      epochResults.push('lapsed');
       if (fightIndex >= EPOCHS_PER_RUN - 1) {
         phase = 'run_end';
         // Reaching the end is a completed run regardless of misses along the way.
@@ -146,6 +154,7 @@ export function createRun(seed: number): Run {
       upgrades.length = 0;
       outcome = null;
       pendingPickChoices = [];
+      epochResults = [];
     },
     getPlayerConfig() {
       return applyUpgrades(PLAYER_BASE, upgrades);

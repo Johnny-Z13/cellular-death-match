@@ -12,6 +12,24 @@ calls, document them here, push each finished piece.
 
 ---
 
+## Prioritized summary (end of audit)
+
+- **P0 (broken)** — none found. Two full harness runs (desktop + iPhone, coach
+  live, every tool/breed/notebook path) with zero console/page errors.
+- **P1 (fixed this session)** — end-of-run summary claimed "Completed all 6
+  ecosystems" even when objectives lapsed (side-effect of the forgiving
+  rebalance). Now tracks completed-vs-lapsed per epoch and reports honestly:
+  "Trial concluded: X of 6 objectives achieved" (or "flawless trial" at 6/6).
+- **P2 (your ears needed)** — audio density: paste-drag smears are rate-limited
+  (150ms) and reverb is subtle, but I can't *hear* headless. Worth one real
+  listen: draw a long trail while reactions fire and judge mud. Knobs:
+  per-sound `cooldownMs` in `uiAudio.ts`, reverb wet 0.22.
+- **P3 (taste notes)** — the visible-mutation splodge (amber speckle, ~12s
+  cycles) can read murky-brown over black in a still; empirically the global
+  tint is ≤ rgb(9,8,4) and decays in <3s, so I left it. If it bugs you, brighten
+  the core in `colorForEffect('mutation')` or shorten the effect ttl. Also the
+  coach teaches Paste before the objective (see judgment call below).
+
 ## Automated audit baseline (pre-onboarding)
 - Full harness run (`scripts/qa-audit.mjs`) at 1280×720 and 390×844: **0 console
   errors**, all tools/breeds/notebook paths work, 8 chimera portraits load,

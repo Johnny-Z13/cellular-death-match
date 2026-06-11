@@ -362,6 +362,7 @@ function showPhase() {
       outcome: state.outcome ?? 'lost',
       fightReached: state.fightIndex + 1,
       totalFights: EPOCHS_PER_RUN,
+      objectivesCompleted: state.epochResults.filter((result) => result === 'completed').length,
       upgrades: state.upgrades.map((u) => {
         const def = getUpgradeDef(u.id);
         if (!def) return u.id;

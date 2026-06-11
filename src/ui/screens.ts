@@ -39,6 +39,7 @@ export interface EndInfo {
   outcome: 'won' | 'lost';
   fightReached: number;        // 1-based
   totalFights: number;
+  objectivesCompleted: number; // achieved (not lapsed) objectives this run
   upgrades: string[];
 }
 
@@ -578,8 +579,12 @@ export function createScreens(): Screens {
     },
     updateEnd(info) {
       endTitle.textContent = info.outcome === 'won' ? 'Lineage Stabilized' : 'Colony Collapsed';
+      // Honest summary: the forgiving model always reaches the end, so report
+      // how many objectives were actually achieved rather than claiming a sweep.
       const fightStr = info.outcome === 'won'
-        ? `Completed all ${info.totalFights} ecosystems.`
+        ? info.objectivesCompleted >= info.totalFights
+          ? `All ${info.totalFights} objectives achieved — a flawless trial.`
+          : `Trial concluded: ${info.objectivesCompleted} of ${info.totalFights} objectives achieved.`
         : `Collapsed during ecosystem ${info.fightReached} / ${info.totalFights}.`;
       const buildStr = info.upgrades.length === 0
         ? 'No upgrades picked.'
