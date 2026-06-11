@@ -86,6 +86,10 @@ let lastFpsTick = performance.now();
 let tickCount = 0;
 let tickerState = createTickerState();
 let didAnnounceCompletion = false;
+// Idle-nudge bookkeeping: last tick the player acted, and how many nudges this
+// epoch (capped so the assistant never nags).
+let lastActionTick = 0;
+let nudgeCountThisEpoch = 0;
 let heardDishEventIds = new Set<number>();
 let pendingResearchBrief: ResearchBriefLine[] = [];
 
@@ -202,6 +206,12 @@ let pasteStrokeActive = false;
 let lastPasteSoundAt = 0;
 let pasteCursor: [number, number] | null = null;
 
+// Any deliberate dish action re-arms the idle nudge and clears a visible one.
+function registerPlayerAction(): void {
+  lastActionTick = tickCount;
+  coach.hideNudge();
+}
+
 canvas.addEventListener('pointerdown', (event) => {
   if (!arena || run.getState().phase !== 'arena') return;
   ecologyAudio.unlock();
@@ -215,6 +225,7 @@ canvas.addEventListener('pointerdown', (event) => {
       uiAudio.play('drop_paste');
       screens.updateToolCharges(arena.getToolStates());
       coach.report('paste-drawn');
+      registerPlayerAction();
     }
     return;
   }
@@ -227,6 +238,7 @@ canvas.addEventListener('pointerdown', (event) => {
     screens.updateToolCharges(arena.getToolStates());
     if (selectedTool === 'egg') coach.report('egg-placed');
     else if (selectedTool === 'nutrient') coach.report('nutrient-used');
+    registerPlayerAction();
   }
 });
 
@@ -237,6 +249,7 @@ canvas.addEventListener('pointermove', (event) => {
   if (arena.applyTool('paste', pos)) {
     screens.updateToolCharges(arena.getToolStates());
     coach.report('paste-drawn');
+    registerPlayerAction();
     // Soft smear while drawing, rate-limited so a drag doesn't machine-gun it.
     const now = performance.now();
     if (now - lastPasteSoundAt > 150) {
@@ -283,6 +296,7 @@ screens.onAgitate(() => {
   ecologyAudio.unlock();
   uiAudio.play('ui_tap');
   if (!arena.agitate()) return;
+  registerPlayerAction();
   screens.updateAgitation(arena.getAgitationState());
   screens.addTicker('Dish agitated: lifeforms are mixing.');
   canvas.classList.remove('dish-shake');
@@ -377,6 +391,8 @@ function startNewFight() {
   tickerState = createTickerState();
   heardDishEventIds = new Set<number>();
   didAnnounceCompletion = false;
+  lastActionTick = 0;
+  nudgeCountThisEpoch = 0;
   screens.setEpochComplete(false);
   screens.clearTicker();
   screens.setPickResearchBrief([]);
@@ -465,6 +481,7 @@ function loop() {
     screens.updateAgitation(arena.getAgitationState());
     screens.setEpochComplete(objective.complete);
     announceEpochCompletion(objective.complete, objective.def.name);
+    maybeNudgeIdlePlayer(objective.complete, objective.def.hint);
   }
   updateTicker(arena);
   persistArenaDiscoveries(arena);
@@ -680,6 +697,25 @@ function announceUnlocks(
   } else if (bannerStrain) {
     fx.showUnlockBanner('Strain Unlocked', bannerStrain, 'New egg available', 'bio');
   }
+}
+
+// Gentle idle nudge: if the player hasn't touched the dish for a while and the
+// objective isn't complete, surface its authored hint ("Lab Assistant" voice).
+// Capped per epoch and suppressed while the tutorial coach is active, so it
+// helps a stuck player without ever nagging an engaged one.
+const NUDGE_IDLE_TICKS = 60 * 22;
+const MAX_NUDGES_PER_EPOCH = 2;
+
+function maybeNudgeIdlePlayer(objectiveComplete: boolean, hint: string | undefined): void {
+  if (objectiveComplete || coach.isActive()) return;
+  if (nudgeCountThisEpoch >= MAX_NUDGES_PER_EPOCH) return;
+  if (tickCount - lastActionTick < NUDGE_IDLE_TICKS) return;
+  nudgeCountThisEpoch += 1;
+  lastActionTick = tickCount; // another full idle stretch before the next one
+  coach.showNudge(
+    'Stuck? Try this',
+    hint ?? 'Drop a Nutrient near a culture and watch how it feeds and follows.',
+  );
 }
 
 // Fire a one-time "experiment complete" signpost the first moment the dish

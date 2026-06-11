@@ -60,6 +60,10 @@ export interface Coach {
   beginRun(): void;        // call when an arena epoch starts
   report(event: CoachEvent): void;
   dismiss(): void;         // skip for good
+  // Idle nudge: a one-off contextual hint reusing the same card. Auto-hides;
+  // "Got it" dismisses just this nudge (never marks the tutorial seen).
+  showNudge(title: string, body: string): void;
+  hideNudge(): void;
 }
 
 export function createCoach(): Coach {
@@ -72,6 +76,9 @@ export function createCoach(): Coach {
 
   let active = false;
   let stepIndex = 0;
+  // 'tutorial' = the first-run lesson; 'nudge' = a transient idle hint.
+  let mode: 'tutorial' | 'nudge' = 'tutorial';
+  let nudgeTimer = 0;
 
   function seen(): boolean {
     try { return window.localStorage.getItem(SEEN_KEY) === '1'; } catch { return false; }
@@ -84,10 +91,12 @@ export function createCoach(): Coach {
     if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
     const step = STEPS[stepIndex];
     if (!step) { hide(); return; }
+    mode = 'tutorial';
     kickerEl.textContent = step.kicker;
     titleEl.textContent = step.title;
     bodyEl.textContent = step.body;
     stepEl.textContent = `${stepIndex + 1} / ${STEPS.length}`;
+    if (skipBtn) skipBtn.textContent = 'Skip tutorial';
     root.classList.add('coach-show');
     root.setAttribute('aria-hidden', 'false');
   }
@@ -105,7 +114,17 @@ export function createCoach(): Coach {
   }
 
   if (skipBtn) {
-    skipBtn.addEventListener('click', () => finish());
+    skipBtn.addEventListener('click', () => {
+      // A nudge's "Got it" only dismisses that nudge; the tutorial's skip
+      // retires the whole lesson permanently.
+      if (mode === 'nudge') hideNudgeNow();
+      else finish();
+    });
+  }
+
+  function hideNudgeNow(): void {
+    window.clearTimeout(nudgeTimer);
+    if (mode === 'nudge') hide();
   }
 
   return {
@@ -140,6 +159,23 @@ export function createCoach(): Coach {
     },
     dismiss() {
       finish();
+    },
+    showNudge(title, body) {
+      // Never interrupt the tutorial; nudges are for players past it.
+      if (active || !root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
+      mode = 'nudge';
+      kickerEl.textContent = 'Lab Assistant';
+      titleEl.textContent = title;
+      bodyEl.textContent = body;
+      stepEl.textContent = '';
+      if (skipBtn) skipBtn.textContent = 'Got it';
+      root.classList.add('coach-show');
+      root.setAttribute('aria-hidden', 'false');
+      window.clearTimeout(nudgeTimer);
+      nudgeTimer = window.setTimeout(() => hideNudgeNow(), 9000);
+    },
+    hideNudge() {
+      hideNudgeNow();
     },
   };
 }

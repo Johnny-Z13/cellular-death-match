@@ -32,3 +32,10 @@ calls, document them here, push each finished piece.
   the most distinctive verb and worth teaching early, but it means the coach
   asks for one action that epoch 1's objective doesn't strictly need. Felt
   right; flag if you'd rather go straight from feeding to the objective.
+- **[shipped] Idle nudge tuning: 22s idle, max 2 per epoch, 9s auto-hide.**
+  Your "too intrusive?" worry shaped this: it only fires when the objective is
+  incomplete AND the tutorial isn't running, any dish action instantly hides
+  it, and a second nudge needs another full idle stretch. Content is the
+  objective's own authored hint, so it's contextual rather than generic.
+  If it still feels naggy in play, the knobs are NUDGE_IDLE_TICKS /
+  MAX_NUDGES_PER_EPOCH in main.ts.

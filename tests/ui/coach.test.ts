@@ -34,6 +34,20 @@ describe('onboarding coach', () => {
     expect(mainSource).toContain('if (run.getState().fightIndex === 0) coach.beginRun()');
   });
 
+  it('nudges idle players with the objective hint, capped and dismissible', () => {
+    // The nudge reuses the coach card in a second mode: "Got it" dismisses
+    // just the nudge, never marking the tutorial as seen.
+    expect(coachSource).toContain('showNudge(title: string, body: string): void;');
+    expect(coachSource).toContain("if (mode === 'nudge') hideNudgeNow();");
+    expect(coachSource).toContain("kickerEl.textContent = 'Lab Assistant';");
+    expect(mainSource).toContain('const NUDGE_IDLE_TICKS = 60 * 22;');
+    expect(mainSource).toContain('const MAX_NUDGES_PER_EPOCH = 2;');
+    expect(mainSource).toContain('function maybeNudgeIdlePlayer(');
+    expect(mainSource).toContain('if (objectiveComplete || coach.isActive()) return;');
+    expect(mainSource).toContain('function registerPlayerAction(): void {');
+    expect(mainSource).toContain('coach.hideNudge();');
+  });
+
   it('never blocks interactive panels and hides in presentation mode', () => {
     // Bottom-centre on desktop (over the non-interactive log zone); under the
     // HUD on phones. Hidden in presentation mode like other chrome.
