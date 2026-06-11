@@ -10,6 +10,7 @@ import { notebookViewForProgression, atlasViewForProgression } from './content/n
 import { createEcologyAudio } from './audio/ecologyAudio';
 import { createUiAudio, DROP_SOUND_FOR_TOOL } from './audio/uiAudio';
 import { createFx } from './ui/fx';
+import { createCoach } from './ui/coach';
 import { soundEventForDishSignal, type SoundEventId } from './audio/soundDesign';
 import { hash2 } from './game/hash';
 import {
@@ -66,6 +67,7 @@ const debug = createDebugPanel();
 const ecologyAudio = createEcologyAudio();
 const uiAudio = createUiAudio();
 const fx = createFx();
+const coach = createCoach();
 const discoveryStorage = window.localStorage;
 let discoverySave: DiscoverySaveState = loadDiscoverySave(discoveryStorage);
 let discoveryProgression = createDiscoveryProgression(discoverySave);
@@ -212,6 +214,7 @@ canvas.addEventListener('pointerdown', (event) => {
     if (arena.applyTool('paste', pos)) {
       uiAudio.play('drop_paste');
       screens.updateToolCharges(arena.getToolStates());
+      coach.report('paste-drawn');
     }
     return;
   }
@@ -222,6 +225,8 @@ canvas.addEventListener('pointerdown', (event) => {
     // Egg keeps the soft UI tap; reagents get their own bespoke drop sound.
     uiAudio.play(DROP_SOUND_FOR_TOOL[selectedTool] ?? 'ui_tap');
     screens.updateToolCharges(arena.getToolStates());
+    if (selectedTool === 'egg') coach.report('egg-placed');
+    else if (selectedTool === 'nutrient') coach.report('nutrient-used');
   }
 });
 
@@ -231,6 +236,7 @@ canvas.addEventListener('pointermove', (event) => {
   pasteCursor = pos;
   if (arena.applyTool('paste', pos)) {
     screens.updateToolCharges(arena.getToolStates());
+    coach.report('paste-drawn');
     // Soft smear while drawing, rate-limited so a drag doesn't machine-gun it.
     const now = performance.now();
     if (now - lastPasteSoundAt > 150) {
@@ -384,6 +390,8 @@ function startNewFight() {
     objective.name,
     objective.description,
   );
+  // First epoch of a run: bring up the onboarding coach (first run only).
+  if (run.getState().fightIndex === 0) coach.beginRun();
   screens.updateToolCharges(arena.getToolStates());
   screens.updateAgitation(arena.getAgitationState());
   debug.updateDiscoveries(discoveryDebugInfo());
@@ -684,6 +692,7 @@ function announceEpochCompletion(complete: boolean, objectiveName: string): void
     uiAudio.play('experiment_ready');
     fx.showToast('discovery', 'Experiment Complete', `${objectiveName} — finish when ready`);
     screens.addTicker('Experiment complete: press End to finish, or keep cultivating.', 'discovery');
+    coach.report('objective-complete');
   } else if (!complete && didAnnounceCompletion) {
     didAnnounceCompletion = false;
   }
