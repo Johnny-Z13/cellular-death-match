@@ -191,6 +191,9 @@ const RESUPPLY_INTERVAL_TICKS = ARENA_TIMING.resupplyIntervalTicks;
 const ACCIDENT_INTERVAL_TICKS = ARENA_TIMING.accidentIntervalTicks;
 const EMERGENCY_EGG_REFILL_TICKS = ARENA_TIMING.emergencyEggRefillTicks;
 const CRISIS_INTERVAL_TICKS = ARENA_TIMING.crisisIntervalTicks;
+// Calm opening window: no hazard (crisis / outbreak / accident) fires for the
+// first stretch of an epoch, so the player can settle in and discover.
+const HAZARD_GRACE_TICKS = 60 * 25;
 const ECOSYSTEM_MIN_POPULATION = ECOSYSTEM_LIMITS.minPopulation;
 const QUIET_EGG_REFILL_POPULATION = ECOSYSTEM_LIMITS.quietEggRefillPopulation;
 const ECOSYSTEM_MAX_POPULATION = ECOSYSTEM_LIMITS.maxPopulation;
@@ -750,7 +753,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           applyAgitation(state, agitationTicksRemaining / AGITATION_DURATION_TICKS);
           agitationTicksRemaining -= 1;
         }
-        if (!activeCrisis && tickNo % CRISIS_INTERVAL_TICKS === 0) {
+        if (!activeCrisis && tickNo >= HAZARD_GRACE_TICKS && tickNo % CRISIS_INTERVAL_TICKS === 0) {
           const result = activateCrisis(this, state, archetypes);
           activeCrisis = { id: result.id, ttl: CRISES[result.id].durationTicks };
           birthCount += result.births;
@@ -788,7 +791,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           supplyDropCount += refillEggIfQuiet(toolStates, state);
           if (toolStates.egg.charges > 0) lastEmergencyEggTick = tickNo;
         }
-        if (tickNo % OUTBREAK_INTERVAL_TICKS === 0) {
+        if (tickNo >= HAZARD_GRACE_TICKS && tickNo % OUTBREAK_INTERVAL_TICKS === 0) {
           const outbreak = triggerPredatorOutbreak(this, state, archetypes);
           if (outbreak) {
             outbreakCount += 1;
@@ -803,7 +806,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         if (tickNo % RESUPPLY_INTERVAL_TICKS === 0) {
           supplyDropCount += resupplyLab(toolStates, objective);
         }
-        if (tickNo % ACCIDENT_INTERVAL_TICKS === 0) {
+        if (tickNo >= HAZARD_GRACE_TICKS && tickNo % ACCIDENT_INTERVAL_TICKS === 0) {
           const accident = randomAccidentEffect(state);
           pulseToolEffect(state, accident, archetypes);
           toolEffects.push(accident);

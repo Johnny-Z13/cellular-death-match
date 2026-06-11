@@ -13,3 +13,4 @@ tests/**/*.js
 .superpowers/
 test-results/
 playwright-report/
+qa-shots/

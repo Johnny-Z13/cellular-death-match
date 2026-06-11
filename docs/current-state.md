@@ -44,7 +44,11 @@ Cellular Death Match is now a mobile-first Petri dish ecosystem game. The origin
    Creation objectives latch once achieved; balance objectives reflect the
    live dish state and can drift back to incomplete.
 6. Pick an upgrade between epochs.
-7. Complete all six epochs or collapse.
+7. Play through all six epochs. A missed objective no longer ends the run — the
+   player simply moves to the next epoch (forfeiting that objective's reward),
+   so the game is a forgiving, playful-discovery sandbox rather than a punisher.
+   Hazards (crisis / outbreak / accident) hold off for a calm ~25s opening window
+   each epoch and arrive on a gentler cadence; epochs run ~80s.
 
 ## Current Lifeforms
 

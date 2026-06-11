@@ -649,7 +649,7 @@ describe('arena ecosystem mode', () => {
       epochTicks: 60 * 20,
     });
 
-    for (let i = 0; i < 60 * 10; i++) {
+    for (let i = 0; i < 60 * 13; i++) {
       arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     }
 
@@ -749,10 +749,12 @@ describe('arena ecosystem mode', () => {
       enemies: [{ archetype: 'swarmlet' as const, targetVol: 120, speed: 8, engulfMultiplier: 4 }],
       wrap: false,
       mode: 'ecosystem',
-      epochTicks: 60 * 30,
+      epochTicks: 60 * 60,
     });
 
-    for (let i = 0; i < 60 * 18; i++) {
+    // Crisis fires after the calm opening window (HAZARD_GRACE_TICKS) at the
+    // crisis interval (30s); run past that.
+    for (let i = 0; i < 60 * 31; i++) {
       arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     }
 
@@ -2125,9 +2127,11 @@ describe('arena ecosystem mode', () => {
       enemies: [{ archetype: 'swarmlet' as const, targetVol: 100, speed: 12, engulfMultiplier: 4 }],
       wrap: true,
       mode: 'ecosystem',
-      epochTicks: 60 * 20,
+      epochTicks: 60 * 60,
     });
-    for (let i = 0; i < 60 * 13; i++) {
+    // Accidents wait out the calm opening window, then fire on the accident
+    // interval (22s); the first lands at ~44s.
+    for (let i = 0; i < 60 * 45; i++) {
       arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     }
     expect(arena.getEcology().accidents).toBe(1);
@@ -2150,11 +2154,13 @@ describe('arena ecosystem mode', () => {
       enemies: [{ archetype: 'bruiser' as const, targetVol: 520, speed: 8, engulfMultiplier: 6.5 }],
       wrap: true,
       mode: 'ecosystem',
-      epochTicks: 60 * 30,
+      epochTicks: 60 * 40,
     });
     const beforeLiving = arena.getEcology().livingEnemies;
     expect(arena.getEcology().outbreaks).toBe(0);
-    for (let i = 0; i < 60 * 7; i++) {
+    // Outbreaks hold off through the calm opening window, then fire on the
+    // outbreak interval (14s); the first lands at ~28s.
+    for (let i = 0; i < 60 * 29; i++) {
       arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     }
     expect(arena.getEcology().outbreaks).toBe(1);
@@ -2176,9 +2182,9 @@ describe('arena ecosystem mode', () => {
       enemies: [{ archetype: 'bruiser' as const, targetVol: 620, speed: 8, engulfMultiplier: 6.5 }],
       wrap: true,
       mode: 'ecosystem',
-      epochTicks: 60 * 30,
+      epochTicks: 60 * 40,
     });
-    for (let i = 0; i < 60 * 7; i++) {
+    for (let i = 0; i < 60 * 29; i++) {
       arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     }
     const hunters = Array.from(arena.archetypes)
@@ -2209,7 +2215,7 @@ describe('arena ecosystem mode', () => {
       mode: 'ecosystem',
       epochTicks: 60 * 30,
     });
-    for (let i = 0; i < 60 * 10; i++) {
+    for (let i = 0; i < 60 * 13; i++) {
       arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     }
     const livingTraits = Array.from(arena.archetypes)
@@ -2234,7 +2240,7 @@ describe('arena ecosystem mode', () => {
       epochTicks: 60 * 20,
     });
 
-    for (let i = 0; i < 60 * 10; i++) {
+    for (let i = 0; i < 60 * 13; i++) {
       arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     }
 

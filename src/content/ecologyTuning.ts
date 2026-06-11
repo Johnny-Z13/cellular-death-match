@@ -1,12 +1,14 @@
 export const ARENA_TIMING = {
-  defaultEpochTicks: 60 * 75,
-  mutationIntervalTicks: 60 * 10,
+  defaultEpochTicks: 60 * 80,
+  mutationIntervalTicks: 60 * 12,
   reseedIntervalTicks: 60 * 5,
-  outbreakIntervalTicks: 60 * 7,
-  resupplyIntervalTicks: 60 * 11,
-  accidentIntervalTicks: 60 * 13,
-  emergencyEggRefillTicks: 60 * 8,
-  crisisIntervalTicks: 60 * 18,
+  // Softer pressure cadence for a playful-discovery feel: hazards arrive less
+  // often and never crowd the opening minute, and tools resupply sooner.
+  outbreakIntervalTicks: 60 * 14,
+  resupplyIntervalTicks: 60 * 9,
+  accidentIntervalTicks: 60 * 22,
+  emergencyEggRefillTicks: 60 * 6,
+  crisisIntervalTicks: 60 * 30,
 } as const;
 
 export const ECOSYSTEM_LIMITS = {

@@ -38,7 +38,7 @@ declare const __COMMIT_MESSAGE__: string;
 const LX = 160;
 const LY = 160;
 const PLAYER_ID = 1;
-const EPOCH_TICKS = 60 * 55;
+const EPOCH_TICKS = 60 * 80; // ~80s per epoch — generous breathing room for discovery
 const PASTE_CURSOR_RADIUS = 9; // grid units; mirrors TOOL_TUNING.paste.radius for the draw cursor glow
 const reduceMotionPref = typeof window !== 'undefined'
   && typeof window.matchMedia === 'function'
@@ -489,10 +489,14 @@ function resolveArenaStatus(status: ArenaStatus): boolean {
     return true;
   }
   if (status === 'lost') {
+    // Playful-discovery model: a missed objective doesn't end the run — the
+    // player moves on to the next epoch (still gets an upgrade pick). Only the
+    // final epoch closes the run.
     uiAudio.play('epoch_fail');
-    uiAudio.stopAmbience();
     fx.playWipe();
-    run.failEpoch();
+    fx.showToast('catalyst', 'Objective Lapsed', 'Moving to the next ecosystem');
+    run.skipEpoch();
+    if (run.getState().phase === 'run_end') uiAudio.stopAmbience();
     showPhase();
     return true;
   }

@@ -27,6 +27,7 @@ export interface Run {
   getState(): RunState;
   start(): void;
   completeEpoch(): void;
+  skipEpoch(): void;
   failEpoch(): void;
   winFight(): void;
   loseFight(): void;
@@ -95,6 +96,21 @@ export function createRun(seed: number): Run {
       if (phase !== 'arena') return;
       if (fightIndex >= EPOCHS_PER_RUN - 1) {
         phase = 'run_end';
+        outcome = 'won';
+        return;
+      }
+      pendingPickChoices = pickThreeChoices();
+      phase = 'upgrade_pick';
+    },
+    // A missed objective no longer ends the run — this is a playful discovery
+    // sandbox, not a punisher. The player simply moves on to the next epoch
+    // (forfeiting that objective's reward) and still gets an upgrade pick.
+    // The run only ends after the final epoch.
+    skipEpoch() {
+      if (phase !== 'arena') return;
+      if (fightIndex >= EPOCHS_PER_RUN - 1) {
+        phase = 'run_end';
+        // Reaching the end is a completed run regardless of misses along the way.
         outcome = 'won';
         return;
       }
