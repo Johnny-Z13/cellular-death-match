@@ -469,6 +469,7 @@ function loop() {
       reactions: ecology.reactions,
       accidents: ecology.accidents,
       outbreaks: ecology.outbreaks,
+      worldEvents: ecology.worldEvents,
       dominant: ecology.dominant,
       crisis: ecology.crisis,
       objectiveName: objective.def.name,

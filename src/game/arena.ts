@@ -20,6 +20,7 @@ import {
   PASTE_TUNING,
   TOOL_EFFECT_TUNING,
   TOOL_TUNING,
+  WORLD_EVENT_TUNING,
 } from '../content/ecologyTuning';
 import {
   BREED_DEFS,
@@ -96,6 +97,7 @@ export interface EcologyInfo {
   reactions: number;
   accidents: number;
   outbreaks: number;
+  worldEvents: number;
   dominant: string;
   signals: string[];
   crisis: string;
@@ -179,6 +181,7 @@ export interface CreateArenaOpts {
   epochTicks?: number;
   objective?: ObjectiveDef;
   includeControlSample?: boolean;
+  worldEventIntensity?: number;
 }
 
 const PLAYER_ID = 1;
@@ -202,6 +205,8 @@ const PLAYER_THREAT_RANGE = ECOSYSTEM_LIMITS.playerThreatRange;
 const MAX_TOOL_EFFECTS = ECOSYSTEM_LIMITS.maxToolEffects;
 const MAX_DISH_EVENTS = ECOSYSTEM_LIMITS.maxDishEvents;
 const DEFAULT_AGITATE_CHARGES = AGITATION_TUNING.defaultCharges;
+const WORLD_EVENT_INTERVAL_TICKS = WORLD_EVENT_TUNING.intervalTicks;
+const WORLD_EVENT_GRACE_TICKS = WORLD_EVENT_TUNING.graceTicks;
 const AGITATION_DURATION_TICKS = AGITATION_TUNING.durationTicks;
 const AGITATION_MIN_SPEED = AGITATION_TUNING.minSpeed;
 const AGITATION_EXTRA_SPEED = AGITATION_TUNING.extraSpeed;
@@ -264,6 +269,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
   const epochTicks = opts.epochTicks ?? DEFAULT_EPOCH_TICKS;
   const objective = opts.objective ?? objectiveForEpoch(0);
   const includeControlSample = opts.includeControlSample ?? true;
+  const worldEventIntensity = clamp(opts.worldEventIntensity ?? WORLD_EVENT_TUNING.defaultIntensity, 0, 1);
   const nEnemies = opts.enemies.length;
   const state = createSim({
     LX: opts.LX,
@@ -287,6 +293,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
   let reactionCount = 0;
   let accidentCount = 0;
   let outbreakCount = 0;
+  let worldEventCount = 0;
   let forcedStatus: ArenaStatus | null = null;
   // Latched once a "create / breed / cultivate" objective is achieved, so the
   // experiment reads as Complete even if the player keeps cultivating after.
@@ -473,6 +480,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         reactions: reactionCount,
         accidents: accidentCount,
         outbreaks: outbreakCount,
+        worldEvents: worldEventCount,
         dominant,
         signals: [...signals],
         crisis: activeCrisis ? CRISES[activeCrisis.id].name : 'none',
@@ -793,6 +801,27 @@ export function createArena(opts: CreateArenaOpts): Arena {
         for (const effect of trailEffects) effect.ttl -= 1;
         for (let i = trailEffects.length - 1; i >= 0; i--) {
           if (trailEffects[i]!.ttl <= 0) trailEffects.splice(i, 1);
+        }
+        if (
+          worldEventIntensity > 0
+          && tickNo >= WORLD_EVENT_GRACE_TICKS
+          && tickNo % WORLD_EVENT_INTERVAL_TICKS === 0
+          && state.rng.random() <= worldEventIntensity
+        ) {
+          const event = triggerWorldEvent(this, state, archetypes);
+          if (event) {
+            worldEventCount += 1;
+            birthCount += event.births;
+            if (event.effect) {
+              pulseToolEffect(state, event.effect, archetypes);
+              toolEffects.push(event.effect);
+              addDishEvent('stabilize', event.label, event.effect.pos, event.effect.radius, event.color);
+              while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
+            } else {
+              addDishEvent('stabilize', event.label, event.pos, event.radius, event.color);
+            }
+            pushSignal(event.signal);
+          }
         }
         if (tickNo % MUTATION_INTERVAL_TICKS === 0) {
           const mutation = mutateEcology(state, archetypes, pushSignal);
@@ -1212,6 +1241,67 @@ function randomAccidentEffect(state: SimState): ToolEffect {
     },
     state.rng.randInt(1_000_000),
   );
+}
+
+interface WorldEventResult {
+  births: number;
+  effect?: ToolEffect;
+  label: string;
+  signal: string;
+  pos: [number, number];
+  radius: number;
+  color: DishEventColor;
+}
+
+function triggerWorldEvent(
+  arena: Arena,
+  state: SimState,
+  archetypes: Map<CellId, EnemySpawn>,
+): WorldEventResult | null {
+  const living = Array.from(state.cells)
+    .filter(([id, cell]) => id !== PLAYER_ID && cell.vol > 0);
+  const parentEntry = living.length > 0 ? living[state.rng.randInt(living.length)] : undefined;
+  const parent = parentEntry?.[1];
+  const parentSpawn = parentEntry ? archetypes.get(parentEntry[0]) : undefined;
+  const pos: [number, number] = parent
+    ? [
+        parent.center[0] + state.rng.randInt(23) - 11,
+        parent.center[1] + state.rng.randInt(23) - 11,
+      ]
+    : [
+        state.rng.randInt(state.grid.LX),
+        state.rng.randInt(state.grid.LY),
+      ];
+  const canSpawn = !!parentSpawn && archetypes.size < ECOSYSTEM_MAX_POPULATION;
+  if (canSpawn && state.rng.random() < WORLD_EVENT_TUNING.sporeDriftChance) {
+    arena.spawnEnemy({ spawn: budSpawn(parentSpawn, state.rng.random()), pos });
+    return {
+      births: 1,
+      label: 'FERTILE DRIFT',
+      signal: 'Fertile drift seeded a culture.',
+      pos,
+      radius: 14,
+      color: 'green',
+    };
+  }
+
+  const effect: ToolEffect = {
+    type: 'nutrient',
+    pos,
+    radius: WORLD_EVENT_TUNING.agarBloomRadius,
+    ttl: WORLD_EVENT_TUNING.agarBloomTtl,
+    maxTtl: WORLD_EVENT_TUNING.agarBloomTtl,
+    seed: state.rng.randInt(1_000_000),
+  };
+  return {
+    births: 0,
+    effect,
+    label: 'AGAR BLOOM',
+    signal: 'Agar bloom fed the dish.',
+    pos,
+    radius: effect.radius,
+    color: 'green',
+  };
 }
 
 function triggerPredatorOutbreak(

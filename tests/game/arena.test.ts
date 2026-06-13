@@ -2185,6 +2185,60 @@ describe('arena ecosystem mode', () => {
     )).toBe(true);
   });
 
+  it('can turn dish fertility world events fully off', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 31,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+      },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 100, speed: 12, engulfMultiplier: 4 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 30,
+      worldEventIntensity: 0,
+    });
+
+    for (let i = 0; i < 60 * 20; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+
+    expect(arena.getEcology().worldEvents).toBe(0);
+  });
+
+  it('can dial dish fertility up into regular organic events', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 32,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+      },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 100, speed: 12, engulfMultiplier: 4 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 30,
+      worldEventIntensity: 1,
+    });
+
+    for (let i = 0; i < 60 * 20; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+
+    expect(arena.getEcology().worldEvents).toBeGreaterThanOrEqual(1);
+    expect(
+      arena.getToolEffects().some((effect) => effect.type === 'nutrient')
+      || arena.getEcology().births > 0,
+    ).toBe(true);
+  });
+
   it('periodically triggers predator outbreaks from oversized cultures', () => {
     const arena = createArena({
       LX: 80,

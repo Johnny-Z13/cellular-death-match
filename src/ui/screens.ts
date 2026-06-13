@@ -26,6 +26,7 @@ export interface HudInfo {
   reactions: number;
   accidents: number;
   outbreaks: number;
+  worldEvents: number;
   dominant: string;
   crisis: string;
   objectiveName: string;
@@ -443,7 +444,7 @@ export function createScreens(): Screens {
       hudVol.textContent = `${info.vol} / ${Math.round(info.targetVol)}`;
       hudProgress.textContent = `${info.secondsRemaining}s`;
       const crisis = info.crisis === 'none' ? '' : `, ${info.crisis} active`;
-      hudEco.textContent = `${info.livingEnemies} lifeforms, ${info.outbreaks} outbreaks, ${info.reactions} reactions, ${info.accidents} accidents, ${info.mutations} mutations, ${info.births} births, ${info.supplyDrops} drops, ${info.dominant} dominant${crisis}`;
+      hudEco.textContent = `${info.livingEnemies} lifeforms, ${info.worldEvents} fertile events, ${info.outbreaks} outbreaks, ${info.reactions} reactions, ${info.accidents} accidents, ${info.mutations} mutations, ${info.births} births, ${info.supplyDrops} drops, ${info.dominant} dominant${crisis}`;
       hudObjective.textContent = info.objectiveComplete
         ? `${info.objectiveName}: complete — finish when ready`
         : `${info.objectiveName}: ${info.objectiveSummary}`;

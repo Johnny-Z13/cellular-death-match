@@ -40,6 +40,15 @@ export const PASTE_TUNING = {
   unitsPerCharge: 64,    // drawn path length one charge buys
 } as const;
 
+export const WORLD_EVENT_TUNING = {
+  defaultIntensity: 0.25,
+  intervalTicks: 60 * 8,
+  graceTicks: 60 * 12,
+  sporeDriftChance: 0.45,
+  agarBloomRadius: 15,
+  agarBloomTtl: 60 * 5,
+} as const;
+
 export const TOOL_EFFECT_TUNING = {
   nutrientPulseGrowth: 80,
   nutrientGrowthPerTick: 1.8,
