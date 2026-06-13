@@ -33,6 +33,7 @@ import {
   type ProgressionLifeformId,
 } from './game/discoveryProgression';
 import { researchBriefForGrant, type ResearchBriefLine } from './game/researchBrief';
+import { applyOnboardingStateReset } from './game/onboardingReset';
 
 declare const __COMMIT_MESSAGE__: string;
 
@@ -69,6 +70,7 @@ const uiAudio = createUiAudio();
 const fx = createFx();
 const coach = createCoach();
 const discoveryStorage = window.localStorage;
+applyOnboardingStateReset(discoveryStorage);
 let discoverySave: DiscoverySaveState = loadDiscoverySave(discoveryStorage);
 let discoveryProgression = createDiscoveryProgression(discoverySave);
 // Allow up to PALETTE_SIZE total cell colors for evolving ecosystem spawns.
