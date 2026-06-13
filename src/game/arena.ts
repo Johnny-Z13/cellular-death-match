@@ -178,6 +178,7 @@ export interface CreateArenaOpts {
   mode?: 'elimination' | 'ecosystem';
   epochTicks?: number;
   objective?: ObjectiveDef;
+  includeControlSample?: boolean;
 }
 
 const PLAYER_ID = 1;
@@ -243,10 +244,26 @@ interface MutationResult {
   effects: ToolEffect[];
 }
 
+function removeControlSample(state: SimState): void {
+  const control = state.cells.get(PLAYER_ID);
+  if (!control) return;
+  const { grid } = state;
+  for (let x = 0; x < grid.LX; x++) {
+    for (let y = 0; y < grid.LY; y++) {
+      if (getCell(grid, x, y) !== PLAYER_ID) continue;
+      setCell(grid, x, y, 0);
+      removePixel(control, x, y, grid.LX, grid.LY, grid.wrap);
+      updateBoundaryAround(grid, x, y);
+    }
+  }
+  state.cells.delete(PLAYER_ID);
+}
+
 export function createArena(opts: CreateArenaOpts): Arena {
   const mode = opts.mode ?? 'elimination';
   const epochTicks = opts.epochTicks ?? DEFAULT_EPOCH_TICKS;
   const objective = opts.objective ?? objectiveForEpoch(0);
+  const includeControlSample = opts.includeControlSample ?? true;
   const nEnemies = opts.enemies.length;
   const state = createSim({
     LX: opts.LX,
@@ -257,6 +274,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
     wrap: opts.wrap,
     wrapBullets: opts.wrapBullets ?? true,
   });
+
+  if (!includeControlSample) removeControlSample(state);
 
   const archetypes = new Map<CellId, EnemySpawn>();
   const aiStates = new Map<CellId, AiState>();

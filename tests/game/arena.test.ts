@@ -41,6 +41,25 @@ describe('createArena — initial state', () => {
     });
     expect(arena.state.cells.size).toBe(2);
   });
+
+  it('can start an onboarding dish without the control sample', () => {
+    const arena = createArena({
+      LX: 50,
+      LY: 50,
+      seed: 1,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 85, speed: 16, engulfMultiplier: 3 }],
+      wrap: true,
+      mode: 'ecosystem',
+      includeControlSample: false,
+    });
+
+    expect(arena.state.cells.has(1)).toBe(false);
+    expect(arena.state.cells.size).toBe(1);
+    expect([...arena.archetypes.keys()]).toEqual([2]);
+    expect(arena.getEcology().livingEnemies).toBe(1);
+    expect(arena.getStatus()).toBe('running');
+  });
 });
 
 describe('arena.getStatus — win/loss', () => {

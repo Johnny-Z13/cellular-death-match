@@ -5,7 +5,7 @@ import {
   applyUpgrades,
 } from '../content/upgrades';
 import { createRng, type Rng } from '../sim/rng';
-import { ECOSYSTEM_SCHEDULE, type EnemySpawn } from '../content/enemies';
+import { ARCHETYPE_DEFAULTS, ECOSYSTEM_SCHEDULE, type EnemySpawn } from '../content/enemies';
 import { OBJECTIVES, objectiveForEpoch, type ObjectiveDef } from '../content/objectives';
 
 export const EPOCHS_PER_RUN = OBJECTIVES.length;
@@ -39,6 +39,7 @@ export interface Run {
   getPlayerConfig(): PlayerConfig;
   getFightSpawnList(): EnemySpawn[];
   getEpochSpawnList(): EnemySpawn[];
+  getOnboardingSpawnList(): EnemySpawn[];
   getObjective(): ObjectiveDef;
 }
 
@@ -169,6 +170,9 @@ export function createRun(seed: number): Run {
       const epoch = ECOSYSTEM_SCHEDULE[fightIndex];
       if (!epoch) return [];
       return epoch.map((e) => ({ ...e }));
+    },
+    getOnboardingSpawnList() {
+      return [{ ...ARCHETYPE_DEFAULTS.swarmlet }];
     },
     getObjective() {
       return objectiveForEpoch(fightIndex);

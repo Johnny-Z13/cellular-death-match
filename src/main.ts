@@ -375,15 +375,18 @@ function showPhase() {
 
 function startNewFight() {
   const playerCfg = run.getPlayerConfig();
-  const enemies = run.getEpochSpawnList();
+  const runState = run.getState();
+  const useOnboardingDish = runState.fightIndex === 0 && !coach.hasSeenTutorial();
+  const enemies = useOnboardingDish ? run.getOnboardingSpawnList() : run.getEpochSpawnList();
   arena = createArena({
     LX,
     LY,
-    seed: (Date.now() & 0xffffffff) ^ (run.getState().fightIndex * 2654435761),
+    seed: (Date.now() & 0xffffffff) ^ (runState.fightIndex * 2654435761),
     player: playerCfg,
     enemies,
     wrap: false,
     mode: 'ecosystem',
+    includeControlSample: !useOnboardingDish,
     epochTicks: EPOCH_TICKS,
     objective: run.getObjective(),
   });
@@ -403,12 +406,12 @@ function startNewFight() {
   if (!uiAudio.isMuted()) uiAudio.startAmbience();
   uiAudio.play('epoch_begin');
   fx.showEpochBanner(
-    `Epoch ${run.getState().fightIndex + 1} / ${EPOCHS_PER_RUN}`,
+    `Epoch ${runState.fightIndex + 1} / ${EPOCHS_PER_RUN}`,
     objective.name,
     objective.description,
   );
   // First epoch of a run: bring up the onboarding coach (first run only).
-  if (run.getState().fightIndex === 0) coach.beginRun();
+  if (runState.fightIndex === 0) coach.beginRun();
   screens.updateToolCharges(arena.getToolStates());
   screens.updateAgitation(arena.getAgitationState());
   debug.updateDiscoveries(discoveryDebugInfo());

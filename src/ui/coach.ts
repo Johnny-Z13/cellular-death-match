@@ -1,7 +1,7 @@
 // First-run onboarding coach. A small, skippable, deep-lab-voiced guide that
 // advances as it observes the player's real actions — never a blocking modal.
-// Event-driven: main.ts reports gameplay beats (egg placed, reagent used, paste
-// drawn, objective complete) and the coach walks its step list, celebrating
+// Event-driven: main.ts reports gameplay beats (egg placed, reagent used,
+// objective complete) and the coach walks its step list, celebrating
 // each ("Well done — you discovered X. To use it, do Y."). First run only,
 // persisted via localStorage; a Skip control dismisses it for good.
 
@@ -23,28 +23,21 @@ interface CoachStep {
 
 const SEEN_KEY = 'cdm.coach.seen';
 
-// The opening lesson: seed life → feed it → draw a trail → finish the dish.
+// The opening lesson: start with Swarmlet, add Splitter, feed the pair, finish.
 const STEPS: readonly CoachStep[] = [
   {
-    id: 'seed',
+    id: 'splitter',
     advanceOn: 'egg-placed',
-    kicker: 'Specimen 01 · Seeding',
-    title: 'Plant your first culture',
-    body: 'The Egg tool is selected. Tap inside the dish to seed a living culture.',
+    kicker: 'Specimen 01 · Pairing',
+    title: 'Add a second culture',
+    body: 'A Swarmlet is already alive in the dish. Pick Splitter from Lifeforms, then tap near the Swarmlet.',
   },
   {
     id: 'feed',
     advanceOn: 'nutrient-used',
     kicker: 'Specimen 01 · Feeding',
-    title: 'Feed it to grow',
-    body: 'Pick Nutrient from the rack, then tap near your culture. It will feed and spread.',
-  },
-  {
-    id: 'paste',
-    advanceOn: 'paste-drawn',
-    kicker: 'Specimen 01 · Steering',
-    title: 'Draw a nutrient trail',
-    body: 'Select Paste and drag across the dish. Cultures drift along the line you paint.',
+    title: 'Feed the pairing',
+    body: 'Pick Nutrient from the rack, then tap between Swarmlet and Splitter. Watch for a new lifeform.',
   },
   {
     id: 'objective',
@@ -57,6 +50,7 @@ const STEPS: readonly CoachStep[] = [
 
 export interface Coach {
   isActive(): boolean;
+  hasSeenTutorial(): boolean;
   beginRun(): void;        // call when an arena epoch starts
   report(event: CoachEvent): void;
   dismiss(): void;         // skip for good
@@ -130,6 +124,9 @@ export function createCoach(): Coach {
   return {
     isActive() {
       return active;
+    },
+    hasSeenTutorial() {
+      return seen();
     },
     beginRun() {
       if (seen()) { active = false; hide(); return; }

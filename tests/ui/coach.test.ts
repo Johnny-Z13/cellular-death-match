@@ -20,18 +20,21 @@ describe('onboarding coach', () => {
   it('advances on real gameplay beats, not timers', () => {
     expect(coachSource).toContain("advanceOn: 'egg-placed'");
     expect(coachSource).toContain("advanceOn: 'nutrient-used'");
-    expect(coachSource).toContain("advanceOn: 'paste-drawn'");
     expect(coachSource).toContain("advanceOn: 'objective-complete'");
+    expect(coachSource).toContain('Pick Splitter from Lifeforms');
+    expect(coachSource).toContain('Feed the pairing');
     expect(mainSource).toContain("coach.report('egg-placed')");
     expect(mainSource).toContain("coach.report('nutrient-used')");
-    expect(mainSource).toContain("coach.report('paste-drawn')");
     expect(mainSource).toContain("coach.report('objective-complete')");
   });
 
   it('shows on the first epoch of a first run only, persisted via localStorage', () => {
     expect(coachSource).toContain("const SEEN_KEY = 'cdm.coach.seen'");
+    expect(coachSource).toContain('hasSeenTutorial(): boolean;');
     expect(coachSource).toContain('if (seen()) { active = false; hide(); return; }');
-    expect(mainSource).toContain('if (run.getState().fightIndex === 0) coach.beginRun()');
+    expect(mainSource).toContain('if (runState.fightIndex === 0) coach.beginRun()');
+    expect(mainSource).toContain('coach.hasSeenTutorial()');
+    expect(mainSource).toContain('run.getOnboardingSpawnList()');
   });
 
   it('nudges idle players with the objective hint, capped and dismissible', () => {

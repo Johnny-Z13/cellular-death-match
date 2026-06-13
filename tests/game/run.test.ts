@@ -208,3 +208,19 @@ describe('getFightSpawnList', () => {
     expect(run.getEpochSpawnList()[0]!.targetVol).not.toBe(1);
   });
 });
+
+describe('first-run onboarding spawn list', () => {
+  it('can start epoch 0 with one Swarmlet for the guided first dish', () => {
+    const run = createRun(42);
+    run.start();
+    const list = run.getOnboardingSpawnList();
+
+    expect(list.map((spawn) => spawn.archetype)).toEqual(['swarmlet']);
+    expect(run.getEpochSpawnList().map((spawn) => spawn.archetype)).toEqual([
+      'bruiser',
+      'swarmlet',
+      'swarmlet',
+      'swarmlet',
+    ]);
+  });
+});
