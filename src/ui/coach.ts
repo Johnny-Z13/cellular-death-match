@@ -21,7 +21,7 @@ interface CoachStep {
   body: string;
 }
 
-const SEEN_KEY = 'cdm.coach.seen';
+const SEEN_KEY = 'cdm.coach.seen.v2';
 
 // The opening lesson: seed once, feed the hidden starter pairing, finish.
 const STEPS: readonly CoachStep[] = [

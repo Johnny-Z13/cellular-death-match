@@ -31,7 +31,7 @@ export type DiscoverySaveInput = Omit<
   'breedDiscoveryRecords' | 'noteDiscoveryRecords'
 > & Partial<Pick<DiscoverySaveState, 'breedDiscoveryRecords' | 'noteDiscoveryRecords'>>;
 
-export const DISCOVERY_SAVE_KEY = 'cellular-death-match.discovery.v1';
+export const DISCOVERY_SAVE_KEY = 'cellular-death-match.discovery.v2';
 
 const BREED_IDS = new Set(Object.keys(BREED_DEFS));
 const NOTE_IDS = new Set(Object.keys(DISCOVERY_NOTES));

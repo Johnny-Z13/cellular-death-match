@@ -29,7 +29,7 @@ describe('onboarding coach', () => {
   });
 
   it('shows on the first epoch of a first run only, persisted via localStorage', () => {
-    expect(coachSource).toContain("const SEEN_KEY = 'cdm.coach.seen'");
+    expect(coachSource).toContain("const SEEN_KEY = 'cdm.coach.seen.v2'");
     expect(coachSource).toContain('hasSeenTutorial(): boolean;');
     expect(coachSource).toContain('if (seen()) { active = false; hide(); return; }');
     expect(mainSource).toContain('if (runState.fightIndex === 0) coach.beginRun()');

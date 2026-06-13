@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DISCOVERY_SAVE_KEY,
   clearDiscoverySave,
   createMemoryStorage,
   loadDiscoverySave,
@@ -64,15 +65,35 @@ describe('discovery save', () => {
   it('falls back safely on corrupt JSON', () => {
     const storage = createMemoryStorage();
 
-    storage.setItem('cellular-death-match.discovery.v1', '{bad json');
+    storage.setItem(DISCOVERY_SAVE_KEY, '{bad json');
 
     expect(loadDiscoverySave(storage).discoveredBreedIds).toEqual([]);
+  });
+
+  it('ignores legacy v1 discovery progress so redesigned onboarding starts fresh', () => {
+    const storage = createMemoryStorage();
+
+    storage.setItem('cellular-death-match.discovery.v1', JSON.stringify({
+      persistenceEnabled: true,
+      discoveredBreedIds: ['needle_swarm'],
+      discoveredNoteIds: ['breed_needle_swarm'],
+      revealAll: true,
+    }));
+
+    expect(loadDiscoverySave(storage)).toEqual({
+      persistenceEnabled: false,
+      discoveredBreedIds: [],
+      discoveredNoteIds: [],
+      breedDiscoveryRecords: [],
+      noteDiscoveryRecords: [],
+      revealAll: false,
+    });
   });
 
   it('drops obsolete discovery ids while preserving valid ones', () => {
     const storage = createMemoryStorage();
 
-    storage.setItem('cellular-death-match.discovery.v1', JSON.stringify({
+    storage.setItem(DISCOVERY_SAVE_KEY, JSON.stringify({
       persistenceEnabled: true,
       discoveredBreedIds: ['needle_swarm', 'missing_breed'],
       discoveredNoteIds: ['breed_needle_swarm', 'missing_note'],
