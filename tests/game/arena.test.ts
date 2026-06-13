@@ -597,6 +597,32 @@ describe('arena ecosystem mode', () => {
     expect(cell.targetVol - before).toBeGreaterThan(80);
   });
 
+  it('makes nutrients produce an eager flocking vector for nearby lifeforms', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 71,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        nutrientCharges: 1,
+      },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 120, speed: 8, engulfMultiplier: 4 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+    });
+    const cell = arena.state.cells.get(2)!;
+    const nutrientPos: [number, number] = [cell.center[0] + 6, cell.center[1]];
+    expect(arena.applyTool('nutrient', nutrientPos)).toBe(true);
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    expect(cell.intent.vec[0]).toBeGreaterThan(0.8);
+    expect(Math.abs(cell.intent.vec[1])).toBeLessThan(0.25);
+    expect(cell.intent.speed).toBeGreaterThan(8);
+  });
+
   it('makes toxins produce a strong flee vector for nearby lifeforms', () => {
     const arena = createArena({
       LX: 80,

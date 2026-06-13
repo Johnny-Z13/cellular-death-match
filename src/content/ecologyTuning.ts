@@ -43,7 +43,7 @@ export const PASTE_TUNING = {
 export const TOOL_EFFECT_TUNING = {
   nutrientPulseGrowth: 80,
   nutrientGrowthPerTick: 1.8,
-  nutrientPullSpeed: 5.5,
+  nutrientPullSpeed: 13,
   toxinPulseDamage: 42,
   toxinShrinkPerTick: 0.24,
   toxinFleeSpeed: 24,
