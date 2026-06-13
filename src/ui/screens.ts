@@ -625,6 +625,8 @@ export function createScreens(): Screens {
       endEpochButton.classList.toggle('end-action-ready', complete);
       const endLabel = endEpochButton.querySelector<HTMLElement>('small');
       if (endLabel) endLabel.textContent = complete ? 'ready' : 'score dish';
+      const endState = endEpochButton.querySelector<HTMLElement>('b');
+      if (endState) endState.textContent = complete ? 'ready' : 'now';
       hud.classList.toggle('hud-complete', complete);
     },
   };

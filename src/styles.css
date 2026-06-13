@@ -516,10 +516,36 @@ canvas {
    glows and breathes so the player notices they can finish — without being
    forced out of a dish they want to keep cultivating. */
 .end-action.end-action-ready {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   border-color: var(--bio);
   color: var(--ink);
   background: linear-gradient(180deg, rgba(91, 233, 214, 0.16), var(--panel-raised));
-  animation: end-ready-pulse 1.9s ease-in-out infinite;
+  animation: end-ready-pulse 1.35s ease-in-out infinite;
+}
+
+.end-action.end-action-ready > * {
+  position: relative;
+  z-index: 1;
+}
+
+.end-action.end-action-ready::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    110deg,
+    transparent 0 34%,
+    rgba(255, 255, 255, 0.72) 46%,
+    rgba(91, 233, 214, 0.58) 54%,
+    transparent 68% 100%
+  );
+  mix-blend-mode: screen;
+  transform: translateX(-135%);
+  animation: end-ready-flash 1.35s ease-in-out infinite;
 }
 
 .end-action.end-action-ready .end-icon {
@@ -532,8 +558,14 @@ canvas {
 }
 
 @keyframes end-ready-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(91, 233, 214, 0); }
-  50% { box-shadow: 0 0 0 2px rgba(91, 233, 214, 0.28), 0 0 22px rgba(91, 233, 214, 0.32); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(91, 233, 214, 0.12); }
+  50% { box-shadow: 0 0 0 3px rgba(91, 233, 214, 0.34), 0 0 26px rgba(91, 233, 214, 0.46); }
+}
+
+@keyframes end-ready-flash {
+  0%, 58% { transform: translateX(-135%); opacity: 0; }
+  66% { opacity: 0.96; }
+  86%, 100% { transform: translateX(135%); opacity: 0; }
 }
 
 /* HUD objective line picks up the bio accent when the experiment is complete. */
@@ -1574,6 +1606,7 @@ canvas {
   .coach.coach-show,
   .fx-wipe.fx-wipe-play,
   .end-action.end-action-ready,
+  .end-action.end-action-ready::after,
   .notebook-screen.visible .notebook-card,
   .notebook-screen.notebook-screen-closing .notebook-card,
   .notebook-entry-new {
@@ -2587,6 +2620,10 @@ canvas {
     min-width: 72px;
     min-height: 68px;
     padding: 8px 6px;
+  }
+
+  .toolbox .end-action.end-action-ready {
+    order: -1;
   }
 
   .fx-toasts {
