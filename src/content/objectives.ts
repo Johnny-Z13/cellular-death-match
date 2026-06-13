@@ -30,7 +30,7 @@ export const OBJECTIVES: ReadonlyArray<ObjectiveDef> = [
     name: 'Create a New Lifeform',
     description: 'Create Bloom Mass from a compatible early dish pairing.',
     target: 'Bloom Mass created',
-    hint: 'Plant Swarmlet and Splitter close together, then feed with Nutrient. For a riskier clue, hatch an egg inside Nutrient + Toxin.',
+    hint: 'Seed one extra Swarmlet, then feed the living cultures with Nutrient until Bloom appears.',
     breedId: 'bloom_mass',
   },
   {

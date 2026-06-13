@@ -172,7 +172,10 @@ export function createRun(seed: number): Run {
       return epoch.map((e) => ({ ...e }));
     },
     getOnboardingSpawnList() {
-      return [{ ...ARCHETYPE_DEFAULTS.swarmlet }];
+      return [
+        { ...ARCHETYPE_DEFAULTS.swarmlet },
+        { ...ARCHETYPE_DEFAULTS.splitter },
+      ];
     },
     getObjective() {
       return objectiveForEpoch(fightIndex);

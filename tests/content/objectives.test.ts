@@ -29,14 +29,14 @@ describe('OBJECTIVES', () => {
     }
   });
 
-  it('gives the opening dish both a breed recipe and a volatile catalyst clue', () => {
+  it('keeps the opening dish hint focused on egg and nutrient concepts', () => {
     const opening = objectiveForEpoch(0);
 
     expect(opening.kind).toBe('discover_breed');
-    expect(opening.hint).toContain('Swarmlet and Splitter');
+    expect(opening.hint).toContain('Swarmlet');
     expect(opening.hint).toContain('Nutrient');
-    expect(opening.hint).toContain('Toxin');
-    expect(opening.hint).toContain('egg');
+    expect(opening.hint).not.toContain('Splitter');
+    expect(opening.hint).not.toContain('Toxin');
   });
 
   it('cycles objectives by epoch index', () => {

@@ -9,12 +9,11 @@ const fxSource = readFileSync('src/ui/fx.ts', 'utf8');
 const mainSource = readFileSync('src/main.ts', 'utf8');
 
 describe('discovery menu placeholders', () => {
-  it('keeps locked discovery slots visible as disabled unknown entries', () => {
+  it('keeps locked discovery slots disabled but hidden until they unlock', () => {
     expect(screensSource).toContain('locked-discovery');
     expect(screensSource).toContain('Unknown');
-    expect(screensSource).toContain("button.hidden = false");
-    expect(screensSource).not.toContain('btn.hidden = !unlockedToolIds.has(tool)');
-    expect(screensSource).not.toContain('button.hidden = !unlockedLifeformIds.has(id)');
+    expect(screensSource).toContain('btn.hidden = locked;');
+    expect(screensSource).toContain('button.hidden = locked;');
     expect(css).toContain('.locked-discovery');
     expect(css).toContain('.unknown-icon');
   });

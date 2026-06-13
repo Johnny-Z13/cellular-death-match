@@ -153,7 +153,7 @@ export function createScreens(): Screens {
   let selectedToolId: ToolId = 'egg';
   let selectedEggArchetype: EnemyArchetype = 'swarmlet';
   let unlockedLifeformIds = new Set<string>();
-  let unlockedToolIds = new Set<ToolId>(['egg', 'nutrient', 'toxin', 'water', 'salt', 'acid']);
+  let unlockedToolIds = new Set<ToolId>(['egg', 'nutrient']);
   let eggSelectHandler: ((archetype: EnemyArchetype) => void) | null = null;
   let lifeformSelectHandler: ((id: string) => void) | null = null;
   const optionByArchetype = new Map<EnemyArchetype, EggOption>();
@@ -200,7 +200,7 @@ export function createScreens(): Screens {
   function applyLifeformVisibility(): void {
     for (const [id, button] of lifeButtons) {
       const locked = !unlockedLifeformIds.has(id);
-      button.hidden = false;
+      button.hidden = locked;
       setUnknownState(button, locked, 'Unknown lifeform');
       const selected = !locked && id === selectedLifeformId;
       setSelectedButtonState(button, selected);
@@ -296,7 +296,7 @@ export function createScreens(): Screens {
         const tool = btn.dataset.tool;
         if (!isToolId(tool)) continue;
         const locked = !unlockedToolIds.has(tool);
-        btn.hidden = false;
+        btn.hidden = locked;
         setUnknownState(btn, locked, 'Unknown reagent');
       }
     },

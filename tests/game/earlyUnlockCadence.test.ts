@@ -14,6 +14,7 @@ describe('early unlock cadence', () => {
     });
 
     expect(progression.unlockedTools).toEqual(['egg', 'nutrient', 'toxin', 'water', 'salt', 'paste']);
+    expect(progression.unlockedLifeforms).toEqual(['swarmlet', 'bruiser', 'splitter', 'bloom_mass']);
 
     const first = applyCompletionResearchGrant(progression);
     expect(first?.grant.id).toBe('grant_salt_water_crystal');

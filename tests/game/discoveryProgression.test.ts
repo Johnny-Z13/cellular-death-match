@@ -18,8 +18,8 @@ describe('discovery progression', () => {
   it('starts with the onboarding kit only', () => {
     const progression = createDiscoveryProgression();
 
-    expect(progression.unlockedLifeforms).toEqual(['swarmlet', 'bruiser', 'splitter']);
-    expect(progression.unlockedTools).toEqual(['egg', 'nutrient', 'toxin', 'paste']);
+    expect(progression.unlockedLifeforms).toEqual(['swarmlet']);
+    expect(progression.unlockedTools).toEqual(['egg', 'nutrient']);
     expect(progression.discoveredBreedIds).toEqual([]);
     expect(progression.discoveredNoteIds).toEqual([]);
     expect(progression.breedDiscoveryRecords).toEqual([]);
@@ -48,14 +48,14 @@ describe('discovery progression', () => {
     expect(acknowledged.noteDiscoveryRecords.every((record) => record.fresh === false)).toBe(true);
   });
 
-  it('unlocks Bloom Mass and Water when Bloom Mass is discovered', () => {
+  it('unlocks the first reagent and egg bundle when Bloom Mass is discovered', () => {
     const progression = updateDiscoveryProgression(createDiscoveryProgression(), {
       breedIds: ['bloom_mass'],
       noteIds: ['breed_bloom_mass'],
     });
 
-    expect(progression.unlockedLifeforms).toContain('bloom_mass');
-    expect(progression.unlockedTools).toContain('water');
+    expect(progression.unlockedLifeforms).toEqual(['swarmlet', 'bruiser', 'splitter', 'bloom_mass']);
+    expect(progression.unlockedTools).toEqual(['egg', 'nutrient', 'toxin', 'water', 'paste']);
   });
 
   it('reveals and clears all runtime unlocks without requiring persistence', () => {
@@ -67,8 +67,8 @@ describe('discovery progression', () => {
 
     const cleared = clearDiscoveryProgression(revealed);
     expect(cleared.revealAll).toBe(false);
-    expect(cleared.unlockedTools).toEqual(['egg', 'nutrient', 'toxin', 'paste']);
-    expect(cleared.unlockedLifeforms).toEqual(['swarmlet', 'bruiser', 'splitter']);
+    expect(cleared.unlockedTools).toEqual(['egg', 'nutrient']);
+    expect(cleared.unlockedLifeforms).toEqual(['swarmlet']);
   });
 
   it('offers one new research grant per completed dish in the authored run', () => {

@@ -210,12 +210,12 @@ describe('getFightSpawnList', () => {
 });
 
 describe('first-run onboarding spawn list', () => {
-  it('can start epoch 0 with one Swarmlet for the guided first dish', () => {
+  it('starts epoch 0 with the hidden Bloom pairing for the guided first dish', () => {
     const run = createRun(42);
     run.start();
     const list = run.getOnboardingSpawnList();
 
-    expect(list.map((spawn) => spawn.archetype)).toEqual(['swarmlet']);
+    expect(list.map((spawn) => spawn.archetype)).toEqual(['swarmlet', 'splitter']);
     expect(run.getEpochSpawnList().map((spawn) => spawn.archetype)).toEqual([
       'bruiser',
       'swarmlet',

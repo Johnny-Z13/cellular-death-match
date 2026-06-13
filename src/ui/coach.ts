@@ -23,21 +23,21 @@ interface CoachStep {
 
 const SEEN_KEY = 'cdm.coach.seen';
 
-// The opening lesson: start with Swarmlet, add Splitter, feed the pair, finish.
+// The opening lesson: seed once, feed the hidden starter pairing, finish.
 const STEPS: readonly CoachStep[] = [
   {
-    id: 'splitter',
+    id: 'egg',
     advanceOn: 'egg-placed',
-    kicker: 'Specimen 01 · Pairing',
-    title: 'Add a second culture',
-    body: 'A Swarmlet is already alive in the dish. Pick Splitter from Lifeforms, then tap near the Swarmlet.',
+    kicker: 'Specimen 01 · Seed',
+    title: 'Place one egg',
+    body: 'Tap open dish space to add another Swarmlet culture.',
   },
   {
     id: 'feed',
     advanceOn: 'nutrient-used',
     kicker: 'Specimen 01 · Feeding',
-    title: 'Feed the pairing',
-    body: 'Pick Nutrient from the rack, then tap between Swarmlet and Splitter. Watch for a new lifeform.',
+    title: 'Feed the colony',
+    body: 'Pick Nutrient from the rack, then tap near the living cultures. Watch for a new lifeform.',
   },
   {
     id: 'objective',
@@ -144,7 +144,7 @@ export function createCoach(): Coach {
         if (titleEl && bodyEl && kickerEl && stepEl && root) {
           kickerEl.textContent = 'Onboarding complete';
           titleEl.textContent = 'You have the basics';
-          bodyEl.textContent = 'Seed, feed, steer, and discover. The Notebook logs every breed you find. Good luck.';
+          bodyEl.textContent = 'Seed, feed, steer, and discover. The Notebook logs every breed you find.';
           stepEl.textContent = `${STEPS.length} / ${STEPS.length}`;
           root.classList.add('coach-show');
         }

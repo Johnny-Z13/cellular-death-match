@@ -47,11 +47,9 @@ export interface DiscoveryAnnouncement {
   tone: GrantTickerTone;
 }
 
-export const STARTER_PROGRESSION_TOOLS: readonly ProgressionToolId[] = ['egg', 'nutrient', 'toxin', 'paste'];
+export const STARTER_PROGRESSION_TOOLS: readonly ProgressionToolId[] = ['egg', 'nutrient'];
 export const STARTER_PROGRESSION_LIFEFORMS: readonly ProgressionLifeformId[] = [
   'swarmlet',
-  'bruiser',
-  'splitter',
 ];
 
 export const ALL_PROGRESSION_TOOLS: readonly ProgressionToolId[] = [
@@ -351,7 +349,11 @@ function buildProgression(base: {
   for (const breed of breeds) lifeformSet.add(breed);
 
   if (breeds.has('bloom_mass')) {
+    toolSet.add('toxin');
     toolSet.add('water');
+    toolSet.add('paste');
+    lifeformSet.add('bruiser');
+    lifeformSet.add('splitter');
   }
   if (
     notes.has('recipe_nutrient_conduit')

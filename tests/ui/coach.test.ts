@@ -21,8 +21,8 @@ describe('onboarding coach', () => {
     expect(coachSource).toContain("advanceOn: 'egg-placed'");
     expect(coachSource).toContain("advanceOn: 'nutrient-used'");
     expect(coachSource).toContain("advanceOn: 'objective-complete'");
-    expect(coachSource).toContain('Pick Splitter from Lifeforms');
-    expect(coachSource).toContain('Feed the pairing');
+    expect(coachSource).toContain('Tap open dish space to add another Swarmlet culture.');
+    expect(coachSource).toContain('Feed the colony');
     expect(mainSource).toContain("coach.report('egg-placed')");
     expect(mainSource).toContain("coach.report('nutrient-used')");
     expect(mainSource).toContain("coach.report('objective-complete')");

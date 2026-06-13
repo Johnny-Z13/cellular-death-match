@@ -60,6 +60,10 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 /* Faint grain/scanline atmosphere over the whole document */
 body::after {
   content: "";
