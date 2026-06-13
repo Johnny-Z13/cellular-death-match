@@ -1269,7 +1269,7 @@ canvas {
 }
 
 .fx-banner.fx-banner-show {
-  animation: fx-banner-cycle 2200ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: fx-banner-cycle 3200ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 .fx-banner-inner {
@@ -1318,8 +1318,8 @@ canvas {
 
 @keyframes fx-banner-cycle {
   0% { opacity: 0; transform: scale(1.04); filter: blur(6px); }
-  16% { opacity: 1; transform: scale(1); filter: blur(0); }
-  78% { opacity: 1; transform: scale(1); filter: blur(0); }
+  12% { opacity: 1; transform: scale(1); filter: blur(0); }
+  84% { opacity: 1; transform: scale(1); filter: blur(0); }
   100% { opacity: 0; transform: scale(0.99); filter: blur(2px); }
 }
 

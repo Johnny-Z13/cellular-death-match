@@ -39,7 +39,7 @@ export function createFx(): Fx {
     banner.classList.add('fx-banner-show');
     if (reduceMotion) {
       window.clearTimeout(bannerTimer);
-      bannerTimer = window.setTimeout(() => banner.classList.remove('fx-banner-show'), accent ? 1900 : 1600);
+      bannerTimer = window.setTimeout(() => banner.classList.remove('fx-banner-show'), accent ? 1900 : 2600);
     }
   }
 
