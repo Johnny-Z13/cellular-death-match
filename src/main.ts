@@ -34,6 +34,11 @@ import {
 } from './game/discoveryProgression';
 import { researchBriefForGrant, type ResearchBriefLine } from './game/researchBrief';
 import { applyOnboardingStateReset } from './game/onboardingReset';
+import {
+  lifeformUnlocksForCurrentStage,
+  shouldUseOnboardingDishForCurrentStage,
+  toolUnlocksForCurrentStage,
+} from './game/onboardingStage';
 
 declare const __COMMIT_MESSAGE__: string;
 
@@ -94,6 +99,7 @@ let lastActionTick = 0;
 let nudgeCountThisEpoch = 0;
 let heardDishEventIds = new Set<number>();
 let pendingResearchBrief: ResearchBriefLine[] = [];
+let lastOpeningBloomCreated = false;
 
 interface RuntimeOverlayState {
   menuOpen: boolean;
@@ -168,6 +174,7 @@ screens.onAudioToggle(() => {
 screens.setAudioMuted(uiAudio.isMuted());
 
 screens.onLifeformSelect((id) => {
+  if (!currentLifeformUnlocks().includes(id as ProgressionLifeformId)) return;
   overlayState.selectedLifeformId = id;
   screens.setSelectedLifeform(id);
   // Picking any lifeform arms the egg tool so the player can drop it straight
@@ -288,7 +295,7 @@ screens.onEndRestart(() => {
   showPhase();
 });
 screens.onToolSelect((tool) => {
-  if (!discoveryProgression.unlockedTools.includes(tool)) return;
+  if (!currentToolUnlocks().includes(tool)) return;
   uiAudio.play('ui_select');
   selectedTool = tool;
   screens.setTool(tool);
@@ -378,7 +385,7 @@ function showPhase() {
 function startNewFight() {
   const playerCfg = run.getPlayerConfig();
   const runState = run.getState();
-  const useOnboardingDish = runState.fightIndex === 0 && !coach.hasSeenTutorial();
+  const useOnboardingDish = shouldUseOnboardingDishForCurrentStage(runState.fightIndex, false);
   const enemies = useOnboardingDish ? run.getOnboardingSpawnList() : run.getEpochSpawnList();
   arena = createArena({
     LX,
@@ -397,8 +404,10 @@ function startNewFight() {
   tickerState = createTickerState();
   heardDishEventIds = new Set<number>();
   didAnnounceCompletion = false;
+  lastOpeningBloomCreated = false;
   lastActionTick = 0;
   nudgeCountThisEpoch = 0;
+  applyDiscoveryProgressionUi();
   screens.setEpochComplete(false);
   screens.clearTicker();
   screens.setPickResearchBrief([]);
@@ -450,6 +459,14 @@ function loop() {
     displayedFps = framesSinceTick;
     framesSinceTick = 0;
     lastFpsTick = now;
+  }
+
+  const currentOpeningBloomCreated = openingBloomCreatedInCurrentDish();
+  if (currentOpeningBloomCreated !== lastOpeningBloomCreated) {
+    lastOpeningBloomCreated = currentOpeningBloomCreated;
+    if (currentOpeningBloomCreated) advanceDiscoveryProgression(arena.getEcology().discoveries);
+    applyDiscoveryProgressionUi();
+    refreshArenaToolUi();
   }
 
   // HUD update.
@@ -630,11 +647,13 @@ function saveRuntimeDiscoveryState(): void {
 }
 
 function applyDiscoveryProgressionUi(): void {
-  screens.setToolUnlocks(discoveryProgression.unlockedTools);
-  screens.setLifeformUnlocks(discoveryProgression.unlockedLifeforms);
+  const unlockedTools = currentToolUnlocks();
+  const unlockedLifeforms = currentLifeformUnlocks();
+  screens.setToolUnlocks(unlockedTools);
+  screens.setLifeformUnlocks(unlockedLifeforms);
   refreshNotebook();
 
-  if (!discoveryProgression.unlockedTools.includes(selectedTool)) {
+  if (!unlockedTools.includes(selectedTool)) {
     selectedTool = 'egg';
   }
   if (!isUnlockedEggArchetype(selectedEggArchetype)) {
@@ -645,11 +664,31 @@ function applyDiscoveryProgressionUi(): void {
   screens.setEggArchetype(selectedEggArchetype);
   if (
     !overlayState.selectedLifeformId
-    || !discoveryProgression.unlockedLifeforms.includes(overlayState.selectedLifeformId as ProgressionLifeformId)
+    || !unlockedLifeforms.includes(overlayState.selectedLifeformId as ProgressionLifeformId)
   ) {
     overlayState.selectedLifeformId = selectedEggArchetype;
   }
   screens.setSelectedLifeform(overlayState.selectedLifeformId);
+}
+
+function currentToolUnlocks(): readonly ToolId[] {
+  return toolUnlocksForCurrentStage(
+    discoveryProgression,
+    run.getState().fightIndex,
+    openingBloomCreatedInCurrentDish(),
+  );
+}
+
+function currentLifeformUnlocks(): readonly ProgressionLifeformId[] {
+  return lifeformUnlocksForCurrentStage(
+    discoveryProgression,
+    run.getState().fightIndex,
+    openingBloomCreatedInCurrentDish(),
+  );
+}
+
+function openingBloomCreatedInCurrentDish(): boolean {
+  return arena?.getEcology().discoveries.breedIds.includes('bloom_mass') === true;
 }
 
 function refreshArenaToolUi(): void {
@@ -659,7 +698,7 @@ function refreshArenaToolUi(): void {
 }
 
 function isUnlockedEggArchetype(archetype: EnemyArchetype): boolean {
-  return discoveryProgression.unlockedLifeforms.includes(archetype);
+  return currentLifeformUnlocks().includes(archetype);
 }
 
 function announceDiscoveryProgressionChange(

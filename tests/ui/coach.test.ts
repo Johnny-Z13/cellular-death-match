@@ -33,7 +33,7 @@ describe('onboarding coach', () => {
     expect(coachSource).toContain('hasSeenTutorial(): boolean;');
     expect(coachSource).toContain('if (seen()) { active = false; hide(); return; }');
     expect(mainSource).toContain('if (runState.fightIndex === 0) coach.beginRun()');
-    expect(mainSource).toContain('coach.hasSeenTutorial()');
+    expect(mainSource).toContain('shouldUseOnboardingDishForCurrentStage(runState.fightIndex, false)');
     expect(mainSource).toContain('run.getOnboardingSpawnList()');
   });
 
