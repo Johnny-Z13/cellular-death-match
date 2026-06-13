@@ -620,7 +620,7 @@ describe('arena ecosystem mode', () => {
     arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     expect(cell.intent.vec[0]).toBeLessThan(-0.8);
     expect(Math.abs(cell.intent.vec[1])).toBeLessThan(0.25);
-    expect(cell.intent.speed).toBeGreaterThan(9);
+    expect(cell.intent.speed).toBeGreaterThan(16);
   });
 
   it('lets propagators prefer compatible swarmlets over closer predators', () => {

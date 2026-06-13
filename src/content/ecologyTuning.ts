@@ -46,7 +46,7 @@ export const TOOL_EFFECT_TUNING = {
   nutrientPullSpeed: 5.5,
   toxinPulseDamage: 42,
   toxinShrinkPerTick: 0.24,
-  toxinFleeSpeed: 13,
+  toxinFleeSpeed: 24,
   waterPulseGrowth: 34,
   waterGrowthPerTick: 0.58,
   waterSpreadSpeed: 4.2,
