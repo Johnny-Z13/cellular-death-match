@@ -11,6 +11,8 @@ import { createIconCells } from './iconCells';
 
 type ScreenName = 'title' | 'pick' | 'end' | 'hud' | 'notebook';
 export type ToolId = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' | 'paste';
+export type ButtonHintLevel = 'hint' | 'ready';
+export type ButtonHintTarget = ToolId | 'notebook';
 
 export interface HudInfo {
   fightIndex: number;          // 0-based; HUD shows fightIndex+1
@@ -62,10 +64,12 @@ export interface Screens {
   addTicker(message: string, tone?: TickerTone): void;
   clearTicker(): void;
   setTool(tool: ToolId): void;
+  setButtonHint(target: ButtonHintTarget | null, level?: ButtonHintLevel): void;
   setToolUnlocks(tools: readonly ToolId[]): void;
   showcaseToolUnlock(tool: ToolId): void;
   updateToolCharges(charges: Record<ToolId, ToolState>): void;
   updateAgitation(state: AgitationState): void;
+  setAgitateUnlocked(unlocked: boolean): void;
   onToolSelect(handler: (tool: ToolId) => void): void;
   onAgitate(handler: () => void): void;
   onEndEpoch(handler: () => void): void;
@@ -154,6 +158,8 @@ export function createScreens(): Screens {
   let selectedEggArchetype: EnemyArchetype = 'swarmlet';
   let unlockedLifeformIds = new Set<string>();
   let unlockedToolIds = new Set<ToolId>(['egg', 'nutrient']);
+  let agitationUnlocked = true;
+  let currentAgitationState: AgitationState = { charges: 0, maxCharges: 0, activeTicks: 0 };
   let eggSelectHandler: ((archetype: EnemyArchetype) => void) | null = null;
   let lifeformSelectHandler: ((id: string) => void) | null = null;
   const optionByArchetype = new Map<EnemyArchetype, EggOption>();
@@ -262,6 +268,29 @@ export function createScreens(): Screens {
   notebookTabLog.addEventListener('click', () => setNotebookTab('log'));
   notebookTabAtlas.addEventListener('click', () => setNotebookTab('atlas'));
 
+  function buttonForHintTarget(target: ButtonHintTarget): HTMLButtonElement | null {
+    if (target === 'notebook') return notebookButton;
+    return toolButtons.find((button) => button.dataset.tool === target) ?? null;
+  }
+
+  function applyButtonHint(target: ButtonHintTarget | null, level: ButtonHintLevel = 'hint'): void {
+    const hintedButton = target ? buttonForHintTarget(target) : null;
+    for (const button of [...toolButtons, notebookButton]) {
+      const active = button === hintedButton && !button.hidden && !button.disabled;
+      button.classList.toggle('button-hint-pulse', active && level === 'hint');
+      button.classList.toggle('button-ready-pulse', active && level === 'ready');
+    }
+  }
+
+  function applyAgitationUi(): void {
+    agitateButton.hidden = !agitationUnlocked;
+    agitateButton.disabled = !agitationUnlocked || currentAgitationState.charges <= 0;
+    agitateButton.classList.toggle('selected', agitationUnlocked && currentAgitationState.activeTicks > 0);
+    agitateCount.textContent = agitationUnlocked
+      ? `${currentAgitationState.charges}/${currentAgitationState.maxCharges}`
+      : '?';
+  }
+
   return {
     show(name) {
       if (name === 'title' || name === 'pick' || name === 'end' || name === 'notebook') closeMobileDrawers();
@@ -290,6 +319,9 @@ export function createScreens(): Screens {
       updateToolSummary(toolSummary, selectedToolId, selectedEggArchetype, optionByArchetype);
       updateMobileToolReadout(mobileToolName, mobileToolSummary, selectedToolId, selectedEggArchetype, optionByArchetype);
     },
+    setButtonHint(target, level = 'hint') {
+      applyButtonHint(target, level);
+    },
     setToolUnlocks(tools) {
       unlockedToolIds = new Set(tools);
       for (const btn of toolButtons) {
@@ -298,6 +330,7 @@ export function createScreens(): Screens {
         const locked = !unlockedToolIds.has(tool);
         btn.hidden = locked;
         setUnknownState(btn, locked, 'Unknown reagent');
+        if (locked) btn.classList.remove('button-hint-pulse', 'button-ready-pulse');
       }
     },
     showcaseToolUnlock(tool) {
@@ -327,9 +360,12 @@ export function createScreens(): Screens {
       }
     },
     updateAgitation(state) {
-      agitateButton.disabled = state.charges <= 0;
-      agitateButton.classList.toggle('selected', state.activeTicks > 0);
-      agitateCount.textContent = `${state.charges}/${state.maxCharges}`;
+      currentAgitationState = state;
+      applyAgitationUi();
+    },
+    setAgitateUnlocked(unlocked) {
+      agitationUnlocked = unlocked;
+      applyAgitationUi();
     },
     onToolSelect(handler) {
       for (const btn of toolButtons) {

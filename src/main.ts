@@ -100,6 +100,7 @@ let nudgeCountThisEpoch = 0;
 let heardDishEventIds = new Set<number>();
 let pendingResearchBrief: ResearchBriefLine[] = [];
 let lastOpeningBloomCreated = false;
+let didPlaceEggThisEpoch = false;
 
 interface RuntimeOverlayState {
   menuOpen: boolean;
@@ -245,8 +246,13 @@ canvas.addEventListener('pointerdown', (event) => {
     // Egg keeps the soft UI tap; reagents get their own bespoke drop sound.
     uiAudio.play(DROP_SOUND_FOR_TOOL[selectedTool] ?? 'ui_tap');
     screens.updateToolCharges(arena.getToolStates());
-    if (selectedTool === 'egg') coach.report('egg-placed');
-    else if (selectedTool === 'nutrient') coach.report('nutrient-used');
+    if (selectedTool === 'egg') {
+      didPlaceEggThisEpoch = true;
+      coach.report('egg-placed');
+    } else if (selectedTool === 'nutrient') {
+      coach.report('nutrient-used');
+    }
+    updateButtonHint();
     registerPlayerAction();
   }
 });
@@ -353,11 +359,14 @@ function showPhase() {
     setPresentationMode(false);
   }
   if (state.phase === 'title') {
+    updateButtonHint();
     screens.show('title');
   } else if (state.phase === 'arena') {
     screens.show('hud');
+    updateButtonHint();
     // arena was started by startNewFight(); HUD updates in loop.
   } else if (state.phase === 'upgrade_pick') {
+    updateButtonHint();
     const choices = state.pendingPickChoices.map((id) => ({ id, def: getUpgradeDef(id)! }));
     screens.setPickChoices(choices, (id) => {
       uiAudio.play('ui_select');
@@ -367,6 +376,7 @@ function showPhase() {
     });
     screens.show('pick');
   } else if (state.phase === 'run_end') {
+    updateButtonHint();
     screens.updateEnd({
       outcome: state.outcome ?? 'lost',
       fightReached: state.fightIndex + 1,
@@ -405,6 +415,7 @@ function startNewFight() {
   heardDishEventIds = new Set<number>();
   didAnnounceCompletion = false;
   lastOpeningBloomCreated = false;
+  didPlaceEggThisEpoch = false;
   lastActionTick = 0;
   nudgeCountThisEpoch = 0;
   applyDiscoveryProgressionUi();
@@ -425,6 +436,7 @@ function startNewFight() {
   if (runState.fightIndex === 0) coach.beginRun();
   screens.updateToolCharges(arena.getToolStates());
   screens.updateAgitation(arena.getAgitationState());
+  updateButtonHint();
   debug.updateDiscoveries(discoveryDebugInfo());
   // Update debug panel swatches to match the renderer's palette.
   debug.setSwatch(1, swatchForCellId(1, PALETTE_SIZE));
@@ -467,6 +479,7 @@ function loop() {
     if (currentOpeningBloomCreated) advanceDiscoveryProgression(arena.getEcology().discoveries);
     applyDiscoveryProgressionUi();
     refreshArenaToolUi();
+    updateButtonHint();
   }
 
   // HUD update.
@@ -504,6 +517,7 @@ function loop() {
     screens.updateToolCharges(arena.getToolStates());
     screens.updateAgitation(arena.getAgitationState());
     screens.setEpochComplete(objective.complete);
+    updateButtonHint();
     announceEpochCompletion(objective.complete, objective.def.name);
     maybeNudgeIdlePlayer(objective.complete, objective.def.hint);
   }
@@ -650,6 +664,10 @@ function applyDiscoveryProgressionUi(): void {
   const unlockedTools = currentToolUnlocks();
   const unlockedLifeforms = currentLifeformUnlocks();
   screens.setToolUnlocks(unlockedTools);
+  screens.setAgitateUnlocked(!shouldUseOnboardingDishForCurrentStage(
+    run.getState().fightIndex,
+    openingBloomCreatedInCurrentDish(),
+  ));
   screens.setLifeformUnlocks(unlockedLifeforms);
   refreshNotebook();
 
@@ -689,6 +707,30 @@ function currentLifeformUnlocks(): readonly ProgressionLifeformId[] {
 
 function openingBloomCreatedInCurrentDish(): boolean {
   return arena?.getEcology().discoveries.breedIds.includes('bloom_mass') === true;
+}
+
+function updateButtonHint(): void {
+  const state = run.getState();
+  if (state.phase !== 'arena' || !arena) {
+    screens.setButtonHint(null);
+    return;
+  }
+
+  if (arena.getObjectiveProgress().complete) {
+    screens.setButtonHint(null);
+    return;
+  }
+
+  if (shouldUseOnboardingDishForCurrentStage(state.fightIndex, openingBloomCreatedInCurrentDish())) {
+    if (!didPlaceEggThisEpoch) {
+      screens.setButtonHint('egg', 'hint');
+    } else {
+      screens.setButtonHint('nutrient', 'hint');
+    }
+    return;
+  }
+
+  screens.setButtonHint(null);
 }
 
 function refreshArenaToolUi(): void {

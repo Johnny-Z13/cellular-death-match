@@ -431,6 +431,79 @@ canvas {
   animation: tool-discovery-pulse 1.8s ease-out 1;
 }
 
+.button-hint-pulse,
+.button-ready-pulse {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.button-hint-pulse {
+  border-color: rgba(91, 233, 214, 0.78) !important;
+  box-shadow: 0 0 0 1px rgba(91, 233, 214, 0.24), 0 0 22px rgba(91, 233, 214, 0.2);
+  animation: button-hint-breathe 1.55s ease-in-out infinite;
+}
+
+.button-ready-pulse {
+  border-color: rgba(255, 214, 103, 0.86) !important;
+  box-shadow: 0 0 0 1px rgba(255, 214, 103, 0.28), 0 0 24px rgba(255, 214, 103, 0.24);
+  animation: button-hint-breathe 1.2s ease-in-out infinite;
+}
+
+.button-hint-pulse::after,
+.button-ready-pulse::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    110deg,
+    transparent 0 34%,
+    rgba(255, 255, 255, 0.45) 47%,
+    rgba(91, 233, 214, 0.38) 56%,
+    transparent 70% 100%
+  );
+  transform: translateX(-135%);
+  mix-blend-mode: screen;
+  animation: button-hint-sheen 1.55s ease-in-out infinite;
+}
+
+.button-ready-pulse::after {
+  background: linear-gradient(
+    110deg,
+    transparent 0 34%,
+    rgba(255, 255, 255, 0.5) 47%,
+    rgba(255, 214, 103, 0.44) 56%,
+    transparent 70% 100%
+  );
+  animation-duration: 1.2s;
+}
+
+.button-hint-pulse > *,
+.button-ready-pulse > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes button-hint-breathe {
+  0%, 100% {
+    transform: translateY(0);
+    filter: brightness(1);
+  }
+  50% {
+    transform: translateY(-2px);
+    filter: brightness(1.16);
+  }
+}
+
+@keyframes button-hint-sheen {
+  0% { transform: translateX(-135%); opacity: 0; }
+  18% { opacity: 0.9; }
+  54% { transform: translateX(135%); opacity: 0; }
+  100% { transform: translateX(135%); opacity: 0; }
+}
+
 .tool-button strong,
 .tool-button small {
   display: block;
@@ -1611,6 +1684,10 @@ canvas {
   .fx-wipe.fx-wipe-play,
   .end-action.end-action-ready,
   .end-action.end-action-ready::after,
+  .button-hint-pulse,
+  .button-hint-pulse::after,
+  .button-ready-pulse,
+  .button-ready-pulse::after,
   .notebook-screen.visible .notebook-card,
   .notebook-screen.notebook-screen-closing .notebook-card,
   .notebook-entry-new {
