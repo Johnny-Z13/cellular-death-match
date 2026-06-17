@@ -100,15 +100,19 @@ describe('onboarding coach', () => {
   it('advances on real gameplay beats, not timers', () => {
     expect(coachSource).toContain("advanceOn: 'egg-placed'");
     expect(coachSource).toContain("advanceOn: 'nutrient-used'");
-    expect(coachSource).toContain('Tap open dish space to add another Swarmlet culture.');
-    expect(coachSource).toContain('Feed the colony');
+    expect(coachSource).toContain("advanceOn: 'objective-complete'");
+    expect(coachSource).toContain("advanceOn: 'epoch-ended'");
+    expect(coachSource).toContain('Click Egg, then plant it');
+    expect(coachSource).toContain('Click Nutrient, then feed it');
+    expect(coachSource).toContain('Press End');
     expect(mainSource).toContain("coach.report('egg-placed')");
     expect(mainSource).toContain("coach.report('nutrient-used')");
     expect(mainSource).toContain("coach.report('objective-complete')");
+    expect(mainSource).toContain("coach.report('epoch-ended')");
   });
 
   it('shows on the first epoch of a first run only, persisted via localStorage', () => {
-    expect(coachSource).toContain("const SEEN_KEY = 'cdm.coach.seen.v2'");
+    expect(coachSource).toContain("const SEEN_KEY = 'cdm.coach.seen.v3'");
     expect(coachSource).toContain('hasSeenTutorial(): boolean;');
     expect(coachSource).toContain('if (seen()) { active = false; hide(); return; }');
     expect(mainSource).toContain('if (runState.fightIndex === 0) coach.beginRun()');
@@ -146,20 +150,29 @@ describe('onboarding coach', () => {
     expect(screensSource).toContain("info.targetVol > 0 ? `${info.vol} / ${Math.round(info.targetVol)}` : '-'");
   });
 
-  it('retires itself after the final tutorial beat without requiring Skip', () => {
+  it('hand-holds the first epoch until the player ends it successfully', () => {
     vi.useFakeTimers();
     const elements = installCoachDom();
     const coach = createCoach();
 
     coach.beginRun();
+    expect(elements.get('coach-title')?.textContent).toBe('Click Egg, then plant it');
+
     coach.report('egg-placed');
+    expect(coach.isActive()).toBe(true);
+    expect(elements.get('coach-title')?.textContent).toBe('Click Nutrient, then feed it');
+
     coach.report('nutrient-used');
+    expect(coach.isActive()).toBe(true);
+    expect(elements.get('coach-title')?.textContent).toBe('Create Bloom Mass');
+
+    coach.report('objective-complete');
+    expect(coach.isActive()).toBe(true);
+    expect(elements.get('coach-title')?.textContent).toBe('Press End');
+
+    coach.report('epoch-ended' as never);
 
     expect(coach.isActive()).toBe(false);
-    expect(elements.get('coach')?.classList.contains('coach-show')).toBe(true);
-
-    vi.advanceTimersByTime(4200);
-
     expect(elements.get('coach')?.classList.contains('coach-show')).toBe(false);
     expect(elements.get('coach')?.getAttribute('aria-hidden')).toBe('true');
   });
@@ -180,7 +193,7 @@ describe('onboarding coach', () => {
     elements.get('coach-skip')?.click();
 
     expect(coach.isActive()).toBe(true);
-    expect(elements.get('coach-title')?.textContent).toBe('Place one egg');
+    expect(elements.get('coach-title')?.textContent).toBe('Click Egg, then plant it');
     expect(elements.get('coach-skip')?.textContent).toBe('Skip tutorial');
   });
 

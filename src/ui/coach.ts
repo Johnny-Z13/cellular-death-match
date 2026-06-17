@@ -7,7 +7,8 @@ export type CoachEvent =
   | 'egg-placed'
   | 'nutrient-used'
   | 'paste-drawn'
-  | 'objective-complete';
+  | 'objective-complete'
+  | 'epoch-ended';
 
 interface CoachStep {
   id: string;
@@ -31,24 +32,37 @@ export interface CoachView {
   setTutorialCard(card: CoachCard | null): void;
 }
 
-const SEEN_KEY = 'cdm.coach.seen.v2';
+const SEEN_KEY = 'cdm.coach.seen.v3';
 
-// The opening lesson: seed once, feed the hidden starter pairing, then hand off
-// to the objective HUD, button hints, and idle nudges.
+// The opening lesson owns the top HUD until the first short epoch is banked.
 const STEPS: readonly CoachStep[] = [
   {
     id: 'egg',
     advanceOn: 'egg-placed',
-    kicker: 'Specimen 01 · Seed',
-    title: 'Place one egg',
-    body: 'Tap open dish space to add another Swarmlet culture.',
+    kicker: 'Onboarding',
+    title: 'Click Egg, then plant it',
+    body: 'Tap an empty spot in the dish.',
   },
   {
     id: 'feed',
     advanceOn: 'nutrient-used',
-    kicker: 'Specimen 01 · Feeding',
-    title: 'Feed the colony',
-    body: 'Pick Nutrient from the rack, then tap near the living cultures. Watch for a new lifeform.',
+    kicker: 'Onboarding',
+    title: 'Click Nutrient, then feed it',
+    body: 'Tap near the cultures.',
+  },
+  {
+    id: 'bloom',
+    advanceOn: 'objective-complete',
+    kicker: 'Onboarding',
+    title: 'Create Bloom Mass',
+    body: 'Keep feeding until the new lifeform appears.',
+  },
+  {
+    id: 'end',
+    advanceOn: 'epoch-ended',
+    kicker: 'Onboarding',
+    title: 'Press End',
+    body: 'Finish this epoch.',
   },
 ];
 
@@ -159,27 +173,7 @@ export function createCoach(view?: CoachView): Coach {
       if (!step || step.advanceOn !== event) return;
       stepIndex += 1;
       if (stepIndex >= STEPS.length) {
-        // Final beat done: celebrate briefly, then retire the coach.
-        if (view) {
-          view.setTutorialCard({
-            kicker: 'Onboarding complete',
-            title: 'You have the basics',
-            body: 'Seed, feed, steer, and discover. The Notebook logs every breed you find.',
-            stepText: `${STEPS.length} / ${STEPS.length}`,
-            skipLabel: 'Skip tutorial',
-            onSkip: finish,
-          });
-        }
-        if (titleEl && bodyEl && kickerEl && stepEl && root) {
-          kickerEl.textContent = 'Onboarding complete';
-          titleEl.textContent = 'You have the basics';
-          bodyEl.textContent = 'Seed, feed, steer, and discover. The Notebook logs every breed you find.';
-          stepEl.textContent = `${STEPS.length} / ${STEPS.length}`;
-          root.classList.add('coach-show');
-          root.setAttribute('aria-hidden', 'false');
-        }
-        window.setTimeout(() => finish(), 4200);
-        active = false;
+        finish();
         return;
       }
       render();

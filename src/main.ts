@@ -548,6 +548,7 @@ function resolveArenaStatus(status: ArenaStatus): boolean {
     uiAudio.play('epoch_win');
     fx.playWipe();
     run.completeEpoch();
+    coach.report('epoch-ended');
     if (run.getState().phase === 'run_end') uiAudio.stopAmbience();
     showPhase();
     return true;
