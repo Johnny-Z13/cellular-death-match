@@ -51,6 +51,15 @@ export interface PickChoice {
   def: UpgradeDef;
 }
 
+export interface HudTutorialInfo {
+  kicker: string;
+  title: string;
+  body: string;
+  stepText: string;
+  skipLabel: string;
+  onSkip: () => void;
+}
+
 export interface EggOption {
   archetype: EnemyArchetype;
   name: string;
@@ -81,6 +90,7 @@ export interface Screens {
   onLifeformSelect(handler: (id: string) => void): void;
   setSelectedLifeform(id: string | null): void;
   updateHud(info: HudInfo): void;
+  setHudTutorial(info: HudTutorialInfo | null): void;
   setPickResearchBrief(lines: readonly ResearchBriefLine[]): void;
   updateNotebook(view: NotebookView): void;
   updateAtlas(view: AtlasView): void;
@@ -136,6 +146,12 @@ export function createScreens(): Screens {
   const hudObjective = get('hud-objective');
   const hudHint      = get('hud-hint');
   const hudUpgrades  = get('hud-upgrades');
+  const hudTutorial = get('hud-tutorial');
+  const hudTutorialKicker = get('hud-tutorial-kicker');
+  const hudTutorialTitle = get('hud-tutorial-title');
+  const hudTutorialBody = get('hud-tutorial-body');
+  const hudTutorialStep = get('hud-tutorial-step');
+  const hudTutorialSkip = get('hud-tutorial-skip') as HTMLButtonElement;
   const toolSummary  = get('tool-summary');
   const mobileLifeformsToggle = get('mobile-lifeforms-toggle') as HTMLButtonElement;
   const mobileLogToggle = get('mobile-log-toggle') as HTMLButtonElement;
@@ -162,6 +178,7 @@ export function createScreens(): Screens {
   let currentAgitationState: AgitationState = { charges: 0, maxCharges: 0, activeTicks: 0 };
   let eggSelectHandler: ((archetype: EnemyArchetype) => void) | null = null;
   let lifeformSelectHandler: ((id: string) => void) | null = null;
+  let hudTutorialSkipHandler: (() => void) | null = null;
   const optionByArchetype = new Map<EnemyArchetype, EggOption>();
   const iconCells = createIconCells();
 
@@ -253,6 +270,9 @@ export function createScreens(): Screens {
   });
   mobileLogToggle.addEventListener('click', () => {
     setMobileDrawer(mobileDrawer === 'log' ? 'none' : 'log');
+  });
+  hudTutorialSkip.addEventListener('click', () => {
+    hudTutorialSkipHandler?.();
   });
   setMobileDrawer('none');
 
@@ -477,7 +497,7 @@ export function createScreens(): Screens {
     },
     updateHud(info) {
       hudFight.textContent = `${info.fightIndex + 1} / ${info.totalFights}`;
-      hudVol.textContent = `${info.vol} / ${Math.round(info.targetVol)}`;
+      hudVol.textContent = info.targetVol > 0 ? `${info.vol} / ${Math.round(info.targetVol)}` : '-';
       hudProgress.textContent = `${info.secondsRemaining}s`;
       const crisis = info.crisis === 'none' ? '' : `, ${info.crisis} active`;
       hudEco.textContent = `${info.livingEnemies} lifeforms, ${info.worldEvents} fertile events, ${info.outbreaks} outbreaks, ${info.reactions} reactions, ${info.accidents} accidents, ${info.mutations} mutations, ${info.births} births, ${info.supplyDrops} drops, ${info.dominant} dominant${crisis}`;
@@ -488,6 +508,17 @@ export function createScreens(): Screens {
         ? 'Experiment complete. Press End to bank it, or keep cultivating.'
         : info.objectiveHint;
       hudUpgrades.textContent = info.upgrades.length === 0 ? 'none' : info.upgrades.join(', ');
+    },
+    setHudTutorial(info) {
+      hudTutorialSkipHandler = info?.onSkip ?? null;
+      hud.classList.toggle('hud-tutorial-active', info !== null);
+      hudTutorial.hidden = info === null;
+      if (!info) return;
+      hudTutorialKicker.textContent = info.kicker;
+      hudTutorialTitle.textContent = info.title;
+      hudTutorialBody.textContent = info.body;
+      hudTutorialStep.textContent = info.stepText;
+      hudTutorialSkip.textContent = info.skipLabel;
     },
     setPickResearchBrief(lines) {
       pickResearchBrief.replaceChildren();
@@ -616,8 +647,8 @@ export function createScreens(): Screens {
     },
     updateEnd(info) {
       endTitle.textContent = info.outcome === 'won' ? 'Lineage Stabilized' : 'Colony Collapsed';
-      // Honest summary: the forgiving model always reaches the end, so report
-      // how many objectives were actually achieved rather than claiming a sweep.
+      // Honest summary: report achieved objectives separately from the run
+      // outcome so a lapse never reads like a successful sweep.
       const fightStr = info.outcome === 'won'
         ? info.objectivesCompleted >= info.totalFights
           ? `All ${info.totalFights} objectives achieved — a flawless trial.`

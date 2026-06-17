@@ -12,7 +12,7 @@
       href="https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/src/styles.css?v=20260610-premium-pass" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260617-hud-tutorial" />
   </head>
   <body>
     <main class="layout">
@@ -214,12 +214,21 @@
       </div>
 
       <div id="hud" class="hud">
+        <div id="hud-tutorial" class="hud-tutorial" hidden>
+          <div class="hud-tutorial-head">
+            <span id="hud-tutorial-kicker" class="hud-tutorial-kicker">Specimen 01</span>
+            <span id="hud-tutorial-step" class="hud-tutorial-step">1 / 2</span>
+          </div>
+          <strong id="hud-tutorial-title" class="hud-tutorial-title">Place one egg</strong>
+          <p id="hud-tutorial-body" class="hud-tutorial-body">Tap open dish space to add another Swarmlet culture.</p>
+          <button id="hud-tutorial-skip" class="hud-tutorial-skip" type="button">Skip tutorial</button>
+        </div>
         <div class="hud-row"><span class="hud-key">Epoch</span><span id="hud-fight" class="hud-val">1 / 5</span></div>
         <div class="hud-row"><span class="hud-key">Deadline</span><span id="hud-progress" class="hud-val">55s</span></div>
         <div class="hud-row hud-eco-row hud-objective-row"><span class="hud-key">Objective</span><span id="hud-objective" class="hud-val">—</span></div>
         <div class="hud-row hud-hint-row"><span class="hud-key">Hint</span><span id="hud-hint" class="hud-val">—</span></div>
-        <div class="hud-row"><span class="hud-key">Vol</span><span id="hud-vol" class="hud-val">— / —</span></div>
-        <div class="hud-row hud-eco-row"><span class="hud-key">Ecology</span><span id="hud-eco" class="hud-val">—</span></div>
+        <div class="hud-row hud-vol-row"><span class="hud-key">Vol</span><span id="hud-vol" class="hud-val">— / —</span></div>
+        <div class="hud-row hud-eco-row hud-ecology-row"><span class="hud-key">Ecology</span><span id="hud-eco" class="hud-val">—</span></div>
         <div class="hud-row" id="hud-upgrades-row"><span class="hud-key">Build</span><span id="hud-upgrades" class="hud-val">none</span></div>
       </div>
 
@@ -247,16 +256,7 @@
       <div id="fx-toasts" class="fx-toasts" aria-live="polite"></div>
       <div id="fx-wipe" class="fx-wipe" aria-hidden="true"></div>
 
-      <aside id="coach" class="coach" aria-hidden="true" aria-live="polite">
-        <div class="coach-head">
-          <span id="coach-kicker" class="coach-kicker">Specimen 01</span>
-          <span id="coach-step" class="coach-step">1 / 4</span>
-        </div>
-        <strong id="coach-title" class="coach-title">Plant your first culture</strong>
-        <p id="coach-body" class="coach-body">Tap inside the dish to seed a living culture.</p>
-        <button id="coach-skip" class="coach-skip" type="button">Skip tutorial</button>
-      </aside>
     </main>
-    <script type="module" src="/src/main.ts?v=20260617-onboarding-flow"></script>
+    <script type="module" src="/src/main.ts?v=20260617-deadline-tick"></script>
   </body>
 </html>

@@ -8,6 +8,7 @@ const html = readFileSync('index.html', 'utf8');
 const css = readFileSync('src/styles.css', 'utf8');
 const coachSource = readFileSync('src/ui/coach.ts', 'utf8');
 const mainSource = readFileSync('src/main.ts', 'utf8');
+const screensSource = readFileSync('src/ui/screens.ts', 'utf8');
 
 class FakeClassList {
   private readonly classes = new Set<string>();
@@ -79,12 +80,21 @@ afterEach(() => {
 
 describe('onboarding coach', () => {
   it('ships a skippable coach panel in the HTML', () => {
-    expect(html).toContain('id="coach"');
-    expect(html).toContain('id="coach-kicker"');
-    expect(html).toContain('id="coach-title"');
-    expect(html).toContain('id="coach-body"');
-    expect(html).toContain('id="coach-step"');
-    expect(html).toContain('id="coach-skip"');
+    expect(html).toContain('id="hud-tutorial"');
+    expect(html).toContain('id="hud-tutorial-kicker"');
+    expect(html).toContain('id="hud-tutorial-title"');
+    expect(html).toContain('id="hud-tutorial-body"');
+    expect(html).toContain('id="hud-tutorial-step"');
+    expect(html).toContain('id="hud-tutorial-skip"');
+    expect(html).not.toContain('id="coach"');
+  });
+
+  it('uses the objective HUD as the tutorial surface', () => {
+    expect(mainSource).toContain('createCoach({');
+    expect(mainSource).toContain('screens.setHudTutorial');
+    expect(coachSource).toContain('setTutorialCard(card: CoachCard | null): void;');
+    expect(css).toContain('.hud-tutorial');
+    expect(css).toContain('.hud.hud-tutorial-active .hud-row');
   });
 
   it('advances on real gameplay beats, not timers', () => {
@@ -120,14 +130,20 @@ describe('onboarding coach', () => {
     expect(mainSource).toContain('coach.hideNudge();');
   });
 
-  it('never blocks interactive panels and hides in presentation mode', () => {
-    // Bottom-centre on desktop (over the non-interactive log zone); under the
-    // HUD on phones. Hidden in presentation mode like other chrome.
-    expect(css).toContain('.coach {');
-    expect(css).toContain('.coach.coach-show');
-    expect(css).toContain('.presentation-mode .coach');
-    const mobileBlockStart = css.indexOf('@media (max-width: 899px)');
-    expect(css.indexOf('top: calc(92px + env(safe-area-inset-top))')).toBeGreaterThan(mobileBlockStart);
+  it('keeps the HUD content-driven so tutorial or objective text cannot be clipped', () => {
+    expect(css).toContain('min-height: var(--desktop-status-height)');
+    expect(css).toContain('overflow: visible');
+    expect(css).toContain('max-height: calc(100svh - 16px - env(safe-area-inset-top))');
+    expect(css).not.toContain('\n    height: var(--desktop-status-height)');
+    expect(css).not.toContain('\n    height: 84px');
+  });
+
+  it('keeps the deadline ticking even when the onboarding dish has no control sample', () => {
+    expect(mainSource).toContain('vol: player?.vol ?? 0');
+    expect(mainSource).toContain('targetVol: player?.targetVol ?? 0');
+    expect(mainSource).not.toContain('// HUD update.\n  if (player) {');
+    expect(mainSource).not.toContain('// HUD update.\r\n  if (player) {');
+    expect(screensSource).toContain("info.targetVol > 0 ? `${info.vol} / ${Math.round(info.targetVol)}` : '-'");
   });
 
   it('retires itself after the final tutorial beat without requiring Skip', () => {

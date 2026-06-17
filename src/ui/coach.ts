@@ -18,6 +18,19 @@ interface CoachStep {
   body: string;
 }
 
+export interface CoachCard {
+  kicker: string;
+  title: string;
+  body: string;
+  stepText: string;
+  skipLabel: string;
+  onSkip: () => void;
+}
+
+export interface CoachView {
+  setTutorialCard(card: CoachCard | null): void;
+}
+
 const SEEN_KEY = 'cdm.coach.seen.v2';
 
 // The opening lesson: seed once, feed the hidden starter pairing, then hand off
@@ -51,7 +64,7 @@ export interface Coach {
   hideNudge(): void;
 }
 
-export function createCoach(): Coach {
+export function createCoach(view?: CoachView): Coach {
   const root = document.getElementById('coach');
   const kickerEl = document.getElementById('coach-kicker');
   const titleEl = document.getElementById('coach-title');
@@ -74,10 +87,21 @@ export function createCoach(): Coach {
   }
 
   function render(): void {
-    if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
     const step = STEPS[stepIndex];
     if (!step) { hide(); return; }
     mode = 'tutorial';
+    if (view) {
+      view.setTutorialCard({
+        kicker: step.kicker,
+        title: step.title,
+        body: step.body,
+        stepText: `${stepIndex + 1} / ${STEPS.length}`,
+        skipLabel: 'Skip tutorial',
+        onSkip: finish,
+      });
+      return;
+    }
+    if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
     kickerEl.textContent = step.kicker;
     titleEl.textContent = step.title;
     bodyEl.textContent = step.body;
@@ -88,6 +112,7 @@ export function createCoach(): Coach {
   }
 
   function hide(): void {
+    view?.setTutorialCard(null);
     if (!root) return;
     root.classList.remove('coach-show');
     root.setAttribute('aria-hidden', 'true');
@@ -135,6 +160,16 @@ export function createCoach(): Coach {
       stepIndex += 1;
       if (stepIndex >= STEPS.length) {
         // Final beat done: celebrate briefly, then retire the coach.
+        if (view) {
+          view.setTutorialCard({
+            kicker: 'Onboarding complete',
+            title: 'You have the basics',
+            body: 'Seed, feed, steer, and discover. The Notebook logs every breed you find.',
+            stepText: `${STEPS.length} / ${STEPS.length}`,
+            skipLabel: 'Skip tutorial',
+            onSkip: finish,
+          });
+        }
         if (titleEl && bodyEl && kickerEl && stepEl && root) {
           kickerEl.textContent = 'Onboarding complete';
           titleEl.textContent = 'You have the basics';
@@ -156,6 +191,20 @@ export function createCoach(): Coach {
       // Regular nudges are for players past the tutorial. Onboarding rescue
       // nudges can temporarily interrupt and then restore the tutorial card.
       if (active && !opts.interruptTutorial) return;
+      if (view) {
+        mode = 'nudge';
+        view.setTutorialCard({
+          kicker: 'Lab Assistant',
+          title,
+          body,
+          stepText: '',
+          skipLabel: 'Got it',
+          onSkip: hideNudgeNow,
+        });
+        window.clearTimeout(nudgeTimer);
+        nudgeTimer = window.setTimeout(() => hideNudgeNow(), 9000);
+        return;
+      }
       if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
       mode = 'nudge';
       kickerEl.textContent = 'Lab Assistant';

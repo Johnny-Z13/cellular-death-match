@@ -86,31 +86,29 @@ describe('winFight — final fight ends the run', () => {
   });
 });
 
-describe('skipEpoch — forgiving lapse', () => {
-  it('advances past a lapsed objective and records completed-vs-lapsed results', () => {
+describe('skipEpoch - lapsed objective', () => {
+  it('ends the run without offering adaptation choices', () => {
     const run = createRun(42);
     run.start();
-    // Lapse epoch 0, complete epoch 1.
-    run.skipEpoch();
-    expect(run.getState().phase).toBe('upgrade_pick');
-    run.pickUpgrade(run.getState().pendingPickChoices[0]!);
-    run.completeEpoch();
-    expect(run.getState().epochResults).toEqual(['lapsed', 'completed']);
-  });
-
-  it('still ends the run as won when the final epoch lapses', () => {
-    const run = createRun(7);
-    run.start();
-    for (let i = 0; i < FIGHTS_PER_RUN - 1; i++) {
-      run.skipEpoch();
-      run.pickUpgrade(run.getState().pendingPickChoices[0]!);
-    }
     run.skipEpoch();
     const s = run.getState();
     expect(s.phase).toBe('run_end');
-    expect(s.outcome).toBe('won');
-    expect(s.epochResults.filter((r) => r === 'completed')).toHaveLength(0);
-    expect(s.epochResults).toHaveLength(FIGHTS_PER_RUN);
+    expect(s.outcome).toBe('lost');
+    expect(s.pendingPickChoices).toEqual([]);
+    expect(s.epochResults).toEqual(['lapsed']);
+  });
+
+  it('ignores upgrade picks after a lapsed objective', () => {
+    const run = createRun(7);
+    run.start();
+    run.skipEpoch();
+    run.pickUpgrade('egg_1');
+    const s = run.getState();
+    expect(s.phase).toBe('run_end');
+    expect(s.outcome).toBe('lost');
+    expect(s.fightIndex).toBe(0);
+    expect(s.upgrades).toEqual([]);
+    expect(s.epochResults).toEqual(['lapsed']);
   });
 });
 

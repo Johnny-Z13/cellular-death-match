@@ -1555,94 +1555,6 @@ canvas {
   to { opacity: 0; transform: translateY(-10px); }
 }
 
-/* ---- Onboarding coach -------------------------------------------------- */
-/* A small, skippable lesson card in the deep-lab voice. Docked bottom-left on
-   desktop; sits above the mobile shell on phones. Never blocks the dish. */
-.coach {
-  /* Bottom-centre, floating over the (non-interactive) dish-log zone so it
-     never blocks the reagent rack or lifeform rack. */
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 14px;
-  z-index: 8;
-  width: min(340px, calc(100vw - 32px));
-  display: none;
-  gap: 7px;
-  padding: 14px 16px;
-  border: 1px solid var(--hairline-strong);
-  border-left: 3px solid var(--bio);
-  border-radius: 14px;
-  background: var(--panel-raised);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
-  box-shadow: var(--shadow-panel), 0 0 30px rgba(91, 233, 214, 0.12);
-  box-sizing: border-box;
-}
-
-.coach.coach-show {
-  display: grid;
-  animation: fx-toast-in 360ms cubic-bezier(0.2, 0.9, 0.2, 1);
-}
-
-.coach-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 10px;
-}
-
-.coach-kicker {
-  font-family: var(--font-display);
-  font-size: 9px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--bio);
-}
-
-.coach-step {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--ink-faint);
-  font-variant-numeric: tabular-nums;
-}
-
-.coach-title {
-  font-family: var(--font-display);
-  font-size: 14px;
-  font-weight: 400;
-  color: #ffffff;
-  line-height: 1.25;
-}
-
-.coach-body {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  line-height: 1.45;
-  color: var(--ink-dim);
-}
-
-.coach-skip {
-  justify-self: end;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  color: var(--ink-faint);
-  background: transparent;
-  border: 1px solid var(--hairline);
-  border-radius: 7px;
-  padding: 5px 9px;
-  cursor: pointer;
-  transition: color 140ms ease, border-color 140ms ease;
-}
-
-.coach-skip:hover,
-.coach-skip:focus-visible {
-  color: var(--ink);
-  border-color: var(--hairline-strong);
-}
-
 /* Transition wipe between phases. */
 .fx-wipe {
   position: fixed;
@@ -1680,7 +1592,6 @@ canvas {
   .life-panel .life-item-discovered::before,
   .life-panel .life-item-discovered::after,
   .fx-toast,
-  .coach.coach-show,
   .fx-wipe.fx-wipe-play,
   .end-action.end-action-ready,
   .end-action.end-action-ready::after,
@@ -1727,7 +1638,6 @@ canvas {
 .presentation-mode .debug,
 .presentation-mode .fx-banner,
 .presentation-mode .fx-toasts,
-.presentation-mode .coach,
 .presentation-mode .screen {
   display: none !important;
 }
@@ -2518,6 +2428,8 @@ canvas {
   z-index: 5;
   box-sizing: border-box;
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.34);
+  max-height: calc(100svh - 16px - env(safe-area-inset-top));
+  overflow: visible;
 }
 
 .hud.visible {
@@ -2575,9 +2487,81 @@ canvas {
   white-space: normal;
 }
 
-.hud .hud-row:nth-child(6),
+.hud-ecology-row,
 #hud-upgrades-row {
   display: none;
+}
+
+.hud-tutorial {
+  display: grid;
+  gap: 7px;
+  pointer-events: none;
+}
+
+.hud.hud-tutorial-active .hud-row {
+  display: none !important;
+}
+
+.hud.hud-tutorial-active {
+  pointer-events: auto;
+}
+
+.hud-tutorial-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.hud-tutorial-kicker {
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--bio);
+}
+
+.hud-tutorial-step {
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hud-tutorial-title {
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.25;
+}
+
+.hud-tutorial-body {
+  margin: 0;
+  color: var(--ink-dim);
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.hud-tutorial-skip {
+  justify-self: end;
+  pointer-events: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  background: transparent;
+  border: 1px solid var(--hairline);
+  border-radius: 7px;
+  padding: 5px 9px;
+  cursor: pointer;
+  transition: color 140ms ease, border-color 140ms ease;
+}
+
+.hud-tutorial-skip:hover,
+.hud-tutorial-skip:focus-visible {
+  color: var(--ink);
+  border-color: var(--hairline-strong);
 }
 
 /* =========================  RESPONSIVE  ================================= */
@@ -2677,7 +2661,7 @@ canvas {
   }
 
   .hud-hint-row,
-  .hud .hud-row:nth-child(5) {
+  .hud-vol-row {
     display: none;
   }
 
@@ -2711,24 +2695,13 @@ canvas {
     bottom: calc(212px + env(safe-area-inset-bottom));
   }
 
-  /* Phones: the coach sits just under the HUD, over the dish's top edge —
-     clear of the bottom shell, toolbar, and the lifeform/log drawers. */
-  .coach {
-    left: 10px;
-    right: 10px;
-    width: auto;
-    transform: none;
-    bottom: auto;
-    top: calc(92px + env(safe-area-inset-top));
-    padding: 11px 13px;
-  }
-
-  .coach-title {
+  /* Phones: tutorial copy shares the HUD surface, so keep it compact. */
+  .hud-tutorial-title {
     font-size: 12px;
   }
 
-  .coach-body {
-    font-size: 11px;
+  .hud-tutorial-body {
+    font-size: 10.5px;
   }
 
   .life-panel {
@@ -2945,7 +2918,7 @@ canvas {
     max-width: 205px;
   }
 
-  .hud .hud-row:nth-child(6),
+  .hud-ecology-row,
   #hud-upgrades-row {
     display: flex;
   }
@@ -2995,8 +2968,8 @@ canvas {
     bottom: calc(50svh + (var(--desktop-dish-size) / 2) + var(--desktop-gap));
     transform: translateX(-50%);
     width: var(--desktop-dish-size);
-    height: var(--desktop-status-height);
-    overflow: hidden;
+    min-height: var(--desktop-status-height);
+    overflow: visible;
   }
 
   .hud-val {
@@ -3060,7 +3033,7 @@ canvas {
   .hud {
     top: 8px;
     bottom: auto;
-    height: 84px;
+    min-height: 84px;
   }
 }
 

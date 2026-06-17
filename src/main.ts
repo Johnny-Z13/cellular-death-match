@@ -74,7 +74,9 @@ const debug = createDebugPanel();
 const ecologyAudio = createEcologyAudio();
 const uiAudio = createUiAudio();
 const fx = createFx();
-const coach = createCoach();
+const coach = createCoach({
+  setTutorialCard: screens.setHudTutorial,
+});
 const discoveryStorage = window.localStorage;
 applyOnboardingStateReset(discoveryStorage);
 let discoverySave: DiscoverySaveState = loadDiscoverySave(discoveryStorage);
@@ -484,44 +486,42 @@ function loop() {
   }
 
   // HUD update.
-  if (player) {
-    const runState = run.getState();
-    const ecology = arena.getEcology();
-    const objective = arena.getObjectiveProgress();
-    screens.updateHud({
-      fightIndex: runState.fightIndex,
-      totalFights: EPOCHS_PER_RUN,
-      vol: player.vol,
-      targetVol: player.targetVol,
-      progress: ecology.progress,
-      secondsRemaining: ecology.secondsRemaining,
-      livingEnemies: ecology.livingEnemies,
-      mutations: ecology.mutations,
-      births: ecology.births,
-      supplyDrops: ecology.supplyDrops,
-      reactions: ecology.reactions,
-      accidents: ecology.accidents,
-      outbreaks: ecology.outbreaks,
-      worldEvents: ecology.worldEvents,
-      dominant: ecology.dominant,
-      crisis: ecology.crisis,
-      objectiveName: objective.def.name,
-      objectiveSummary: objective.summary,
-      objectiveHint: objective.def.hint ?? '',
-      objectiveComplete: objective.complete,
-      upgrades: runState.upgrades.map((u) => {
-        const def = getUpgradeDef(u.id);
-        if (!def) return u.id;
-        return u.stacks > 1 ? `${def.name} x${u.stacks}` : def.name;
-      }),
-    });
-    screens.updateToolCharges(arena.getToolStates());
-    screens.updateAgitation(arena.getAgitationState());
-    screens.setEpochComplete(objective.complete);
-    updateButtonHint();
-    announceEpochCompletion(objective.complete, objective.def.name);
-    maybeNudgeIdlePlayer(objective.complete, objective.def.hint);
-  }
+  const runState = run.getState();
+  const ecology = arena.getEcology();
+  const objective = arena.getObjectiveProgress();
+  screens.updateHud({
+    fightIndex: runState.fightIndex,
+    totalFights: EPOCHS_PER_RUN,
+    vol: player?.vol ?? 0,
+    targetVol: player?.targetVol ?? 0,
+    progress: ecology.progress,
+    secondsRemaining: ecology.secondsRemaining,
+    livingEnemies: ecology.livingEnemies,
+    mutations: ecology.mutations,
+    births: ecology.births,
+    supplyDrops: ecology.supplyDrops,
+    reactions: ecology.reactions,
+    accidents: ecology.accidents,
+    outbreaks: ecology.outbreaks,
+    worldEvents: ecology.worldEvents,
+    dominant: ecology.dominant,
+    crisis: ecology.crisis,
+    objectiveName: objective.def.name,
+    objectiveSummary: objective.summary,
+    objectiveHint: objective.def.hint ?? '',
+    objectiveComplete: objective.complete,
+    upgrades: runState.upgrades.map((u) => {
+      const def = getUpgradeDef(u.id);
+      if (!def) return u.id;
+      return u.stacks > 1 ? `${def.name} x${u.stacks}` : def.name;
+    }),
+  });
+  screens.updateToolCharges(arena.getToolStates());
+  screens.updateAgitation(arena.getAgitationState());
+  screens.setEpochComplete(objective.complete);
+  updateButtonHint();
+  announceEpochCompletion(objective.complete, objective.def.name);
+  maybeNudgeIdlePlayer(objective.complete, objective.def.hint);
   updateTicker(arena);
   persistArenaDiscoveries(arena);
 
@@ -553,12 +553,10 @@ function resolveArenaStatus(status: ArenaStatus): boolean {
     return true;
   }
   if (status === 'lost') {
-    // Playful-discovery model: a missed objective doesn't end the run — the
-    // player moves on to the next epoch (still gets an upgrade pick). Only the
-    // final epoch closes the run.
+    // Adaptation choices are only awarded after a completed objective.
     uiAudio.play('epoch_fail');
     fx.playWipe();
-    fx.showToast('catalyst', 'Objective Lapsed', 'Moving to the next ecosystem');
+    fx.showToast('catalyst', 'Objective Lapsed', 'Trial concluded');
     run.skipEpoch();
     if (run.getState().phase === 'run_end') uiAudio.stopAmbience();
     showPhase();

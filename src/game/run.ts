@@ -110,21 +110,14 @@ export function createRun(seed: number): Run {
       pendingPickChoices = pickThreeChoices();
       phase = 'upgrade_pick';
     },
-    // A missed objective no longer ends the run — this is a playful discovery
-    // sandbox, not a punisher. The player simply moves on to the next epoch
-    // (forfeiting that objective's reward) and still gets an upgrade pick.
-    // The run only ends after the final epoch.
+    // Adaptation choices are rewards for completed objectives. A lapsed
+    // objective closes the trial instead of advancing to the research pick.
     skipEpoch() {
       if (phase !== 'arena') return;
       epochResults.push('lapsed');
-      if (fightIndex >= EPOCHS_PER_RUN - 1) {
-        phase = 'run_end';
-        // Reaching the end is a completed run regardless of misses along the way.
-        outcome = 'won';
-        return;
-      }
-      pendingPickChoices = pickThreeChoices();
-      phase = 'upgrade_pick';
+      pendingPickChoices = [];
+      phase = 'run_end';
+      outcome = 'lost';
     },
     failEpoch() {
       phase = 'run_end';

@@ -282,7 +282,32 @@ describe('arena ecosystem mode', () => {
     expect(arena.getEcology().supplyDrops).toBe(0);
   });
 
-  it('ends the epoch immediately as won when the current objective is satisfied', () => {
+  it('ends the epoch immediately as won when an instant-bank objective is satisfied', () => {
+    const arena = createArena({
+      LX: 50,
+      LY: 50,
+      seed: 1,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 150, speed: 8, engulfMultiplier: 6.5 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+      objective: {
+        kind: 'breed_archetype',
+        name: 'Test Breed',
+        description: 'Breed one swarmlet.',
+        target: '1 living Swarmlet',
+        archetype: 'swarmlet',
+        targetCount: 1,
+      },
+    });
+
+    expect(arena.getStatus()).toBe('running');
+    expect(arena.endEpochNow()).toBe('won');
+    expect(arena.getStatus()).toBe('won');
+  });
+
+  it('does not mark hold-until-deadline objectives complete before the deadline', () => {
     const arena = createArena({
       LX: 50,
       LY: 50,
@@ -301,9 +326,10 @@ describe('arena ecosystem mode', () => {
       },
     });
 
-    expect(arena.getStatus()).toBe('running');
-    expect(arena.endEpochNow()).toBe('won');
-    expect(arena.getStatus()).toBe('won');
+    expect(arena.getObjectiveProgress().met).toBe(true);
+    expect(arena.getObjectiveProgress().complete).toBe(false);
+    expect(arena.endEpochNow()).toBe('lost');
+    expect(arena.getStatus()).toBe('lost');
   });
 
   it('ends the epoch immediately as lost when the current objective is not satisfied', () => {

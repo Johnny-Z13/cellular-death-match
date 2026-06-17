@@ -37,7 +37,7 @@ describe('mobile layout CSS', () => {
     expect(mobile).toContain('.hud {');
     expect(mobile).toContain('font-size: 10px');
     expect(mobile).toContain('.hud-hint-row,');
-    expect(mobile).toContain('.hud .hud-row:nth-child(5)');
+    expect(mobile).toContain('.hud-vol-row');
     expect(mobile).toContain('display: none');
 
     expect(mobile).toContain('.toolbox {');

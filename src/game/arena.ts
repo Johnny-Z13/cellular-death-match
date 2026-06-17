@@ -438,7 +438,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         // Latch achievement for "create / breed" objectives so the dish stays
         // Complete after the moment of success.
         if (progress.met && progress.latches) objectiveAchieved = true;
-        const complete = progress.latches ? objectiveAchieved : progress.met;
+        const complete = progress.latches ? objectiveAchieved : progress.complete;
         // The experiment no longer auto-wins the instant it succeeds: the
         // player banks it via endEpochNow(), or the deadline banks it for them.
         // The deadline is a soft backstop — complete at the deadline wins,
@@ -497,7 +497,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         discoveredBreedTicks,
       });
       if (progress.met && progress.latches) objectiveAchieved = true;
-      const complete = progress.latches ? objectiveAchieved : progress.met;
+      const complete = progress.latches ? objectiveAchieved : progress.complete;
       return { ...progress, complete };
     },
     getToolStates(): Record<LabTool, ToolState> {
@@ -727,14 +727,14 @@ export function createArena(opts: CreateArenaOpts): Arena {
       const current = this.getStatus();
       if (current !== 'running') return current;
       if (mode !== 'ecosystem') return current;
-      // The player is banking the experiment early. Evaluate as if at the
-      // deadline: a complete/satisfied dish wins; an unmet one ends as a loss.
-      const progress = evaluateObjective(state, archetypes, objective, epochTicks, epochTicks, {
+      // The player is banking the experiment now. Deadline objectives are only
+      // complete once the clock has actually reached the deadline.
+      const progress = evaluateObjective(state, archetypes, objective, tickNo, epochTicks, {
         reactions: reactionCount,
         discoveredBreedTicks,
         forceShowcase: true,
       });
-      const complete = progress.latches ? objectiveAchieved || progress.met : progress.met;
+      const complete = progress.latches ? objectiveAchieved || progress.complete : progress.complete;
       forcedStatus = complete || progress.status === 'satisfied' ? 'won' : 'lost';
       tickNo = Math.max(tickNo, epochTicks);
       return forcedStatus;
@@ -1703,7 +1703,7 @@ function evaluateObjective(
       urgency,
       met: ok,
       latches: false,
-      complete: ok,
+      complete: deadline && ok,
     };
   }
 
@@ -1765,7 +1765,7 @@ function evaluateObjective(
     urgency,
     met: ok,
     latches: false,
-    complete: ok,
+    complete: deadline && ok,
   };
 }
 
