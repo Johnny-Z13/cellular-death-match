@@ -1,9 +1,6 @@
 // First-run onboarding coach. A small, skippable, deep-lab-voiced guide that
-// advances as it observes the player's real actions — never a blocking modal.
-// Event-driven: main.ts reports gameplay beats (egg placed, reagent used,
-// objective complete) and the coach walks its step list, celebrating
-// each ("Well done — you discovered X. To use it, do Y."). First run only,
-// persisted via localStorage; a Skip control dismisses it for good.
+// advances as it observes the player's real actions, never as a blocking modal.
+// First run only, persisted via localStorage; a Skip control dismisses it for good.
 
 export type CoachEvent =
   | 'arena-start'
@@ -23,7 +20,8 @@ interface CoachStep {
 
 const SEEN_KEY = 'cdm.coach.seen.v2';
 
-// The opening lesson: seed once, feed the hidden starter pairing, finish.
+// The opening lesson: seed once, feed the hidden starter pairing, then hand off
+// to the objective HUD, button hints, and idle nudges.
 const STEPS: readonly CoachStep[] = [
   {
     id: 'egg',
@@ -39,24 +37,17 @@ const STEPS: readonly CoachStep[] = [
     title: 'Feed the colony',
     body: 'Pick Nutrient from the rack, then tap near the living cultures. Watch for a new lifeform.',
   },
-  {
-    id: 'objective',
-    advanceOn: 'objective-complete',
-    kicker: 'Specimen 01 · Objective',
-    title: 'Complete the experiment',
-    body: 'Read the objective up top. Combine cultures and reagents to meet it — then press End when ready.',
-  },
 ];
 
 export interface Coach {
   isActive(): boolean;
   hasSeenTutorial(): boolean;
-  beginRun(): void;        // call when an arena epoch starts
+  beginRun(): void;
   report(event: CoachEvent): void;
-  dismiss(): void;         // skip for good
+  dismiss(): void;
   // Idle nudge: a one-off contextual hint reusing the same card. Auto-hides;
   // "Got it" dismisses just this nudge (never marks the tutorial seen).
-  showNudge(title: string, body: string): void;
+  showNudge(title: string, body: string, opts?: { interruptTutorial?: boolean }): void;
   hideNudge(): void;
 }
 
@@ -77,6 +68,7 @@ export function createCoach(): Coach {
   function seen(): boolean {
     try { return window.localStorage.getItem(SEEN_KEY) === '1'; } catch { return false; }
   }
+
   function markSeen(): void {
     try { window.localStorage.setItem(SEEN_KEY, '1'); } catch { /* ignore */ }
   }
@@ -107,6 +99,13 @@ export function createCoach(): Coach {
     hide();
   }
 
+  function hideNudgeNow(): void {
+    window.clearTimeout(nudgeTimer);
+    if (mode !== 'nudge') return;
+    if (active) render();
+    else hide();
+  }
+
   if (skipBtn) {
     skipBtn.addEventListener('click', () => {
       // A nudge's "Got it" only dismisses that nudge; the tutorial's skip
@@ -114,11 +113,6 @@ export function createCoach(): Coach {
       if (mode === 'nudge') hideNudgeNow();
       else finish();
     });
-  }
-
-  function hideNudgeNow(): void {
-    window.clearTimeout(nudgeTimer);
-    if (mode === 'nudge') hide();
   }
 
   return {
@@ -140,16 +134,17 @@ export function createCoach(): Coach {
       if (!step || step.advanceOn !== event) return;
       stepIndex += 1;
       if (stepIndex >= STEPS.length) {
-        // Final beat done — celebrate briefly, then retire the coach.
+        // Final beat done: celebrate briefly, then retire the coach.
         if (titleEl && bodyEl && kickerEl && stepEl && root) {
           kickerEl.textContent = 'Onboarding complete';
           titleEl.textContent = 'You have the basics';
           bodyEl.textContent = 'Seed, feed, steer, and discover. The Notebook logs every breed you find.';
           stepEl.textContent = `${STEPS.length} / ${STEPS.length}`;
           root.classList.add('coach-show');
+          root.setAttribute('aria-hidden', 'false');
         }
         window.setTimeout(() => finish(), 4200);
-        active = false; // stop accepting further events, but leave the final card up
+        active = false;
         return;
       }
       render();
@@ -157,9 +152,11 @@ export function createCoach(): Coach {
     dismiss() {
       finish();
     },
-    showNudge(title, body) {
-      // Never interrupt the tutorial; nudges are for players past it.
-      if (active || !root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
+    showNudge(title, body, opts = {}) {
+      // Regular nudges are for players past the tutorial. Onboarding rescue
+      // nudges can temporarily interrupt and then restore the tutorial card.
+      if (active && !opts.interruptTutorial) return;
+      if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
       mode = 'nudge';
       kickerEl.textContent = 'Lab Assistant';
       titleEl.textContent = title;

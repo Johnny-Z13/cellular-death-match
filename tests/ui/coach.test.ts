@@ -1,11 +1,81 @@
 // @ts-expect-error Vitest runs this test in Node; the app tsconfig does not ship Node types.
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createCoach } from '../../src/ui/coach';
+import { onboardingIdleNudge } from '../../src/ui/onboardingHints';
 
 const html = readFileSync('index.html', 'utf8');
 const css = readFileSync('src/styles.css', 'utf8');
 const coachSource = readFileSync('src/ui/coach.ts', 'utf8');
 const mainSource = readFileSync('src/main.ts', 'utf8');
+
+class FakeClassList {
+  private readonly classes = new Set<string>();
+
+  add(name: string): void {
+    this.classes.add(name);
+  }
+
+  remove(name: string): void {
+    this.classes.delete(name);
+  }
+
+  contains(name: string): boolean {
+    return this.classes.has(name);
+  }
+}
+
+class FakeElement {
+  textContent = '';
+  readonly classList = new FakeClassList();
+  private readonly attrs = new Map<string, string>();
+  private clickHandler: (() => void) | null = null;
+
+  setAttribute(name: string, value: string): void {
+    this.attrs.set(name, value);
+  }
+
+  getAttribute(name: string): string | null {
+    return this.attrs.get(name) ?? null;
+  }
+
+  addEventListener(event: string, handler: () => void): void {
+    if (event === 'click') this.clickHandler = handler;
+  }
+
+  click(): void {
+    this.clickHandler?.();
+  }
+}
+
+function installCoachDom(): Map<string, FakeElement> {
+  const ids = ['coach', 'coach-kicker', 'coach-title', 'coach-body', 'coach-step', 'coach-skip'];
+  const elements = new Map(ids.map((id) => [id, new FakeElement()]));
+  const storage = new Map<string, string>();
+  vi.stubGlobal('document', {
+    getElementById(id: string) {
+      return elements.get(id) ?? null;
+    },
+  });
+  vi.stubGlobal('window', {
+    setTimeout,
+    clearTimeout,
+    localStorage: {
+      getItem(key: string) {
+        return storage.get(key) ?? null;
+      },
+      setItem(key: string, value: string) {
+        storage.set(key, value);
+      },
+    },
+  });
+  return elements;
+}
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 
 describe('onboarding coach', () => {
   it('ships a skippable coach panel in the HTML', () => {
@@ -20,7 +90,6 @@ describe('onboarding coach', () => {
   it('advances on real gameplay beats, not timers', () => {
     expect(coachSource).toContain("advanceOn: 'egg-placed'");
     expect(coachSource).toContain("advanceOn: 'nutrient-used'");
-    expect(coachSource).toContain("advanceOn: 'objective-complete'");
     expect(coachSource).toContain('Tap open dish space to add another Swarmlet culture.');
     expect(coachSource).toContain('Feed the colony');
     expect(mainSource).toContain("coach.report('egg-placed')");
@@ -40,13 +109,13 @@ describe('onboarding coach', () => {
   it('nudges idle players with the objective hint, capped and dismissible', () => {
     // The nudge reuses the coach card in a second mode: "Got it" dismisses
     // just the nudge, never marking the tutorial as seen.
-    expect(coachSource).toContain('showNudge(title: string, body: string): void;');
+    expect(coachSource).toContain('showNudge(title: string, body: string, opts?: { interruptTutorial?: boolean }): void;');
     expect(coachSource).toContain("if (mode === 'nudge') hideNudgeNow();");
     expect(coachSource).toContain("kickerEl.textContent = 'Lab Assistant';");
     expect(mainSource).toContain('const NUDGE_IDLE_TICKS = 60 * 22;');
     expect(mainSource).toContain('const MAX_NUDGES_PER_EPOCH = 2;');
     expect(mainSource).toContain('function maybeNudgeIdlePlayer(');
-    expect(mainSource).toContain('if (objectiveComplete || coach.isActive()) return;');
+    expect(mainSource).toContain('onboardingIdleNudge({');
     expect(mainSource).toContain('function registerPlayerAction(): void {');
     expect(mainSource).toContain('coach.hideNudge();');
   });
@@ -59,5 +128,65 @@ describe('onboarding coach', () => {
     expect(css).toContain('.presentation-mode .coach');
     const mobileBlockStart = css.indexOf('@media (max-width: 899px)');
     expect(css.indexOf('top: calc(92px + env(safe-area-inset-top))')).toBeGreaterThan(mobileBlockStart);
+  });
+
+  it('retires itself after the final tutorial beat without requiring Skip', () => {
+    vi.useFakeTimers();
+    const elements = installCoachDom();
+    const coach = createCoach();
+
+    coach.beginRun();
+    coach.report('egg-placed');
+    coach.report('nutrient-used');
+
+    expect(coach.isActive()).toBe(false);
+    expect(elements.get('coach')?.classList.contains('coach-show')).toBe(true);
+
+    vi.advanceTimersByTime(4200);
+
+    expect(elements.get('coach')?.classList.contains('coach-show')).toBe(false);
+    expect(elements.get('coach')?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('can show an idle onboarding nudge over the active tutorial and then restore the tutorial card', () => {
+    vi.useFakeTimers();
+    const elements = installCoachDom();
+    const coach = createCoach();
+
+    coach.beginRun();
+    coach.showNudge('Make the first discovery', 'Place one Swarmlet egg, then feed the living cultures.', {
+      interruptTutorial: true,
+    });
+
+    expect(elements.get('coach-title')?.textContent).toBe('Make the first discovery');
+    expect(elements.get('coach-skip')?.textContent).toBe('Got it');
+
+    elements.get('coach-skip')?.click();
+
+    expect(coach.isActive()).toBe(true);
+    expect(elements.get('coach-title')?.textContent).toBe('Place one egg');
+    expect(elements.get('coach-skip')?.textContent).toBe('Skip tutorial');
+  });
+
+  it('chooses onboarding idle nudges for the next concrete action', () => {
+    expect(onboardingIdleNudge({
+      objectiveComplete: true,
+      tutorialActive: false,
+      objectiveHint: 'unused',
+    })).toEqual({
+      title: 'Experiment ready',
+      body: 'Press End to bank this dish and unlock the next research step.',
+      interruptTutorial: false,
+    });
+
+    expect(onboardingIdleNudge({
+      objectiveComplete: false,
+      tutorialActive: true,
+      objectiveHint: 'Seed one extra Swarmlet, then feed the living cultures with Nutrient until Bloom appears.',
+    })).toEqual({
+      title: 'Make the first discovery',
+      body: 'Place one Swarmlet egg, then feed the living cultures with Nutrient until Bloom appears.',
+      interruptTutorial: true,
+    });
   });
 });

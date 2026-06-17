@@ -11,6 +11,7 @@ import { createEcologyAudio } from './audio/ecologyAudio';
 import { createUiAudio, DROP_SOUND_FOR_TOOL } from './audio/uiAudio';
 import { createFx } from './ui/fx';
 import { createCoach } from './ui/coach';
+import { onboardingIdleNudge } from './ui/onboardingHints';
 import { soundEventForDishSignal, type SoundEventId } from './audio/soundDesign';
 import { hash2 } from './game/hash';
 import {
@@ -795,14 +796,19 @@ const NUDGE_IDLE_TICKS = 60 * 22;
 const MAX_NUDGES_PER_EPOCH = 2;
 
 function maybeNudgeIdlePlayer(objectiveComplete: boolean, hint: string | undefined): void {
-  if (objectiveComplete || coach.isActive()) return;
   if (nudgeCountThisEpoch >= MAX_NUDGES_PER_EPOCH) return;
   if (tickCount - lastActionTick < NUDGE_IDLE_TICKS) return;
+  const nudge = onboardingIdleNudge({
+    objectiveComplete,
+    tutorialActive: coach.isActive(),
+    objectiveHint: hint,
+  });
   nudgeCountThisEpoch += 1;
   lastActionTick = tickCount; // another full idle stretch before the next one
   coach.showNudge(
-    'Stuck? Try this',
-    hint ?? 'Drop a Nutrient near a culture and watch how it feeds and follows.',
+    nudge.title,
+    nudge.body,
+    { interruptTutorial: nudge.interruptTutorial },
   );
 }
 
