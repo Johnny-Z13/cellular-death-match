@@ -12,6 +12,7 @@ import {
   updateBoundaryAround,
 } from './grid';
 import { addPixel, removePixel } from './cell';
+import { getBreedProfile } from './breedProfiles';
 
 // One Monte Carlo step. Returns true if the step changed the grid.
 export function mcStep(state: SimState): boolean {
@@ -36,11 +37,21 @@ export function mcStep(state: SimState): boolean {
   const targetVal = getCell(grid, xT, yT);
   if (sourceVal === targetVal) return false;
 
+  // Look up the source cell's breed profile for per-cell beta scaling.
+  const sourceCell = sourceVal !== 0 ? state.cells.get(sourceVal) : undefined;
+  const profile = sourceCell
+    ? getBreedProfile(sourceCell.breedProfileId)
+    : getBreedProfile(undefined);
+  const shifts = sourceCell?.energyShifts;
+  const isingEff = profile.isingMul * (1 + (shifts?.isingShift ?? 0));
+  const volEff = profile.volMul * (1 + (shifts?.volShift ?? 0));
+  const movEff = profile.movMul * (1 + (shifts?.movShift ?? 0));
+
   const dH =
-    state.betaIsing * isingTerm(state, xT, yT, sourceVal, targetVal) +
-    state.betaVol * volumeTerm(state, sourceVal, targetVal) +
-    state.betaMov * movementTerm(state, sourceVal, dir) +
-    engulfTerm(state, sourceVal, targetVal);
+    state.betaIsing * isingEff * isingTerm(state, xT, yT, sourceVal, targetVal) +
+    state.betaVol * volEff * volumeTerm(state, sourceVal, targetVal) +
+    state.betaMov * movEff * movementTerm(state, sourceVal, dir) +
+    profile.engulfMul * engulfTerm(state, sourceVal, targetVal);
 
   if (rng.random() > Math.exp(-dH)) return false;
 

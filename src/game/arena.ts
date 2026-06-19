@@ -40,6 +40,9 @@ import { swarmletStep } from './enemies/swarmlet';
 import { mirrorStep } from './enemies/mirror';
 import { bossStep, type BossState } from './enemies/boss';
 import { displacementVec } from './geometry';
+import { getReagentShift, type BreedProfileId } from '../sim/breedProfiles';
+import { createHomeostasisTracker } from './homeostasis';
+import { getEscalation } from './escalation';
 
 export type { PlayerConfig } from '../content/upgrades';
 
@@ -83,6 +86,9 @@ export interface Arena {
   endEpochNow(): ArenaStatus;
   tick(input: ArenaInput): void;
   spawnEnemy(opts: SpawnEnemyOpts): CellId;
+  getHomeostasisProgress(): number;
+  isHomeostasisAchieved(): boolean;
+  isEcosystemCollapsed(): boolean;
 }
 
 export interface EcologyInfo {
@@ -182,12 +188,13 @@ export interface CreateArenaOpts {
   objective?: ObjectiveDef;
   includeControlSample?: boolean;
   worldEventIntensity?: number;
+  fightIndex?: number;
 }
 
 const PLAYER_ID = 1;
 const ENGULF_DECAY_PER_FRAME = 0.035;
 const MC_STEPS_PER_TICK = 1100;
-const DEFAULT_EPOCH_TICKS = ARENA_TIMING.defaultEpochTicks;
+// Epoch ticks now comes from escalation.ts via getEscalation(fightIndex).epochTicks.
 const MUTATION_INTERVAL_TICKS = ARENA_TIMING.mutationIntervalTicks;
 const RESEED_INTERVAL_TICKS = ARENA_TIMING.reseedIntervalTicks;
 const OUTBREAK_INTERVAL_TICKS = ARENA_TIMING.outbreakIntervalTicks;
@@ -266,8 +273,15 @@ function removeControlSample(state: SimState): void {
 
 export function createArena(opts: CreateArenaOpts): Arena {
   const mode = opts.mode ?? 'elimination';
-  const epochTicks = opts.epochTicks ?? DEFAULT_EPOCH_TICKS;
+  const fightIndex = opts.fightIndex ?? 0;
+  const esc = getEscalation(fightIndex);
+  const epochTicks = opts.epochTicks ?? esc.epochTicks;
   const objective = opts.objective ?? objectiveForEpoch(0);
+  // Escalation-adjusted hazard intervals.
+  const effectiveCrisisInterval = Math.max(60, Math.round(CRISIS_INTERVAL_TICKS * esc.crisisIntervalMul));
+  const effectiveOutbreakInterval = Math.max(60, Math.round(OUTBREAK_INTERVAL_TICKS * esc.crisisIntervalMul));
+  const effectiveAccidentInterval = Math.max(60, Math.round(ACCIDENT_INTERVAL_TICKS * esc.accidentIntervalMul));
+  const effectiveOutbreakCount = esc.outbreakSeverity;
   const includeControlSample = opts.includeControlSample ?? true;
   const worldEventIntensity = clamp(opts.worldEventIntensity ?? WORLD_EVENT_TUNING.defaultIntensity, 0, 1);
   const nEnemies = opts.enemies.length;
@@ -319,6 +333,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
   const discoveredBreedTicks = new Map<BreedId, number>();
   const discoveredNoteIds = new Set<DiscoveryNoteId>();
   const discoveryMessages: string[] = [];
+  const homeostasisTracker = createHomeostasisTracker();
 
   function pushSignal(message: string): void {
     if (signals[0] === message) return;
@@ -743,6 +758,11 @@ export function createArena(opts: CreateArenaOpts): Arena {
       if (this.getStatus() !== 'running') return;
       tickNo += 1;
 
+      // Reset per-cell energy shifts each tick (accumulated by applyToolEffects).
+      for (const cell of state.cells.values()) {
+        cell.energyShifts = { isingShift: 0, volShift: 0, movShift: 0 };
+      }
+
       // The control sample is no longer directly piloted in ecosystem mode. It
       // remains a visible anchor organism, influenced by the same dish tools.
       const p = state.cells.get(PLAYER_ID);
@@ -780,7 +800,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           applyAgitation(state, agitationTicksRemaining / AGITATION_DURATION_TICKS);
           agitationTicksRemaining -= 1;
         }
-        if (!activeCrisis && tickNo >= HAZARD_GRACE_TICKS && tickNo % CRISIS_INTERVAL_TICKS === 0) {
+        if (!activeCrisis && tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveCrisisInterval === 0) {
           const result = activateCrisis(this, state, archetypes);
           activeCrisis = { id: result.id, ttl: CRISES[result.id].durationTicks };
           birthCount += result.births;
@@ -839,8 +859,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
           supplyDropCount += refillEggIfQuiet(toolStates, state);
           if (toolStates.egg.charges > 0) lastEmergencyEggTick = tickNo;
         }
-        if (tickNo >= HAZARD_GRACE_TICKS && tickNo % OUTBREAK_INTERVAL_TICKS === 0) {
-          const outbreak = triggerPredatorOutbreak(this, state, archetypes);
+        if (tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveOutbreakInterval === 0) {
+          const outbreak = triggerPredatorOutbreak(this, state, archetypes, effectiveOutbreakCount);
           if (outbreak) {
             outbreakCount += 1;
             birthCount += outbreak.births;
@@ -854,7 +874,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         if (tickNo % RESUPPLY_INTERVAL_TICKS === 0) {
           supplyDropCount += resupplyLab(toolStates, objective);
         }
-        if (tickNo >= HAZARD_GRACE_TICKS && tickNo % ACCIDENT_INTERVAL_TICKS === 0) {
+        if (tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveAccidentInterval === 0) {
           const accident = randomAccidentEffect(state);
           pulseToolEffect(state, accident, archetypes);
           toolEffects.push(accident);
@@ -885,6 +905,18 @@ export function createArena(opts: CreateArenaOpts): Arena {
       }
 
       simTick(state, MC_STEPS_PER_TICK);
+
+      // Feed homeostasis tracker with current population snapshot.
+      const breedCounts = new Map<string, number>();
+      let totalLiving = 0;
+      for (const [cellId, cell] of state.cells) {
+        if (cell.vol <= 0) continue;
+        const spawn = archetypes.get(cellId);
+        const breed = spawn?.breedId ?? spawn?.archetype ?? 'unknown';
+        breedCounts.set(breed, (breedCounts.get(breed) ?? 0) + 1);
+        totalLiving++;
+      }
+      homeostasisTracker.tick({ breedCounts, totalLiving });
     },
     spawnEnemy(spawnOpts: SpawnEnemyOpts): CellId {
       const id = nextCellId++;
@@ -893,6 +925,13 @@ export function createArena(opts: CreateArenaOpts): Arena {
         targetVol: spawnOpts.spawn.targetVol,
         pos: spawnOpts.pos,
       });
+      // Assign breed energy profile: use breed-specific profile if available,
+      // otherwise fall back to the archetype profile.
+      const cell = state.cells.get(id);
+      if (cell) {
+        const profileId = (spawnOpts.spawn.breedId ?? spawnOpts.spawn.archetype) as BreedProfileId;
+        cell.breedProfileId = profileId;
+      }
       archetypes.set(id, spawnOpts.spawn);
       const ai: AiState = {};
       if (spawnOpts.spawn.archetype === 'sniper')   ai.sniper = { shootTimer: spawnOpts.spawn.shootCooldown ?? 30 };
@@ -900,6 +939,20 @@ export function createArena(opts: CreateArenaOpts): Arena {
       if (spawnOpts.spawn.archetype === 'splitter') ai.splitter = { didSpawn: false };
       aiStates.set(id, ai);
       return id;
+    },
+    getHomeostasisProgress(): number {
+      return homeostasisTracker.progress();
+    },
+    isHomeostasisAchieved(): boolean {
+      return homeostasisTracker.isAchieved();
+    },
+    isEcosystemCollapsed(): boolean {
+      // Collapsed if no living cells remain (excluding cell 0 / background).
+      let livingCount = 0;
+      for (const cell of state.cells.values()) {
+        if (cell.vol > 0) livingCount++;
+      }
+      return livingCount === 0;
     },
   };
 
@@ -1308,6 +1361,7 @@ function triggerPredatorOutbreak(
   arena: Arena,
   state: SimState,
   archetypes: Map<CellId, EnemySpawn>,
+  outbreakHunters?: number,
 ): { births: number; effect: ToolEffect } | null {
   if (archetypes.size >= ECOSYSTEM_MAX_POPULATION) return null;
   const source = dominantOutbreakSource(state);
@@ -1316,7 +1370,7 @@ function triggerPredatorOutbreak(
   const sourceArchetype = source.id === PLAYER_ID
     ? 'control_sample'
     : archetypes.get(source.id)?.archetype ?? 'culture';
-  const hunterCount = Math.min(OUTBREAK_HUNTER_COUNT, ECOSYSTEM_MAX_POPULATION - archetypes.size);
+  const hunterCount = Math.min(outbreakHunters ?? OUTBREAK_HUNTER_COUNT, ECOSYSTEM_MAX_POPULATION - archetypes.size);
   let births = 0;
   for (let i = 0; i < hunterCount; i++) {
     const angle = (Math.PI * 2 * i) / hunterCount + state.rng.random() * 0.45;
@@ -2088,6 +2142,13 @@ function applyToolEffects(
       const dist = Math.hypot(v[0], v[1]);
       if (dist > effect.radius) continue;
       const strength = (1 - dist / effect.radius) * (effect.ttl / effect.maxTtl);
+      // Accumulate reagent energy shifts (strength-weighted by distance and TTL)
+      const reagentShift = getReagentShift(effect.type);
+      if (cell.energyShifts) {
+        cell.energyShifts.isingShift += reagentShift.isingShift * strength;
+        cell.energyShifts.volShift += reagentShift.volShift * strength;
+        cell.energyShifts.movShift += reagentShift.movShift * strength;
+      }
       const dirX = dist > 0 ? v[0] / dist : 0;
       const dirY = dist > 0 ? v[1] / dist : 0;
       if (effect.type === 'hatch') {

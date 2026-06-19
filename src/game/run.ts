@@ -7,10 +7,16 @@ import {
 import { createRng, type Rng } from '../sim/rng';
 import { ARCHETYPE_DEFAULTS, ECOSYSTEM_SCHEDULE, type EnemySpawn } from '../content/enemies';
 import { OBJECTIVES, objectiveForEpoch, type ObjectiveDef } from '../content/objectives';
+import { drawObjectives, type DrawContext } from './objectivePool';
+import { isMidGameEpoch } from './onboardingStage';
+import type { BreedId } from '../content/catalysis';
 
-export const EPOCHS_PER_RUN = OBJECTIVES.length;
-export const FIGHTS_PER_RUN = EPOCHS_PER_RUN;
+// Fixed epochs use the OBJECTIVES array; mid-game epochs are open-ended.
+export const FIXED_EPOCH_COUNT = 3;
 export const UPGRADES_PER_PICK = 3;
+// Backward compat: research grants are tested over OBJECTIVES.length iterations.
+export const EPOCHS_PER_RUN = OBJECTIVES.length;
+export const FIGHTS_PER_RUN = OBJECTIVES.length;
 
 export type RunPhase = 'title' | 'arena' | 'upgrade_pick' | 'run_end';
 
@@ -21,9 +27,8 @@ export interface RunState {
   outcome: null | 'won' | 'lost';
   pendingPickChoices: string[];
   seed: number;
-  // One entry per finished epoch: did the player achieve its objective, or did
-  // it lapse at the deadline? Drives an honest end-of-run summary.
   epochResults: Array<'completed' | 'lapsed'>;
+  chosenObjective?: ObjectiveDef;
 }
 
 export interface Run {
@@ -32,6 +37,7 @@ export interface Run {
   completeEpoch(): void;
   skipEpoch(): void;
   failEpoch(): void;
+  achieveHomeostasis(): void;
   winFight(): void;
   loseFight(): void;
   pickUpgrade(id: string): void;
@@ -41,6 +47,8 @@ export interface Run {
   getEpochSpawnList(): EnemySpawn[];
   getOnboardingSpawnList(): EnemySpawn[];
   getObjective(): ObjectiveDef;
+  setChosenObjective(obj: ObjectiveDef): void;
+  getObjectiveChoices(discoveredBreeds: ReadonlySet<BreedId>, unlockedTools: readonly string[]): ObjectiveDef[];
 }
 
 const PLAYER_BASE: PlayerConfig = {
@@ -62,13 +70,13 @@ export function createRun(seed: number): Run {
   let outcome: null | 'won' | 'lost' = null;
   let pendingPickChoices: string[] = [];
   let epochResults: Array<'completed' | 'lapsed'> = [];
+  let chosenObjective: ObjectiveDef | undefined;
   const rng: Rng = createRng(seed);
 
   function pickThreeChoices(): string[] {
     if (UPGRADES.length <= UPGRADES_PER_PICK) {
       return UPGRADES.map((u) => u.id);
     }
-    // Fisher-Yates partial shuffle.
     const ids = UPGRADES.map((u) => u.id);
     for (let i = 0; i < UPGRADES_PER_PICK; i++) {
       const j = i + rng.randInt(ids.length - i);
@@ -89,6 +97,7 @@ export function createRun(seed: number): Run {
         pendingPickChoices: [...pendingPickChoices],
         seed,
         epochResults: [...epochResults],
+        chosenObjective,
       };
     },
     start() {
@@ -98,37 +107,29 @@ export function createRun(seed: number): Run {
       outcome = null;
       pendingPickChoices = [];
       epochResults = [];
+      chosenObjective = undefined;
     },
     completeEpoch() {
       if (phase !== 'arena') return;
       epochResults.push('completed');
-      if (fightIndex >= EPOCHS_PER_RUN - 1) {
-        phase = 'run_end';
-        outcome = 'won';
-        return;
-      }
+      // Open-ended: never end the run on epoch count alone.
       pendingPickChoices = pickThreeChoices();
       phase = 'upgrade_pick';
     },
-    // A missed objective no longer ends the run — this is a playful discovery
-    // sandbox, not a punisher. The player simply moves on to the next epoch
-    // (forfeiting that objective's reward) and still gets an upgrade pick.
-    // The run only ends after the final epoch.
     skipEpoch() {
       if (phase !== 'arena') return;
       epochResults.push('lapsed');
-      if (fightIndex >= EPOCHS_PER_RUN - 1) {
-        phase = 'run_end';
-        // Reaching the end is a completed run regardless of misses along the way.
-        outcome = 'won';
-        return;
-      }
       pendingPickChoices = pickThreeChoices();
       phase = 'upgrade_pick';
     },
     failEpoch() {
       phase = 'run_end';
       outcome = 'lost';
+    },
+    achieveHomeostasis() {
+      if (phase === 'run_end') return;
+      phase = 'run_end';
+      outcome = 'won';
     },
     winFight() {
       this.completeEpoch();
@@ -141,12 +142,12 @@ export function createRun(seed: number): Run {
       if (!pendingPickChoices.includes(id)) {
         throw new Error(`upgrade "${id}" was not in the pick choices`);
       }
-      // Stack onto an existing entry if same id, else add new.
       const existing = upgrades.find((u) => u.id === id);
       if (existing) existing.stacks += 1;
       else upgrades.push({ id, stacks: 1 });
       fightIndex += 1;
       pendingPickChoices = [];
+      chosenObjective = undefined;
       phase = 'arena';
     },
     restart() {
@@ -156,18 +157,21 @@ export function createRun(seed: number): Run {
       outcome = null;
       pendingPickChoices = [];
       epochResults = [];
+      chosenObjective = undefined;
     },
     getPlayerConfig() {
       return applyUpgrades(PLAYER_BASE, upgrades);
     },
     getFightSpawnList() {
-      // Return a deep copy so callers can't mutate the schedule.
-      const fight = ECOSYSTEM_SCHEDULE[fightIndex];
+      // For mid-game epochs, cycle through the schedule.
+      const scheduleIndex = fightIndex % ECOSYSTEM_SCHEDULE.length;
+      const fight = ECOSYSTEM_SCHEDULE[scheduleIndex];
       if (!fight) return [];
       return fight.map((e) => ({ ...e }));
     },
     getEpochSpawnList() {
-      const epoch = ECOSYSTEM_SCHEDULE[fightIndex];
+      const scheduleIndex = fightIndex % ECOSYSTEM_SCHEDULE.length;
+      const epoch = ECOSYSTEM_SCHEDULE[scheduleIndex];
       if (!epoch) return [];
       return epoch.map((e) => ({ ...e }));
     },
@@ -178,7 +182,36 @@ export function createRun(seed: number): Run {
       ];
     },
     getObjective() {
-      return objectiveForEpoch(fightIndex);
+      // Mid-game: use the chosen objective if set.
+      if (isMidGameEpoch(fightIndex) && chosenObjective) {
+        return chosenObjective;
+      }
+      // Fixed epochs: use the OBJECTIVES array.
+      if (fightIndex < OBJECTIVES.length) {
+        return objectiveForEpoch(fightIndex);
+      }
+      // Fallback for mid-game without a chosen objective: generic sustain.
+      return {
+        kind: 'balanced_ecology' as any,
+        name: 'Maintain Balance',
+        description: 'Keep the ecosystem balanced.',
+        target: 'Balanced ecology',
+        hint: 'Seed multiple types and keep no one breed dominant.',
+        maxDominance: 0.56,
+        minCount: 3,
+      };
+    },
+    setChosenObjective(obj: ObjectiveDef) {
+      chosenObjective = obj;
+    },
+    getObjectiveChoices(discoveredBreeds: ReadonlySet<BreedId>, unlockedTools: readonly string[]) {
+      const ctx: DrawContext = {
+        epochIndex: fightIndex,
+        discoveredBreeds,
+        unlockedTools,
+        seed: seed + fightIndex,
+      };
+      return drawObjectives(ctx);
     },
   };
 }

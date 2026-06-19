@@ -1,43 +1,16 @@
-// First-run onboarding coach. A small, skippable, deep-lab-voiced guide that
-// advances as it observes the player's real actions, never as a blocking modal.
+// First-run onboarding coach. A small, skippable, event-driven guide that
+// advances through 3 beats as it observes the player's real actions.
 // First run only, persisted via localStorage; a Skip control dismisses it for good.
+
+import { ONBOARDING_BEATS } from '../game/onboardingStage';
 
 export type CoachEvent =
   | 'arena-start'
   | 'egg-placed'
   | 'nutrient-used'
   | 'paste-drawn'
-  | 'objective-complete';
-
-interface CoachStep {
-  id: string;
-  // The beat that advances FROM this step to the next.
-  advanceOn: CoachEvent;
-  kicker: string;
-  title: string;
-  body: string;
-}
-
-const SEEN_KEY = 'cdm.coach.seen.v2';
-
-// The opening lesson: seed once, feed the hidden starter pairing, then hand off
-// to the objective HUD, button hints, and idle nudges.
-const STEPS: readonly CoachStep[] = [
-  {
-    id: 'egg',
-    advanceOn: 'egg-placed',
-    kicker: 'Specimen 01 · Seed',
-    title: 'Place one egg',
-    body: 'Tap open dish space to add another Swarmlet culture.',
-  },
-  {
-    id: 'feed',
-    advanceOn: 'nutrient-used',
-    kicker: 'Specimen 01 · Feeding',
-    title: 'Feed the colony',
-    body: 'Pick Nutrient from the rack, then tap near the living cultures. Watch for a new lifeform.',
-  },
-];
+  | 'objective-complete'
+  | 'bloom-discovered';
 
 export interface Coach {
   isActive(): boolean;
@@ -45,11 +18,17 @@ export interface Coach {
   beginRun(): void;
   report(event: CoachEvent): void;
   dismiss(): void;
+  getBeatIndex(): number;
+  getCurrentButtonHint(): string | undefined;
+  shouldAutoSpawn(): boolean;
+  onOnboardingComplete: (() => void) | null;
   // Idle nudge: a one-off contextual hint reusing the same card. Auto-hides;
   // "Got it" dismisses just this nudge (never marks the tutorial seen).
   showNudge(title: string, body: string, opts?: { interruptTutorial?: boolean }): void;
   hideNudge(): void;
 }
+
+const SEEN_KEY = 'cdm.coach.seen.v3';
 
 export function createCoach(): Coach {
   const root = document.getElementById('coach');
@@ -60,10 +39,11 @@ export function createCoach(): Coach {
   const skipBtn = document.getElementById('coach-skip');
 
   let active = false;
-  let stepIndex = 0;
+  let beatIndex = 0;
   // 'tutorial' = the first-run lesson; 'nudge' = a transient idle hint.
   let mode: 'tutorial' | 'nudge' = 'tutorial';
   let nudgeTimer = 0;
+  let autoSpawnTriggered = false;
 
   function seen(): boolean {
     try { return window.localStorage.getItem(SEEN_KEY) === '1'; } catch { return false; }
@@ -75,13 +55,13 @@ export function createCoach(): Coach {
 
   function render(): void {
     if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
-    const step = STEPS[stepIndex];
-    if (!step) { hide(); return; }
+    const beat = ONBOARDING_BEATS[beatIndex];
+    if (!beat) { hide(); return; }
     mode = 'tutorial';
-    kickerEl.textContent = step.kicker;
-    titleEl.textContent = step.title;
-    bodyEl.textContent = step.body;
-    stepEl.textContent = `${stepIndex + 1} / ${STEPS.length}`;
+    kickerEl.textContent = `Lab Induction · Step ${beatIndex + 1}`;
+    titleEl.textContent = beat.message;
+    bodyEl.textContent = '';
+    stepEl.textContent = `${beatIndex + 1} / ${ONBOARDING_BEATS.length}`;
     if (skipBtn) skipBtn.textContent = 'Skip tutorial';
     root.classList.add('coach-show');
     root.setAttribute('aria-hidden', 'false');
@@ -108,43 +88,64 @@ export function createCoach(): Coach {
 
   if (skipBtn) {
     skipBtn.addEventListener('click', () => {
-      // A nudge's "Got it" only dismisses that nudge; the tutorial's skip
-      // retires the whole lesson permanently.
       if (mode === 'nudge') hideNudgeNow();
       else finish();
     });
   }
 
-  return {
+  const coach: Coach = {
+    onOnboardingComplete: null,
+
     isActive() {
       return active;
     },
     hasSeenTutorial() {
       return seen();
     },
+    getBeatIndex() {
+      return beatIndex;
+    },
+    getCurrentButtonHint() {
+      if (!active) return undefined;
+      const beat = ONBOARDING_BEATS[beatIndex];
+      return beat?.buttonHint;
+    },
+    shouldAutoSpawn() {
+      if (autoSpawnTriggered) return false;
+      const beat = ONBOARDING_BEATS[beatIndex];
+      if (beat?.autoSpawn) {
+        autoSpawnTriggered = true;
+        return true;
+      }
+      return false;
+    },
     beginRun() {
       if (seen()) { active = false; hide(); return; }
       active = true;
-      stepIndex = 0;
+      beatIndex = 0;
+      autoSpawnTriggered = false;
       render();
     },
     report(event) {
       if (!active) return;
-      const step = STEPS[stepIndex];
-      if (!step || step.advanceOn !== event) return;
-      stepIndex += 1;
-      if (stepIndex >= STEPS.length) {
+      const beat = ONBOARDING_BEATS[beatIndex];
+      if (!beat || beat.trigger !== event) return;
+      beatIndex += 1;
+      if (beatIndex >= ONBOARDING_BEATS.length) {
         // Final beat done: celebrate briefly, then retire the coach.
         if (titleEl && bodyEl && kickerEl && stepEl && root) {
-          kickerEl.textContent = 'Onboarding complete';
-          titleEl.textContent = 'You have the basics';
-          bodyEl.textContent = 'Seed, feed, steer, and discover. The Notebook logs every breed you find.';
-          stepEl.textContent = `${STEPS.length} / ${STEPS.length}`;
+          kickerEl.textContent = 'Discovery!';
+          titleEl.textContent = 'You created a new lifeform!';
+          bodyEl.textContent = 'Your Notebook logs every breed you find. Seed, feed, and discover.';
+          stepEl.textContent = `${ONBOARDING_BEATS.length} / ${ONBOARDING_BEATS.length}`;
           root.classList.add('coach-show');
           root.setAttribute('aria-hidden', 'false');
         }
-        window.setTimeout(() => finish(), 4200);
         active = false;
+        window.setTimeout(() => {
+          finish();
+          if (coach.onOnboardingComplete) coach.onOnboardingComplete();
+        }, 4200);
         return;
       }
       render();
@@ -153,8 +154,6 @@ export function createCoach(): Coach {
       finish();
     },
     showNudge(title, body, opts = {}) {
-      // Regular nudges are for players past the tutorial. Onboarding rescue
-      // nudges can temporarily interrupt and then restore the tutorial card.
       if (active && !opts.interruptTutorial) return;
       if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
       mode = 'nudge';
@@ -172,4 +171,6 @@ export function createCoach(): Coach {
       hideNudgeNow();
     },
   };
+
+  return coach;
 }

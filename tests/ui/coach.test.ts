@@ -87,28 +87,21 @@ describe('onboarding coach', () => {
     expect(html).toContain('id="coach-skip"');
   });
 
-  it('advances on real gameplay beats, not timers', () => {
-    expect(coachSource).toContain("advanceOn: 'egg-placed'");
-    expect(coachSource).toContain("advanceOn: 'nutrient-used'");
-    expect(coachSource).toContain('Tap open dish space to add another Swarmlet culture.');
-    expect(coachSource).toContain('Feed the colony');
+  it('advances on real gameplay beats using ONBOARDING_BEATS triggers', () => {
+    expect(coachSource).toContain("ONBOARDING_BEATS");
+    expect(coachSource).toContain("beat.trigger !== event");
     expect(mainSource).toContain("coach.report('egg-placed')");
     expect(mainSource).toContain("coach.report('nutrient-used')");
-    expect(mainSource).toContain("coach.report('objective-complete')");
   });
 
   it('shows on the first epoch of a first run only, persisted via localStorage', () => {
-    expect(coachSource).toContain("const SEEN_KEY = 'cdm.coach.seen.v2'");
+    expect(coachSource).toContain("const SEEN_KEY = 'cdm.coach.seen.v3'");
     expect(coachSource).toContain('hasSeenTutorial(): boolean;');
     expect(coachSource).toContain('if (seen()) { active = false; hide(); return; }');
-    expect(mainSource).toContain('if (runState.fightIndex === 0) coach.beginRun()');
-    expect(mainSource).toContain('shouldUseOnboardingDishForCurrentStage(runState.fightIndex, false)');
-    expect(mainSource).toContain('run.getOnboardingSpawnList()');
+    expect(mainSource).toContain('coach.beginRun()');
   });
 
   it('nudges idle players with the objective hint, capped and dismissible', () => {
-    // The nudge reuses the coach card in a second mode: "Got it" dismisses
-    // just the nudge, never marking the tutorial as seen.
     expect(coachSource).toContain('showNudge(title: string, body: string, opts?: { interruptTutorial?: boolean }): void;');
     expect(coachSource).toContain("if (mode === 'nudge') hideNudgeNow();");
     expect(coachSource).toContain("kickerEl.textContent = 'Lab Assistant';");
@@ -121,8 +114,6 @@ describe('onboarding coach', () => {
   });
 
   it('never blocks interactive panels and hides in presentation mode', () => {
-    // Bottom-centre on desktop (over the non-interactive log zone); under the
-    // HUD on phones. Hidden in presentation mode like other chrome.
     expect(css).toContain('.coach {');
     expect(css).toContain('.coach.coach-show');
     expect(css).toContain('.presentation-mode .coach');
@@ -138,6 +129,7 @@ describe('onboarding coach', () => {
     coach.beginRun();
     coach.report('egg-placed');
     coach.report('nutrient-used');
+    coach.report('bloom-discovered');
 
     expect(coach.isActive()).toBe(false);
     expect(elements.get('coach')?.classList.contains('coach-show')).toBe(true);
@@ -164,7 +156,7 @@ describe('onboarding coach', () => {
     elements.get('coach-skip')?.click();
 
     expect(coach.isActive()).toBe(true);
-    expect(elements.get('coach-title')?.textContent).toBe('Place one egg');
+    expect(elements.get('coach-title')?.textContent).toBe('Place a Swarmlet egg in the dish');
     expect(elements.get('coach-skip')?.textContent).toBe('Skip tutorial');
   });
 

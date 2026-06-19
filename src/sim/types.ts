@@ -26,6 +26,9 @@ export interface Cell {
   centerLinearSum: [number, number];
   center: [number, number];
   intent: Intent;
+  breedProfileId?: import('./breedProfiles').BreedProfileId;
+  /** Accumulated reagent energy shifts for current tick. Reset each tick. */
+  energyShifts?: { isingShift: number; volShift: number; movShift: number };
 }
 
 export interface Bullet {
