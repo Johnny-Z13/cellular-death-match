@@ -27,4 +27,15 @@ describe('onboarding state reset', () => {
     expect(applyOnboardingStateReset(storage)).toBe(false);
     expect(storage.getItem(DISCOVERY_SAVE_KEY)).toBe('progress after reset');
   });
+
+  it('reruns when an older reset marker predates the current tutorial key', () => {
+    const storage = createMemoryStorage();
+    storage.setItem('cdm.onboarding-reset.v1', '1');
+    storage.setItem('cdm.coach.seen.v3', '1');
+
+    expect(applyOnboardingStateReset(storage)).toBe(true);
+
+    expect(storage.getItem('cdm.coach.seen.v3')).toBeNull();
+    expect(storage.getItem(ONBOARDING_RESET_KEY)).toBe('1');
+  });
 });

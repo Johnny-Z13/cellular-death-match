@@ -3,7 +3,7 @@ import {
   type DiscoveryStorage,
 } from './discoverySave';
 
-export const ONBOARDING_RESET_KEY = 'cdm.onboarding-reset.v1';
+export const ONBOARDING_RESET_KEY = 'cdm.onboarding-reset.v2';
 
 const KNOWN_DISCOVERY_KEYS = [
   'cellular-death-match.discovery.v1',
