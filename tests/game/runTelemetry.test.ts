@@ -63,12 +63,14 @@ describe('run telemetry', () => {
   });
 
   it('names won lab reports from equilibrium biome or classified final breed volumes without banking biomes', () => {
-    expect(mainSource).toContain("import { classifyBiome } from './game/homeostasis';");
-    expect(mainSource).toContain('const finalBreedCounts = arena ? finalBreedCountsFor(arena) : new Map<string, number>();');
-    expect(mainSource).toContain('const finalBreedVolumes = arena ? finalBreedVolumesFor(arena) : new Map<string, number>();');
-    expect(mainSource).toContain('const finalBiomeName = state.outcome === \'won\'');
-    expect(mainSource).toContain('arena?.getEquilibrium().biomeName');
-    expect(mainSource).toContain('classifyBiome(finalBreedVolumes).name');
+    expect(mainSource).toContain("import { createRunEndReportInput } from './game/runFlow';");
+    expect(mainSource).toContain("import { finalBreedCountsFor, finalBreedVolumesFor } from './game/runSnapshot';");
+    expect(mainSource).toContain('const finalBreedCounts = finalBreedCountsFor(arena);');
+    expect(mainSource).toContain('const finalBreedVolumes = finalBreedVolumesFor(arena);');
+    expect(mainSource).toContain('createRunEndReportInput({');
+    expect(mainSource).toContain('telemetry: runTelemetry');
+    expect(mainSource).toContain('notebookDiscoveredCount: notebookView.discoveredCount');
+    expect(mainSource).toContain('equilibriumBiomeName: arena?.getEquilibrium().biomeName');
     expect(mainSource).not.toContain('classifyBiome(finalBreedCounts).name');
     expect(mainSource).toContain('newBiome: false');
   });

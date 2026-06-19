@@ -16,7 +16,8 @@ import { onboardingIdleNudge } from './ui/onboardingHints';
 import { soundEventForDishSignal, type SoundEventId } from './audio/soundDesign';
 import { assembleLabReport, type LabReport } from './game/labReport';
 import { createRunTelemetry, type RunTelemetry } from './game/runTelemetry';
-import { classifyBiome } from './game/homeostasis';
+import { createRunEndReportInput } from './game/runFlow';
+import { finalBreedCountsFor, finalBreedVolumesFor } from './game/runSnapshot';
 import { hash2 } from './game/hash';
 import {
   clearDiscoverySave,
@@ -508,56 +509,28 @@ function labReportForRunEnd(): LabReport {
 
   const state = run.getState();
   const notebookView = notebookViewForProgression(discoveryProgression);
-  const notebookCompletion = notebookView.totalCount === 0
-    ? 0
-    : notebookView.discoveredCount / notebookView.totalCount;
-  const finalBreedCounts = arena ? finalBreedCountsFor(arena) : new Map<string, number>();
-  const finalBreedVolumes = arena ? finalBreedVolumesFor(arena) : new Map<string, number>();
-  const finalBiomeName = state.outcome === 'won'
-    ? arena?.getEquilibrium().biomeName
-      ?? (finalBreedVolumes.size > 0 ? classifyBiome(finalBreedVolumes).name : undefined)
-    : undefined;
-
-  finalLabReport = assembleLabReport(runTelemetry.toLabReportInput({
+  const finalBreedCounts = finalBreedCountsFor(arena);
+  const finalBreedVolumes = finalBreedVolumesFor(arena);
+  finalLabReport = assembleLabReport(createRunEndReportInput({
+    telemetry: runTelemetry,
     endedAtMs: performance.now(),
     outcome: state.outcome ?? 'lost',
-    biomeName: finalBiomeName,
-    epochCount: Math.max(1, state.fightIndex + 1, state.epochResults.length),
+    fightIndex: state.fightIndex,
+    epochResults: state.epochResults,
     newBiome: false,
     finalBreedCounts,
+    finalBreedVolumes,
     peakBiodiversity,
     longestStabilityStreak,
     newStrainsBanked: newStrainsBankedThisRun,
     totalStrainsDiscovered: strainLibrary.getAvailableStrains().length,
     totalStrainsAvailable: totalStrainsAvailableForReport(),
-    newNotebookEntries: Math.max(0, notebookView.discoveredCount - notebookEntryCountAtRunStart),
-    notebookCompletion,
+    notebookDiscoveredCount: notebookView.discoveredCount,
+    notebookTotalCount: notebookView.totalCount,
+    notebookEntryCountAtRunStart,
+    equilibriumBiomeName: arena?.getEquilibrium().biomeName,
   }));
   return finalLabReport;
-}
-
-function finalBreedCountsFor(ar: Arena): Map<string, number> {
-  const counts = new Map<string, number>();
-  for (const [cellId, cell] of ar.state.cells) {
-    if (cell.vol <= 0) continue;
-    const spawn = ar.archetypes.get(cellId);
-    if (!spawn) continue;
-    const id = spawn.breedId ?? spawn.archetype;
-    counts.set(id, (counts.get(id) ?? 0) + 1);
-  }
-  return counts;
-}
-
-function finalBreedVolumesFor(ar: Arena): Map<string, number> {
-  const volumes = new Map<string, number>();
-  for (const [cellId, cell] of ar.state.cells) {
-    if (cell.vol <= 0) continue;
-    const spawn = ar.archetypes.get(cellId);
-    if (!spawn) continue;
-    const id = spawn.breedId ?? spawn.archetype;
-    volumes.set(id, (volumes.get(id) ?? 0) + cell.vol);
-  }
-  return volumes;
 }
 
 function totalStrainsAvailableForReport(): number {
