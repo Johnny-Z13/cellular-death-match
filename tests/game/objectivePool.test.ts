@@ -27,6 +27,18 @@ describe('OBJECTIVE_POOL', () => {
       expect(typeof obj.available).toBe('function');
     }
   });
+
+  it('keeps protector unavailable until fragile-culture survival is tracked', () => {
+    const protector = OBJECTIVE_POOL.find((obj) => obj.kind === 'protector');
+    expect(protector).toBeDefined();
+    expect(protector?.available({
+      ...baseCtx,
+      epochIndex: 8,
+      discoveredBreeds: new Set(['bloom_mass', 'needle_swarm']),
+      unlockedTools: ['nutrient', 'toxin', 'water', 'salt', 'acid'],
+    })).toBe(false);
+    expect(protector?.unavailableReason).toMatch(/fragile/i);
+  });
 });
 
 describe('drawObjectives', () => {
@@ -41,7 +53,7 @@ describe('drawObjectives', () => {
     expect(choices.length).toBe(2);
   });
 
-  it('filters out cross_breed when fewer than 2 breeds are discovered', () => {
+  it('filters out cross_breed when no undiscovered hybrid can be bred', () => {
     const ctx: DrawContext = {
       ...baseCtx,
       discoveredBreeds: new Set(),
@@ -55,6 +67,29 @@ describe('drawObjectives', () => {
         expect(choice.kind).not.toBe('cross_breed');
       }
     }
+
+    const alreadyKnownHybrid: DrawContext = {
+      ...ctx,
+      discoveredBreeds: new Set(['needle_swarm', 'bloom_mass', 'quill_bloom']),
+    };
+    for (let seed = 0; seed < 50; seed++) {
+      const choices = drawObjectives({ ...alreadyKnownHybrid, seed });
+      for (const choice of choices) {
+        expect(choice.kind).not.toBe('cross_breed');
+      }
+    }
+  });
+
+  it('allows cross_breed when discovered parents can create a new hybrid', () => {
+    const ctx: DrawContext = {
+      ...baseCtx,
+      discoveredBreeds: new Set(['needle_swarm', 'bloom_mass']),
+      epochIndex: 6,
+      unlockedTools: ['nutrient', 'toxin', 'water', 'salt', 'acid'],
+    };
+
+    const crossBreed = OBJECTIVE_POOL.find((obj) => obj.kind === 'cross_breed');
+    expect(crossBreed?.available(ctx)).toBe(true);
   });
 
   it('filters out acid_sculptor when acid is not in unlockedTools', () => {

@@ -376,6 +376,7 @@ function showPhase() {
   screens.hide('title');
   screens.hide('loadout');
   screens.hide('pick');
+  screens.hide('objective');
   screens.hide('end');
   screens.hide('notebook');
   screens.hide('hud');
@@ -399,9 +400,23 @@ function showPhase() {
       uiAudio.play('ui_select');
       fx.playWipe();
       run.pickUpgrade(id);
-      startNewFight();
+      if (run.getState().phase === 'objective_pick') {
+        showPhase();
+      } else {
+        startNewFight();
+      }
     });
     screens.show('pick');
+  } else if (state.phase === 'objective_pick') {
+    updateButtonHint();
+    const choices = run.getObjectiveChoices(new Set(discoveryProgression.discoveredBreedIds), currentToolUnlocks());
+    screens.setObjectiveChoices(choices, (objective) => {
+      uiAudio.play('ui_select');
+      fx.playWipe();
+      run.setChosenObjective(objective);
+      startNewFight();
+    });
+    screens.show('objective');
   } else if (state.phase === 'run_end') {
     updateButtonHint();
     screens.updateLabReport(labReportForRunEnd());
@@ -539,6 +554,7 @@ function startNewFight() {
     includeControlSample: !useOnboardingDish,
     objective: run.getObjective(),
     fightIndex: runState.fightIndex,
+    knownBreedIds: new Set(discoveryProgression.discoveredBreedIds),
   });
   renderer = createRenderer(canvas, PALETTE_SIZE);
   tickCount = 0;

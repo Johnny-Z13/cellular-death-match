@@ -2406,6 +2406,135 @@ describe('arena ecosystem mode', () => {
     arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     expect(arena.getStatus()).toBe('lost');
   });
+
+  it('counts sustained balance for balance_keeper objectives', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 811,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        { archetype: 'swarmlet' as const, targetVol: 120, speed: 10, engulfMultiplier: 4 },
+        { archetype: 'splitter' as const, targetVol: 120, speed: 8, engulfMultiplier: 5 },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+      objective: {
+        kind: 'balance_keeper',
+        name: 'Balance Keeper',
+        description: 'Keep cultures balanced.',
+        target: 'No breed > 60% for 2 ticks',
+        maxDominance: 0.6,
+        sustainTicks: 2,
+      },
+    });
+
+    expect(arena.getObjectiveProgress().complete).toBe(false);
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    expect(arena.getObjectiveProgress().complete).toBe(false);
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    expect(arena.getObjectiveProgress().complete).toBe(true);
+  });
+
+  it('tracks extinction lows and recovery for extinction_reversal objectives', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 812,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 90, speed: 10, engulfMultiplier: 4 }],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+      objective: {
+        kind: 'extinction_reversal',
+        name: 'Extinction Reversal',
+        description: 'Recover from one culture.',
+        target: 'Recover to 4+ cultures',
+        targetCount: 4,
+      },
+    });
+
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    expect(arena.getObjectiveProgress().complete).toBe(false);
+
+    arena.spawnEnemy({ spawn: { archetype: 'swarmlet', targetVol: 90, speed: 10, engulfMultiplier: 4 }, pos: [20, 20] });
+    arena.spawnEnemy({ spawn: { archetype: 'splitter', targetVol: 90, speed: 8, engulfMultiplier: 4 }, pos: [35, 20] });
+    arena.spawnEnemy({ spawn: { archetype: 'bruiser', targetVol: 90, speed: 7, engulfMultiplier: 5 }, pos: [50, 20] });
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+
+    expect(arena.getObjectiveProgress().complete).toBe(true);
+  });
+
+  it('lets acid-led reactions satisfy acid_sculptor objectives', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 813,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        toxinCharges: 1,
+        acidCharges: 1,
+      },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 120, speed: 10, engulfMultiplier: 4 }],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+      objective: {
+        kind: 'acid_sculptor',
+        name: 'Acid Sculptor',
+        description: 'Use acid to trigger a reaction.',
+        target: '1 acid reaction',
+      },
+    });
+
+    expect(arena.applyTool('toxin', [40, 40])).toBe(true);
+    expect(arena.applyTool('acid', [40, 40])).toBe(true);
+
+    expect(arena.getEcology().reactions).toBeGreaterThanOrEqual(1);
+    expect(arena.getObjectiveProgress().complete).toBe(true);
+  });
+
+  it('tracks current-epoch hybrid discoveries for cross_breed objectives', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 814,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        nutrientCharges: 1,
+      },
+      enemies: [
+        { archetype: 'sniper' as const, breedId: 'needle_swarm', targetVol: 100, speed: 10, engulfMultiplier: 4 },
+        { archetype: 'splitter' as const, breedId: 'bloom_mass', targetVol: 120, speed: 8, engulfMultiplier: 5 },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+      knownBreedIds: new Set(['needle_swarm', 'bloom_mass']),
+      objective: {
+        kind: 'cross_breed',
+        name: 'Cross-Breed',
+        description: 'Create a hybrid.',
+        target: '1 hybrid breed created',
+      },
+    });
+    arena.state.cells.get(2)!.center = [42, 44];
+    arena.state.cells.get(3)!.center = [50, 44];
+
+    expect(arena.applyTool('nutrient', [46, 44])).toBe(true);
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+
+    expect(arena.getEcology().discoveries.breedIds).toContain('quill_bloom');
+    expect(arena.getObjectiveProgress().complete).toBe(true);
+  });
 });
 
 describe('arena.tick — applies input', () => {

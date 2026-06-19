@@ -2700,6 +2700,21 @@ canvas {
   line-height: 1.4;
 }
 
+.objective-card-target,
+.objective-card-hint {
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.objective-card-target {
+  color: #d8f8ff;
+}
+
+.objective-card-hint {
+  color: var(--ink-faint);
+}
+
 /* ---- HUD --------------------------------------------------------------- */
 .hud {
   display: none;

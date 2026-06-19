@@ -8,7 +8,17 @@ export type ObjectiveKind =
   | 'breed_archetype'
   | 'controlled_reaction'
   | 'balanced_ecology'
-  | 'dominant_archetype';
+  | 'dominant_archetype'
+  | 'cross_breed'
+  | 'mega_culture'
+  | 'reaction_chain'
+  | 'balance_keeper'
+  | 'crisis_survivor'
+  | 'protector'
+  | 'acid_sculptor'
+  | 'colony_founder'
+  | 'symbiosis'
+  | 'extinction_reversal';
 
 export interface ObjectiveDef {
   kind: ObjectiveKind;
@@ -22,6 +32,8 @@ export interface ObjectiveDef {
   minCount?: number;
   minCoverage?: number;
   maxDominance?: number;
+  sustainTicks?: number;
+  volumeTarget?: number;
 }
 
 export const OBJECTIVES: ReadonlyArray<ObjectiveDef> = [

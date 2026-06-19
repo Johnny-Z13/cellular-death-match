@@ -16,7 +16,6 @@ import {
   AGITATION_TUNING,
   ARENA_TIMING,
   ECOSYSTEM_LIMITS,
-  OBJECTIVE_TUNING,
   PASTE_TUNING,
   TOOL_EFFECT_TUNING,
   TOOL_TUNING,
@@ -43,8 +42,16 @@ import { displacementVec } from './geometry';
 import { getReagentShift, type BreedProfileId } from '../sim/breedProfiles';
 import { createHomeostasisTracker } from './homeostasis';
 import { getEscalation } from './escalation';
+import {
+  createObjectiveRuntime,
+  evaluateObjective,
+  updateObjectiveRuntime,
+  type ObjectiveMetrics,
+  type ObjectiveProgress,
+} from './objectiveScoring';
 
 export type { PlayerConfig } from '../content/upgrades';
+export type { ObjectiveProgress, ObjectiveStatus } from './objectiveScoring';
 
 export interface ArenaInput {
   moveVec: [number, number];
@@ -54,7 +61,6 @@ export interface ArenaInput {
 
 export type ArenaStatus = 'running' | 'won' | 'lost';
 export type LabTool = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' | 'paste';
-export type ObjectiveStatus = 'running' | 'satisfied' | 'failed';
 export type ToolEffectType =
   // 'paste' is a tool, not an effect — its stamps are stored as 'nutrient'.
   | Exclude<LabTool, 'egg' | 'paste'>
@@ -112,22 +118,6 @@ export interface EcologyInfo {
     noteIds: DiscoveryNoteId[];
     latest: string[];
   };
-}
-
-export interface ObjectiveProgress {
-  def: ObjectiveDef;
-  status: ObjectiveStatus;
-  summary: string;
-  urgency: 'safe' | 'warning' | 'critical';
-  // `met`: the objective's condition holds right now (deadline-independent).
-  // `latches`: once met, this objective stays complete even if conditions drift
-  //   (creation/breeding objectives). Balance objectives do not latch — they
-  //   reflect the live state, so a collapsed dish reads as not-complete again.
-  // `complete`: the player-facing "experiment complete" signal the arena fills
-  //   in (latched or live depending on `latches`).
-  met: boolean;
-  latches: boolean;
-  complete: boolean;
 }
 
 export interface ToolState {
@@ -189,6 +179,7 @@ export interface CreateArenaOpts {
   includeControlSample?: boolean;
   worldEventIntensity?: number;
   fightIndex?: number;
+  knownBreedIds?: ReadonlySet<BreedId>;
 }
 
 const PLAYER_ID = 1;
@@ -236,14 +227,6 @@ const ACID_SHRINK_PER_TICK = TOOL_EFFECT_TUNING.acidShrinkPerTick;
 const ACID_FLEE_SPEED = TOOL_EFFECT_TUNING.acidFleeSpeed;
 const BLOOM_GROWTH_PER_TICK = TOOL_EFFECT_TUNING.bloomGrowthPerTick;
 const BRINE_SHRINK_PER_TICK = TOOL_EFFECT_TUNING.brineShrinkPerTick;
-const PRESERVE_GRAZER_MIN = OBJECTIVE_TUNING.preserveGrazerMin;
-const BREED_TARGET_COUNT = OBJECTIVE_TUNING.breedTargetCount;
-const CONTROLLED_REACTION_MIN_COUNT = OBJECTIVE_TUNING.controlledReactionMinCount;
-const CONTROLLED_REACTION_MIN_COVERAGE = OBJECTIVE_TUNING.controlledReactionMinCoverage;
-const DOMINANT_MIN_COVERAGE = OBJECTIVE_TUNING.dominantMinCoverage;
-const BALANCE_MAX_DOMINANCE = OBJECTIVE_TUNING.balanceMaxDominance;
-const BALANCE_MIN_LIFEFORMS = OBJECTIVE_TUNING.balanceMinLifeforms;
-const DISCOVERY_SHOWCASE_TICKS = 90;
 
 interface AiState {
   sniper?: SniperState;
@@ -329,11 +312,13 @@ export function createArena(opts: CreateArenaOpts): Arena {
   let nextDishEventId = 1;
   const toolStates: Record<LabTool, ToolState> = toolLoadoutFor(opts.player);
   const signals: string[] = [];
+  const knownBreedIds = new Set<BreedId>(opts.knownBreedIds ?? []);
   const discoveredBreedIds = new Set<BreedId>();
   const discoveredBreedTicks = new Map<BreedId, number>();
   const discoveredNoteIds = new Set<DiscoveryNoteId>();
   const discoveryMessages: string[] = [];
   const homeostasisTracker = createHomeostasisTracker();
+  const objectiveRuntime = createObjectiveRuntime();
 
   function pushSignal(message: string): void {
     if (signals[0] === message) return;
@@ -353,6 +338,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
     if (discoveredBreedIds.has(id)) return;
     discoveredBreedIds.add(id);
     discoveredBreedTicks.set(id, tickNo);
+    if (BREED_DEFS[id].parents) objectiveRuntime.hybridDiscovered = true;
     discoverNote(`breed_${id}`, `NEW LIFEFORM CREATED: ${BREED_DEFS[id].name}.`);
     if (sourceCell) {
       const marker = breedDiscoveryMarkerFor(id);
@@ -392,6 +378,20 @@ export function createArena(opts: CreateArenaOpts): Arena {
     for (let i = dishEvents.length - 1; i >= 0; i--) {
       if (dishEvents[i]!.ttl <= 0) dishEvents.splice(i, 1);
     }
+  }
+
+  function currentObjectiveProgress(
+    progressTick = tickNo,
+    forceShowcase = false,
+  ): ObjectiveProgress {
+    return evaluateObjective(objective, objectiveMetrics(state, archetypes), {
+      tickNo: progressTick,
+      epochTicks,
+      reactions: reactionCount,
+      discoveredBreedTicks,
+      runtime: objectiveRuntime,
+      forceShowcase,
+    });
   }
 
   for (let i = 0; i < nEnemies; i++) {
@@ -446,10 +446,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       // sample dies — otherwise a dead dish would idle forever with no verdict.
       if ((!p || p.vol === 0) && mode !== 'ecosystem') return 'lost';
       if (mode === 'ecosystem') {
-        const progress = evaluateObjective(state, archetypes, objective, tickNo, epochTicks, {
-          reactions: reactionCount,
-          discoveredBreedTicks,
-        });
+        const progress = currentObjectiveProgress();
         // Latch achievement for "create / breed" objectives so the dish stays
         // Complete after the moment of success.
         if (progress.met && progress.latches) objectiveAchieved = true;
@@ -507,10 +504,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       };
     },
     getObjectiveProgress(): ObjectiveProgress {
-      const progress = evaluateObjective(state, archetypes, objective, tickNo, epochTicks, {
-        reactions: reactionCount,
-        discoveredBreedTicks,
-      });
+      const progress = currentObjectiveProgress();
       if (progress.met && progress.latches) objectiveAchieved = true;
       const complete = progress.latches ? objectiveAchieved : progress.met;
       return { ...progress, complete };
@@ -580,6 +574,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
           state.rng.randInt(1_000_000),
         );
         if (catalyticReaction) {
+          if (reactionInvolvesEffectType(hatchEffect, toolEffects, 'acid')) {
+            objectiveRuntime.acidReactionTriggered = true;
+          }
           reactionCount += 1;
           pulseToolEffect(state, catalyticReaction.effect, archetypes);
           toolEffects.push(catalyticReaction.effect);
@@ -682,6 +679,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
       }
       const reaction = reactionFor(effect, toolEffects, state.rng.randInt(1_000_000));
       if (reaction) {
+        if (reactionInvolvesEffectType(effect, toolEffects, 'acid')) {
+          objectiveRuntime.acidReactionTriggered = true;
+        }
         reactionCount += 1;
         pulseToolEffect(state, reaction, archetypes);
         toolEffects.push(reaction);
@@ -691,6 +691,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       // the painted line — steer life with paste, then catalyse the path.
       const trailReaction = reactionFor(effect, trailEffects, state.rng.randInt(1_000_000));
       if (trailReaction) {
+        if (effect.type === 'acid') objectiveRuntime.acidReactionTriggered = true;
         reactionCount += 1;
         pulseToolEffect(state, trailReaction, archetypes);
         toolEffects.push(trailReaction);
@@ -700,6 +701,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
         while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
       }
       if (catalyticReaction) {
+        if (reactionInvolvesEffectType(effect, toolEffects, 'acid')) {
+          objectiveRuntime.acidReactionTriggered = true;
+        }
         reactionCount += 1;
         pulseToolEffect(state, catalyticReaction.effect, archetypes);
         toolEffects.push(catalyticReaction.effect);
@@ -744,11 +748,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       if (mode !== 'ecosystem') return current;
       // The player is banking the experiment early. Evaluate as if at the
       // deadline: a complete/satisfied dish wins; an unmet one ends as a loss.
-      const progress = evaluateObjective(state, archetypes, objective, epochTicks, epochTicks, {
-        reactions: reactionCount,
-        discoveredBreedTicks,
-        forceShowcase: true,
-      });
+      const progress = currentObjectiveProgress(epochTicks, true);
       const complete = progress.latches ? objectiveAchieved || progress.met : progress.met;
       forcedStatus = complete || progress.status === 'satisfied' ? 'won' : 'lost';
       tickNo = Math.max(tickNo, epochTicks);
@@ -809,7 +809,12 @@ export function createArena(opts: CreateArenaOpts): Arena {
         if (activeCrisis) {
           applyCrisisEffects(state, activeCrisis.id);
           activeCrisis.ttl -= 1;
-          if (activeCrisis.ttl <= 0) activeCrisis = null;
+          if (activeCrisis.ttl <= 0) {
+            if (objectiveMetrics(state, archetypes).livingLifeforms >= 3) {
+              objectiveRuntime.survivedCrisis = true;
+            }
+            activeCrisis = null;
+          }
         }
         for (const effect of toolEffects) {
           if (effect.type === 'fold_fault') applyFoldingFault(state, effect);
@@ -882,7 +887,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           accidentCount += 1;
           while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
         }
-        evaluateBreedDiscoveries(state, archetypes, toolEffects, discoveredBreedIds, (id, sourceCell) => {
+        evaluateBreedDiscoveries(state, archetypes, toolEffects, new Set([...knownBreedIds, ...discoveredBreedIds]), (id, sourceCell) => {
           discoverBreed(this, id, sourceCell);
         });
       }
@@ -917,6 +922,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
         totalLiving++;
       }
       homeostasisTracker.tick({ breedCounts, totalLiving });
+      if (mode === 'ecosystem') {
+        updateObjectiveRuntime(objectiveRuntime, objectiveMetrics(state, archetypes), objective);
+      }
     },
     spawnEnemy(spawnOpts: SpawnEnemyOpts): CellId {
       const id = nextCellId++;
@@ -1023,6 +1031,19 @@ function reactionFor(newEffect: ToolEffect, effects: ToolEffect[], seed: number)
     };
   }
   return null;
+}
+
+function reactionInvolvesEffectType(
+  newEffect: ToolEffect,
+  effects: ToolEffect[],
+  type: ToolEffectType,
+): boolean {
+  if (newEffect.type === type) return true;
+  return effects.some((effect) => (
+    effect !== newEffect
+    && effect.type === type
+    && Math.hypot(newEffect.pos[0] - effect.pos[0], newEffect.pos[1] - effect.pos[1]) <= Math.min(newEffect.radius, effect.radius) * 0.85
+  ));
 }
 
 function catalyticReactionFor(
@@ -1714,133 +1735,7 @@ function rule30Bit(seed: number, x: number, y: number, phase: number): 0 | 1 {
   return ((30 >> pattern) & 1) as 0 | 1;
 }
 
-function evaluateObjective(
-  state: SimState,
-  archetypes: Map<CellId, EnemySpawn>,
-  objective: ObjectiveDef,
-  tickNo: number,
-  epochTicks: number,
-  context: {
-    reactions: number;
-    discoveredBreedTicks: ReadonlyMap<BreedId, number>;
-    forceShowcase?: boolean;
-  },
-): ObjectiveProgress {
-  const metrics = dishMetrics(state, archetypes);
-  const deadline = tickNo >= epochTicks;
-  const urgency = objectiveUrgency(tickNo, epochTicks);
-
-  if (objective.kind === 'discover_breed') {
-    const breedId = objective.breedId ?? 'bloom_mass';
-    const discoveredTick = context.discoveredBreedTicks.get(breedId);
-    const discovered = discoveredTick !== undefined;
-    const showcased = discovered && (context.forceShowcase || tickNo - discoveredTick >= DISCOVERY_SHOWCASE_TICKS);
-    const name = BREED_DEFS[breedId]?.name ?? breedId;
-    return {
-      def: objective,
-      status: showcased ? 'satisfied' : deadline && !discovered ? 'failed' : 'running',
-      summary: discovered ? `${name} created - logging sample` : `${name} not yet created`,
-      urgency,
-      met: showcased,
-      latches: true,
-      complete: showcased,
-    };
-  }
-
-  if (objective.kind === 'preserve_grazers') {
-    const minCount = objective.minCount ?? PRESERVE_GRAZER_MIN;
-    const ok = metrics.protectedCultureCount >= minCount;
-    return {
-      def: objective,
-      status: deadline ? ok ? 'satisfied' : 'failed' : 'running',
-      summary: `${metrics.protectedCultureCount} / ${minCount} protected cultures`,
-      urgency,
-      met: ok,
-      latches: false,
-      complete: ok,
-    };
-  }
-
-  if (objective.kind === 'breed_archetype') {
-    const archetype = objective.archetype ?? 'swarmlet';
-    const targetCount = objective.targetCount ?? BREED_TARGET_COUNT;
-    const count = metrics.archetypeCounts.get(archetype) ?? 0;
-    const ok = count >= targetCount;
-    const failed = deadline && !ok;
-    return {
-      def: objective,
-      status: ok ? 'satisfied' : failed ? 'failed' : 'running',
-      summary: `${count} / ${targetCount} ${archetype} cultures`,
-      urgency,
-      met: ok,
-      latches: true,
-      complete: ok,
-    };
-  }
-
-  if (objective.kind === 'controlled_reaction') {
-    const targetCount = objective.targetCount ?? CONTROLLED_REACTION_MIN_COUNT;
-    const minCoverage = objective.minCoverage ?? CONTROLLED_REACTION_MIN_COVERAGE;
-    const ok = context.reactions >= targetCount && metrics.coverage >= minCoverage;
-    return {
-      def: objective,
-      status: ok ? 'satisfied' : deadline ? 'failed' : 'running',
-      summary: `${context.reactions} / ${targetCount} reactions, ${Math.round(metrics.coverage * 100)}% living coverage`,
-      urgency,
-      met: ok,
-      latches: true,
-      complete: ok,
-    };
-  }
-
-  if (objective.kind === 'dominant_archetype') {
-    const archetype = objective.archetype ?? 'boss';
-    const minCoverage = objective.minCoverage ?? DOMINANT_MIN_COVERAGE;
-    const ok = metrics.dominantArchetype === archetype && metrics.coverage >= minCoverage;
-    return {
-      def: objective,
-      status: ok ? 'satisfied' : deadline ? 'failed' : 'running',
-      summary: `${metrics.dominantArchetype ?? 'none'} dominant, ${Math.round(metrics.coverage * 100)}% living coverage`,
-      urgency,
-      met: ok,
-      latches: false,
-      complete: ok,
-    };
-  }
-
-  const maxDominance = objective.maxDominance ?? BALANCE_MAX_DOMINANCE;
-  const minCount = objective.minCount ?? BALANCE_MIN_LIFEFORMS;
-  const dominancePct = metrics.lifeformVol === 0 ? 0 : metrics.dominantVol / metrics.lifeformVol;
-  const ok = dominancePct <= maxDominance && metrics.livingLifeforms >= minCount;
-  return {
-    def: objective,
-    status: deadline ? ok ? 'satisfied' : 'failed' : 'running',
-    summary: `${Math.round(dominancePct * 100)}% / ${Math.round(maxDominance * 100)}% dominance, ${metrics.livingLifeforms} cultures`,
-    urgency,
-    met: ok,
-    latches: false,
-    complete: ok,
-  };
-}
-
-function objectiveUrgency(tickNo: number, epochTicks: number): ObjectiveProgress['urgency'] {
-  const remaining = epochTicks - tickNo;
-  if (remaining <= 60 * 10) return 'critical';
-  if (remaining <= 60 * 22) return 'warning';
-  return 'safe';
-}
-
-function dishMetrics(state: SimState, archetypes: Map<CellId, EnemySpawn>): {
-  controlSampleVol: number;
-  livingLifeforms: number;
-  protectedCultureCount: number;
-  archetypeCounts: Map<EnemyArchetype, number>;
-  livingVol: number;
-  lifeformVol: number;
-  dominantVol: number;
-  dominantArchetype: EnemyArchetype | null;
-  coverage: number;
-} {
+function objectiveMetrics(state: SimState, archetypes: Map<CellId, EnemySpawn>): ObjectiveMetrics {
   let controlSampleVol = 0;
   let livingLifeforms = 0;
   let protectedCultureCount = 0;
@@ -1848,7 +1743,11 @@ function dishMetrics(state: SimState, archetypes: Map<CellId, EnemySpawn>): {
   let lifeformVol = 0;
   let dominantVol = 0;
   let dominantArchetype: EnemyArchetype | null = null;
+  let maxLifeformVolume = 0;
+  let nearbyDifferentBreedPair = false;
   const archetypeCounts = new Map<EnemyArchetype, number>();
+  const breedVolumes = new Map<string, number>();
+  const livingBreedCells: Array<{ cell: Cell; breedKey: string }> = [];
   for (const [id, cell] of state.cells) {
     if (cell.vol <= 0) continue;
     livingVol += cell.vol;
@@ -1859,7 +1758,9 @@ function dishMetrics(state: SimState, archetypes: Map<CellId, EnemySpawn>): {
 
     livingLifeforms += 1;
     lifeformVol += cell.vol;
-    const archetype = archetypes.get(id)?.archetype;
+    maxLifeformVolume = Math.max(maxLifeformVolume, cell.vol);
+    const spawn = archetypes.get(id);
+    const archetype = spawn?.archetype;
     if (archetype) {
       archetypeCounts.set(archetype, (archetypeCounts.get(archetype) ?? 0) + 1);
       const role = ARCHETYPE_ECOLOGY[archetype].role;
@@ -1869,7 +1770,28 @@ function dishMetrics(state: SimState, archetypes: Map<CellId, EnemySpawn>): {
         dominantArchetype = archetype;
       }
     }
+    const breedKey = spawn?.breedId ?? spawn?.archetype ?? `cell-${id}`;
+    breedVolumes.set(breedKey, (breedVolumes.get(breedKey) ?? 0) + cell.vol);
+    livingBreedCells.push({ cell, breedKey });
   }
+
+  let maxBreedVolume = 0;
+  for (const volume of breedVolumes.values()) {
+    if (volume > maxBreedVolume) maxBreedVolume = volume;
+  }
+
+  for (let i = 0; i < livingBreedCells.length && !nearbyDifferentBreedPair; i++) {
+    const a = livingBreedCells[i]!;
+    for (let j = i + 1; j < livingBreedCells.length; j++) {
+      const b = livingBreedCells[j]!;
+      if (a.breedKey === b.breedKey) continue;
+      if (distanceBetween(state, a.cell.center, b.cell.center) <= 28) {
+        nearbyDifferentBreedPair = true;
+        break;
+      }
+    }
+  }
+
   return {
     controlSampleVol,
     livingLifeforms,
@@ -1880,6 +1802,9 @@ function dishMetrics(state: SimState, archetypes: Map<CellId, EnemySpawn>): {
     dominantVol,
     dominantArchetype,
     coverage: livingVol / (state.grid.LX * state.grid.LY),
+    maxLifeformVolume,
+    maxBreedDominance: lifeformVol === 0 ? 0 : maxBreedVolume / lifeformVol,
+    nearbyDifferentBreedPair,
   };
 }
 

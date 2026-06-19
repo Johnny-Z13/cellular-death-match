@@ -3,6 +3,7 @@ import type { LabReport } from '../game/labReport';
 import type { ResearchBriefLine } from '../game/researchBrief';
 import type { UpgradeDef } from '../content/upgrades';
 import type { EnemyArchetype } from '../content/enemies';
+import type { ObjectiveDef } from '../content/objectives';
 import type { NotebookView, AtlasView } from '../content/notebook';
 import {
   LIFEFORM_IDENTITIES,
@@ -12,8 +13,8 @@ import { createIconCells } from './iconCells';
 import { renderLabReport } from './labReportScreen';
 
 type ScreenName = 'title' | 'pick' | 'end' | 'hud' | 'notebook';
-type AppScreenName = ScreenName | 'loadout';
-type LayoutScreenName = 'title' | 'loadout' | 'pick' | 'end' | 'notebook' | 'arena';
+type AppScreenName = ScreenName | 'loadout' | 'objective';
+type LayoutScreenName = 'title' | 'loadout' | 'pick' | 'objective' | 'end' | 'notebook' | 'arena';
 export type ToolId = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' | 'paste';
 export type ButtonHintLevel = 'hint' | 'ready';
 export type ButtonHintTarget = ToolId | 'notebook';
@@ -90,6 +91,7 @@ export interface Screens {
   updateAtlas(view: AtlasView): void;
   setLoadoutScreen(el: HTMLElement): void;
   setPickChoices(choices: PickChoice[], onPick: (id: string) => void): void;
+  setObjectiveChoices(choices: ObjectiveDef[], onPick: (objective: ObjectiveDef) => void): void;
   updateEnd(info: EndInfo): void;
   updateLabReport(report: LabReport | null): void;
   onTitleStart(handler: () => void): void;
@@ -118,6 +120,7 @@ export function createScreens(): Screens {
   const screenTitle  = get('screen-title');
   const screenLoadout = get('screen-loadout');
   const screenPick   = get('screen-pick');
+  const screenObjective = get('screen-objective');
   const screenEnd    = get('screen-end');
   const screenNotebook = get('screen-notebook');
   const hud          = get('hud');
@@ -134,6 +137,7 @@ export function createScreens(): Screens {
   const pickResearchBrief = get('pick-research-brief');
   const loadoutMount = get('loadout-mount');
   const pickChoices  = get('pick-choices');
+  const objectiveChoices = get('objective-choices');
   const endTitle     = get('end-title');
   const endSummary   = get('end-summary');
   const labReportMount = get('lab-report-mount');
@@ -195,6 +199,7 @@ export function createScreens(): Screens {
     title: screenTitle,
     loadout: screenLoadout,
     pick: screenPick,
+    objective: screenObjective,
     end: screenEnd,
     notebook: screenNotebook,
     hud,
@@ -205,6 +210,7 @@ export function createScreens(): Screens {
     if (screenTitle.classList.contains('visible')) screen = 'title';
     else if (screenLoadout.classList.contains('visible')) screen = 'loadout';
     else if (screenPick.classList.contains('visible')) screen = 'pick';
+    else if (screenObjective.classList.contains('visible')) screen = 'objective';
     else if (screenEnd.classList.contains('visible')) screen = 'end';
     else if (screenNotebook.classList.contains('visible')) screen = 'notebook';
     layout.dataset.screen = screen;
@@ -318,6 +324,7 @@ export function createScreens(): Screens {
         name === 'title'
         || name === 'loadout'
         || name === 'pick'
+        || name === 'objective'
         || name === 'end'
         || name === 'notebook'
       ) {
@@ -648,6 +655,29 @@ export function createScreens(): Screens {
         btn.append(name, desc);
         btn.addEventListener('click', () => onPick(c.id));
         pickChoices.append(btn);
+      }
+    },
+    setObjectiveChoices(choices, onPick) {
+      objectiveChoices.replaceChildren();
+      for (const objective of choices) {
+        const btn = document.createElement('button');
+        btn.className = 'pick-card objective-card';
+        btn.type = 'button';
+        const name = document.createElement('div');
+        name.className = 'pick-card-name';
+        name.textContent = objective.name;
+        const desc = document.createElement('div');
+        desc.className = 'pick-card-desc';
+        desc.textContent = objective.description;
+        const target = document.createElement('div');
+        target.className = 'objective-card-target';
+        target.textContent = objective.target;
+        const hint = document.createElement('div');
+        hint.className = 'objective-card-hint';
+        hint.textContent = objective.hint ?? '';
+        btn.append(name, desc, target, hint);
+        btn.addEventListener('click', () => onPick(objective));
+        objectiveChoices.append(btn);
       }
     },
     updateEnd(info) {
