@@ -1,4 +1,4 @@
-import type { AgitationState, ToolState } from '../game/arena';
+import type { AgitationState, EquilibriumInfo, ToolState } from '../game/arena';
 import type { LabReport } from '../game/labReport';
 import type { ResearchBriefLine } from '../game/researchBrief';
 import type { UpgradeDef } from '../content/upgrades';
@@ -86,6 +86,7 @@ export interface Screens {
   onLifeformSelect(handler: (id: string) => void): void;
   setSelectedLifeform(id: string | null): void;
   updateHud(info: HudInfo): void;
+  setEquilibrium(info: EquilibriumInfo): void;
   setPickResearchBrief(lines: readonly ResearchBriefLine[]): void;
   updateNotebook(view: NotebookView): void;
   updateAtlas(view: AtlasView): void;
@@ -145,6 +146,7 @@ export function createScreens(): Screens {
   const hudFight     = get('hud-fight');
   const hudVol       = get('hud-vol');
   const hudProgress  = get('hud-progress');
+  const hudEquilibrium = get('hud-equilibrium');
   const hudEco       = get('hud-eco');
   const hudObjective = get('hud-objective');
   const hudHint      = get('hud-hint');
@@ -528,6 +530,12 @@ export function createScreens(): Screens {
         ? 'Experiment complete. Press End to bank it, or keep cultivating.'
         : info.objectiveHint;
       hudUpgrades.textContent = info.upgrades.length === 0 ? 'none' : info.upgrades.join(', ');
+    },
+    setEquilibrium(info) {
+      hudEquilibrium.textContent = info.achieved
+        ? info.biomeName ? `Equilibrium: ${info.biomeName}` : 'Equilibrium reached'
+        : `Equilibrium ${Math.round(Math.max(0, Math.min(1, info.progress)) * 100)}%`;
+      hud.classList.toggle('hud-equilibrium-achieved', info.achieved);
     },
     setPickResearchBrief(lines) {
       pickResearchBrief.replaceChildren();

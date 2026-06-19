@@ -669,6 +669,20 @@ canvas {
   text-shadow: 0 0 14px rgba(91, 233, 214, 0.3);
 }
 
+.hud-equilibrium-achieved {
+  border-color: rgba(91, 233, 214, 0.38);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.34), 0 0 24px rgba(91, 233, 214, 0.16);
+}
+
+.hud-equilibrium-row .hud-val {
+  color: #d8f8ff;
+}
+
+.hud-equilibrium-achieved .hud-equilibrium-row .hud-val {
+  color: var(--bio);
+  text-shadow: 0 0 15px rgba(91, 233, 214, 0.42);
+}
+
 .dish-shake {
   animation: dish-shake 720ms cubic-bezier(0.2, 0.9, 0.2, 1);
   transform-origin: center;
@@ -2791,7 +2805,7 @@ canvas {
   white-space: normal;
 }
 
-.hud .hud-row:nth-child(6),
+.hud-ecology-row,
 #hud-upgrades-row {
   display: none;
 }
@@ -2893,7 +2907,7 @@ canvas {
   }
 
   .hud-hint-row,
-  .hud .hud-row:nth-child(5) {
+  .hud-volume-row {
     display: none;
   }
 
@@ -3169,7 +3183,7 @@ canvas {
     max-width: 205px;
   }
 
-  .hud .hud-row:nth-child(6),
+  .hud-ecology-row,
   #hud-upgrades-row {
     display: flex;
   }

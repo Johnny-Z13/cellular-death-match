@@ -103,6 +103,7 @@ let lastFpsTick = performance.now();
 let tickCount = 0;
 let tickerState = createTickerState();
 let didAnnounceCompletion = false;
+let didAnnounceEquilibrium = false;
 // Idle-nudge bookkeeping: last tick the player acted, and how many nudges this
 // epoch (capped so the assistant never nags).
 let lastActionTick = 0;
@@ -348,6 +349,18 @@ screens.onEndEpoch(() => {
   if (!arena || run.getState().phase !== 'arena') return;
   ecologyAudio.unlock();
   uiAudio.play('ui_tap');
+  if (arena.getEquilibrium().achieved) {
+    persistArenaDiscoveries(arena);
+    awardCompletionResearchGrant();
+    sampleRunTelemetryFromArena(arena);
+    bankRunStrains();
+    uiAudio.play('epoch_win');
+    fx.playWipe();
+    run.achieveHomeostasis();
+    uiAudio.stopAmbience();
+    showPhase();
+    return;
+  }
   const status = arena.endEpochNow();
   resolveArenaStatus(status);
 });
@@ -561,6 +574,7 @@ function startNewFight() {
   tickerState = createTickerState();
   heardDishEventIds = new Set<number>();
   didAnnounceCompletion = false;
+  didAnnounceEquilibrium = false;
   lastOpeningBloomCreated = false;
   didPlaceEggThisEpoch = false;
   lastActionTick = 0;
@@ -648,6 +662,8 @@ function loop() {
   }
 
   const ecology = arena.getEcology();
+  const equilibrium = arena.getEquilibrium();
+  screens.setEquilibrium(equilibrium);
   sampleRunTelemetryFromArena(arena);
 
   // HUD update.
@@ -683,9 +699,10 @@ function loop() {
     });
     screens.updateToolCharges(arena.getToolStates());
     screens.updateAgitation(arena.getAgitationState());
-    screens.setEpochComplete(objective.complete);
+    screens.setEpochComplete(objective.complete || equilibrium.achieved);
     updateButtonHint();
     announceEpochCompletion(objective.complete, objective.def.name);
+    announceEquilibrium(equilibrium);
     maybeNudgeIdlePlayer(objective.complete, objective.def.hint);
   }
   updateTicker(arena);
@@ -698,20 +715,6 @@ function loop() {
     status: arena.getStatus(),
   });
   debug.updateDiscoveries(discoveryDebugInfo());
-
-  // Homeostasis check: if equilibrium achieved, end the run as won.
-  if (!isOnboardingEpoch(run.getState().fightIndex) && arena.isHomeostasisAchieved()) {
-    persistArenaDiscoveries(arena);
-    awardCompletionResearchGrant();
-    sampleRunTelemetryFromArena(arena);
-    bankRunStrains();
-    uiAudio.play('epoch_win');
-    fx.playWipe();
-    run.achieveHomeostasis();
-    uiAudio.stopAmbience();
-    showPhase();
-    return;
-  }
 
   // Ecosystem collapse check: if all cells dead past onboarding, end run.
   if (!isOnboardingEpoch(run.getState().fightIndex) && arena.isEcosystemCollapsed() && tickCount > 120) {
@@ -1082,6 +1085,14 @@ function announceEpochCompletion(complete: boolean, objectiveName: string): void
   } else if (!complete && didAnnounceCompletion) {
     didAnnounceCompletion = false;
   }
+}
+
+function announceEquilibrium(info: { achieved: boolean; progress: number; biomeName: string | null }): void {
+  if (!info.achieved || didAnnounceEquilibrium || isOnboardingEpoch(run.getState().fightIndex)) return;
+  didAnnounceEquilibrium = true;
+  uiAudio.play('epoch_win');
+  fx.showToast('discovery', 'Stable Ecosystem', info.biomeName ?? 'Equilibrium');
+  screens.addTicker('Equilibrium reached: pressure paused. End when ready, or keep observing.', 'discovery');
 }
 
 function labelForStrain(strain: string): string {

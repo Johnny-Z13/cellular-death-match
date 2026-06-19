@@ -2185,6 +2185,53 @@ describe('arena ecosystem mode', () => {
     )).toBe(true);
   });
 
+  it('latches equilibrium as visible state and pauses pressure without ending the epoch', () => {
+    const arena = createArena({
+      LX: 140,
+      LY: 140,
+      seed: 51,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+      },
+      enemies: [
+        { archetype: 'swarmlet' as const, breedId: 'bloom_mass', targetVol: 520, speed: 0, engulfMultiplier: 1 },
+        { archetype: 'swarmlet' as const, breedId: 'bloom_mass', targetVol: 520, speed: 0, engulfMultiplier: 1 },
+        { archetype: 'swarmlet' as const, breedId: 'needle_swarm', targetVol: 520, speed: 0, engulfMultiplier: 1 },
+        { archetype: 'swarmlet' as const, breedId: 'needle_swarm', targetVol: 520, speed: 0, engulfMultiplier: 1 },
+        { archetype: 'swarmlet' as const, breedId: 'glass_antibody', targetVol: 520, speed: 0, engulfMultiplier: 1 },
+      ],
+      wrap: true,
+      mode: 'ecosystem',
+      includeControlSample: false,
+      epochTicks: 60 * 80,
+      worldEventIntensity: 0,
+    });
+
+    for (let i = 0; i < 60 * 20; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+
+    const equilibrium = arena.getEquilibrium();
+    expect(equilibrium.achieved).toBe(true);
+    expect(equilibrium.progress).toBe(1);
+    expect(equilibrium.biomeName).toBeTruthy();
+    expect(arena.getStatus()).toBe('running');
+
+    const pressureAtEquilibrium = arena.getEcology();
+    for (let i = 0; i < 60 * 25; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+
+    const ecology = arena.getEcology();
+    expect(ecology.outbreaks).toBe(pressureAtEquilibrium.outbreaks);
+    expect(ecology.accidents).toBe(pressureAtEquilibrium.accidents);
+    expect(ecology.crisis).toBe('none');
+    expect(arena.getStatus()).toBe('running');
+  });
+
   it('can turn dish fertility world events fully off', () => {
     const arena = createArena({
       LX: 80,

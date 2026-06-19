@@ -103,9 +103,14 @@ describe('run telemetry', () => {
       'run.skipEpoch();',
     )).toBe(true);
     expect(appearsBefore(
-      branchSource('arena.isHomeostasisAchieved()', 'arena.isEcosystemCollapsed()'),
+      branchSource('if (arena.getEquilibrium().achieved)', 'const status = arena.endEpochNow();'),
       'sampleRunTelemetryFromArena(arena);',
       'bankRunStrains();',
+    )).toBe(true);
+    expect(appearsBefore(
+      branchSource('if (arena.getEquilibrium().achieved)', 'const status = arena.endEpochNow();'),
+      'sampleRunTelemetryFromArena(arena);',
+      'run.achieveHomeostasis();',
     )).toBe(true);
     expect(appearsBefore(
       branchSource('arena.isEcosystemCollapsed()', '// Status check'),

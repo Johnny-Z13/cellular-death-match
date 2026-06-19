@@ -81,6 +81,7 @@ export interface Arena {
   archetypes: Map<CellId, EnemySpawn>;
   getStatus(): ArenaStatus;
   getEcology(): EcologyInfo;
+  getEquilibrium(): EquilibriumInfo;
   getObjectiveProgress(): ObjectiveProgress;
   getToolStates(): Record<LabTool, ToolState>;
   getAgitationState(): AgitationState;
@@ -95,6 +96,12 @@ export interface Arena {
   getHomeostasisProgress(): number;
   isHomeostasisAchieved(): boolean;
   isEcosystemCollapsed(): boolean;
+}
+
+export interface EquilibriumInfo {
+  achieved: boolean;
+  progress: number;
+  biomeName: string | null;
 }
 
 export interface EcologyInfo {
@@ -793,6 +800,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       }
 
       if (mode === 'ecosystem') {
+        const pressurePaused = homeostasisTracker.isAchieved();
         applyToolEffects(state, toolEffects, archetypes);
         // Trail stamps pull + feed cells exactly like nutrient drops, so a drawn
         // line becomes a gentle gradient colonies drift along.
@@ -801,13 +809,14 @@ export function createArena(opts: CreateArenaOpts): Arena {
           applyAgitation(state, agitationTicksRemaining / AGITATION_DURATION_TICKS);
           agitationTicksRemaining -= 1;
         }
-        if (!activeCrisis && tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveCrisisInterval === 0) {
+        if (pressurePaused) activeCrisis = null;
+        if (!pressurePaused && !activeCrisis && tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveCrisisInterval === 0) {
           const result = activateCrisis(this, state, archetypes);
           activeCrisis = { id: result.id, ttl: CRISES[result.id].durationTicks };
           birthCount += result.births;
           pushSignal(`Crisis: ${CRISES[result.id].name}.`);
         }
-        if (activeCrisis) {
+        if (!pressurePaused && activeCrisis) {
           applyCrisisEffects(state, activeCrisis.id);
           activeCrisis.ttl -= 1;
           if (activeCrisis.ttl <= 0) {
@@ -829,7 +838,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
           if (trailEffects[i]!.ttl <= 0) trailEffects.splice(i, 1);
         }
         if (
-          worldEventIntensity > 0
+          !pressurePaused
+          && worldEventIntensity > 0
           && tickNo >= WORLD_EVENT_GRACE_TICKS
           && tickNo % WORLD_EVENT_INTERVAL_TICKS === 0
           && state.rng.random() <= worldEventIntensity
@@ -849,7 +859,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
             pushSignal(event.signal);
           }
         }
-        if (tickNo % MUTATION_INTERVAL_TICKS === 0) {
+        if (!pressurePaused && tickNo % MUTATION_INTERVAL_TICKS === 0) {
           const mutation = mutateEcology(state, archetypes, pushSignal);
           mutationCount += mutation.changed;
           for (const effect of mutation.effects) {
@@ -858,14 +868,14 @@ export function createArena(opts: CreateArenaOpts): Arena {
           }
           while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
         }
-        if (tickNo % RESEED_INTERVAL_TICKS === 0) {
+        if (!pressurePaused && tickNo % RESEED_INTERVAL_TICKS === 0) {
           birthCount += reseedEcology(this, state, archetypes);
         }
         if (tickNo - lastEmergencyEggTick >= EMERGENCY_EGG_REFILL_TICKS) {
           supplyDropCount += refillEggIfQuiet(toolStates, state);
           if (toolStates.egg.charges > 0) lastEmergencyEggTick = tickNo;
         }
-        if (tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveOutbreakInterval === 0) {
+        if (!pressurePaused && tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveOutbreakInterval === 0) {
           const outbreak = triggerPredatorOutbreak(this, state, archetypes, effectiveOutbreakCount);
           if (outbreak) {
             outbreakCount += 1;
@@ -880,7 +890,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         if (tickNo % RESUPPLY_INTERVAL_TICKS === 0) {
           supplyDropCount += resupplyLab(toolStates, objective);
         }
-        if (tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveAccidentInterval === 0) {
+        if (!pressurePaused && tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveAccidentInterval === 0) {
           const accident = randomAccidentEffect(state);
           pulseToolEffect(state, accident, archetypes);
           toolEffects.push(accident);
@@ -912,17 +922,18 @@ export function createArena(opts: CreateArenaOpts): Arena {
 
       simTick(state, MC_STEPS_PER_TICK);
 
-      // Feed homeostasis tracker with current population snapshot.
-      const breedCounts = new Map<string, number>();
-      let totalLiving = 0;
+      // Feed homeostasis with breed volume shares, not culture counts.
+      const breedVolumes = new Map<string, number>();
+      let totalVolume = 0;
       for (const [cellId, cell] of state.cells) {
         if (cell.vol <= 0) continue;
         const spawn = archetypes.get(cellId);
-        const breed = spawn?.breedId ?? spawn?.archetype ?? 'unknown';
-        breedCounts.set(breed, (breedCounts.get(breed) ?? 0) + 1);
-        totalLiving++;
+        if (!spawn) continue;
+        const breed = spawn.breedId ?? spawn.archetype;
+        breedVolumes.set(breed, (breedVolumes.get(breed) ?? 0) + cell.vol);
+        totalVolume += cell.vol;
       }
-      homeostasisTracker.tick({ breedCounts, totalLiving });
+      homeostasisTracker.tick({ breedVolumes, totalVolume });
       if (mode === 'ecosystem') {
         updateObjectiveRuntime(objectiveRuntime, objectiveMetrics(state, archetypes), objective);
       }
@@ -951,6 +962,13 @@ export function createArena(opts: CreateArenaOpts): Arena {
     },
     getHomeostasisProgress(): number {
       return homeostasisTracker.progress();
+    },
+    getEquilibrium(): EquilibriumInfo {
+      return {
+        achieved: homeostasisTracker.isAchieved(),
+        progress: homeostasisTracker.progress(),
+        biomeName: homeostasisTracker.getBiome()?.name ?? null,
+      };
     },
     isHomeostasisAchieved(): boolean {
       return homeostasisTracker.isAchieved();
