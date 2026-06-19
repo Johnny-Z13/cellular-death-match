@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { assembleLabReport } from '../../src/game/labReport';
 import type { LabReport } from '../../src/game/labReport';
+import { classifyBiome } from '../../src/game/homeostasis';
 import { renderLabReport } from '../../src/ui/labReportScreen';
 
 class FakeElement {
@@ -132,5 +134,39 @@ describe('renderLabReport', () => {
     }).textContent;
 
     expect(text).toContain('No living cultures');
+  });
+
+  it('renders a classified won-report biome instead of Unknown Biome', () => {
+    installFakeDocument();
+    const finalBreedCounts = new Map([
+      ['swarmlet', 9],
+      ['splitter', 2],
+    ]);
+    const biome = classifyBiome(finalBreedCounts);
+    const report = assembleLabReport({
+      runNumber: 8,
+      outcome: 'won',
+      biomeName: biome.name,
+      epochCount: 3,
+      durationMs: 90_000,
+      discoveredBreeds: [],
+      discoveredHybrids: [],
+      reactionsTriggered: 0,
+      newBiome: false,
+      finalBreedCounts,
+      peakBiodiversity: 2,
+      longestStabilityStreak: 60,
+      newStrainsBanked: [],
+      totalStrainsDiscovered: 1,
+      totalStrainsAvailable: 14,
+      newNotebookEntries: 0,
+      notebookCompletion: 0.1,
+    });
+
+    const text = renderLabReport(report).textContent;
+
+    expect(text).toContain('Stable Ecosystem');
+    expect(text).toContain('Swarm Flats');
+    expect(text).not.toContain('Unknown Biome');
   });
 });

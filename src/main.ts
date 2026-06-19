@@ -15,6 +15,7 @@ import { onboardingIdleNudge } from './ui/onboardingHints';
 import { soundEventForDishSignal, type SoundEventId } from './audio/soundDesign';
 import { assembleLabReport, type LabReport } from './game/labReport';
 import { createRunTelemetry, type RunTelemetry } from './game/runTelemetry';
+import { classifyBiome } from './game/homeostasis';
 import { hash2 } from './game/hash';
 import {
   clearDiscoverySave,
@@ -438,13 +439,17 @@ function labReportForRunEnd(): LabReport {
   const notebookCompletion = notebookView.totalCount === 0
     ? 0
     : notebookView.discoveredCount / notebookView.totalCount;
+  const finalBreedCounts = arena ? finalBreedCountsFor(arena) : new Map<string, number>();
 
   finalLabReport = assembleLabReport(runTelemetry.toLabReportInput({
     endedAtMs: performance.now(),
     outcome: state.outcome ?? 'lost',
+    biomeName: state.outcome === 'won' && finalBreedCounts.size > 0
+      ? classifyBiome(finalBreedCounts).name
+      : undefined,
     epochCount: Math.max(1, state.fightIndex + 1, state.epochResults.length),
     newBiome: false,
-    finalBreedCounts: arena ? finalBreedCountsFor(arena) : new Map<string, number>(),
+    finalBreedCounts,
     peakBiodiversity,
     longestStabilityStreak,
     newStrainsBanked: newStrainsBankedThisRun,

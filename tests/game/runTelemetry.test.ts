@@ -62,6 +62,14 @@ describe('run telemetry', () => {
     expect(mainSource).toContain('runTelemetry.recordDiscovery(breedId, Boolean(def?.parents));');
   });
 
+  it('names won lab reports from classified final breed counts without banking biomes', () => {
+    expect(mainSource).toContain("import { classifyBiome } from './game/homeostasis';");
+    expect(mainSource).toContain('const finalBreedCounts = arena ? finalBreedCountsFor(arena) : new Map<string, number>();');
+    expect(mainSource).toContain("biomeName: state.outcome === 'won' && finalBreedCounts.size > 0");
+    expect(mainSource).toContain('classifyBiome(finalBreedCounts).name');
+    expect(mainSource).toContain('newBiome: false');
+  });
+
   it('samples the current arena before every run phase transition that can replace it', () => {
     expect(mainSource).toContain('function sampleRunTelemetryFromArena(ar: Arena): void');
     expect(appearsBefore(
