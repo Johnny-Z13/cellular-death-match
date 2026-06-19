@@ -8,6 +8,8 @@ The simulation is a TypeScript/Canvas port inspired by James Simon's cellular Po
 
 This project sits in the lineage of Conway's Game of Life, cellular automata, and the wider maths of emergence: simple local rules, repeated many times, producing surprising global behavior. Cellular Death Match uses a cellular Potts-style model rather than Life's exact birth/survival rules, but the fascination is the same: watching order, competition, blooms, collapse, and apparent intention emerge from tiny stochastic updates.
 
+The per-breed energy profile system — where each lifeform has distinct CPM physics coefficients that determine its shape, compactness, and movement texture — was inspired by James Simon's [cell-fight](https://github.com/james-simon/cell-fight), a Python/Pygame multiplayer cell combat game built on the Cellular Potts Model. cell-fight demonstrated how simple energy-term tuning can produce visually rich, emergent cell morphology without explicit shape logic.
+
 The game layer leans into that by asking the player to cultivate conditions instead of directly puppeteering every cell. Eggs, nutrients, toxins, mutation, reseeding, and objectives are all meant to make the dish feel like a living system that can be nudged, never fully commanded.
 
 ## Current Gameplay
