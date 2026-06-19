@@ -40,6 +40,7 @@ import { swarmletStep } from './enemies/swarmlet';
 import { mirrorStep } from './enemies/mirror';
 import { bossStep, type BossState } from './enemies/boss';
 import { displacementVec } from './geometry';
+import { getReagentShift, type BreedProfileId } from '../sim/breedProfiles';
 
 export type { PlayerConfig } from '../content/upgrades';
 
@@ -743,6 +744,11 @@ export function createArena(opts: CreateArenaOpts): Arena {
       if (this.getStatus() !== 'running') return;
       tickNo += 1;
 
+      // Reset per-cell energy shifts each tick (accumulated by applyToolEffects).
+      for (const cell of state.cells.values()) {
+        cell.energyShifts = { isingShift: 0, volShift: 0, movShift: 0 };
+      }
+
       // The control sample is no longer directly piloted in ecosystem mode. It
       // remains a visible anchor organism, influenced by the same dish tools.
       const p = state.cells.get(PLAYER_ID);
@@ -893,6 +899,13 @@ export function createArena(opts: CreateArenaOpts): Arena {
         targetVol: spawnOpts.spawn.targetVol,
         pos: spawnOpts.pos,
       });
+      // Assign breed energy profile: use breed-specific profile if available,
+      // otherwise fall back to the archetype profile.
+      const cell = state.cells.get(id);
+      if (cell) {
+        const profileId = (spawnOpts.spawn.breedId ?? spawnOpts.spawn.archetype) as BreedProfileId;
+        cell.breedProfileId = profileId;
+      }
       archetypes.set(id, spawnOpts.spawn);
       const ai: AiState = {};
       if (spawnOpts.spawn.archetype === 'sniper')   ai.sniper = { shootTimer: spawnOpts.spawn.shootCooldown ?? 30 };
@@ -2088,6 +2101,13 @@ function applyToolEffects(
       const dist = Math.hypot(v[0], v[1]);
       if (dist > effect.radius) continue;
       const strength = (1 - dist / effect.radius) * (effect.ttl / effect.maxTtl);
+      // Accumulate reagent energy shifts (strength-weighted by distance and TTL)
+      const reagentShift = getReagentShift(effect.type);
+      if (cell.energyShifts) {
+        cell.energyShifts.isingShift += reagentShift.isingShift * strength;
+        cell.energyShifts.volShift += reagentShift.volShift * strength;
+        cell.energyShifts.movShift += reagentShift.movShift * strength;
+      }
       const dirX = dist > 0 ? v[0] / dist : 0;
       const dirY = dist > 0 ? v[1] / dist : 0;
       if (effect.type === 'hatch') {
