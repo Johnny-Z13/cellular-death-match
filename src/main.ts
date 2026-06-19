@@ -1,4 +1,4 @@
-﻿import { createRun, EPOCHS_PER_RUN } from './game/run';
+﻿import { createRun } from './game/run';
 import { createArena, type Arena, type ArenaStatus } from './game/arena';
 import { createRenderer, type Renderer } from './ui/render';
 import { createDebugPanel } from './ui/debug';
@@ -381,7 +381,7 @@ function showPhase() {
     screens.updateEnd({
       outcome: state.outcome ?? 'lost',
       fightReached: state.fightIndex + 1,
-      totalFights: EPOCHS_PER_RUN,
+      totalFights: 0,  // open-ended run
       objectivesCompleted: state.epochResults.filter((result) => result === 'completed').length,
       upgrades: state.upgrades.map((u) => {
         const def = getUpgradeDef(u.id);
@@ -429,7 +429,7 @@ function startNewFight() {
   if (!uiAudio.isMuted()) uiAudio.startAmbience();
   uiAudio.play('epoch_begin');
   fx.showEpochBanner(
-    `Epoch ${runState.fightIndex + 1} / ${EPOCHS_PER_RUN}`,
+    `Epoch ${runState.fightIndex + 1}`,
     objective.name,
     objective.description,
   );
@@ -490,7 +490,7 @@ function loop() {
     const objective = arena.getObjectiveProgress();
     screens.updateHud({
       fightIndex: runState.fightIndex,
-      totalFights: EPOCHS_PER_RUN,
+      totalFights: 0,  // open-ended run
       vol: player.vol,
       targetVol: player.targetVol,
       progress: ecology.progress,

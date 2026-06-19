@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createRun, FIGHTS_PER_RUN } from '../../src/game/run';
-import { OBJECTIVES } from '../../src/content/objectives';
+import { createRun, FIXED_EPOCH_COUNT } from '../../src/game/run';
 
 describe('createRun — initial', () => {
   it('starts in title phase', () => {
@@ -11,8 +10,8 @@ describe('createRun — initial', () => {
     expect(run.getState().outcome).toBeNull();
   });
 
-  it('runs one ecosystem for every authored objective', () => {
-    expect(FIGHTS_PER_RUN).toBe(OBJECTIVES.length);
+  it('has 3 fixed epochs', () => {
+    expect(FIXED_EPOCH_COUNT).toBe(3);
   });
 });
 
@@ -68,19 +67,35 @@ describe('pickUpgrade', () => {
   });
 });
 
-describe('winFight — final fight ends the run', () => {
-  it(`winFight on fight ${FIGHTS_PER_RUN - 1} transitions arena → run_end (won)`, () => {
+describe('open-ended run', () => {
+  it('does not end after epoch 6 — continues to epoch 7+', () => {
     const run = createRun(42);
     run.start();
-    // Win and pick through every non-final epoch, then the final win ends the run.
-    for (let i = 0; i < FIGHTS_PER_RUN - 1; i++) {
-      run.winFight();
-      const choice = run.getState().pendingPickChoices[0]!;
-      run.pickUpgrade(choice);
+    for (let i = 0; i < 7; i++) {
+      run.completeEpoch();
+      if (run.getState().phase === 'upgrade_pick') {
+        run.pickUpgrade(run.getState().pendingPickChoices[0]!);
+      }
     }
-    expect(run.getState().fightIndex).toBe(FIGHTS_PER_RUN - 1);
-    expect(run.getState().phase).toBe('arena');
-    run.winFight();
+    expect(run.getState().phase).not.toBe('run_end');
+  });
+
+  it('failEpoch still ends the run (collapse)', () => {
+    const run = createRun(42);
+    run.start();
+    run.failEpoch();
+    expect(run.getState().phase).toBe('run_end');
+    expect(run.getState().outcome).toBe('lost');
+  });
+
+  it('achieveHomeostasis ends the run as won', () => {
+    const run = createRun(42);
+    run.start();
+    for (let i = 0; i < 4; i++) {
+      run.completeEpoch();
+      run.pickUpgrade(run.getState().pendingPickChoices[0]!);
+    }
+    run.achieveHomeostasis();
     expect(run.getState().phase).toBe('run_end');
     expect(run.getState().outcome).toBe('won');
   });
@@ -90,27 +105,11 @@ describe('skipEpoch — forgiving lapse', () => {
   it('advances past a lapsed objective and records completed-vs-lapsed results', () => {
     const run = createRun(42);
     run.start();
-    // Lapse epoch 0, complete epoch 1.
     run.skipEpoch();
     expect(run.getState().phase).toBe('upgrade_pick');
     run.pickUpgrade(run.getState().pendingPickChoices[0]!);
     run.completeEpoch();
     expect(run.getState().epochResults).toEqual(['lapsed', 'completed']);
-  });
-
-  it('still ends the run as won when the final epoch lapses', () => {
-    const run = createRun(7);
-    run.start();
-    for (let i = 0; i < FIGHTS_PER_RUN - 1; i++) {
-      run.skipEpoch();
-      run.pickUpgrade(run.getState().pendingPickChoices[0]!);
-    }
-    run.skipEpoch();
-    const s = run.getState();
-    expect(s.phase).toBe('run_end');
-    expect(s.outcome).toBe('won');
-    expect(s.epochResults.filter((r) => r === 'completed')).toHaveLength(0);
-    expect(s.epochResults).toHaveLength(FIGHTS_PER_RUN);
   });
 });
 
@@ -121,7 +120,6 @@ describe('loseFight', () => {
     run.winFight();
     const choice = run.getState().pendingPickChoices[0]!;
     run.pickUpgrade(choice);
-    // Now in fight 1.
     run.loseFight();
     const s = run.getState();
     expect(s.phase).toBe('run_end');
@@ -152,13 +150,12 @@ describe('getPlayerConfig', () => {
     const run = createRun(42);
     run.start();
     run.winFight();
-    // Force pick of a known lab research option if available; else any.
     const choices = run.getState().pendingPickChoices;
     const researchChoice = choices.find((c) => c === 'egg_1') ?? choices[0]!;
     run.pickUpgrade(researchChoice);
     const cfg = run.getPlayerConfig();
     if (researchChoice === 'egg_1') {
-      expect(cfg.eggCharges).toBe(10);   // 8 + 2
+      expect(cfg.eggCharges).toBe(10);
     } else {
       expect(cfg.targetVol).toBeGreaterThanOrEqual(420);
     }
@@ -172,32 +169,6 @@ describe('getFightSpawnList', () => {
     const list = run.getFightSpawnList();
     expect(list.length).toBe(4);
     expect(list[0]!.archetype).toBe('bruiser');
-  });
-
-  it('returns the schedule entry for epoch 4 (boss ecology)', () => {
-    const run = createRun(42);
-    run.start();
-    // Advance to epoch 4.
-    for (let i = 0; i < 4; i++) {
-      run.winFight();
-      run.pickUpgrade(run.getState().pendingPickChoices[0]!);
-    }
-    expect(run.getState().fightIndex).toBe(4);
-    const list = run.getFightSpawnList();
-    expect(list.map((e) => e.archetype).sort()).toEqual(['boss', 'sniper', 'splitter']);
-  });
-
-  it('returns the final boss-cultivation objective after the boss egg unlock', () => {
-    const run = createRun(42);
-    run.start();
-    for (let i = 0; i < FIGHTS_PER_RUN - 1; i++) {
-      run.winFight();
-      run.pickUpgrade(run.getState().pendingPickChoices[0]!);
-    }
-
-    expect(run.getState().fightIndex).toBe(FIGHTS_PER_RUN - 1);
-    expect(run.getObjective().kind).toBe('dominant_archetype');
-    expect(run.getObjective().archetype).toBe('boss');
   });
 
   it('getEpochSpawnList returns defensive copies', () => {
@@ -214,13 +185,39 @@ describe('first-run onboarding spawn list', () => {
     const run = createRun(42);
     run.start();
     const list = run.getOnboardingSpawnList();
-
     expect(list.map((spawn) => spawn.archetype)).toEqual(['swarmlet', 'splitter']);
-    expect(run.getEpochSpawnList().map((spawn) => spawn.archetype)).toEqual([
-      'bruiser',
-      'swarmlet',
-      'swarmlet',
-      'swarmlet',
-    ]);
+  });
+});
+
+describe('objectives', () => {
+  it('epoch 0 is discover_breed (onboarding)', () => {
+    const run = createRun(42);
+    run.start();
+    expect(run.getObjective().kind).toBe('discover_breed');
+    expect(run.getObjective().breedId).toBe('bloom_mass');
+  });
+
+  it('mid-game uses chosen objective when set', () => {
+    const run = createRun(42);
+    run.start();
+    for (let i = 0; i < 3; i++) {
+      run.completeEpoch();
+      run.pickUpgrade(run.getState().pendingPickChoices[0]!);
+    }
+    expect(run.getState().fightIndex).toBe(3);
+    const obj = { kind: 'mega_culture' as any, name: 'Test', description: 'Test', target: 'Test' };
+    run.setChosenObjective(obj);
+    expect(run.getObjective().kind).toBe('mega_culture');
+  });
+
+  it('getObjectiveChoices returns 2 choices for mid-game', () => {
+    const run = createRun(42);
+    run.start();
+    for (let i = 0; i < 3; i++) {
+      run.completeEpoch();
+      run.pickUpgrade(run.getState().pendingPickChoices[0]!);
+    }
+    const choices = run.getObjectiveChoices(new Set(['bloom_mass' as any]), ['egg', 'nutrient', 'toxin', 'water']);
+    expect(choices.length).toBe(2);
   });
 });
