@@ -13,6 +13,8 @@ import { createFx } from './ui/fx';
 import { createCoach } from './ui/coach';
 import { onboardingIdleNudge } from './ui/onboardingHints';
 import { soundEventForDishSignal, type SoundEventId } from './audio/soundDesign';
+import { assembleLabReport, type LabReport } from './game/labReport';
+import { createRunTelemetry, type RunTelemetry } from './game/runTelemetry';
 import { hash2 } from './game/hash';
 import {
   clearDiscoverySave,
@@ -50,6 +52,7 @@ const LY = 160;
 const PLAYER_ID = 1;
 // Epoch ticks now comes from escalation.ts via arena's fightIndex.
 const PASTE_CURSOR_RADIUS = 9; // grid units; mirrors TOOL_TUNING.paste.radius for the draw cursor glow
+const HOMEOSTASIS_SUSTAIN_TICKS = 60 * 20;
 const reduceMotionPref = typeof window !== 'undefined'
   && typeof window.matchMedia === 'function'
   && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -106,8 +109,16 @@ let pendingResearchBrief: ResearchBriefLine[] = [];
 let lastOpeningBloomCreated = false;
 let didPlaceEggThisEpoch = false;
 let discoveredBreedsThisRun = new Set<string>();
-let discoveredHybridsThisRun = new Set<string>();
 let peakBiodiversity = 0;
+let longestStabilityStreak = 0;
+let runTelemetry: RunTelemetry = createRunTelemetry({
+  startedAtMs: performance.now(),
+  runNumber: strainLibrary.getRunCount() + 1,
+});
+let didBankRunStrains = false;
+let newStrainsBankedThisRun: string[] = [];
+let notebookEntryCountAtRunStart = notebookViewForProgression(discoveryProgression).discoveredCount;
+let finalLabReport: LabReport | null = null;
 
 interface RuntimeOverlayState {
   menuOpen: boolean;
@@ -299,15 +310,15 @@ screens.onTitleStart(() => {
   uiAudio.unlock();
   uiAudio.play('ui_select');
   run.start();
-  discoveredBreedsThisRun = new Set();
-  discoveredHybridsThisRun = new Set();
-  peakBiodiversity = 0;
+  resetRunTelemetry();
   startNewFight();
 });
 screens.onEndRestart(() => {
   uiAudio.play('ui_select');
   fx.playWipe();
   run.restart();
+  finalLabReport = null;
+  screens.updateLabReport(null);
   showPhase();
 });
 screens.onToolSelect((tool) => {
@@ -369,6 +380,7 @@ function showPhase() {
     setPresentationMode(false);
   }
   if (state.phase === 'title') {
+    screens.updateLabReport(null);
     updateButtonHint();
     screens.show('title');
   } else if (state.phase === 'arena') {
@@ -387,6 +399,7 @@ function showPhase() {
     screens.show('pick');
   } else if (state.phase === 'run_end') {
     updateButtonHint();
+    screens.updateLabReport(labReportForRunEnd());
     screens.updateEnd({
       outcome: state.outcome ?? 'lost',
       fightReached: state.fightIndex + 1,
@@ -400,6 +413,66 @@ function showPhase() {
     });
     screens.show('end');
   }
+}
+
+function resetRunTelemetry(): void {
+  discoveredBreedsThisRun = new Set();
+  peakBiodiversity = 0;
+  longestStabilityStreak = 0;
+  didBankRunStrains = false;
+  newStrainsBankedThisRun = [];
+  finalLabReport = null;
+  notebookEntryCountAtRunStart = notebookViewForProgression(discoveryProgression).discoveredCount;
+  runTelemetry = createRunTelemetry({
+    startedAtMs: performance.now(),
+    runNumber: strainLibrary.getRunCount() + 1,
+  });
+  screens.updateLabReport(null);
+}
+
+function labReportForRunEnd(): LabReport {
+  if (finalLabReport) return finalLabReport;
+
+  const state = run.getState();
+  const notebookView = notebookViewForProgression(discoveryProgression);
+  const notebookCompletion = notebookView.totalCount === 0
+    ? 0
+    : notebookView.discoveredCount / notebookView.totalCount;
+
+  finalLabReport = assembleLabReport(runTelemetry.toLabReportInput({
+    endedAtMs: performance.now(),
+    outcome: state.outcome ?? 'lost',
+    epochCount: Math.max(1, state.fightIndex + 1, state.epochResults.length),
+    newBiome: false,
+    finalBreedCounts: arena ? finalBreedCountsFor(arena) : new Map<string, number>(),
+    peakBiodiversity,
+    longestStabilityStreak,
+    newStrainsBanked: newStrainsBankedThisRun,
+    totalStrainsDiscovered: strainLibrary.getAvailableStrains().length,
+    totalStrainsAvailable: totalStrainsAvailableForReport(),
+    newNotebookEntries: Math.max(0, notebookView.discoveredCount - notebookEntryCountAtRunStart),
+    notebookCompletion,
+  }));
+  return finalLabReport;
+}
+
+function finalBreedCountsFor(ar: Arena): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const [cellId, cell] of ar.state.cells) {
+    if (cell.vol <= 0) continue;
+    const spawn = ar.archetypes.get(cellId);
+    if (!spawn) continue;
+    const id = spawn.breedId ?? spawn.archetype;
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  return counts;
+}
+
+function totalStrainsAvailableForReport(): number {
+  return unique([
+    ...EGG_ARCHETYPES,
+    ...Object.keys(BREED_DEFS),
+  ]).length;
 }
 
 function startNewFight() {
@@ -508,10 +581,12 @@ function loop() {
     updateButtonHint();
   }
 
+  const ecology = arena.getEcology();
+  runTelemetry.recordReactionCount(ecology.reactions);
+
   // HUD update.
   if (player) {
     const runState = run.getState();
-    const ecology = arena.getEcology();
     const objective = arena.getObjectiveProgress();
     screens.updateHud({
       fightIndex: runState.fightIndex,
@@ -566,6 +641,11 @@ function loop() {
     if (spawn) livingBreeds.add(spawn.breedId ?? spawn.archetype);
   }
   if (livingBreeds.size > peakBiodiversity) peakBiodiversity = livingBreeds.size;
+  runTelemetry.recordPeakBiodiversity(livingBreeds.size);
+  longestStabilityStreak = Math.max(
+    longestStabilityStreak,
+    Math.round(arena.getHomeostasisProgress() * HOMEOSTASIS_SUSTAIN_TICKS),
+  );
 
   // Homeostasis check: if equilibrium achieved, end the run as won.
   if (!isOnboardingEpoch(run.getState().fightIndex) && arena.isHomeostasisAchieved()) {
@@ -597,12 +677,20 @@ function loop() {
   scheduleLoop();
 }
 
-function bankRunStrains(): void {
+function bankRunStrains(): string[] {
+  if (didBankRunStrains) return [...newStrainsBankedThisRun];
+  didBankRunStrains = true;
+
+  const alreadyAvailable = new Set(strainLibrary.getAvailableStrains());
+  const newlyBanked: string[] = [];
   for (const breedId of discoveredBreedsThisRun) {
+    if (!alreadyAvailable.has(breedId)) newlyBanked.push(breedId);
     strainLibrary.bankStrain(breedId);
   }
+  newStrainsBankedThisRun = unique([...newStrainsBankedThisRun, ...newlyBanked]);
   strainLibrary.incrementRunCount();
   strainLibrary.save();
+  return newlyBanked;
 }
 
 function resolveArenaStatus(status: ArenaStatus): boolean {
@@ -611,6 +699,7 @@ function resolveArenaStatus(status: ArenaStatus): boolean {
       persistArenaDiscoveries(arena);
       awardCompletionResearchGrant();
     }
+    runTelemetry.recordEpochCompleted();
     uiAudio.play('epoch_win');
     fx.playWipe();
     run.completeEpoch();
@@ -625,6 +714,7 @@ function resolveArenaStatus(status: ArenaStatus): boolean {
     uiAudio.play('epoch_fail');
     fx.playWipe();
     fx.showToast('catalyst', 'Objective Lapsed', 'Moving to the next ecosystem');
+    runTelemetry.recordEpochLapsed();
     run.skipEpoch();
     if (run.getState().phase === 'run_end') uiAudio.stopAmbience();
     showPhase();
@@ -690,7 +780,7 @@ function advanceDiscoveryProgression(delta: DiscoveryDelta): boolean {
     if (!previousProgression.discoveredBreedIds.includes(breedId)) {
       discoveredBreedsThisRun.add(breedId);
       const def = BREED_DEFS[breedId as BreedId];
-      if (def?.parents) discoveredHybridsThisRun.add(breedId);
+      runTelemetry.recordDiscovery(breedId, Boolean(def?.parents));
     }
   }
   applyDiscoveryProgressionUi();

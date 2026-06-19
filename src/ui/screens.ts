@@ -1,4 +1,5 @@
 import type { AgitationState, ToolState } from '../game/arena';
+import type { LabReport } from '../game/labReport';
 import type { ResearchBriefLine } from '../game/researchBrief';
 import type { UpgradeDef } from '../content/upgrades';
 import type { EnemyArchetype } from '../content/enemies';
@@ -8,6 +9,7 @@ import {
   type LifeformIdentityId,
 } from '../content/lifeformIdentity';
 import { createIconCells } from './iconCells';
+import { renderLabReport } from './labReportScreen';
 
 type ScreenName = 'title' | 'pick' | 'end' | 'hud' | 'notebook';
 type LayoutScreenName = 'title' | 'pick' | 'end' | 'notebook' | 'arena';
@@ -87,6 +89,7 @@ export interface Screens {
   updateAtlas(view: AtlasView): void;
   setPickChoices(choices: PickChoice[], onPick: (id: string) => void): void;
   updateEnd(info: EndInfo): void;
+  updateLabReport(report: LabReport | null): void;
   onTitleStart(handler: () => void): void;
   onEndRestart(handler: () => void): void;
   onNotebookOpen(handler: () => void): void;
@@ -129,6 +132,7 @@ export function createScreens(): Screens {
   const pickChoices  = get('pick-choices');
   const endTitle     = get('end-title');
   const endSummary   = get('end-summary');
+  const labReportMount = get('lab-report-mount');
   const endRestart   = get('end-restart');
   const hudFight     = get('hud-fight');
   const hudVol       = get('hud-vol');
@@ -649,6 +653,10 @@ export function createScreens(): Screens {
         ? 'No upgrades picked.'
         : `Build: ${info.upgrades.join(', ')}.`;
       endSummary.textContent = `${fightStr} ${buildStr}`;
+    },
+    updateLabReport(report) {
+      labReportMount.replaceChildren();
+      if (report) labReportMount.append(renderLabReport(report));
     },
     onTitleStart(handler) {
       titleStart.addEventListener('click', handler);

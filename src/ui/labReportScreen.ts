@@ -9,48 +9,92 @@ export function renderLabReport(report: LabReport): HTMLElement {
   root.className = 'lab-report-screen';
 
   const outcomeText = report.header.outcome === 'won'
-    ? `Stable Ecosystem — ${report.header.biomeName ?? 'Unknown Biome'}`
-    : `Ecosystem Collapse — Epoch ${report.header.epochCount}`;
+    ? `Stable Ecosystem - ${report.header.biomeName ?? 'Unknown Biome'}`
+    : `Ecosystem Collapse - Epoch ${report.header.epochCount}`;
 
-  const bars = [...report.ecosystem.finalBreedCounts.entries()]
+  const header = el('div', 'lab-report-header');
+  header.append(
+    el('h2', '', `Lab Report #${report.header.runNumber}`),
+    el('p', `lab-report-outcome ${report.header.outcome}`, outcomeText),
+    el('p', 'lab-report-duration', `${report.header.epochCount} epochs, ${report.header.durationFormatted}`),
+  );
+
+  const discoveries = section('Discoveries');
+  discoveries.append(
+    el('p', '', `${report.discoveries.breeds.length} breeds discovered`),
+    labelList(report.discoveries.breeds, 'lab-report-list', 'No new breeds'),
+    el('p', '', `${report.discoveries.hybrids.length} hybrids created`),
+    labelList(report.discoveries.hybrids, 'lab-report-list', 'No new hybrids'),
+    el('p', '', `${report.discoveries.reactionsTriggered} reactions triggered`),
+  );
+  if (report.discoveries.newBiome) {
+    discoveries.append(el('p', 'lab-report-highlight', 'New biome achieved!'));
+  }
+
+  const ecosystem = section('Ecosystem');
+  const bars = el('div', 'lab-report-bars');
+  for (const [breed, count] of [...report.ecosystem.finalBreedCounts.entries()]
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([breed, count]) => {
-      const label = breed.replace(/_/g, ' ');
-      return `<div class="lab-report-bar"><span>${label}</span><span>${count}</span></div>`;
-    })
-    .join('');
+    .slice(0, 5)) {
+    const row = el('div', 'lab-report-bar');
+    row.append(
+      el('span', '', displayLabel(breed)),
+      el('span', '', String(count)),
+    );
+    bars.append(row);
+  }
+  ecosystem.append(
+    bars,
+    el('p', '', `Peak biodiversity: ${report.ecosystem.peakBiodiversity}`),
+    el('p', '', `Longest stability: ${report.ecosystem.longestStabilitySeconds}s`),
+  );
 
-  root.innerHTML = `
-    <div class="lab-report-header">
-      <h2>Lab Report #${report.header.runNumber}</h2>
-      <p class="lab-report-outcome ${report.header.outcome}">${outcomeText}</p>
-      <p class="lab-report-duration">${report.header.epochCount} epochs, ${report.header.durationFormatted}</p>
-    </div>
-    <div class="lab-report-section">
-      <h3>Discoveries</h3>
-      <p>${report.discoveries.breeds.length} breeds discovered</p>
-      <p>${report.discoveries.hybrids.length} hybrids created</p>
-      <p>${report.discoveries.reactionsTriggered} reactions triggered</p>
-      ${report.discoveries.newBiome ? '<p class="lab-report-highlight">New biome achieved!</p>' : ''}
-    </div>
-    <div class="lab-report-section">
-      <h3>Ecosystem</h3>
-      <div class="lab-report-bars">${bars}</div>
-      <p>Peak biodiversity: ${report.ecosystem.peakBiodiversity}</p>
-      <p>Longest stability: ${report.ecosystem.longestStabilitySeconds}s</p>
-    </div>
-    <div class="lab-report-section">
-      <h3>Strain Bank</h3>
-      <p>${report.strainBank.newCount} new strains banked</p>
-      <p>Collection: ${report.strainBank.totalProgress}</p>
-    </div>
-    <div class="lab-report-section">
-      <h3>Notebook</h3>
-      <p>${report.notebook.newEntries} new entries</p>
-      <p>Completion: ${Math.round(report.notebook.completion * 100)}%</p>
-    </div>
-  `;
+  const strainBank = section('Strain Bank');
+  strainBank.append(
+    el('p', '', `${report.strainBank.newCount} new strains banked`),
+    labelList(report.strainBank.newStrains, 'lab-report-list', 'No new strains'),
+    el('p', '', `Collection: ${report.strainBank.totalProgress}`),
+  );
+
+  const notebook = section('Notebook');
+  notebook.append(
+    el('p', '', `${report.notebook.newEntries} new entries`),
+    el('p', '', `Completion: ${Math.round(report.notebook.completion * 100)}%`),
+  );
+
+  root.append(header, discoveries, ecosystem, strainBank, notebook);
 
   return root;
+}
+
+function section(title: string): HTMLElement {
+  const node = el('div', 'lab-report-section');
+  node.append(el('h3', '', title));
+  return node;
+}
+
+function labelList(values: readonly string[], className: string, emptyText: string): HTMLElement {
+  const list = el('ul', className);
+  if (values.length === 0) {
+    list.append(el('li', 'lab-report-empty', emptyText));
+    return list;
+  }
+  for (const value of values) {
+    list.append(el('li', '', displayLabel(value)));
+  }
+  return list;
+}
+
+function el(tagName: string, className = '', text = ''): HTMLElement {
+  const node = document.createElement(tagName);
+  if (className) node.className = className;
+  if (text) node.textContent = text;
+  return node;
+}
+
+function displayLabel(value: string): string {
+  if (!/^[A-Za-z0-9 _-]+$/.test(value)) return value;
+  return value
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }

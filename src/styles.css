@@ -1857,6 +1857,96 @@ canvas {
   overflow-wrap: anywhere;
 }
 
+.lab-report-mount {
+  margin: 18px 0 20px;
+  max-height: min(48svh, 480px);
+  overflow: auto;
+  text-align: left;
+  scrollbar-width: thin;
+}
+
+.lab-report-mount:empty {
+  display: none;
+}
+
+.lab-report-screen {
+  display: grid;
+  gap: 12px;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.lab-report-header {
+  text-align: center;
+}
+
+.lab-report-header h2,
+.lab-report-section h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: #ffffff;
+}
+
+.lab-report-header h2 {
+  font-size: 18px;
+}
+
+.lab-report-outcome,
+.lab-report-duration,
+.lab-report-section p {
+  margin: 5px 0 0;
+}
+
+.lab-report-outcome.won {
+  color: var(--accent);
+}
+
+.lab-report-outcome.lost {
+  color: #ff8f8f;
+}
+
+.lab-report-section {
+  border-top: 1px solid var(--hairline);
+  padding-top: 10px;
+}
+
+.lab-report-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--ink-dim);
+}
+
+.lab-report-empty {
+  opacity: 0.75;
+}
+
+.lab-report-bars {
+  display: grid;
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.lab-report-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lab-report-bar span:first-child {
+  overflow-wrap: anywhere;
+}
+
+.lab-report-highlight {
+  color: var(--accent);
+}
+
 .commit-debug {
   margin: 16px auto 0 auto;
   color: var(--ink-faint);
