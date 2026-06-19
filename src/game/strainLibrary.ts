@@ -15,6 +15,7 @@ export interface StrainLibraryState {
 export interface StrainLibrary {
   getAvailableStrains(): string[];
   getLoadout(): string[];
+  getPlayableLoadout(): string[];
   getLoadoutSlots(): number;
   getRunCount(): number;
   getBiomeCount(): number;
@@ -80,6 +81,14 @@ function sanitize(value: unknown): StrainLibraryState {
   return { availableStrains, loadout, loadoutSlots, runCount, biomeCount };
 }
 
+function playableLoadoutFor(state: StrainLibraryState): string[] {
+  const availableSet = new Set(state.availableStrains);
+  const loadout = [...new Set(state.loadout)]
+    .filter((strain) => availableSet.has(strain))
+    .slice(0, state.loadoutSlots);
+  return loadout.length > 0 ? loadout : [DEFAULT_STRAIN];
+}
+
 export function createStrainLibrary(storage: DiscoveryStorage): StrainLibrary {
   let state: StrainLibraryState;
 
@@ -101,6 +110,10 @@ export function createStrainLibrary(storage: DiscoveryStorage): StrainLibrary {
 
     getLoadout(): string[] {
       return [...state.loadout];
+    },
+
+    getPlayableLoadout(): string[] {
+      return playableLoadoutFor(state);
     },
 
     getLoadoutSlots(): number {

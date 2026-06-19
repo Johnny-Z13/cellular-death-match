@@ -1,5 +1,10 @@
 import type { StrainLibrary } from '../game/strainLibrary';
 
+export interface LoadoutScreenOptions {
+  labelForStrain: (strain: string) => string;
+  colorForStrain: (strain: string) => string;
+}
+
 /**
  * Build a loadout selection DOM element for the pre-run screen.
  * Players pick which strains to bring into their next run.
@@ -7,34 +12,52 @@ import type { StrainLibrary } from '../game/strainLibrary';
 export function renderLoadoutScreen(
   library: StrainLibrary,
   onConfirm: (loadout: string[]) => void,
+  options: LoadoutScreenOptions,
 ): HTMLElement {
   const root = document.createElement('div');
   root.className = 'loadout-screen';
 
   const available = library.getAvailableStrains();
   const slots = library.getLoadoutSlots();
-  const selected = new Set(library.getLoadout());
+  const selected = new Set(library.getPlayableLoadout());
 
   function render(): void {
-    root.innerHTML = `
-      <h2>Egg Loadout</h2>
-      <p class="loadout-subtitle">Select up to ${slots} strains for this run</p>
-      <div class="loadout-grid">
-        ${available.map((strain) => `
-          <button
-            class="loadout-strain ${selected.has(strain) ? 'selected' : ''}"
-            data-strain="${strain}"
-          >${strain.replace(/_/g, ' ')}</button>
-        `).join('')}
-      </div>
-      <button class="loadout-confirm" ${selected.size === 0 ? 'disabled' : ''}>
-        Start Run (${selected.size}/${slots})
-      </button>
-    `;
+    root.replaceChildren();
 
-    for (const btn of root.querySelectorAll('.loadout-strain')) {
-      btn.addEventListener('click', () => {
-        const strain = (btn as HTMLElement).dataset.strain!;
+    const title = document.createElement('h2');
+    title.className = 'screen-title';
+    title.textContent = 'Egg Loadout';
+
+    const subtitle = document.createElement('p');
+    subtitle.className = 'loadout-subtitle';
+    subtitle.textContent = `Select up to ${slots} strains for this run`;
+
+    const count = document.createElement('p');
+    count.className = 'loadout-count';
+    count.textContent = `${selected.size}/${slots} selected`;
+
+    const grid = document.createElement('div');
+    grid.className = 'loadout-grid';
+
+    for (const strain of available) {
+      const button = document.createElement('button');
+      const isSelected = selected.has(strain);
+      button.className = `loadout-strain${isSelected ? ' selected' : ''}`;
+      button.type = 'button';
+      button.dataset.strain = strain;
+      button.setAttribute('aria-pressed', String(isSelected));
+      button.style.setProperty('--strain-color', options.colorForStrain(strain));
+      button.disabled = !isSelected && selected.size >= slots;
+
+      const swatch = document.createElement('span');
+      swatch.className = 'loadout-strain-swatch';
+      swatch.setAttribute('aria-hidden', 'true');
+
+      const label = document.createElement('span');
+      label.textContent = options.labelForStrain(strain);
+
+      button.append(swatch, label);
+      button.addEventListener('click', () => {
         if (selected.has(strain)) {
           selected.delete(strain);
         } else if (selected.size < slots) {
@@ -42,18 +65,24 @@ export function renderLoadoutScreen(
         }
         render();
       });
+
+      grid.append(button);
     }
 
-    const confirmBtn = root.querySelector('.loadout-confirm');
-    if (confirmBtn) {
-      confirmBtn.addEventListener('click', () => {
-        if (selected.size > 0) {
-          const loadout = [...selected];
-          library.setLoadout(loadout);
-          onConfirm(loadout);
-        }
-      });
-    }
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'loadout-confirm screen-button';
+    confirmBtn.type = 'button';
+    confirmBtn.disabled = selected.size === 0;
+    confirmBtn.textContent = `Start Run (${selected.size}/${slots})`;
+    confirmBtn.addEventListener('click', () => {
+      if (selected.size === 0) return;
+      const loadout = [...selected];
+      library.setLoadout(loadout);
+      library.save();
+      onConfirm(loadout);
+    });
+
+    root.append(title, subtitle, count, grid, confirmBtn);
   }
 
   render();

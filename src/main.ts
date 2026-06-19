@@ -3,6 +3,7 @@ import { createArena, type Arena, type ArenaStatus } from './game/arena';
 import { createRenderer, type Renderer } from './ui/render';
 import { createDebugPanel } from './ui/debug';
 import { createScreens, type ToolId } from './ui/screens';
+import { renderLoadoutScreen } from './ui/loadoutScreen';
 import { getUpgradeDef } from './content/upgrades';
 import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/enemies';
 import { BREED_DEFS, DISCOVERY_NOTES, type BreedId } from './content/catalysis';
@@ -93,6 +94,7 @@ let arena: Arena | null = null;
 let renderer: Renderer | null = null;
 let selectedTool: ToolId = 'egg';
 let selectedEggArchetype: EnemyArchetype = 'swarmlet';
+let currentRunLoadout = new Set<string>(['swarmlet']);
 // When a discovered breed is the active lifeform, the egg hatches that breed.
 let selectedBreedId: BreedId | null = null;
 let displayedFps = 0;
@@ -194,12 +196,11 @@ screens.onAudioToggle(() => {
 screens.setAudioMuted(uiAudio.isMuted());
 
 screens.onLifeformSelect((id) => {
-  if (!currentLifeformUnlocks().includes(id as ProgressionLifeformId)) return;
-  overlayState.selectedLifeformId = id;
+  if (!isSeedableLifeformId(id)) return;
+  setEggLifeformSelection(id);
   screens.setSelectedLifeform(id);
   // Picking any lifeform arms the egg tool so the player can drop it straight
   // away. A discovered breed hatches as that breed; a base strain as its egg.
-  selectedBreedId = id in BREED_DEFS ? (id as BreedId) : null;
   selectedTool = 'egg';
   screens.setTool('egg');
 });
@@ -310,9 +311,11 @@ screens.onTitleStart(() => {
   ecologyAudio.unlock();
   uiAudio.unlock();
   uiAudio.play('ui_select');
-  run.start();
-  resetRunTelemetry();
-  startNewFight();
+  if (strainLibrary.getAvailableStrains().length > 1) {
+    showLoadoutPicker();
+    return;
+  }
+  beginRunWithCurrentLoadout();
 });
 screens.onEndRestart(() => {
   uiAudio.play('ui_select');
@@ -320,6 +323,7 @@ screens.onEndRestart(() => {
   run.restart();
   finalLabReport = null;
   screens.updateLabReport(null);
+  currentRunLoadout = new Set(strainLibrary.getPlayableLoadout());
   showPhase();
 });
 screens.onToolSelect((tool) => {
@@ -355,11 +359,10 @@ applyDiscoveryProgressionUi();
 screens.onEggSelect((archetype) => {
   if (!isUnlockedEggArchetype(archetype)) return;
   uiAudio.play('ui_select');
-  selectedEggArchetype = archetype;
+  setEggLifeformSelection(archetype);
   selectedTool = 'egg';
   screens.setTool(selectedTool);
   screens.setEggArchetype(archetype);
-  overlayState.selectedLifeformId = archetype;
   screens.setSelectedLifeform(archetype);
 });
 screens.setTool(selectedTool);
@@ -371,6 +374,7 @@ showPhase();
 function showPhase() {
   // Hide every overlay; show the one for the current phase.
   screens.hide('title');
+  screens.hide('loadout');
   screens.hide('pick');
   screens.hide('end');
   screens.hide('notebook');
@@ -413,6 +417,45 @@ function showPhase() {
       }),
     });
     screens.show('end');
+  }
+}
+
+function showLoadoutPicker(): void {
+  screens.setLoadoutScreen(renderLoadoutScreen(
+    strainLibrary,
+    (loadout) => {
+      uiAudio.play('ui_select');
+      fx.playWipe();
+      beginRunWithCurrentLoadout(loadout);
+    },
+    { labelForStrain, colorForStrain },
+  ));
+  screens.hide('title');
+  screens.show('loadout');
+}
+
+function beginRunWithCurrentLoadout(loadout = strainLibrary.getPlayableLoadout()): void {
+  const playableLoadout = playableLifeformIds(loadout);
+  currentRunLoadout = new Set(playableLoadout);
+  setEggLifeformSelection(playableLoadout[0] ?? 'swarmlet');
+  run.start();
+  resetRunTelemetry();
+  startNewFight();
+}
+
+function playableLifeformIds(loadout: readonly string[]): ProgressionLifeformId[] {
+  const ids = unique(loadout).filter(isProgressionLifeformId);
+  return ids.length > 0 ? ids : ['swarmlet'];
+}
+
+function setEggLifeformSelection(id: ProgressionLifeformId): void {
+  overlayState.selectedLifeformId = id;
+  if (isBreedId(id)) {
+    selectedBreedId = id;
+    selectedEggArchetype = BREED_DEFS[id].baseArchetype;
+  } else {
+    selectedBreedId = null;
+    selectedEggArchetype = id;
   }
 }
 
@@ -865,18 +908,16 @@ function applyDiscoveryProgressionUi(): void {
   if (!unlockedTools.includes(selectedTool)) {
     selectedTool = 'egg';
   }
-  if (!isUnlockedEggArchetype(selectedEggArchetype)) {
-    selectedEggArchetype = 'swarmlet';
+
+  const selectedLifeformId = overlayState.selectedLifeformId;
+  if (!selectedLifeformId || !isSeedableLifeformId(selectedLifeformId)) {
+    setEggLifeformSelection(unlockedLifeforms[0] ?? 'swarmlet');
+  } else {
+    setEggLifeformSelection(selectedLifeformId);
   }
 
   screens.setTool(selectedTool);
   screens.setEggArchetype(selectedEggArchetype);
-  if (
-    !overlayState.selectedLifeformId
-    || !unlockedLifeforms.includes(overlayState.selectedLifeformId as ProgressionLifeformId)
-  ) {
-    overlayState.selectedLifeformId = selectedEggArchetype;
-  }
   screens.setSelectedLifeform(overlayState.selectedLifeformId);
 }
 
@@ -889,11 +930,16 @@ function currentToolUnlocks(): readonly ToolId[] {
 }
 
 function currentLifeformUnlocks(): readonly ProgressionLifeformId[] {
-  return lifeformUnlocksForCurrentStage(
+  const stagedLifeforms = lifeformUnlocksForCurrentStage(
     discoveryProgression,
     run.getState().fightIndex,
     openingBloomCreatedInCurrentDish(),
   );
+  const phase = run.getState().phase;
+  if (phase !== 'arena' && phase !== 'upgrade_pick') return stagedLifeforms;
+
+  const loadoutLifeforms = [...currentRunLoadout].filter(isProgressionLifeformId);
+  return loadoutLifeforms.length > 0 ? loadoutLifeforms : ['swarmlet'];
 }
 
 function openingBloomCreatedInCurrentDish(): boolean {
@@ -932,6 +978,10 @@ function refreshArenaToolUi(): void {
 
 function isUnlockedEggArchetype(archetype: EnemyArchetype): boolean {
   return currentLifeformUnlocks().includes(archetype);
+}
+
+function isSeedableLifeformId(id: string): id is ProgressionLifeformId {
+  return isProgressionLifeformId(id) && currentLifeformUnlocks().includes(id);
 }
 
 function announceDiscoveryProgressionChange(
@@ -1018,8 +1068,36 @@ function announceEpochCompletion(complete: boolean, objectiveName: string): void
   }
 }
 
-function isBaseArchetype(id: ProgressionLifeformId): id is EnemyArchetype {
+function labelForStrain(strain: string): string {
+  if (isBaseArchetype(strain)) return ARCHETYPE_INFO[strain].name;
+  if (isBreedId(strain)) return BREED_DEFS[strain].name;
+  return strain
+    .split('_')
+    .filter(Boolean)
+    .map((part) => capitalize(part))
+    .join(' ');
+}
+
+function colorForStrain(strain: string): string {
+  if (isBaseArchetype(strain)) return cssRgb(ARCHETYPE_INFO[strain].color);
+  if (isBreedId(strain)) return cssRgb(BREED_DEFS[strain].tint);
+  return 'rgb(91, 233, 214)';
+}
+
+function cssRgb(color: readonly [number, number, number]): string {
+  return `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+}
+
+function isBaseArchetype(id: string): id is EnemyArchetype {
   return (EGG_ARCHETYPES as readonly string[]).includes(id);
+}
+
+function isBreedId(id: string): id is BreedId {
+  return id in BREED_DEFS;
+}
+
+function isProgressionLifeformId(id: string): id is ProgressionLifeformId {
+  return isBaseArchetype(id) || isBreedId(id);
 }
 
 function unique<T>(values: readonly T[]): T[] {

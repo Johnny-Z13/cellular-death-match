@@ -12,7 +12,8 @@ import { createIconCells } from './iconCells';
 import { renderLabReport } from './labReportScreen';
 
 type ScreenName = 'title' | 'pick' | 'end' | 'hud' | 'notebook';
-type LayoutScreenName = 'title' | 'pick' | 'end' | 'notebook' | 'arena';
+type AppScreenName = ScreenName | 'loadout';
+type LayoutScreenName = 'title' | 'loadout' | 'pick' | 'end' | 'notebook' | 'arena';
 export type ToolId = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' | 'paste';
 export type ButtonHintLevel = 'hint' | 'ready';
 export type ButtonHintTarget = ToolId | 'notebook';
@@ -62,8 +63,8 @@ export interface EggOption {
 }
 
 export interface Screens {
-  show(name: ScreenName): void;
-  hide(name: ScreenName): void;
+  show(name: AppScreenName): void;
+  hide(name: AppScreenName): void;
   addTicker(message: string, tone?: TickerTone): void;
   clearTicker(): void;
   setTool(tool: ToolId): void;
@@ -87,6 +88,7 @@ export interface Screens {
   setPickResearchBrief(lines: readonly ResearchBriefLine[]): void;
   updateNotebook(view: NotebookView): void;
   updateAtlas(view: AtlasView): void;
+  setLoadoutScreen(el: HTMLElement): void;
   setPickChoices(choices: PickChoice[], onPick: (id: string) => void): void;
   updateEnd(info: EndInfo): void;
   updateLabReport(report: LabReport | null): void;
@@ -114,6 +116,7 @@ export function createScreens(): Screens {
   if (!maybeLayout) throw new Error('screens: missing .layout');
   const layout = maybeLayout;
   const screenTitle  = get('screen-title');
+  const screenLoadout = get('screen-loadout');
   const screenPick   = get('screen-pick');
   const screenEnd    = get('screen-end');
   const screenNotebook = get('screen-notebook');
@@ -129,6 +132,7 @@ export function createScreens(): Screens {
   const notebookTabLog = get('notebook-tab-log') as HTMLButtonElement;
   const notebookTabAtlas = get('notebook-tab-atlas') as HTMLButtonElement;
   const pickResearchBrief = get('pick-research-brief');
+  const loadoutMount = get('loadout-mount');
   const pickChoices  = get('pick-choices');
   const endTitle     = get('end-title');
   const endSummary   = get('end-summary');
@@ -187,8 +191,9 @@ export function createScreens(): Screens {
     return swatch;
   }
 
-  const elFor: Record<ScreenName, HTMLElement> = {
+  const elFor: Record<AppScreenName, HTMLElement> = {
     title: screenTitle,
+    loadout: screenLoadout,
     pick: screenPick,
     end: screenEnd,
     notebook: screenNotebook,
@@ -198,6 +203,7 @@ export function createScreens(): Screens {
   function syncLayoutScreen(): void {
     let screen: LayoutScreenName = 'arena';
     if (screenTitle.classList.contains('visible')) screen = 'title';
+    else if (screenLoadout.classList.contains('visible')) screen = 'loadout';
     else if (screenPick.classList.contains('visible')) screen = 'pick';
     else if (screenEnd.classList.contains('visible')) screen = 'end';
     else if (screenNotebook.classList.contains('visible')) screen = 'notebook';
@@ -308,7 +314,15 @@ export function createScreens(): Screens {
 
   return {
     show(name) {
-      if (name === 'title' || name === 'pick' || name === 'end' || name === 'notebook') closeMobileDrawers();
+      if (
+        name === 'title'
+        || name === 'loadout'
+        || name === 'pick'
+        || name === 'end'
+        || name === 'notebook'
+      ) {
+        closeMobileDrawers();
+      }
       elFor[name].classList.add('visible');
       syncLayoutScreen();
     },
@@ -615,6 +629,9 @@ export function createScreens(): Screens {
         section.append(head, grid);
         notebookAtlas.append(section);
       }
+    },
+    setLoadoutScreen(el) {
+      loadoutMount.replaceChildren(el);
     },
     setPickChoices(choices, onPick) {
       pickChoices.replaceChildren();

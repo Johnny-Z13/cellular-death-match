@@ -100,6 +100,48 @@ describe('setLoadout', () => {
   });
 });
 
+describe('getPlayableLoadout', () => {
+  it('returns the saved valid loadout', () => {
+    const storage = createMemoryStorage();
+    const lib = createStrainLibrary(storage);
+    lib.bankStrain('needle_swarm');
+    lib.setLoadout(['swarmlet', 'needle_swarm']);
+    expect(lib.getPlayableLoadout()).toEqual(['swarmlet', 'needle_swarm']);
+  });
+
+  it('falls back to swarmlet when the saved loadout is empty', () => {
+    const storage = createMemoryStorage();
+    storage.setItem(
+      'cellular-death-match.strains.v1',
+      JSON.stringify({
+        availableStrains: ['swarmlet', 'needle_swarm'],
+        loadout: [],
+        loadoutSlots: 2,
+        runCount: 0,
+        biomeCount: 0,
+      }),
+    );
+    const lib = createStrainLibrary(storage);
+    expect(lib.getPlayableLoadout()).toEqual(['swarmlet']);
+  });
+
+  it('falls back to swarmlet when a saved loadout only contains unavailable strains', () => {
+    const storage = createMemoryStorage();
+    storage.setItem(
+      'cellular-death-match.strains.v1',
+      JSON.stringify({
+        availableStrains: ['swarmlet'],
+        loadout: ['ghost_breed'],
+        loadoutSlots: 2,
+        runCount: 0,
+        biomeCount: 0,
+      }),
+    );
+    const lib = createStrainLibrary(storage);
+    expect(lib.getPlayableLoadout()).toEqual(['swarmlet']);
+  });
+});
+
 describe('addLoadoutSlot', () => {
   it('increments slot count', () => {
     const storage = createMemoryStorage();

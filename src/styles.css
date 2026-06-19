@@ -170,6 +170,15 @@ canvas {
   pointer-events: none;
 }
 
+.layout[data-screen="loadout"] .toolbox,
+.layout[data-screen="loadout"] .life-panel,
+.layout[data-screen="loadout"] .ticker,
+.layout[data-screen="loadout"] .mobile-shell,
+.layout[data-screen="loadout"] .hud {
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* ---- Top chrome buttons (Sound / Full screen) --------------------------- */
 .chrome-button,
 .fullscreen-button {
@@ -1990,6 +1999,99 @@ canvas {
   animation: life-idle-pulse 2s ease-in-out infinite;
 }
 
+/* ---- Loadout screen ---------------------------------------------------- */
+.loadout-screen {
+  display: grid;
+  gap: 12px;
+  width: min(620px, 100%);
+  text-align: left;
+}
+
+.loadout-screen .screen-title,
+.loadout-subtitle,
+.loadout-count {
+  text-align: center;
+}
+
+.loadout-subtitle,
+.loadout-count {
+  margin: 0;
+  color: var(--ink-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.loadout-count {
+  color: var(--bio-bright);
+}
+
+.loadout-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 4px 0 6px;
+}
+
+.loadout-strain {
+  --strain-color: var(--bio);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid rgba(145, 194, 198, 0.24);
+  border-radius: 8px;
+  background: rgba(6, 13, 15, 0.72);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease, box-shadow 140ms ease, transform 140ms ease, opacity 140ms ease;
+}
+
+.loadout-strain:hover,
+.loadout-strain:focus-visible {
+  border-color: var(--strain-color);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.loadout-strain.selected {
+  border-color: var(--strain-color);
+  background: linear-gradient(180deg, rgba(20, 37, 40, 0.92), rgba(8, 16, 18, 0.96));
+  color: #ffffff;
+  box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.035), 0 0 22px rgba(91, 233, 214, 0.1);
+}
+
+.loadout-strain:disabled:not(.selected) {
+  opacity: 0.48;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.loadout-strain-swatch {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, #ffffff, var(--strain-color) 48%, rgba(0, 0, 0, 0.62));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--strain-color) 60%, transparent);
+}
+
+.loadout-confirm {
+  justify-self: center;
+}
+
+.loadout-confirm:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 /* ---- Title screen ------------------------------------------------------ */
 .screen-title-screen {
   background: radial-gradient(120% 100% at 50% 24%, rgba(4, 9, 11, 0.66), rgba(2, 5, 6, 0.95));
@@ -2921,6 +3023,14 @@ canvas {
 
   .screen-title {
     font-size: 22px;
+  }
+
+  .loadout-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .loadout-strain {
+    min-height: 44px;
   }
 
   .mobile-shell {
