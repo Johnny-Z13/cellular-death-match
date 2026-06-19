@@ -13,6 +13,7 @@ import { createUiAudio, DROP_SOUND_FOR_TOOL } from './audio/uiAudio';
 import { createFx } from './ui/fx';
 import { createCoach } from './ui/coach';
 import { onboardingIdleNudge } from './ui/onboardingHints';
+import { isMobileViewport, shouldOpenLifeformsForNewPlayer } from './ui/mobileOnboarding';
 import { soundEventForDishSignal, type SoundEventId } from './audio/soundDesign';
 import { assembleLabReport, type LabReport } from './game/labReport';
 import { createRunTelemetry, type RunTelemetry } from './game/runTelemetry';
@@ -385,6 +386,12 @@ screens.setEggArchetype(selectedEggArchetype);
 screens.setSelectedLifeform(selectedEggArchetype);
 
 showPhase();
+if (shouldOpenLifeformsForNewPlayer({
+  hasSeenTutorial: coach.hasSeenTutorial(),
+  isMobileViewport: isMobileViewport(),
+})) {
+  screens.openMobileLifeformsDrawer();
+}
 
 function showPhase() {
   // Hide every overlay; show the one for the current phase.
