@@ -10,6 +10,7 @@ import {
 import { createIconCells } from './iconCells';
 
 type ScreenName = 'title' | 'pick' | 'end' | 'hud' | 'notebook';
+type LayoutScreenName = 'title' | 'pick' | 'end' | 'notebook' | 'arena';
 export type ToolId = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' | 'paste';
 export type ButtonHintLevel = 'hint' | 'ready';
 export type ButtonHintTarget = ToolId | 'notebook';
@@ -190,6 +191,15 @@ export function createScreens(): Screens {
     hud,
   };
 
+  function syncLayoutScreen(): void {
+    let screen: LayoutScreenName = 'arena';
+    if (screenTitle.classList.contains('visible')) screen = 'title';
+    else if (screenPick.classList.contains('visible')) screen = 'pick';
+    else if (screenEnd.classList.contains('visible')) screen = 'end';
+    else if (screenNotebook.classList.contains('visible')) screen = 'notebook';
+    layout.dataset.screen = screen;
+  }
+
   function setMobileDrawer(next: MobileDrawer): void {
     mobileDrawer = next;
     layout.dataset.mobileDrawer = mobileDrawer;
@@ -255,6 +265,7 @@ export function createScreens(): Screens {
     setMobileDrawer(mobileDrawer === 'log' ? 'none' : 'log');
   });
   setMobileDrawer('none');
+  syncLayoutScreen();
 
   function setNotebookTab(tab: 'log' | 'atlas'): void {
     const atlas = tab === 'atlas';
@@ -295,8 +306,12 @@ export function createScreens(): Screens {
     show(name) {
       if (name === 'title' || name === 'pick' || name === 'end' || name === 'notebook') closeMobileDrawers();
       elFor[name].classList.add('visible');
+      syncLayoutScreen();
     },
-    hide(name) { elFor[name].classList.remove('visible'); },
+    hide(name) {
+      elFor[name].classList.remove('visible');
+      syncLayoutScreen();
+    },
     addTicker(message, tone = 'normal') {
       const line = document.createElement('div');
       line.className = `ticker-line ticker-line-${tone}`;
@@ -616,13 +631,20 @@ export function createScreens(): Screens {
     },
     updateEnd(info) {
       endTitle.textContent = info.outcome === 'won' ? 'Lineage Stabilized' : 'Colony Collapsed';
-      // Honest summary: the forgiving model always reaches the end, so report
-      // how many objectives were actually achieved rather than claiming a sweep.
-      const fightStr = info.outcome === 'won'
-        ? info.objectivesCompleted >= info.totalFights
+      const objectiveLabel = info.objectivesCompleted === 1 ? 'objective' : 'objectives';
+      let fightStr: string;
+      if (info.totalFights === 0) {
+        fightStr = info.outcome === 'won'
+          ? `Homeostasis reached after epoch ${info.fightReached}; ${info.objectivesCompleted} ${objectiveLabel} banked.`
+          : `Colony collapsed during epoch ${info.fightReached}; ${info.objectivesCompleted} ${objectiveLabel} banked.`;
+      } else if (info.outcome === 'won') {
+        fightStr = info.objectivesCompleted >= info.totalFights
           ? `All ${info.totalFights} objectives achieved — a flawless trial.`
-          : `Trial concluded: ${info.objectivesCompleted} of ${info.totalFights} objectives achieved.`
-        : `Collapsed during ecosystem ${info.fightReached} / ${info.totalFights}.`;
+          : `Trial concluded: ${info.objectivesCompleted} of ${info.totalFights} objectives achieved.`;
+      } else {
+        const fixedRunProgress = `${info.fightReached} / ${info.totalFights}`;
+        fightStr = `Collapsed during ecosystem ${fixedRunProgress}.`;
+      }
       const buildStr = info.upgrades.length === 0
         ? 'No upgrades picked.'
         : `Build: ${info.upgrades.join(', ')}.`;

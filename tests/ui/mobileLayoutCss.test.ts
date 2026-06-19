@@ -22,6 +22,15 @@ function mediaBlock(query: string): string {
 }
 
 describe('mobile layout CSS', () => {
+  it('hides gameplay chrome behind the title screen', () => {
+    expect(css).toContain('.layout[data-screen="title"] .toolbox,');
+    expect(css).toContain('.layout[data-screen="title"] .life-panel,');
+    expect(css).toContain('.layout[data-screen="title"] .ticker,');
+    expect(css).toContain('.layout[data-screen="title"] .mobile-shell,');
+    expect(css).toContain('.layout[data-screen="title"] .hud {');
+    expect(css).toContain('pointer-events: none');
+  });
+
   it('switches phones to compact horizontal trays instead of desktop-length fixed lists', () => {
     const mobile = mediaBlock('(max-width: 899px)');
 

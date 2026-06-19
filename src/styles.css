@@ -161,6 +161,15 @@ canvas {
   -webkit-user-select: none;
 }
 
+.layout[data-screen="title"] .toolbox,
+.layout[data-screen="title"] .life-panel,
+.layout[data-screen="title"] .ticker,
+.layout[data-screen="title"] .mobile-shell,
+.layout[data-screen="title"] .hud {
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* ---- Top chrome buttons (Sound / Full screen) --------------------------- */
 .chrome-button,
 .fullscreen-button {
