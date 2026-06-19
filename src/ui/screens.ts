@@ -104,6 +104,7 @@ export interface Screens {
   onAudioToggle(handler: () => void): void;
   setAudioMuted(muted: boolean): void;
   setEpochComplete(complete: boolean): void;
+  openMobileLifeformsDrawer(): void;
 }
 
 export type TickerTone = 'normal' | 'discovery' | 'caution' | 'critical';
@@ -749,6 +750,9 @@ export function createScreens(): Screens {
       const endState = endEpochButton.querySelector<HTMLElement>('b');
       if (endState) endState.textContent = complete ? 'ready' : 'now';
       hud.classList.toggle('hud-complete', complete);
+    },
+    openMobileLifeformsDrawer() {
+      setMobileDrawer('lifeforms');
     },
   };
 }
