@@ -12,16 +12,20 @@ import {
   updateBoundaryAround,
 } from './grid';
 import { addPixel, removePixel } from './cell';
-import { getBreedProfile } from './breedProfiles';
+import { DEFAULT_PROFILE } from './breedProfiles';
 
 // One Monte Carlo step. Returns true if the step changed the grid.
 export function mcStep(state: SimState): boolean {
   const { grid, rng } = state;
   if (grid.boundary.size === 0) return false;
 
-  // Pick a random boundary pixel as the source.
-  // NOTE: O(N) per step — see perf note in plan. We'll optimize later if needed.
-  const boundaryArr = Array.from(grid.boundary);
+  // Pick a random boundary pixel as the source. The cache is rebuilt only when
+  // boundary updates mark it dirty.
+  if (grid.boundaryCacheDirty) {
+    grid.boundaryCache = Array.from(grid.boundary);
+    grid.boundaryCacheDirty = false;
+  }
+  const boundaryArr = grid.boundaryCache;
   const sourceIdx = boundaryArr[rng.randInt(boundaryArr.length)];
   if (sourceIdx === undefined) return false;
   const [xS, yS] = xy(grid, sourceIdx);
@@ -39,9 +43,7 @@ export function mcStep(state: SimState): boolean {
 
   // Look up the source cell's breed profile for per-cell beta scaling.
   const sourceCell = sourceVal !== 0 ? state.cells.get(sourceVal) : undefined;
-  const profile = sourceCell
-    ? getBreedProfile(sourceCell.breedProfileId)
-    : getBreedProfile(undefined);
+  const profile = sourceCell?.energyProfile ?? DEFAULT_PROFILE;
   const shifts = sourceCell?.energyShifts;
   const isingEff = profile.isingMul * (1 + (shifts?.isingShift ?? 0));
   const volEff = profile.volMul * (1 + (shifts?.volShift ?? 0));

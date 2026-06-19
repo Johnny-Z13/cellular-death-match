@@ -30,10 +30,10 @@ For UI or gameplay changes, also check the app in a browser at:
 
 ## Important Boundaries
 
-- `src/sim/` is the low-level cellular Potts simulation. Keep it mostly UI-agnostic and game-agnostic. `breedProfiles.ts` defines per-breed CPM energy coefficients and reagent energy shifts.
+- `src/sim/` is the low-level cellular Potts simulation. Keep it mostly UI-agnostic and game-agnostic. Cells store generic energy coefficients; `breedProfiles.ts` defines game-side per-breed CPM coefficients and reagent energy shifts.
 - `src/game/arena.ts` owns ecosystem rules, tool effects, objective progress, spawning, homeostasis tracking, escalation, and per-tick orchestration.
 - `src/game/run.ts` is an open-ended run state machine (no fixed epoch cap) with homeostasis win state and collapse fail state.
-- `src/game/homeostasis.ts` detects equilibrium (20s sustain, 3+ breeds, <10% share swing) and classifies biomes.
+- `src/game/homeostasis.ts` detects equilibrium (20s sustain, 3+ breeds, stable volume share) and classifies biomes.
 - `src/game/escalation.ts` scales hazard pressure per epoch past the onboarding phase.
 - `src/game/strainLibrary.ts` persists discovered strains and egg loadouts across runs.
 - `src/game/objectivePool.ts` draws procedural objectives for mid-game epochs.
@@ -72,6 +72,6 @@ npm run build
 
 ## Known Product Shape
 
-This is a roguelike ecosystem-cultivation game. Runs are open-ended: 3 fixed onboarding epochs, then procedural mid-game epochs with escalating pressure until homeostasis (win) or collapse (fail). Each breed has a CPM energy profile (Ising/volume/movement/engulf multipliers) that gives it distinct physics. Reagents shift energy coefficients within their field radius. Discovered strains are banked to a persistent strain library for loadout selection on future runs.
+This is a roguelike ecosystem-cultivation game. Runs are open-ended: 3 fixed onboarding epochs, then procedural mid-game epochs with escalating pressure until collapse (fail) or visible equilibrium. Equilibrium pauses pressure and lets the player end the trial when ready. Each breed has a CPM energy profile (Ising/volume/movement/engulf multipliers) that gives it distinct physics. Reagents shift energy coefficients within their field radius. Discovered strains are banked to a persistent strain library for loadout selection on future runs.
 
-Discovery/breeding content lives in `src/content/catalysis.ts` (recipes, breeds, hybrids, notes) and `src/content/lifeformIdentity.ts` (per-lifeform identity + `renderStyle`). Breed energy profiles live in `src/sim/breedProfiles.ts`. Cross-breeding logic is in `src/game/arena.ts` (`evaluateBreedDiscoveries`/`hybridPairSource`). The dish renderer is `src/ui/render.ts`. Adding a breed means updating its `BreedDef`, identity, breed profile, notebook list, and the progression lifeform list — the content tests enforce that these stay in sync.
+Discovery/breeding content lives in `src/content/catalysis.ts` (recipes, breeds, hybrids, notes) and `src/content/lifeformIdentity.ts` (per-lifeform identity + `renderStyle`). Breed energy profiles live in `src/sim/breedProfiles.ts` but are resolved by `src/game/arena.ts` before reaching the sim. Cross-breeding logic is in `src/game/arena.ts` (`evaluateBreedDiscoveries`/`hybridPairSource`). The dish renderer is `src/ui/render.ts`. Adding a breed means updating its `BreedDef`, identity, breed profile, notebook list, and the progression lifeform list — the content tests enforce that these stay in sync.

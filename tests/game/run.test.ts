@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
+import type { ObjectiveDef } from '../../src/content/objectives';
 import { createRun, FIXED_EPOCH_COUNT } from '../../src/game/run';
+
+function pickFirstUpgradeAndObjective(run: ReturnType<typeof createRun>): void {
+  run.pickUpgrade(run.getState().pendingPickChoices[0]!);
+  if (run.getState().phase === 'objective_pick') {
+    run.setChosenObjective(run.getObjectiveChoices(new Set(['needle_swarm', 'bloom_mass']), ['nutrient', 'toxin', 'water', 'salt'])[0]!);
+  }
+}
 
 describe('createRun — initial', () => {
   it('starts in title phase', () => {
@@ -74,7 +82,7 @@ describe('open-ended run', () => {
     for (let i = 0; i < 7; i++) {
       run.completeEpoch();
       if (run.getState().phase === 'upgrade_pick') {
-        run.pickUpgrade(run.getState().pendingPickChoices[0]!);
+        pickFirstUpgradeAndObjective(run);
       }
     }
     expect(run.getState().phase).not.toBe('run_end');
@@ -93,7 +101,7 @@ describe('open-ended run', () => {
     run.start();
     for (let i = 0; i < 4; i++) {
       run.completeEpoch();
-      run.pickUpgrade(run.getState().pendingPickChoices[0]!);
+      pickFirstUpgradeAndObjective(run);
     }
     run.achieveHomeostasis();
     expect(run.getState().phase).toBe('run_end');
@@ -107,7 +115,7 @@ describe('skipEpoch — forgiving lapse', () => {
     run.start();
     run.skipEpoch();
     expect(run.getState().phase).toBe('upgrade_pick');
-    run.pickUpgrade(run.getState().pendingPickChoices[0]!);
+    pickFirstUpgradeAndObjective(run);
     run.completeEpoch();
     expect(run.getState().epochResults).toEqual(['lapsed', 'completed']);
   });
@@ -120,6 +128,9 @@ describe('loseFight', () => {
     run.winFight();
     const choice = run.getState().pendingPickChoices[0]!;
     run.pickUpgrade(choice);
+    if (run.getState().phase === 'objective_pick') {
+      run.setChosenObjective(run.getObjectiveChoices(new Set(['needle_swarm', 'bloom_mass']), ['nutrient', 'toxin', 'water', 'salt'])[0]!);
+    }
     run.loseFight();
     const s = run.getState();
     expect(s.phase).toBe('run_end');
@@ -133,7 +144,7 @@ describe('restart', () => {
     const run = createRun(42);
     run.start();
     run.winFight();
-    run.pickUpgrade(run.getState().pendingPickChoices[0]!);
+    pickFirstUpgradeAndObjective(run);
     run.loseFight();
     expect(run.getState().phase).toBe('run_end');
     run.restart();
@@ -200,24 +211,48 @@ describe('objectives', () => {
   it('mid-game uses chosen objective when set', () => {
     const run = createRun(42);
     run.start();
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       run.completeEpoch();
       run.pickUpgrade(run.getState().pendingPickChoices[0]!);
     }
+    run.completeEpoch();
+    run.pickUpgrade(run.getState().pendingPickChoices[0]!);
     expect(run.getState().fightIndex).toBe(3);
-    const obj = { kind: 'mega_culture' as any, name: 'Test', description: 'Test', target: 'Test' };
+    expect(run.getState().phase).toBe('objective_pick');
+    const obj: ObjectiveDef = { kind: 'mega_culture', name: 'Test', description: 'Test', target: 'Test' };
     run.setChosenObjective(obj);
+    expect(run.getState().phase).toBe('arena');
     expect(run.getObjective().kind).toBe('mega_culture');
+  });
+
+  it('enters objective_pick after the upgrade that opens mid-game', () => {
+    const run = createRun(42);
+    run.start();
+    for (let i = 0; i < FIXED_EPOCH_COUNT - 1; i++) {
+      run.completeEpoch();
+      run.pickUpgrade(run.getState().pendingPickChoices[0]!);
+      expect(run.getState().phase).toBe('arena');
+    }
+
+    run.completeEpoch();
+    run.pickUpgrade(run.getState().pendingPickChoices[0]!);
+
+    expect(run.getState().fightIndex).toBe(FIXED_EPOCH_COUNT);
+    expect(run.getState().phase).toBe('objective_pick');
+    expect(() => run.getObjective()).toThrow(/objective/i);
   });
 
   it('getObjectiveChoices returns 2 choices for mid-game', () => {
     const run = createRun(42);
     run.start();
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       run.completeEpoch();
       run.pickUpgrade(run.getState().pendingPickChoices[0]!);
     }
-    const choices = run.getObjectiveChoices(new Set(['bloom_mass' as any]), ['egg', 'nutrient', 'toxin', 'water']);
+    run.completeEpoch();
+    run.pickUpgrade(run.getState().pendingPickChoices[0]!);
+    expect(run.getState().phase).toBe('objective_pick');
+    const choices = run.getObjectiveChoices(new Set(['bloom_mass']), ['egg', 'nutrient', 'toxin', 'water']);
     expect(choices.length).toBe(2);
   });
 });

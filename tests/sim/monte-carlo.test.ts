@@ -85,11 +85,67 @@ describe('mcStep', () => {
   it('a step early-returns without changes if boundary is empty', () => {
     const state = makeStateWithTwoBlobs();
     state.grid.boundary.clear();
+    state.grid.boundaryCacheDirty = true;
     const before = Array.from(state.grid.cells);
     mcStep(state);
     expect(Array.from(state.grid.cells)).toEqual(before);
   });
+
+  it('reuses the boundary cache while the boundary stays clean', () => {
+    const state = makeStateWithTwoBlobs();
+    state.rng.randInt = () => 0;
+    const cached = Array.from(state.grid.boundary);
+    state.grid.boundaryCache = cached;
+    state.grid.boundaryCacheDirty = false;
+    state.betaIsing = 10_000;
+    state.betaVol = 10_000;
+    state.betaMov = 10_000;
+
+    mcStep(state);
+
+    expect(state.grid.boundaryCache).toBe(cached);
+    expect(state.grid.boundaryCacheDirty).toBe(false);
+  });
+
+  it('uses sim-neutral energy profiles directly on cells', () => {
+    const state = makeTwoPixelPenaltyState();
+
+    expect(mcStep(state)).toBe(true);
+    expect(state.grid.cells[1]).toBe(1);
+  });
 });
+
+function makeTwoPixelPenaltyState(): SimState {
+  const grid = createGrid(2, 1, false);
+  const c1 = createCell(1, 0);
+  const c2 = createCell(2, 1);
+  setCell(grid, 0, 0, 1);
+  setCell(grid, 1, 0, 2);
+  addPixel(c1, 0, 0, grid.LX, grid.LY, false);
+  addPixel(c2, 1, 0, grid.LX, grid.LY, false);
+  c1.vol = 10;
+  c1.energyProfile = {
+    isingMul: 1,
+    volMul: 0,
+    movMul: 1,
+    engulfMul: 1,
+  };
+  recomputeBoundary(grid);
+  return {
+    grid,
+    cells: new Map([[1, c1], [2, c2]]),
+    bullets: [],
+    betaIsing: 0,
+    betaVol: 1,
+    betaMov: 0,
+    events: [],
+    rng: {
+      randInt: () => 0,
+      random: () => 0.5,
+    },
+    wrapBullets: true,
+  };
+}
 
 describe('mcStep — engulf term', () => {
   it('with engulfMultiplier=5 on cell 1, cell 1 absorbs cell 2 pixels much faster', () => {

@@ -1,70 +1,106 @@
 export interface PopulationSnapshot {
-  breedCounts: Map<string, number>;
-  totalLiving: number;
+  breedVolumes: Map<string, number>;
+  totalVolume: number;
 }
 
 export interface HomeostasisTracker {
   tick(snapshot: PopulationSnapshot): void;
   isAchieved(): boolean;
   progress(): number;  // 0-1
+  getBiome(): BiomeRecord | null;
   reset(): void;
 }
 
-const SUSTAIN_TICKS = 60 * 20;   // 20 seconds at 60fps
+const WINDOW_TICKS = 60 * 20;    // 20 seconds at 60fps
 const MIN_BIODIVERSITY = 3;
 const MAX_SHARE_SWING = 0.10;    // 10%
 
 export function createHomeostasisTracker(): HomeostasisTracker {
-  let stableTicks = 0;
+  let samples: Array<Map<string, number>> = [];
   let achieved = false;
-  let prevShares = new Map<string, number>();
+  let biome: BiomeRecord | null = null;
+
+  function clearWindow(): void {
+    samples = [];
+    biome = null;
+  }
 
   return {
     tick(snapshot) {
       if (achieved) return;
-      const livingBreeds = [...snapshot.breedCounts.entries()]
-        .filter(([, count]) => count > 0).length;
-      if (livingBreeds < MIN_BIODIVERSITY || snapshot.totalLiving === 0) {
-        stableTicks = 0;
-        prevShares = new Map();
+      const currentShares = volumeShares(snapshot);
+      if (currentShares.size < MIN_BIODIVERSITY) {
+        clearWindow();
         return;
       }
-      const currentShares = new Map<string, number>();
-      for (const [breed, count] of snapshot.breedCounts) {
-        if (count > 0) currentShares.set(breed, count / snapshot.totalLiving);
+
+      if (samples.length > 0 && !sameBreedSet(samples[0]!, currentShares)) {
+        samples = [currentShares];
+        biome = null;
+        return;
       }
-      if (prevShares.size > 0) {
-        for (const [breed, share] of currentShares) {
-          const prev = prevShares.get(breed) ?? 0;
-          if (Math.abs(share - prev) > MAX_SHARE_SWING) {
-            stableTicks = 0;
-            prevShares = currentShares;
-            return;
-          }
-        }
-        for (const [breed] of prevShares) {
-          if (!currentShares.has(breed)) {
-            stableTicks = 0;
-            prevShares = currentShares;
-            return;
-          }
-        }
+
+      samples.push(currentShares);
+      while (samples.length > WINDOW_TICKS) samples.shift();
+      if (!isStableWindow(samples)) {
+        samples = [currentShares];
+        biome = null;
+        return;
       }
-      prevShares = currentShares;
-      stableTicks++;
-      if (stableTicks >= SUSTAIN_TICKS) achieved = true;
+
+      if (samples.length >= WINDOW_TICKS) {
+        achieved = true;
+        biome = classifyBiome(snapshot.breedVolumes);
+      }
     },
     isAchieved() { return achieved; },
     progress() {
       if (achieved) return 1;
-      return Math.min(1, stableTicks / SUSTAIN_TICKS);
+      return Math.min(1, samples.length / WINDOW_TICKS);
+    },
+    getBiome() {
+      return biome ? { ...biome, topBreeds: [...biome.topBreeds] } : null;
     },
     reset() {
-      stableTicks = 0;
       achieved = false;
-      prevShares = new Map();
+      clearWindow();
     },
   };
+}
+
+function volumeShares(snapshot: PopulationSnapshot): Map<string, number> {
+  const shares = new Map<string, number>();
+  if (snapshot.totalVolume <= 0) return shares;
+  for (const [breed, volume] of snapshot.breedVolumes) {
+    if (volume <= 0) continue;
+    shares.set(breed, volume / snapshot.totalVolume);
+  }
+  return shares;
+}
+
+function sameBreedSet(a: Map<string, number>, b: Map<string, number>): boolean {
+  if (a.size !== b.size) return false;
+  for (const breed of a.keys()) {
+    if (!b.has(breed)) return false;
+  }
+  return true;
+}
+
+function isStableWindow(windowSamples: Array<Map<string, number>>): boolean {
+  const first = windowSamples[0];
+  if (!first) return false;
+  for (const breed of first.keys()) {
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
+    for (const sample of windowSamples) {
+      const share = sample.get(breed);
+      if (share === undefined) return false;
+      min = Math.min(min, share);
+      max = Math.max(max, share);
+    }
+    if (max - min > MAX_SHARE_SWING) return false;
+  }
+  return true;
 }
 
 // --- Biome Classification ---
@@ -92,14 +128,14 @@ const BIOME_NAMES: Record<string, string> = {
   mirror: 'Echo Chamber',
 };
 
-export function classifyBiome(breedCounts: Map<string, number>): BiomeRecord {
-  const sorted = [...breedCounts.entries()]
-    .filter(([, count]) => count > 0)
+export function classifyBiome(breedVolumes: Map<string, number>): BiomeRecord {
+  const sorted = [...breedVolumes.entries()]
+    .filter(([, volume]) => volume > 0)
     .sort((a, b) => b[1] - a[1]);
   const topBreeds = sorted.slice(0, 3).map(([breed]) => breed);
   const dominant = topBreeds[0];
-  const total = sorted.reduce((sum, [, count]) => sum + count, 0);
-  const dominantShare = dominant ? (breedCounts.get(dominant) ?? 0) / total : 0;
+  const total = sorted.reduce((sum, [, volume]) => sum + volume, 0);
+  const dominantShare = dominant && total > 0 ? (breedVolumes.get(dominant) ?? 0) / total : 0;
 
   let name: string;
   if (dominant && dominantShare > 0.4) {

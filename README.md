@@ -14,10 +14,10 @@ The game layer leans into that by asking the player to cultivate conditions inst
 
 ## Current Gameplay
 
-- **Roguelike runs** — open-ended, no fixed epoch count. Runs end when the ecosystem collapses (fail) or reaches homeostasis (win).
+- **Roguelike runs** — open-ended, no fixed epoch count. Runs fail when the ecosystem collapses; homeostasis becomes a visible equilibrium state the player can observe before ending the trial.
 - **Guided onboarding** — Epoch 1 is a 3-beat auto-advancing tutorial (~30 seconds). Epochs 2-3 teach ecology and breeding.
 - **Procedural mid-game** — from Epoch 4+, choose between 2 objectives each epoch. Pressure escalates: crises come faster, outbreaks hit harder, mutations grow wilder.
-- **Homeostasis win state** — when 3+ breeds coexist in stable equilibrium for 20 seconds, the game recognizes it as a living ecosystem. No popup — just a subtle glow and the label "Equilibrium."
+- **Homeostasis win state** — when 3+ breeds hold stable volume share for 20 seconds, the HUD recognizes a living ecosystem, pauses pressure, and marks the dish "Equilibrium."
 - **Strain library** — discovered breeds are banked across runs. Before each run, pick an egg loadout from your collection.
 - **CPM energy profiles** — each breed has distinct physics coefficients (Ising surface tension, volume preservation, movement responsiveness). Bruisers are compact blobs; swarmlets spread thin with pseudopods; bloom mass flows like an amorphous film.
 - **Reagent energy shifts** — reagents modify CPM coefficients within their field. Salt hardens cells, acid fragments them, nutrient loosens them. Combos produce emergent visual behaviors.
@@ -52,13 +52,13 @@ Every culture's pixels glow in their own color: the dish renders with a bloom pa
 
 ```bash
 npm install
-npm run dev
+npm run dev -- --port 5199 --strictPort
 ```
 
-Open the local URL that Vite prints, usually:
+Open the local URL that Vite prints:
 
 ```text
-http://localhost:5173/
+http://localhost:5199/
 ```
 
 ## Preview On An iPhone
@@ -99,8 +99,8 @@ src/
 
 The game is designed mobile-first:
 
-- Portrait phone: centered dish, compact HUD, lifeform egg picker, bottom tool sheet.
-- Desktop: dish centered with tools and HUD on the left, lifeform guide and inspector on the right.
+- Portrait phone: centered dish, compact HUD, lifeform egg picker, and bottom tool sheet.
+- Desktop: centered dish, richer side panels, lab log, inspector, and a compact run HUD above the culture.
 
 ## Repository Readiness
 

@@ -18,7 +18,7 @@ export const UPGRADES_PER_PICK = 3;
 export const EPOCHS_PER_RUN = OBJECTIVES.length;
 export const FIGHTS_PER_RUN = OBJECTIVES.length;
 
-export type RunPhase = 'title' | 'arena' | 'upgrade_pick' | 'run_end';
+export type RunPhase = 'title' | 'arena' | 'upgrade_pick' | 'objective_pick' | 'run_end';
 
 export interface RunState {
   phase: RunPhase;
@@ -148,7 +148,7 @@ export function createRun(seed: number): Run {
       fightIndex += 1;
       pendingPickChoices = [];
       chosenObjective = undefined;
-      phase = 'arena';
+      phase = isMidGameEpoch(fightIndex) ? 'objective_pick' : 'arena';
     },
     restart() {
       phase = 'title';
@@ -183,26 +183,19 @@ export function createRun(seed: number): Run {
     },
     getObjective() {
       // Mid-game: use the chosen objective if set.
-      if (isMidGameEpoch(fightIndex) && chosenObjective) {
-        return chosenObjective;
+      if (isMidGameEpoch(fightIndex)) {
+        if (chosenObjective) return chosenObjective;
+        throw new Error('Mid-game objective requested before objective_pick chose one');
       }
       // Fixed epochs: use the OBJECTIVES array.
-      if (fightIndex < OBJECTIVES.length) {
+      if (fightIndex < FIXED_EPOCH_COUNT) {
         return objectiveForEpoch(fightIndex);
       }
-      // Fallback for mid-game without a chosen objective: generic sustain.
-      return {
-        kind: 'balanced_ecology' as any,
-        name: 'Maintain Balance',
-        description: 'Keep the ecosystem balanced.',
-        target: 'Balanced ecology',
-        hint: 'Seed multiple types and keep no one breed dominant.',
-        maxDominance: 0.56,
-        minCount: 3,
-      };
+      throw new Error(`No fixed objective defined for epoch ${fightIndex}`);
     },
     setChosenObjective(obj: ObjectiveDef) {
       chosenObjective = obj;
+      if (phase === 'objective_pick') phase = 'arena';
     },
     getObjectiveChoices(discoveredBreeds: ReadonlySet<BreedId>, unlockedTools: readonly string[]) {
       const ctx: DrawContext = {

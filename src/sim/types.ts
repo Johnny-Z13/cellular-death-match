@@ -5,6 +5,8 @@ export interface Grid {
   LY: number;
   cells: Uint16Array;       // length LX * LY; cells[idx(x, y)] = CellId
   boundary: Set<number>;    // flat indices of pixels on a cell boundary
+  boundaryCache: number[];
+  boundaryCacheDirty: boolean;
   wrap: boolean;
 }
 
@@ -26,9 +28,16 @@ export interface Cell {
   centerLinearSum: [number, number];
   center: [number, number];
   intent: Intent;
-  breedProfileId?: import('./breedProfiles').BreedProfileId;
+  energyProfile?: EnergyProfile;
   /** Accumulated reagent energy shifts for current tick. Reset each tick. */
   energyShifts?: { isingShift: number; volShift: number; movShift: number };
+}
+
+export interface EnergyProfile {
+  isingMul: number;
+  volMul: number;
+  movMul: number;
+  engulfMul: number;
 }
 
 export interface Bullet {

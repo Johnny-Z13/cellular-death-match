@@ -22,6 +22,15 @@ function mediaBlock(query: string): string {
 }
 
 describe('mobile layout CSS', () => {
+  it('hides gameplay chrome behind the title screen', () => {
+    expect(css).toContain('.layout[data-screen="title"] .toolbox,');
+    expect(css).toContain('.layout[data-screen="title"] .life-panel,');
+    expect(css).toContain('.layout[data-screen="title"] .ticker,');
+    expect(css).toContain('.layout[data-screen="title"] .mobile-shell,');
+    expect(css).toContain('.layout[data-screen="title"] .hud {');
+    expect(css).toContain('pointer-events: none');
+  });
+
   it('switches phones to compact horizontal trays instead of desktop-length fixed lists', () => {
     const mobile = mediaBlock('(max-width: 899px)');
 
@@ -37,7 +46,7 @@ describe('mobile layout CSS', () => {
     expect(mobile).toContain('.hud {');
     expect(mobile).toContain('font-size: 10px');
     expect(mobile).toContain('.hud-hint-row,');
-    expect(mobile).toContain('.hud .hud-row:nth-child(5)');
+    expect(mobile).toContain('.hud-volume-row');
     expect(mobile).toContain('display: none');
 
     expect(mobile).toContain('.toolbox {');
@@ -79,6 +88,13 @@ describe('mobile layout CSS', () => {
     expect(smallPhone).toContain('grid-auto-columns: minmax(64px, 1fr)');
     expect(smallPhone).toContain('bottom: calc(132px + env(safe-area-inset-bottom))');
     expect(smallPhone).toContain('max-height: min(45svh, 232px)');
+    expect(smallPhone).toContain('.coach {');
+    expect(smallPhone).toContain('top: calc(74px + env(safe-area-inset-top))');
+    expect(smallPhone).toContain('padding: 9px 11px');
+    expect(smallPhone).toContain('.coach-body {');
+    expect(smallPhone).toContain('margin: 4px 0 0');
+    expect(smallPhone).toContain('.fx-banner-title {');
+    expect(smallPhone).toContain('font-size: clamp(22px, 8vw, 34px)');
   });
 
   it('resets desktop controls back to rack flow so the desktop layout remains unchanged', () => {

@@ -8,9 +8,9 @@ import {
 // Helper: build a stable snapshot with exactly `n` breeds, evenly distributed.
 function stableSnapshot(breeds: string[], total: number): PopulationSnapshot {
   const perBreed = Math.floor(total / breeds.length);
-  const breedCounts = new Map<string, number>();
-  for (const b of breeds) breedCounts.set(b, perBreed);
-  return { breedCounts, totalLiving: total };
+  const breedVolumes = new Map<string, number>();
+  for (const b of breeds) breedVolumes.set(b, perBreed);
+  return { breedVolumes, totalVolume: total };
 }
 
 const SUSTAIN_TICKS = 60 * 20; // 1200
@@ -27,7 +27,7 @@ describe('HomeostasisTracker', () => {
     expect(tracker.progress()).toBeLessThan(1);
   });
 
-  it('triggers after 20 seconds of stable snapshots', () => {
+  it('triggers after 20 seconds of stable three-breed volume shares', () => {
     const tracker = createHomeostasisTracker();
     const snapshot = stableSnapshot(['a', 'b', 'c'], 300);
     for (let i = 0; i < SUSTAIN_TICKS; i++) {
@@ -35,6 +35,7 @@ describe('HomeostasisTracker', () => {
     }
     expect(tracker.isAchieved()).toBe(true);
     expect(tracker.progress()).toBe(1);
+    expect(tracker.getBiome()?.topBreeds).toEqual(['a', 'b', 'c']);
   });
 
   it('resets if biodiversity drops below 3', () => {
@@ -48,26 +49,41 @@ describe('HomeostasisTracker', () => {
 
     // Drop to 2 breeds
     const lowDiversity: PopulationSnapshot = {
-      breedCounts: new Map([['a', 150], ['b', 150]]),
-      totalLiving: 300,
+      breedVolumes: new Map([['a', 150], ['b', 150]]),
+      totalVolume: 300,
     };
     tracker.tick(lowDiversity);
     expect(tracker.progress()).toBe(0);
     expect(tracker.isAchieved()).toBe(false);
   });
 
-  it('resets if population share swings more than 10%', () => {
+  it('does not achieve if a breed volume share swings more than 10% over the window', () => {
     const tracker = createHomeostasisTracker();
     // Start: a=33%, b=33%, c=34% of 300
     const snapshot1 = stableSnapshot(['a', 'b', 'c'], 300);
-    for (let i = 0; i < 10; i++) tracker.tick(snapshot1);
+    for (let i = 0; i < SUSTAIN_TICKS - 1; i++) tracker.tick(snapshot1);
 
     // Big swing: a goes to 50% — swing > 10%
     const snapshot2: PopulationSnapshot = {
-      breedCounts: new Map([['a', 150], ['b', 75], ['c', 75]]),
-      totalLiving: 300,
+      breedVolumes: new Map([['a', 150], ['b', 75], ['c', 75]]),
+      totalVolume: 300,
     };
     tracker.tick(snapshot2);
+    expect(tracker.isAchieved()).toBe(false);
+    expect(tracker.progress()).toBeLessThan(1);
+  });
+
+  it('resets if a breed disappears from the stable window', () => {
+    const tracker = createHomeostasisTracker();
+    const snapshot = stableSnapshot(['a', 'b', 'c'], 300);
+    for (let i = 0; i < SUSTAIN_TICKS / 2; i++) tracker.tick(snapshot);
+
+    tracker.tick({
+      breedVolumes: new Map([['a', 150], ['b', 150], ['c', 0]]),
+      totalVolume: 300,
+    });
+
+    expect(tracker.isAchieved()).toBe(false);
     expect(tracker.progress()).toBe(0);
   });
 
@@ -101,8 +117,8 @@ describe('HomeostasisTracker', () => {
 
     // Tick with a bad snapshot — should still be achieved
     const bad: PopulationSnapshot = {
-      breedCounts: new Map([['a', 300]]),
-      totalLiving: 300,
+      breedVolumes: new Map([['a', 300]]),
+      totalVolume: 300,
     };
     tracker.tick(bad);
     expect(tracker.isAchieved()).toBe(true);

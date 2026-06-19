@@ -17,6 +17,39 @@ function killCell(arena: Arena, id: number): void {
   }
 }
 
+function stableEquilibriumEnemies() {
+  return [
+    { archetype: 'swarmlet' as const, breedId: 'bloom_mass' as const, targetVol: 520, speed: 0, engulfMultiplier: 1 },
+    { archetype: 'swarmlet' as const, breedId: 'bloom_mass' as const, targetVol: 520, speed: 0, engulfMultiplier: 1 },
+    { archetype: 'swarmlet' as const, breedId: 'needle_swarm' as const, targetVol: 520, speed: 0, engulfMultiplier: 1 },
+    { archetype: 'swarmlet' as const, breedId: 'needle_swarm' as const, targetVol: 520, speed: 0, engulfMultiplier: 1 },
+    { archetype: 'swarmlet' as const, breedId: 'glass_antibody' as const, targetVol: 520, speed: 0, engulfMultiplier: 1 },
+  ];
+}
+
+function saturatedStableEquilibriumEnemies() {
+  const breeds = ['bloom_mass', 'needle_swarm', 'glass_antibody'] as const;
+  return Array.from({ length: 28 }, (_, index) => ({
+    archetype: 'swarmlet' as const,
+    breedId: breeds[index % breeds.length]!,
+    targetVol: 170,
+    speed: 0,
+    engulfMultiplier: 1,
+  }));
+}
+
+function forceBreedVolumes(arena: Arena, breedVolumes: Record<string, number>): void {
+  for (const [cellId, cell] of arena.state.cells) {
+    const spawn = arena.archetypes.get(cellId);
+    if (!spawn) continue;
+    const breed = spawn.breedId ?? spawn.archetype;
+    const volume = breedVolumes[breed];
+    if (volume === undefined) continue;
+    cell.vol = volume;
+    cell.targetVol = volume;
+  }
+}
+
 describe('createArena — initial state', () => {
   it('starts with status "running"', () => {
     const arena = createArena({
@@ -2185,6 +2218,91 @@ describe('arena ecosystem mode', () => {
     )).toBe(true);
   });
 
+  it('latches equilibrium as visible state and pauses pressure past the objective deadline', () => {
+    const arena = createArena({
+      LX: 140,
+      LY: 140,
+      seed: 51,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+      },
+      enemies: stableEquilibriumEnemies(),
+      wrap: true,
+      mode: 'ecosystem',
+      includeControlSample: false,
+      epochTicks: 60 * 21,
+      worldEventIntensity: 0,
+    });
+
+    for (let i = 0; i < 60 * 20; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+
+    const equilibrium = arena.getEquilibrium();
+    expect(equilibrium.achieved).toBe(true);
+    expect(equilibrium.progress).toBe(1);
+    expect(equilibrium.biomeName).toBeTruthy();
+    expect(arena.getStatus()).toBe('running');
+
+    const pressureAtEquilibrium = arena.getEcology();
+    for (let i = 0; i < 60 * 25; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+
+    const ecology = arena.getEcology();
+    expect(ecology.outbreaks).toBe(pressureAtEquilibrium.outbreaks);
+    expect(ecology.accidents).toBe(pressureAtEquilibrium.accidents);
+    expect(ecology.crisis).toBe('none');
+    expect(arena.getStatus()).toBe('running');
+  });
+
+  it('marks a crisis-survivor objective if equilibrium cancels an active crisis', () => {
+    const arena = createArena({
+      LX: 140,
+      LY: 140,
+      seed: 18,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+      },
+      enemies: saturatedStableEquilibriumEnemies(),
+      wrap: true,
+      mode: 'ecosystem',
+      includeControlSample: false,
+      epochTicks: 60 * 80,
+      worldEventIntensity: 0,
+      objective: {
+        kind: 'crisis_survivor',
+        name: 'Crisis Survivor',
+        description: 'Keep a stable culture through pressure.',
+        target: '3+ cultures alive through crisis',
+      },
+    });
+
+    for (let i = 0; i < 60 * 11; i++) {
+      forceBreedVolumes(arena, { bloom_mass: 170, needle_swarm: 170, glass_antibody: 340 });
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+    for (let i = 0; i < 60 * 25; i++) {
+      forceBreedVolumes(arena, { bloom_mass: 170, needle_swarm: 170, glass_antibody: 170 });
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+      if (arena.getEquilibrium().achieved) break;
+    }
+
+    expect(arena.getEquilibrium().achieved).toBe(true);
+    expect(arena.getEcology().crisis).not.toBe('none');
+
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+
+    expect(arena.getEcology().crisis).toBe('none');
+    expect(arena.getObjectiveProgress().complete).toBe(true);
+  });
+
   it('can turn dish fertility world events fully off', () => {
     const arena = createArena({
       LX: 80,
@@ -2405,6 +2523,213 @@ describe('arena ecosystem mode', () => {
     expect(arena.getStatus()).toBe('running');
     arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     expect(arena.getStatus()).toBe('lost');
+  });
+
+  it('counts sustained balance for balance_keeper objectives', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 811,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [
+        { archetype: 'swarmlet' as const, targetVol: 120, speed: 10, engulfMultiplier: 4 },
+        { archetype: 'splitter' as const, targetVol: 120, speed: 8, engulfMultiplier: 5 },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+      objective: {
+        kind: 'balance_keeper',
+        name: 'Balance Keeper',
+        description: 'Keep cultures balanced.',
+        target: 'No breed > 60% for 2 ticks',
+        maxDominance: 0.6,
+        sustainTicks: 2,
+      },
+    });
+
+    expect(arena.getObjectiveProgress().complete).toBe(false);
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    expect(arena.getObjectiveProgress().complete).toBe(false);
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    expect(arena.getObjectiveProgress().complete).toBe(true);
+  });
+
+  it('tracks extinction lows and recovery for extinction_reversal objectives', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 812,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 90, speed: 10, engulfMultiplier: 4 }],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+      objective: {
+        kind: 'extinction_reversal',
+        name: 'Extinction Reversal',
+        description: 'Recover from one culture.',
+        target: 'Recover to 4+ cultures',
+        targetCount: 4,
+      },
+    });
+
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    expect(arena.getObjectiveProgress().complete).toBe(false);
+
+    arena.spawnEnemy({ spawn: { archetype: 'swarmlet', targetVol: 90, speed: 10, engulfMultiplier: 4 }, pos: [20, 20] });
+    arena.spawnEnemy({ spawn: { archetype: 'splitter', targetVol: 90, speed: 8, engulfMultiplier: 4 }, pos: [35, 20] });
+    arena.spawnEnemy({ spawn: { archetype: 'bruiser', targetVol: 90, speed: 7, engulfMultiplier: 5 }, pos: [50, 20] });
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+
+    expect(arena.getObjectiveProgress().complete).toBe(true);
+  });
+
+  it('lets acid-led reactions satisfy acid_sculptor objectives', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 813,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        toxinCharges: 1,
+        acidCharges: 1,
+      },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 120, speed: 10, engulfMultiplier: 4 }],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+      objective: {
+        kind: 'acid_sculptor',
+        name: 'Acid Sculptor',
+        description: 'Use acid to trigger a reaction.',
+        target: '1 acid reaction',
+      },
+    });
+
+    expect(arena.applyTool('toxin', [40, 40])).toBe(true);
+    expect(arena.applyTool('acid', [40, 40])).toBe(true);
+
+    expect(arena.getEcology().reactions).toBeGreaterThanOrEqual(1);
+    expect(arena.getObjectiveProgress().complete).toBe(true);
+  });
+
+  it('does not satisfy acid_sculptor when acid is near a non-acid selected reaction', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 815,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        saltCharges: 1,
+        acidCharges: 1,
+        waterCharges: 1,
+      },
+      enemies: [{
+        archetype: 'bruiser' as const,
+        targetVol: 120,
+        speed: 8,
+        engulfMultiplier: 5,
+        traits: ['gelatinous'],
+      }],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+      objective: {
+        kind: 'acid_sculptor',
+        name: 'Acid Sculptor',
+        description: 'Use acid to trigger a reaction.',
+        target: '1 acid reaction',
+      },
+    });
+
+    expect(arena.applyTool('salt', [40, 40])).toBe(true);
+    expect(arena.applyTool('acid', [40, 40])).toBe(true);
+    expect(arena.applyTool('water', [40, 40])).toBe(true);
+
+    expect(arena.getEcology().reactions).toBeGreaterThanOrEqual(1);
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_salt_water_crystal');
+    expect(arena.getObjectiveProgress().complete).toBe(false);
+  });
+
+  it('tracks current-epoch hybrid discoveries for cross_breed objectives', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 814,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        nutrientCharges: 1,
+      },
+      enemies: [
+        { archetype: 'sniper' as const, breedId: 'needle_swarm', targetVol: 100, speed: 10, engulfMultiplier: 4 },
+        { archetype: 'splitter' as const, breedId: 'bloom_mass', targetVol: 120, speed: 8, engulfMultiplier: 5 },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+      knownBreedIds: new Set(['needle_swarm', 'bloom_mass']),
+      objective: {
+        kind: 'cross_breed',
+        name: 'Cross-Breed',
+        description: 'Create a hybrid.',
+        target: '1 hybrid breed created',
+      },
+    });
+    arena.state.cells.get(2)!.center = [42, 44];
+    arena.state.cells.get(3)!.center = [50, 44];
+
+    expect(arena.applyTool('nutrient', [46, 44])).toBe(true);
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+
+    expect(arena.getEcology().discoveries.breedIds).toContain('quill_bloom');
+    expect(arena.getObjectiveProgress().complete).toBe(true);
+  });
+
+  it('does not complete cross_breed by re-discovering a known hybrid', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 816,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        nutrientCharges: 1,
+      },
+      enemies: [
+        { archetype: 'sniper' as const, breedId: 'needle_swarm', targetVol: 100, speed: 10, engulfMultiplier: 4 },
+        { archetype: 'splitter' as const, breedId: 'bloom_mass', targetVol: 120, speed: 8, engulfMultiplier: 5 },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+      knownBreedIds: new Set(['needle_swarm', 'bloom_mass', 'quill_bloom']),
+      objective: {
+        kind: 'cross_breed',
+        name: 'Cross-Breed',
+        description: 'Create a new hybrid.',
+        target: '1 new hybrid breed created',
+      },
+    });
+    arena.state.cells.get(2)!.center = [42, 44];
+    arena.state.cells.get(3)!.center = [50, 44];
+
+    expect(arena.applyTool('nutrient', [46, 44])).toBe(true);
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+
+    expect(arena.getEcology().discoveries.breedIds).toContain('quill_bloom');
+    expect(arena.getObjectiveProgress().complete).toBe(false);
   });
 });
 

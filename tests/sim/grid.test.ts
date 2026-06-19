@@ -7,6 +7,7 @@ import {
   isCellBoundary,
   neighborVals,
   recomputeBoundary,
+  updateBoundaryAround,
 } from '../../src/sim/grid';
 
 describe('createGrid', () => {
@@ -17,6 +18,8 @@ describe('createGrid', () => {
     expect(g.cells.length).toBe(80);
     expect(g.cells.every((v) => v === 0)).toBe(true);
     expect(g.boundary.size).toBe(0);
+    expect(g.boundaryCache).toEqual([]);
+    expect(g.boundaryCacheDirty).toBe(true);
     expect(g.wrap).toBe(true);
   });
 });
@@ -78,10 +81,24 @@ describe('recomputeBoundary', () => {
     const g = createGrid(5, 5, true);
     g.cells.fill(1);
     setCell(g, 2, 2, 2);
+    g.boundaryCacheDirty = false;
     recomputeBoundary(g);
     // (2,2) and its 8 neighbors are all on boundary
     expect(g.boundary.size).toBe(9);
     expect(g.boundary.has(idx(g, 2, 2))).toBe(true);
     expect(g.boundary.has(idx(g, 1, 1))).toBe(true);
+    expect(g.boundaryCacheDirty).toBe(true);
+  });
+
+  it('marks the boundary cache dirty when updating local boundary pixels', () => {
+    const g = createGrid(5, 5, true);
+    g.cells.fill(1);
+    recomputeBoundary(g);
+    g.boundaryCacheDirty = false;
+
+    setCell(g, 2, 2, 2);
+    updateBoundaryAround(g, 2, 2);
+
+    expect(g.boundaryCacheDirty).toBe(true);
   });
 });

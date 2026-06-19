@@ -9,6 +9,8 @@ export function createGrid(LX: number, LY: number, wrap: boolean): Grid {
     // (the control sample), silently corrupting pixel ownership.
     cells: new Uint16Array(LX * LY),
     boundary: new Set<number>(),
+    boundaryCache: [],
+    boundaryCacheDirty: true,
     wrap,
   };
 }
@@ -69,18 +71,25 @@ export function recomputeBoundary(g: Grid): void {
       if (isCellBoundary(g, x, y)) g.boundary.add(idx(g, x, y));
     }
   }
+  g.boundaryCacheDirty = true;
 }
 
 // Update the boundary set for a pixel and its 8 neighbors.
 // Called after every pixel transfer.
 export function updateBoundaryAround(g: Grid, x: number, y: number): void {
+  let changed = false;
   for (const [dx, dy] of [[0, 0], ...NEIGHBOR_DIRS]) {
     const n = neighborCoord(g, x, y, dx as number, dy as number);
     if (n === null) continue;
     const i = idx(g, n[0], n[1]);
-    if (isCellBoundary(g, n[0], n[1])) g.boundary.add(i);
-    else g.boundary.delete(i);
+    if (isCellBoundary(g, n[0], n[1])) {
+      if (!g.boundary.has(i)) changed = true;
+      g.boundary.add(i);
+    } else if (g.boundary.delete(i)) {
+      changed = true;
+    }
   }
+  if (changed) g.boundaryCacheDirty = true;
 }
 
 export function neighborVals(g: Grid, x: number, y: number): CellId[] {

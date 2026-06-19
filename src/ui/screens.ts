@@ -1,15 +1,20 @@
-import type { AgitationState, ToolState } from '../game/arena';
+import type { AgitationState, EquilibriumInfo, ToolState } from '../game/arena';
+import type { LabReport } from '../game/labReport';
 import type { ResearchBriefLine } from '../game/researchBrief';
 import type { UpgradeDef } from '../content/upgrades';
 import type { EnemyArchetype } from '../content/enemies';
+import type { ObjectiveDef } from '../content/objectives';
 import type { NotebookView, AtlasView } from '../content/notebook';
 import {
   LIFEFORM_IDENTITIES,
   type LifeformIdentityId,
 } from '../content/lifeformIdentity';
 import { createIconCells } from './iconCells';
+import { renderLabReport } from './labReportScreen';
 
 type ScreenName = 'title' | 'pick' | 'end' | 'hud' | 'notebook';
+type AppScreenName = ScreenName | 'loadout' | 'objective';
+type LayoutScreenName = 'title' | 'loadout' | 'pick' | 'objective' | 'end' | 'notebook' | 'arena';
 export type ToolId = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' | 'paste';
 export type ButtonHintLevel = 'hint' | 'ready';
 export type ButtonHintTarget = ToolId | 'notebook';
@@ -59,8 +64,8 @@ export interface EggOption {
 }
 
 export interface Screens {
-  show(name: ScreenName): void;
-  hide(name: ScreenName): void;
+  show(name: AppScreenName): void;
+  hide(name: AppScreenName): void;
   addTicker(message: string, tone?: TickerTone): void;
   clearTicker(): void;
   setTool(tool: ToolId): void;
@@ -81,11 +86,15 @@ export interface Screens {
   onLifeformSelect(handler: (id: string) => void): void;
   setSelectedLifeform(id: string | null): void;
   updateHud(info: HudInfo): void;
+  setEquilibrium(info: EquilibriumInfo): void;
   setPickResearchBrief(lines: readonly ResearchBriefLine[]): void;
   updateNotebook(view: NotebookView): void;
   updateAtlas(view: AtlasView): void;
+  setLoadoutScreen(el: HTMLElement): void;
   setPickChoices(choices: PickChoice[], onPick: (id: string) => void): void;
+  setObjectiveChoices(choices: ObjectiveDef[], onPick: (objective: ObjectiveDef) => void): void;
   updateEnd(info: EndInfo): void;
+  updateLabReport(report: LabReport | null): void;
   onTitleStart(handler: () => void): void;
   onEndRestart(handler: () => void): void;
   onNotebookOpen(handler: () => void): void;
@@ -110,7 +119,9 @@ export function createScreens(): Screens {
   if (!maybeLayout) throw new Error('screens: missing .layout');
   const layout = maybeLayout;
   const screenTitle  = get('screen-title');
+  const screenLoadout = get('screen-loadout');
   const screenPick   = get('screen-pick');
+  const screenObjective = get('screen-objective');
   const screenEnd    = get('screen-end');
   const screenNotebook = get('screen-notebook');
   const hud          = get('hud');
@@ -125,13 +136,17 @@ export function createScreens(): Screens {
   const notebookTabLog = get('notebook-tab-log') as HTMLButtonElement;
   const notebookTabAtlas = get('notebook-tab-atlas') as HTMLButtonElement;
   const pickResearchBrief = get('pick-research-brief');
+  const loadoutMount = get('loadout-mount');
   const pickChoices  = get('pick-choices');
+  const objectiveChoices = get('objective-choices');
   const endTitle     = get('end-title');
   const endSummary   = get('end-summary');
+  const labReportMount = get('lab-report-mount');
   const endRestart   = get('end-restart');
   const hudFight     = get('hud-fight');
   const hudVol       = get('hud-vol');
   const hudProgress  = get('hud-progress');
+  const hudEquilibrium = get('hud-equilibrium');
   const hudEco       = get('hud-eco');
   const hudObjective = get('hud-objective');
   const hudHint      = get('hud-hint');
@@ -182,13 +197,26 @@ export function createScreens(): Screens {
     return swatch;
   }
 
-  const elFor: Record<ScreenName, HTMLElement> = {
+  const elFor: Record<AppScreenName, HTMLElement> = {
     title: screenTitle,
+    loadout: screenLoadout,
     pick: screenPick,
+    objective: screenObjective,
     end: screenEnd,
     notebook: screenNotebook,
     hud,
   };
+
+  function syncLayoutScreen(): void {
+    let screen: LayoutScreenName = 'arena';
+    if (screenTitle.classList.contains('visible')) screen = 'title';
+    else if (screenLoadout.classList.contains('visible')) screen = 'loadout';
+    else if (screenPick.classList.contains('visible')) screen = 'pick';
+    else if (screenObjective.classList.contains('visible')) screen = 'objective';
+    else if (screenEnd.classList.contains('visible')) screen = 'end';
+    else if (screenNotebook.classList.contains('visible')) screen = 'notebook';
+    layout.dataset.screen = screen;
+  }
 
   function setMobileDrawer(next: MobileDrawer): void {
     mobileDrawer = next;
@@ -255,6 +283,7 @@ export function createScreens(): Screens {
     setMobileDrawer(mobileDrawer === 'log' ? 'none' : 'log');
   });
   setMobileDrawer('none');
+  syncLayoutScreen();
 
   function setNotebookTab(tab: 'log' | 'atlas'): void {
     const atlas = tab === 'atlas';
@@ -293,10 +322,23 @@ export function createScreens(): Screens {
 
   return {
     show(name) {
-      if (name === 'title' || name === 'pick' || name === 'end' || name === 'notebook') closeMobileDrawers();
+      if (
+        name === 'title'
+        || name === 'loadout'
+        || name === 'pick'
+        || name === 'objective'
+        || name === 'end'
+        || name === 'notebook'
+      ) {
+        closeMobileDrawers();
+      }
       elFor[name].classList.add('visible');
+      syncLayoutScreen();
     },
-    hide(name) { elFor[name].classList.remove('visible'); },
+    hide(name) {
+      elFor[name].classList.remove('visible');
+      syncLayoutScreen();
+    },
     addTicker(message, tone = 'normal') {
       const line = document.createElement('div');
       line.className = `ticker-line ticker-line-${tone}`;
@@ -489,6 +531,12 @@ export function createScreens(): Screens {
         : info.objectiveHint;
       hudUpgrades.textContent = info.upgrades.length === 0 ? 'none' : info.upgrades.join(', ');
     },
+    setEquilibrium(info) {
+      hudEquilibrium.textContent = info.achieved
+        ? info.biomeName ? `Equilibrium: ${info.biomeName}` : 'Equilibrium reached'
+        : `Equilibrium ${Math.round(Math.max(0, Math.min(1, info.progress)) * 100)}%`;
+      hud.classList.toggle('hud-equilibrium-achieved', info.achieved);
+    },
     setPickResearchBrief(lines) {
       pickResearchBrief.replaceChildren();
       pickResearchBrief.hidden = lines.length === 0;
@@ -597,6 +645,9 @@ export function createScreens(): Screens {
         notebookAtlas.append(section);
       }
     },
+    setLoadoutScreen(el) {
+      loadoutMount.replaceChildren(el);
+    },
     setPickChoices(choices, onPick) {
       pickChoices.replaceChildren();
       for (const c of choices) {
@@ -614,19 +665,53 @@ export function createScreens(): Screens {
         pickChoices.append(btn);
       }
     },
+    setObjectiveChoices(choices, onPick) {
+      objectiveChoices.replaceChildren();
+      for (const objective of choices) {
+        const btn = document.createElement('button');
+        btn.className = 'pick-card objective-card';
+        btn.type = 'button';
+        const name = document.createElement('div');
+        name.className = 'pick-card-name';
+        name.textContent = objective.name;
+        const desc = document.createElement('div');
+        desc.className = 'pick-card-desc';
+        desc.textContent = objective.description;
+        const target = document.createElement('div');
+        target.className = 'objective-card-target';
+        target.textContent = objective.target;
+        const hint = document.createElement('div');
+        hint.className = 'objective-card-hint';
+        hint.textContent = objective.hint ?? '';
+        btn.append(name, desc, target, hint);
+        btn.addEventListener('click', () => onPick(objective));
+        objectiveChoices.append(btn);
+      }
+    },
     updateEnd(info) {
       endTitle.textContent = info.outcome === 'won' ? 'Lineage Stabilized' : 'Colony Collapsed';
-      // Honest summary: the forgiving model always reaches the end, so report
-      // how many objectives were actually achieved rather than claiming a sweep.
-      const fightStr = info.outcome === 'won'
-        ? info.objectivesCompleted >= info.totalFights
+      const objectiveLabel = info.objectivesCompleted === 1 ? 'objective' : 'objectives';
+      let fightStr: string;
+      if (info.totalFights === 0) {
+        fightStr = info.outcome === 'won'
+          ? `Homeostasis reached after epoch ${info.fightReached}; ${info.objectivesCompleted} ${objectiveLabel} banked.`
+          : `Colony collapsed during epoch ${info.fightReached}; ${info.objectivesCompleted} ${objectiveLabel} banked.`;
+      } else if (info.outcome === 'won') {
+        fightStr = info.objectivesCompleted >= info.totalFights
           ? `All ${info.totalFights} objectives achieved — a flawless trial.`
-          : `Trial concluded: ${info.objectivesCompleted} of ${info.totalFights} objectives achieved.`
-        : `Collapsed during ecosystem ${info.fightReached} / ${info.totalFights}.`;
+          : `Trial concluded: ${info.objectivesCompleted} of ${info.totalFights} objectives achieved.`;
+      } else {
+        const fixedRunProgress = `${info.fightReached} / ${info.totalFights}`;
+        fightStr = `Collapsed during ecosystem ${fixedRunProgress}.`;
+      }
       const buildStr = info.upgrades.length === 0
         ? 'No upgrades picked.'
         : `Build: ${info.upgrades.join(', ')}.`;
       endSummary.textContent = `${fightStr} ${buildStr}`;
+    },
+    updateLabReport(report) {
+      labReportMount.replaceChildren();
+      if (report) labReportMount.append(renderLabReport(report));
     },
     onTitleStart(handler) {
       titleStart.addEventListener('click', handler);
