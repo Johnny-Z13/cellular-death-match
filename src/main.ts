@@ -582,7 +582,7 @@ function loop() {
   }
 
   const ecology = arena.getEcology();
-  runTelemetry.recordReactionCount(ecology.reactions);
+  sampleRunTelemetryFromArena(arena);
 
   // HUD update.
   if (player) {
@@ -633,24 +633,11 @@ function loop() {
   });
   debug.updateDiscoveries(discoveryDebugInfo());
 
-  // Track peak biodiversity for lab report.
-  const livingBreeds = new Set<string>();
-  for (const [cellId, cell] of arena.state.cells) {
-    if (cell.vol <= 0) continue;
-    const spawn = arena.archetypes.get(cellId);
-    if (spawn) livingBreeds.add(spawn.breedId ?? spawn.archetype);
-  }
-  if (livingBreeds.size > peakBiodiversity) peakBiodiversity = livingBreeds.size;
-  runTelemetry.recordPeakBiodiversity(livingBreeds.size);
-  longestStabilityStreak = Math.max(
-    longestStabilityStreak,
-    Math.round(arena.getHomeostasisProgress() * HOMEOSTASIS_SUSTAIN_TICKS),
-  );
-
   // Homeostasis check: if equilibrium achieved, end the run as won.
   if (!isOnboardingEpoch(run.getState().fightIndex) && arena.isHomeostasisAchieved()) {
     persistArenaDiscoveries(arena);
     awardCompletionResearchGrant();
+    sampleRunTelemetryFromArena(arena);
     bankRunStrains();
     uiAudio.play('epoch_win');
     fx.playWipe();
@@ -662,6 +649,7 @@ function loop() {
 
   // Ecosystem collapse check: if all cells dead past onboarding, end run.
   if (!isOnboardingEpoch(run.getState().fightIndex) && arena.isEcosystemCollapsed() && tickCount > 120) {
+    sampleRunTelemetryFromArena(arena);
     bankRunStrains();
     uiAudio.play('epoch_fail');
     fx.playWipe();
@@ -698,6 +686,7 @@ function resolveArenaStatus(status: ArenaStatus): boolean {
     if (arena) {
       persistArenaDiscoveries(arena);
       awardCompletionResearchGrant();
+      sampleRunTelemetryFromArena(arena);
     }
     runTelemetry.recordEpochCompleted();
     uiAudio.play('epoch_win');
@@ -714,6 +703,7 @@ function resolveArenaStatus(status: ArenaStatus): boolean {
     uiAudio.play('epoch_fail');
     fx.playWipe();
     fx.showToast('catalyst', 'Objective Lapsed', 'Moving to the next ecosystem');
+    if (arena) sampleRunTelemetryFromArena(arena);
     runTelemetry.recordEpochLapsed();
     run.skipEpoch();
     if (run.getState().phase === 'run_end') uiAudio.stopAmbience();
@@ -737,9 +727,10 @@ function persistArenaDiscoveries(ar: Arena): void {
 }
 
 function awardCompletionResearchGrant(): void {
-  const previousTools = discoveryProgression.unlockedTools;
-  const previousLifeforms = discoveryProgression.unlockedLifeforms;
-  const result = applyCompletionResearchGrant(discoveryProgression);
+  const previousProgression = discoveryProgression;
+  const previousTools = previousProgression.unlockedTools;
+  const previousLifeforms = previousProgression.unlockedLifeforms;
+  const result = applyCompletionResearchGrant(previousProgression);
   if (!result) {
     pendingResearchBrief = [];
     screens.setPickResearchBrief([]);
@@ -747,6 +738,7 @@ function awardCompletionResearchGrant(): void {
   }
 
   discoveryProgression = result.progression;
+  recordNewlyDiscoveredBreeds(previousProgression, discoveryProgression);
   applyDiscoveryProgressionUi();
   announceUnlocks(previousTools, previousLifeforms, discoveryProgression);
   pendingResearchBrief = researchBriefForGrant(result.grant);
@@ -775,20 +767,44 @@ function advanceDiscoveryProgression(delta: DiscoveryDelta): boolean {
   if (!changed) return false;
 
   discoveryProgression = nextProgression;
-  // Track discoveries for this run (for lab report and strain banking).
-  for (const breedId of nextProgression.discoveredBreedIds) {
-    if (!previousProgression.discoveredBreedIds.includes(breedId)) {
-      discoveredBreedsThisRun.add(breedId);
-      const def = BREED_DEFS[breedId as BreedId];
-      runTelemetry.recordDiscovery(breedId, Boolean(def?.parents));
-    }
-  }
+  recordNewlyDiscoveredBreeds(previousProgression, nextProgression);
   applyDiscoveryProgressionUi();
   announceDiscoveryProgressionChange(previousProgression, nextProgression);
   announceUnlocks(previousTools, previousLifeforms, discoveryProgression);
   saveRuntimeDiscoveryState();
   debug.updateDiscoveries(discoveryDebugInfo());
   return true;
+}
+
+function recordNewlyDiscoveredBreeds(
+  previous: Pick<DiscoveryProgressionState, 'discoveredBreedIds'>,
+  next: Pick<DiscoveryProgressionState, 'discoveredBreedIds'>,
+): void {
+  const previousBreedIds = new Set(previous.discoveredBreedIds);
+  for (const breedId of next.discoveredBreedIds) {
+    if (previousBreedIds.has(breedId)) continue;
+    discoveredBreedsThisRun.add(breedId);
+    const def = BREED_DEFS[breedId];
+    runTelemetry.recordDiscovery(breedId, Boolean(def?.parents));
+  }
+}
+
+function sampleRunTelemetryFromArena(ar: Arena): void {
+  const ecology = ar.getEcology();
+  runTelemetry.recordReactionCount(ecology.reactions);
+
+  const livingBreeds = new Set<string>();
+  for (const [cellId, cell] of ar.state.cells) {
+    if (cell.vol <= 0) continue;
+    const spawn = ar.archetypes.get(cellId);
+    if (spawn) livingBreeds.add(spawn.breedId ?? spawn.archetype);
+  }
+  if (livingBreeds.size > peakBiodiversity) peakBiodiversity = livingBreeds.size;
+  runTelemetry.recordPeakBiodiversity(livingBreeds.size);
+  longestStabilityStreak = Math.max(
+    longestStabilityStreak,
+    Math.round(ar.getHomeostasisProgress() * HOMEOSTASIS_SUSTAIN_TICKS),
+  );
 }
 
 function discoveryDebugInfo(): {

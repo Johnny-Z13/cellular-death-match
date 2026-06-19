@@ -33,15 +33,20 @@ export function renderLabReport(report: LabReport): HTMLElement {
 
   const ecosystem = section('Ecosystem');
   const bars = el('div', 'lab-report-bars');
-  for (const [breed, count] of [...report.ecosystem.finalBreedCounts.entries()]
+  const finalCounts = [...report.ecosystem.finalBreedCounts.entries()]
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)) {
-    const row = el('div', 'lab-report-bar');
-    row.append(
-      el('span', '', displayLabel(breed)),
-      el('span', '', String(count)),
-    );
-    bars.append(row);
+    .slice(0, 5);
+  if (finalCounts.length === 0) {
+    bars.append(el('p', 'lab-report-empty', 'No living cultures'));
+  } else {
+    for (const [breed, count] of finalCounts) {
+      const row = el('div', 'lab-report-bar');
+      row.append(
+        el('span', '', displayLabel(breed)),
+        el('span', '', String(count)),
+      );
+      bars.append(row);
+    }
   }
   ecosystem.append(
     bars,

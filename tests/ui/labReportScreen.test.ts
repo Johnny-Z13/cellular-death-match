@@ -119,4 +119,18 @@ describe('renderLabReport', () => {
     expect(text).toContain('<img src=x onerror=alert(1)>');
     expect(text).toContain('<script>alert(1)</script>');
   });
+
+  it('shows an explicit empty-state when no living cultures remain', () => {
+    installFakeDocument();
+
+    const text = renderLabReport({
+      ...sampleReport,
+      ecosystem: {
+        ...sampleReport.ecosystem,
+        finalBreedCounts: new Map(),
+      },
+    }).textContent;
+
+    expect(text).toContain('No living cultures');
+  });
 });

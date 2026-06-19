@@ -1,5 +1,9 @@
+// @ts-expect-error Vitest runs this test in Node; the app tsconfig does not ship Node types.
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { createRunTelemetry } from '../../src/game/runTelemetry';
+
+const mainSource = readFileSync('src/main.ts', 'utf8');
 
 describe('run telemetry', () => {
   it('records discoveries, hybrids, reactions, duration, and final report counts', () => {
@@ -50,4 +54,49 @@ describe('run telemetry', () => {
     expect(input.newNotebookEntries).toBe(2);
     expect(input.notebookCompletion).toBe(0.21);
   });
+
+  it('wires grant-awarded breed discoveries through the same run-local recorder as arena discoveries', () => {
+    expect(mainSource).toContain('function recordNewlyDiscoveredBreeds(');
+    expect(mainSource).toContain('recordNewlyDiscoveredBreeds(previousProgression, discoveryProgression);');
+    expect(mainSource).toContain('recordNewlyDiscoveredBreeds(previousProgression, nextProgression);');
+    expect(mainSource).toContain('runTelemetry.recordDiscovery(breedId, Boolean(def?.parents));');
+  });
+
+  it('samples the current arena before every run phase transition that can replace it', () => {
+    expect(mainSource).toContain('function sampleRunTelemetryFromArena(ar: Arena): void');
+    expect(appearsBefore(
+      branchSource("if (status === 'won')", "if (status === 'lost')"),
+      'sampleRunTelemetryFromArena(arena);',
+      'run.completeEpoch();',
+    )).toBe(true);
+    expect(appearsBefore(
+      branchSource("if (status === 'lost')", 'return false;'),
+      'sampleRunTelemetryFromArena(arena);',
+      'run.skipEpoch();',
+    )).toBe(true);
+    expect(appearsBefore(
+      branchSource('arena.isHomeostasisAchieved()', 'arena.isEcosystemCollapsed()'),
+      'sampleRunTelemetryFromArena(arena);',
+      'bankRunStrains();',
+    )).toBe(true);
+    expect(appearsBefore(
+      branchSource('arena.isEcosystemCollapsed()', '// Status check'),
+      'sampleRunTelemetryFromArena(arena);',
+      'bankRunStrains();',
+    )).toBe(true);
+  });
 });
+
+function branchSource(startNeedle: string, endNeedle: string): string {
+  const start = mainSource.indexOf(startNeedle);
+  const end = mainSource.indexOf(endNeedle, start + startNeedle.length);
+  expect(start).toBeGreaterThan(-1);
+  expect(end).toBeGreaterThan(start);
+  return mainSource.slice(start, end);
+}
+
+function appearsBefore(source: string, firstNeedle: string, secondNeedle: string): boolean {
+  const first = source.indexOf(firstNeedle);
+  const second = source.indexOf(secondNeedle);
+  return first > -1 && second > -1 && first < second;
+}
