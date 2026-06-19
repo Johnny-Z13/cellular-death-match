@@ -522,9 +522,11 @@ function startNewFight() {
       if (arena) {
         persistArenaDiscoveries(arena);
         awardCompletionResearchGrant();
+        sampleRunTelemetryFromArena(arena);
       }
       uiAudio.play('epoch_win');
       fx.playWipe();
+      runTelemetry.recordEpochCompleted();
       run.completeEpoch();
       showPhase();
     };
