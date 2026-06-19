@@ -62,11 +62,14 @@ describe('run telemetry', () => {
     expect(mainSource).toContain('runTelemetry.recordDiscovery(breedId, Boolean(def?.parents));');
   });
 
-  it('names won lab reports from classified final breed counts without banking biomes', () => {
+  it('names won lab reports from equilibrium biome or classified final breed volumes without banking biomes', () => {
     expect(mainSource).toContain("import { classifyBiome } from './game/homeostasis';");
     expect(mainSource).toContain('const finalBreedCounts = arena ? finalBreedCountsFor(arena) : new Map<string, number>();');
-    expect(mainSource).toContain("biomeName: state.outcome === 'won' && finalBreedCounts.size > 0");
-    expect(mainSource).toContain('classifyBiome(finalBreedCounts).name');
+    expect(mainSource).toContain('const finalBreedVolumes = arena ? finalBreedVolumesFor(arena) : new Map<string, number>();');
+    expect(mainSource).toContain('const finalBiomeName = state.outcome === \'won\'');
+    expect(mainSource).toContain('arena?.getEquilibrium().biomeName');
+    expect(mainSource).toContain('classifyBiome(finalBreedVolumes).name');
+    expect(mainSource).not.toContain('classifyBiome(finalBreedCounts).name');
     expect(mainSource).toContain('newBiome: false');
   });
 
@@ -103,12 +106,12 @@ describe('run telemetry', () => {
       'run.skipEpoch();',
     )).toBe(true);
     expect(appearsBefore(
-      branchSource('if (arena.getEquilibrium().achieved)', 'const status = arena.endEpochNow();'),
+      branchSource('if (equilibriumCanEndRun && arena.getEquilibrium().achieved)', 'const status = arena.endEpochNow();'),
       'sampleRunTelemetryFromArena(arena);',
       'bankRunStrains();',
     )).toBe(true);
     expect(appearsBefore(
-      branchSource('if (arena.getEquilibrium().achieved)', 'const status = arena.endEpochNow();'),
+      branchSource('if (equilibriumCanEndRun && arena.getEquilibrium().achieved)', 'const status = arena.endEpochNow();'),
       'sampleRunTelemetryFromArena(arena);',
       'run.achieveHomeostasis();',
     )).toBe(true);

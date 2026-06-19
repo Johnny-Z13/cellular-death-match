@@ -38,7 +38,7 @@
   --panel-radius: 14px;
   --desktop-gap: 16px;
   --desktop-rack-width: clamp(340px, 22vw, 460px);
-  --desktop-status-height: 112px;
+  --desktop-status-height: 128px;
   --desktop-dish-size: min(72svh, calc(100svw - (2 * var(--desktop-rack-width)) - (4 * var(--desktop-gap))), 760px);
 
   --glass-blur: blur(16px) saturate(135%);
@@ -3298,7 +3298,14 @@ canvas {
   .hud {
     top: 8px;
     bottom: auto;
-    height: 84px;
+    height: 96px;
+  }
+
+  .hud-hint-row,
+  .hud-volume-row,
+  .hud-ecology-row,
+  #hud-upgrades-row {
+    display: none;
   }
 }
 

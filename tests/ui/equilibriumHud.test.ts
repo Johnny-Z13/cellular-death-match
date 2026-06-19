@@ -23,9 +23,24 @@ describe('equilibrium HUD state', () => {
     expect(mainSource).not.toContain('arena.isHomeostasisAchieved()) {\n    persistArenaDiscoveries(arena);');
   });
 
+  it('does not let onboarding equilibrium mark End ready or end the run', () => {
+    expect(mainSource).toContain('const equilibriumCanEndRun = !isOnboardingEpoch(run.getState().fightIndex);');
+    expect(mainSource).toContain('if (equilibriumCanEndRun && arena.getEquilibrium().achieved)');
+    expect(mainSource).toContain('screens.setEpochComplete(objective.complete || (equilibriumCanEndRun && equilibrium.achieved));');
+  });
+
   it('styles the equilibrium row with the calm bio glow', () => {
     expect(css).toContain('.hud-equilibrium-row .hud-val');
     expect(css).toContain('.hud-equilibrium-achieved .hud-equilibrium-row .hud-val');
     expect(css).toContain('rgba(91, 233, 214');
+  });
+
+  it('uses a compact wide-desktop HUD layout that leaves room for the new equilibrium row', () => {
+    expect(css).toContain('--desktop-status-height: 128px;');
+    expect(css).toContain('@media (min-width: 1181px) and (max-height: 780px) {');
+    expect(css).toContain('.hud-volume-row,');
+    expect(css).toContain('.hud-ecology-row,');
+    expect(css).toContain('#hud-upgrades-row {');
+    expect(css).toContain('height: 96px');
   });
 });

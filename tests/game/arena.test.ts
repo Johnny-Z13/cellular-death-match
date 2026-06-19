@@ -17,6 +17,39 @@ function killCell(arena: Arena, id: number): void {
   }
 }
 
+function stableEquilibriumEnemies() {
+  return [
+    { archetype: 'swarmlet' as const, breedId: 'bloom_mass' as const, targetVol: 520, speed: 0, engulfMultiplier: 1 },
+    { archetype: 'swarmlet' as const, breedId: 'bloom_mass' as const, targetVol: 520, speed: 0, engulfMultiplier: 1 },
+    { archetype: 'swarmlet' as const, breedId: 'needle_swarm' as const, targetVol: 520, speed: 0, engulfMultiplier: 1 },
+    { archetype: 'swarmlet' as const, breedId: 'needle_swarm' as const, targetVol: 520, speed: 0, engulfMultiplier: 1 },
+    { archetype: 'swarmlet' as const, breedId: 'glass_antibody' as const, targetVol: 520, speed: 0, engulfMultiplier: 1 },
+  ];
+}
+
+function saturatedStableEquilibriumEnemies() {
+  const breeds = ['bloom_mass', 'needle_swarm', 'glass_antibody'] as const;
+  return Array.from({ length: 28 }, (_, index) => ({
+    archetype: 'swarmlet' as const,
+    breedId: breeds[index % breeds.length]!,
+    targetVol: 170,
+    speed: 0,
+    engulfMultiplier: 1,
+  }));
+}
+
+function forceBreedVolumes(arena: Arena, breedVolumes: Record<string, number>): void {
+  for (const [cellId, cell] of arena.state.cells) {
+    const spawn = arena.archetypes.get(cellId);
+    if (!spawn) continue;
+    const breed = spawn.breedId ?? spawn.archetype;
+    const volume = breedVolumes[breed];
+    if (volume === undefined) continue;
+    cell.vol = volume;
+    cell.targetVol = volume;
+  }
+}
+
 describe('createArena — initial state', () => {
   it('starts with status "running"', () => {
     const arena = createArena({
@@ -2185,7 +2218,7 @@ describe('arena ecosystem mode', () => {
     )).toBe(true);
   });
 
-  it('latches equilibrium as visible state and pauses pressure without ending the epoch', () => {
+  it('latches equilibrium as visible state and pauses pressure past the objective deadline', () => {
     const arena = createArena({
       LX: 140,
       LY: 140,
@@ -2196,17 +2229,11 @@ describe('arena ecosystem mode', () => {
         engulfMultiplier: 5,
         bulletSize: 3,
       },
-      enemies: [
-        { archetype: 'swarmlet' as const, breedId: 'bloom_mass', targetVol: 520, speed: 0, engulfMultiplier: 1 },
-        { archetype: 'swarmlet' as const, breedId: 'bloom_mass', targetVol: 520, speed: 0, engulfMultiplier: 1 },
-        { archetype: 'swarmlet' as const, breedId: 'needle_swarm', targetVol: 520, speed: 0, engulfMultiplier: 1 },
-        { archetype: 'swarmlet' as const, breedId: 'needle_swarm', targetVol: 520, speed: 0, engulfMultiplier: 1 },
-        { archetype: 'swarmlet' as const, breedId: 'glass_antibody', targetVol: 520, speed: 0, engulfMultiplier: 1 },
-      ],
+      enemies: stableEquilibriumEnemies(),
       wrap: true,
       mode: 'ecosystem',
       includeControlSample: false,
-      epochTicks: 60 * 80,
+      epochTicks: 60 * 21,
       worldEventIntensity: 0,
     });
 
@@ -2230,6 +2257,50 @@ describe('arena ecosystem mode', () => {
     expect(ecology.accidents).toBe(pressureAtEquilibrium.accidents);
     expect(ecology.crisis).toBe('none');
     expect(arena.getStatus()).toBe('running');
+  });
+
+  it('marks a crisis-survivor objective if equilibrium cancels an active crisis', () => {
+    const arena = createArena({
+      LX: 140,
+      LY: 140,
+      seed: 18,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+      },
+      enemies: saturatedStableEquilibriumEnemies(),
+      wrap: true,
+      mode: 'ecosystem',
+      includeControlSample: false,
+      epochTicks: 60 * 80,
+      worldEventIntensity: 0,
+      objective: {
+        kind: 'crisis_survivor',
+        name: 'Crisis Survivor',
+        description: 'Keep a stable culture through pressure.',
+        target: '3+ cultures alive through crisis',
+      },
+    });
+
+    for (let i = 0; i < 60 * 11; i++) {
+      forceBreedVolumes(arena, { bloom_mass: 170, needle_swarm: 170, glass_antibody: 340 });
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+    for (let i = 0; i < 60 * 25; i++) {
+      forceBreedVolumes(arena, { bloom_mass: 170, needle_swarm: 170, glass_antibody: 170 });
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+      if (arena.getEquilibrium().achieved) break;
+    }
+
+    expect(arena.getEquilibrium().achieved).toBe(true);
+    expect(arena.getEcology().crisis).not.toBe('none');
+
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+
+    expect(arena.getEcology().crisis).toBe('none');
+    expect(arena.getObjectiveProgress().complete).toBe(true);
   });
 
   it('can turn dish fertility world events fully off', () => {

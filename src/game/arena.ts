@@ -463,8 +463,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
         // Complete after the moment of success.
         if (progress.met && progress.latches) objectiveAchieved = true;
         const complete = progress.latches ? objectiveAchieved : progress.met;
-        // The experiment no longer auto-wins the instant it succeeds: the
-        // player banks it via endEpochNow(), or the deadline banks it for them.
+        // Equilibrium is visible and stable until the player banks it; it
+        // pauses pressure without letting the normal objective deadline fire.
+        if (homeostasisTracker.isAchieved()) return 'running';
         // The deadline is a soft backstop — complete at the deadline wins,
         // otherwise an unmet objective fails as before.
         if (tickNo >= epochTicks) return complete || progress.status === 'satisfied' ? 'won' : 'lost';
@@ -809,7 +810,12 @@ export function createArena(opts: CreateArenaOpts): Arena {
           applyAgitation(state, agitationTicksRemaining / AGITATION_DURATION_TICKS);
           agitationTicksRemaining -= 1;
         }
-        if (pressurePaused) activeCrisis = null;
+        if (pressurePaused && activeCrisis) {
+          if (objectiveMetrics(state, archetypes).livingLifeforms >= 3) {
+            objectiveRuntime.survivedCrisis = true;
+          }
+          activeCrisis = null;
+        }
         if (!pressurePaused && !activeCrisis && tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveCrisisInterval === 0) {
           const result = activateCrisis(this, state, archetypes);
           activeCrisis = { id: result.id, ttl: CRISES[result.id].durationTicks };

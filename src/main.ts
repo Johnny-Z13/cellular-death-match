@@ -349,7 +349,8 @@ screens.onEndEpoch(() => {
   if (!arena || run.getState().phase !== 'arena') return;
   ecologyAudio.unlock();
   uiAudio.play('ui_tap');
-  if (arena.getEquilibrium().achieved) {
+  const equilibriumCanEndRun = !isOnboardingEpoch(run.getState().fightIndex);
+  if (equilibriumCanEndRun && arena.getEquilibrium().achieved) {
     persistArenaDiscoveries(arena);
     awardCompletionResearchGrant();
     sampleRunTelemetryFromArena(arena);
@@ -511,13 +512,16 @@ function labReportForRunEnd(): LabReport {
     ? 0
     : notebookView.discoveredCount / notebookView.totalCount;
   const finalBreedCounts = arena ? finalBreedCountsFor(arena) : new Map<string, number>();
+  const finalBreedVolumes = arena ? finalBreedVolumesFor(arena) : new Map<string, number>();
+  const finalBiomeName = state.outcome === 'won'
+    ? arena?.getEquilibrium().biomeName
+      ?? (finalBreedVolumes.size > 0 ? classifyBiome(finalBreedVolumes).name : undefined)
+    : undefined;
 
   finalLabReport = assembleLabReport(runTelemetry.toLabReportInput({
     endedAtMs: performance.now(),
     outcome: state.outcome ?? 'lost',
-    biomeName: state.outcome === 'won' && finalBreedCounts.size > 0
-      ? classifyBiome(finalBreedCounts).name
-      : undefined,
+    biomeName: finalBiomeName,
     epochCount: Math.max(1, state.fightIndex + 1, state.epochResults.length),
     newBiome: false,
     finalBreedCounts,
@@ -542,6 +546,18 @@ function finalBreedCountsFor(ar: Arena): Map<string, number> {
     counts.set(id, (counts.get(id) ?? 0) + 1);
   }
   return counts;
+}
+
+function finalBreedVolumesFor(ar: Arena): Map<string, number> {
+  const volumes = new Map<string, number>();
+  for (const [cellId, cell] of ar.state.cells) {
+    if (cell.vol <= 0) continue;
+    const spawn = ar.archetypes.get(cellId);
+    if (!spawn) continue;
+    const id = spawn.breedId ?? spawn.archetype;
+    volumes.set(id, (volumes.get(id) ?? 0) + cell.vol);
+  }
+  return volumes;
 }
 
 function totalStrainsAvailableForReport(): number {
@@ -663,6 +679,7 @@ function loop() {
 
   const ecology = arena.getEcology();
   const equilibrium = arena.getEquilibrium();
+  const equilibriumCanEndRun = !isOnboardingEpoch(run.getState().fightIndex);
   screens.setEquilibrium(equilibrium);
   sampleRunTelemetryFromArena(arena);
 
@@ -699,7 +716,7 @@ function loop() {
     });
     screens.updateToolCharges(arena.getToolStates());
     screens.updateAgitation(arena.getAgitationState());
-    screens.setEpochComplete(objective.complete || equilibrium.achieved);
+    screens.setEpochComplete(objective.complete || (equilibriumCanEndRun && equilibrium.achieved));
     updateButtonHint();
     announceEpochCompletion(objective.complete, objective.def.name);
     announceEquilibrium(equilibrium);
