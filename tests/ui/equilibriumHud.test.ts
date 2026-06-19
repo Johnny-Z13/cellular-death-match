@@ -41,6 +41,6 @@ describe('equilibrium HUD state', () => {
     expect(css).toContain('.hud-volume-row,');
     expect(css).toContain('.hud-ecology-row,');
     expect(css).toContain('#hud-upgrades-row {');
-    expect(css).toContain('height: 96px');
+    expect(css).toContain('height: 104px');
   });
 });
