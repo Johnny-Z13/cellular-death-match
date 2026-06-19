@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { OBJECTIVE_POOL, drawObjectives } from '../../src/game/objectivePool';
+import {
+  OBJECTIVE_POOL,
+  canCrisisSurvivorResolve,
+  crisisSurvivorResolvableForEpoch,
+  drawObjectives,
+} from '../../src/game/objectivePool';
 import type { DrawContext } from '../../src/game/objectivePool';
 
 const baseCtx: DrawContext = {
@@ -38,6 +43,31 @@ describe('OBJECTIVE_POOL', () => {
       unlockedTools: ['nutrient', 'toxin', 'water', 'salt', 'acid'],
     })).toBe(false);
     expect(protector?.unavailableReason).toMatch(/fragile/i);
+  });
+
+  it('offers crisis_survivor only when a crisis can finish before the epoch deadline', () => {
+    expect(canCrisisSurvivorResolve({
+      epochTicks: 60 * 33,
+      crisisIntervalTicks: 60 * 30,
+      graceTicks: 60 * 25,
+      maxDurationTicks: 60 * 9,
+    })).toBe(false);
+    expect(canCrisisSurvivorResolve({
+      epochTicks: 60 * 40,
+      crisisIntervalTicks: 60 * 30,
+      graceTicks: 60 * 25,
+      maxDurationTicks: 60 * 9,
+    })).toBe(true);
+
+    const crisis = OBJECTIVE_POOL.find((obj) => obj.kind === 'crisis_survivor');
+    expect(crisis).toBeDefined();
+    for (let epochIndex = 0; epochIndex < 20; epochIndex++) {
+      expect(crisis?.available({
+        ...baseCtx,
+        epochIndex,
+        discoveredBreeds: new Set(['bloom_mass', 'needle_swarm']),
+      })).toBe(crisisSurvivorResolvableForEpoch(epochIndex));
+    }
   });
 });
 

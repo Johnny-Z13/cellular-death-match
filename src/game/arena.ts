@@ -239,6 +239,11 @@ interface MutationResult {
   effects: ToolEffect[];
 }
 
+interface ReagentReactionResult {
+  effect: ToolEffect;
+  inputs: readonly ToolEffectType[];
+}
+
 function removeControlSample(state: SimState): void {
   const control = state.cells.get(PLAYER_ID);
   if (!control) return;
@@ -338,7 +343,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
     if (discoveredBreedIds.has(id)) return;
     discoveredBreedIds.add(id);
     discoveredBreedTicks.set(id, tickNo);
-    if (BREED_DEFS[id].parents) objectiveRuntime.hybridDiscovered = true;
+    if (BREED_DEFS[id].parents && !knownBreedIds.has(id)) objectiveRuntime.hybridDiscovered = true;
     discoverNote(`breed_${id}`, `NEW LIFEFORM CREATED: ${BREED_DEFS[id].name}.`);
     if (sourceCell) {
       const marker = breedDiscoveryMarkerFor(id);
@@ -574,7 +579,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           state.rng.randInt(1_000_000),
         );
         if (catalyticReaction) {
-          if (reactionInvolvesEffectType(hatchEffect, toolEffects, 'acid')) {
+          if (reactionUsesAcid(catalyticReaction)) {
             objectiveRuntime.acidReactionTriggered = true;
           }
           reactionCount += 1;
@@ -679,31 +684,27 @@ export function createArena(opts: CreateArenaOpts): Arena {
       }
       const reaction = reactionFor(effect, toolEffects, state.rng.randInt(1_000_000));
       if (reaction) {
-        if (reactionInvolvesEffectType(effect, toolEffects, 'acid')) {
-          objectiveRuntime.acidReactionTriggered = true;
-        }
+        if (reactionUsesAcid(reaction)) objectiveRuntime.acidReactionTriggered = true;
         reactionCount += 1;
-        pulseToolEffect(state, reaction, archetypes);
-        toolEffects.push(reaction);
-        addDishEventForEffect(reaction, addDishEvent);
+        pulseToolEffect(state, reaction.effect, archetypes);
+        toolEffects.push(reaction.effect);
+        addDishEventForEffect(reaction.effect, addDishEvent);
       }
       // Dropping a reagent onto a drawn nutrient trail sparks a reaction along
       // the painted line — steer life with paste, then catalyse the path.
       const trailReaction = reactionFor(effect, trailEffects, state.rng.randInt(1_000_000));
       if (trailReaction) {
-        if (effect.type === 'acid') objectiveRuntime.acidReactionTriggered = true;
+        if (reactionUsesAcid(trailReaction)) objectiveRuntime.acidReactionTriggered = true;
         reactionCount += 1;
-        pulseToolEffect(state, trailReaction, archetypes);
-        toolEffects.push(trailReaction);
-        addDishEventForEffect(trailReaction, addDishEvent);
+        pulseToolEffect(state, trailReaction.effect, archetypes);
+        toolEffects.push(trailReaction.effect);
+        addDishEventForEffect(trailReaction.effect, addDishEvent);
         discoverNote('paste_catalysed', 'Lab note: reagents react along a nutrient paste trail.');
         pushSignal('Paste trail catalysed by reagent.');
         while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
       }
       if (catalyticReaction) {
-        if (reactionInvolvesEffectType(effect, toolEffects, 'acid')) {
-          objectiveRuntime.acidReactionTriggered = true;
-        }
+        if (reactionUsesAcid(catalyticReaction)) objectiveRuntime.acidReactionTriggered = true;
         reactionCount += 1;
         pulseToolEffect(state, catalyticReaction.effect, archetypes);
         toolEffects.push(catalyticReaction.effect);
@@ -1009,7 +1010,7 @@ function toolEffectFor(
   };
 }
 
-function reactionFor(newEffect: ToolEffect, effects: ToolEffect[], seed: number): ToolEffect | null {
+function reactionFor(newEffect: ToolEffect, effects: ToolEffect[], seed: number): ReagentReactionResult | null {
   for (const effect of effects) {
     if (effect === newEffect) continue;
     const dist = Math.hypot(newEffect.pos[0] - effect.pos[0], newEffect.pos[1] - effect.pos[1]);
@@ -1019,31 +1020,25 @@ function reactionFor(newEffect: ToolEffect, effects: ToolEffect[], seed: number)
     const radius = Math.max(newEffect.radius, effect.radius) + 7;
     const maxTtl = reactionType === 'bloom' ? 60 * 5 : reactionType === 'brine' ? 60 * 6 : 60 * 3;
     return {
-      type: reactionType,
-      pos: [
-        (newEffect.pos[0] + effect.pos[0]) / 2,
-        (newEffect.pos[1] + effect.pos[1]) / 2,
-      ],
-      radius,
-      ttl: maxTtl,
-      maxTtl,
-      seed,
+      effect: {
+        type: reactionType,
+        pos: [
+          (newEffect.pos[0] + effect.pos[0]) / 2,
+          (newEffect.pos[1] + effect.pos[1]) / 2,
+        ],
+        radius,
+        ttl: maxTtl,
+        maxTtl,
+        seed,
+      },
+      inputs: [newEffect.type, effect.type],
     };
   }
   return null;
 }
 
-function reactionInvolvesEffectType(
-  newEffect: ToolEffect,
-  effects: ToolEffect[],
-  type: ToolEffectType,
-): boolean {
-  if (newEffect.type === type) return true;
-  return effects.some((effect) => (
-    effect !== newEffect
-    && effect.type === type
-    && Math.hypot(newEffect.pos[0] - effect.pos[0], newEffect.pos[1] - effect.pos[1]) <= Math.min(newEffect.radius, effect.radius) * 0.85
-  ));
+function reactionUsesAcid(reaction: { inputs: readonly string[] }): boolean {
+  return reaction.inputs.includes('acid');
 }
 
 function catalyticReactionFor(
@@ -1053,11 +1048,18 @@ function catalyticReactionFor(
   archetypes: Map<CellId, EnemySpawn>,
   agitated: boolean,
   seed: number,
-): { effect: ToolEffect; noteId: DiscoveryNoteId; message: string; caution: 'stable' | 'volatile' | 'critical' } | null {
+): {
+  effect: ToolEffect;
+  inputs: readonly ToolEffectType[];
+  noteId: DiscoveryNoteId;
+  message: string;
+  caution: 'stable' | 'volatile' | 'critical';
+} | null {
   const newType = catalysisEffectTypeFor(newEffect.type);
   if (!newType) return null;
   let strongestReaction: {
     effect: ToolEffect;
+    inputs: readonly ToolEffectType[];
     noteId: DiscoveryNoteId;
     message: string;
     caution: 'stable' | 'volatile' | 'critical';
@@ -1092,6 +1094,7 @@ function catalyticReactionFor(
         recipe.effect.ttl,
         recipe.effect.radiusBonus,
       ),
+      inputs: recipe.inputs,
       noteId: recipe.discoveryNoteId,
       message: reactionMessageFor(recipe.effect.type, recipe.name),
       caution: recipe.caution,

@@ -2499,6 +2499,47 @@ describe('arena ecosystem mode', () => {
     expect(arena.getObjectiveProgress().complete).toBe(true);
   });
 
+  it('does not satisfy acid_sculptor when acid is near a non-acid selected reaction', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 815,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        saltCharges: 1,
+        acidCharges: 1,
+        waterCharges: 1,
+      },
+      enemies: [{
+        archetype: 'bruiser' as const,
+        targetVol: 120,
+        speed: 8,
+        engulfMultiplier: 5,
+        traits: ['gelatinous'],
+      }],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+      objective: {
+        kind: 'acid_sculptor',
+        name: 'Acid Sculptor',
+        description: 'Use acid to trigger a reaction.',
+        target: '1 acid reaction',
+      },
+    });
+
+    expect(arena.applyTool('salt', [40, 40])).toBe(true);
+    expect(arena.applyTool('acid', [40, 40])).toBe(true);
+    expect(arena.applyTool('water', [40, 40])).toBe(true);
+
+    expect(arena.getEcology().reactions).toBeGreaterThanOrEqual(1);
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_salt_water_crystal');
+    expect(arena.getObjectiveProgress().complete).toBe(false);
+  });
+
   it('tracks current-epoch hybrid discoveries for cross_breed objectives', () => {
     const arena = createArena({
       LX: 90,
@@ -2534,6 +2575,43 @@ describe('arena ecosystem mode', () => {
 
     expect(arena.getEcology().discoveries.breedIds).toContain('quill_bloom');
     expect(arena.getObjectiveProgress().complete).toBe(true);
+  });
+
+  it('does not complete cross_breed by re-discovering a known hybrid', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 816,
+      player: {
+        targetVol: 100,
+        speed: 10,
+        engulfMultiplier: 5,
+        bulletSize: 3,
+        nutrientCharges: 1,
+      },
+      enemies: [
+        { archetype: 'sniper' as const, breedId: 'needle_swarm', targetVol: 100, speed: 10, engulfMultiplier: 4 },
+        { archetype: 'splitter' as const, breedId: 'bloom_mass', targetVol: 120, speed: 8, engulfMultiplier: 5 },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+      knownBreedIds: new Set(['needle_swarm', 'bloom_mass', 'quill_bloom']),
+      objective: {
+        kind: 'cross_breed',
+        name: 'Cross-Breed',
+        description: 'Create a new hybrid.',
+        target: '1 new hybrid breed created',
+      },
+    });
+    arena.state.cells.get(2)!.center = [42, 44];
+    arena.state.cells.get(3)!.center = [50, 44];
+
+    expect(arena.applyTool('nutrient', [46, 44])).toBe(true);
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+
+    expect(arena.getEcology().discoveries.breedIds).toContain('quill_bloom');
+    expect(arena.getObjectiveProgress().complete).toBe(false);
   });
 });
 

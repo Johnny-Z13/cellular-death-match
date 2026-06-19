@@ -1,5 +1,8 @@
 import type { ObjectiveDef } from '../content/objectives';
 import { BREED_DEFS, type BreedId } from '../content/catalysis';
+import { CRISES } from '../content/ecology';
+import { ARENA_TIMING } from '../content/ecologyTuning';
+import { getEscalation } from './escalation';
 import { createRng } from '../sim/rng';
 
 export interface DrawContext {
@@ -13,6 +16,16 @@ export interface PoolObjective extends ObjectiveDef {
   available: (ctx: DrawContext) => boolean;
   unavailableReason?: string;
 }
+
+export interface CrisisResolutionWindow {
+  epochTicks: number;
+  crisisIntervalTicks: number;
+  graceTicks: number;
+  maxDurationTicks: number;
+}
+
+const CRISIS_GRACE_TICKS = 60 * 25;
+const MAX_CRISIS_DURATION_TICKS = Math.max(...Object.values(CRISES).map((crisis) => crisis.durationTicks));
 
 export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
   {
@@ -58,7 +71,7 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
     target: '3+ cultures alive through crisis',
     hint: 'Spread cultures far apart before applying pressure, and keep water ready to dilute toxin spikes.',
     minCount: 3,
-    available: (ctx) => ctx.epochIndex >= 5,
+    available: (ctx) => crisisSurvivorResolvableForEpoch(ctx.epochIndex),
   },
   {
     kind: 'protector',
@@ -121,6 +134,22 @@ export function drawObjectives(ctx: DrawContext): ObjectiveDef[] {
   }
 
   return pool.slice(0, 2);
+}
+
+export function crisisSurvivorResolvableForEpoch(epochIndex: number): boolean {
+  const esc = getEscalation(epochIndex);
+  return canCrisisSurvivorResolve({
+    epochTicks: esc.epochTicks,
+    crisisIntervalTicks: Math.max(60, Math.round(ARENA_TIMING.crisisIntervalTicks * esc.crisisIntervalMul)),
+    graceTicks: CRISIS_GRACE_TICKS,
+    maxDurationTicks: MAX_CRISIS_DURATION_TICKS,
+  });
+}
+
+export function canCrisisSurvivorResolve(window: CrisisResolutionWindow): boolean {
+  if (window.epochTicks <= 0 || window.crisisIntervalTicks <= 0) return false;
+  const firstCrisisStart = Math.ceil(window.graceTicks / window.crisisIntervalTicks) * window.crisisIntervalTicks;
+  return firstCrisisStart + window.maxDurationTicks <= window.epochTicks;
 }
 
 function hasUnmadeHybrid(discoveredBreeds: ReadonlySet<BreedId>): boolean {
