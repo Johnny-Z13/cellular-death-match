@@ -954,7 +954,7 @@ Expected: all pass.
 - Test: `tests/ui/mobileLayoutCss.test.ts`
 - Browser verification required.
 
-- [ ] **Step 1: Add CSS tests for small-mobile coach placement**
+- [x] **Step 1: Add CSS tests for small-mobile coach placement**
 
 Extend `tests/ui/mobileLayoutCss.test.ts` to assert the small-height media query moves the coach clear of the top of the dish:
 
@@ -964,7 +964,7 @@ expect(styles).toContain('.coach');
 expect(styles).toContain('top: calc(74px + env(safe-area-inset-top))');
 ```
 
-- [ ] **Step 2: Tune coach and banner on short screens**
+- [x] **Step 2: Tune coach and banner on short screens**
 
 In `src/styles.css`, under `@media (max-width: 899px) and (max-height: 700px)`, add:
 
@@ -983,7 +983,7 @@ In `src/styles.css`, under `@media (max-width: 899px) and (max-height: 700px)`, 
 }
 ```
 
-- [ ] **Step 3: Browser verification**
+- [x] **Step 3: Browser verification**
 
 Run:
 
@@ -1008,18 +1008,18 @@ Stop the server after verification.
 - Modify: `README.md`
 - Modify: `AGENTS.md` only if verification commands or product shape changed.
 
-- [ ] **Step 1: Update current state**
+- [x] **Step 1: Update current state**
 
 In `docs/current-state.md`, update:
 
 ```md
-npm test      # 501 passing
+npm test      # 61 files, 554 tests passing
 npm run build # clean
 ```
 
 Remove the note about 4 pre-existing CSS failures.
 
-- [ ] **Step 2: Update gameplay loop**
+- [x] **Step 2: Update gameplay loop**
 
 Document the actual player flow:
 
@@ -1032,7 +1032,7 @@ Document the actual player flow:
 7. Equilibrium state.
 8. Lab report.
 
-- [ ] **Step 3: Final verification**
+- [x] **Step 3: Final verification**
 
 Run:
 

@@ -1,14 +1,14 @@
 # Current State
 
-Last updated: 2026-06-19 (CPM energy profiles + roguelike restructure)
+Last updated: 2026-06-19 (roguelike surfacing repair)
 
 ## Summary
 
 Cellular Death Match is a mobile-first Petri dish ecosystem roguelike. Runs are open-ended with escalating pressure:
 
 - 3-beat guided onboarding epoch (~30s), 2 fixed progression epochs, then open-ended mid-game.
-- Runs end via ecosystem collapse (fail) or homeostasis (win — 3+ breeds in stable equilibrium for 20s).
-- Per-breed CPM energy profiles: each breed has distinct Ising/volume/movement/engulf multipliers.
+- Runs fail via ecosystem collapse; homeostasis now latches as a visible equilibrium state that pauses pressure until the player ends the trial.
+- Per-breed CPM energy profiles: each breed has distinct Ising/volume/movement/engulf multipliers, resolved by the arena into sim-neutral cell profiles.
 - Reagent energy shifts: reagents modify CPM coefficients within field radius (salt hardens, acid fragments, etc.).
 - Strain library: discovered breeds banked across runs; players choose egg loadouts before each run.
 - Procedural objective pool: mid-game epochs offer 2 objectives to choose from.
@@ -21,10 +21,10 @@ Cellular Death Match is a mobile-first Petri dish ecosystem roguelike. Runs are 
 
 ## Main Systems
 
-- Simulation: cellular Potts model in `src/sim/`. Per-cell energy profiles in `src/sim/breedProfiles.ts`.
+- Simulation: cellular Potts model in `src/sim/`. Cells store generic energy coefficients; breed profile lookup stays outside the low-level sim.
 - Arena: ecosystem tick loop, objective evaluation, tool effects, mutation, reseeding, homeostasis tracking, escalation, and resupply in `src/game/arena.ts`.
 - Run state: open-ended state machine with homeostasis/collapse end states in `src/game/run.ts`.
-- Homeostasis: equilibrium detection and biome classification in `src/game/homeostasis.ts`.
+- Homeostasis: volume-share equilibrium detection and biome classification in `src/game/homeostasis.ts`.
 - Escalation: per-epoch pressure scaling in `src/game/escalation.ts`.
 - Objective pool: procedural mid-game objectives in `src/game/objectivePool.ts`.
 - Strain library: persistent strain bank and loadout in `src/game/strainLibrary.ts`.
@@ -45,16 +45,17 @@ Cellular Death Match is a mobile-first Petri dish ecosystem roguelike. Runs are 
 
 ## Gameplay Loop
 
-1. Select egg loadout from strain library (if you have more than 1 strain).
-2. Epoch 1: guided 3-beat onboarding — place egg, feed colony, watch bloom (~30s, auto-advances).
-3. Epochs 2-3: fixed objectives (build ecology, first breed) with mild hazards.
-4. Epochs 4+: choose from 2 procedural objectives. Pressure escalates per epoch.
-5. Select an egg strain or lab tool. Tap the dish to seed life, feed growth, or repel colonies.
+1. Start from the title screen, then optionally choose an egg loadout when the strain library has more than one strain.
+2. Epoch 1 is a guided 3-beat onboarding flow: place egg, feed colony, watch bloom (~30s, auto-advances).
+3. Epochs 2-3 use fixed objectives to teach ecology building and first breed discovery.
+4. Epochs 4+ present 2 procedural objective choices before the next ecology round begins.
+5. During each epoch, select an egg strain or lab tool and tap the dish to seed life, feed growth, repel colonies, or trigger reactions.
 6. Satisfy the objective: creation objectives latch once achieved; balance objectives reflect live state.
 7. Pick an upgrade between epochs.
-8. The run continues until the ecosystem collapses (all cultures die → fail) or reaches homeostasis (3+ breeds in stable equilibrium for 20s → win).
-9. Lab Report summarizes discoveries, ecosystem stats, and strains banked.
-10. Strains discovered during the run are banked to the strain library for future runs.
+8. If the dish reaches volume-share stability across 3+ breeds for 20s, the HUD surfaces Equilibrium, pressure pauses, and the player can keep observing or end the trial.
+9. Collapse still ends the run as a failure if all cultures die.
+10. Lab Report summarizes discoveries, hybrids, reactions, biome state, ecosystem stats, notebook progress, and strains banked.
+11. Strains discovered during the run are banked to the strain library for future runs.
 
 ## Current Lifeforms
 
@@ -97,11 +98,11 @@ Hybrid breeds (cross-bred from two discovered base breeds under a nutrient field
 As of this update (2026-06-19):
 
 ```bash
-npm test      # 497 passing, 4 pre-existing CSS failures
+npm test      # 61 files, 554 tests passing
 npm run build # clean
 ```
 
-Both commands are expected to pass. The 4 CSS test failures are pre-existing (desktopLayoutCss, discoveryMenuPlaceholders, discoveryUnlockVisibility, uiSelectionCss).
+Both commands are expected to pass.
 
 ## Historical Docs
 
