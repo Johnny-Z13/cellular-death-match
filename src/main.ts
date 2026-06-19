@@ -707,10 +707,13 @@ function resolveArenaStatus(status: ArenaStatus): boolean {
     // Playful-discovery model: a missed objective doesn't end the run — the
     // player moves on to the next epoch (still gets an upgrade pick). Only the
     // final epoch closes the run.
+    if (arena) {
+      persistArenaDiscoveries(arena);
+      sampleRunTelemetryFromArena(arena);
+    }
     uiAudio.play('epoch_fail');
     fx.playWipe();
     fx.showToast('catalyst', 'Objective Lapsed', 'Moving to the next ecosystem');
-    if (arena) sampleRunTelemetryFromArena(arena);
     runTelemetry.recordEpochLapsed();
     run.skipEpoch();
     if (run.getState().phase === 'run_end') uiAudio.stopAmbience();

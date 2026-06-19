@@ -93,6 +93,16 @@ describe('run telemetry', () => {
       'run.skipEpoch();',
     )).toBe(true);
     expect(appearsBefore(
+      branchSource("if (status === 'lost')", 'return false;'),
+      'persistArenaDiscoveries(arena);',
+      'sampleRunTelemetryFromArena(arena);',
+    )).toBe(true);
+    expect(appearsBefore(
+      branchSource("if (status === 'lost')", 'return false;'),
+      'persistArenaDiscoveries(arena);',
+      'run.skipEpoch();',
+    )).toBe(true);
+    expect(appearsBefore(
       branchSource('arena.isHomeostasisAchieved()', 'arena.isEcosystemCollapsed()'),
       'sampleRunTelemetryFromArena(arena);',
       'bankRunStrains();',
