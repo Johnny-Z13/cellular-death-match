@@ -36,17 +36,19 @@ import {
 import { researchBriefForGrant, type ResearchBriefLine } from './game/researchBrief';
 import { applyOnboardingStateReset } from './game/onboardingReset';
 import {
+  isOnboardingEpoch,
   lifeformUnlocksForCurrentStage,
   shouldUseOnboardingDishForCurrentStage,
   toolUnlocksForCurrentStage,
 } from './game/onboardingStage';
+import { createStrainLibrary, type StrainLibrary } from './game/strainLibrary';
 
 declare const __COMMIT_MESSAGE__: string;
 
 const LX = 160;
 const LY = 160;
 const PLAYER_ID = 1;
-const EPOCH_TICKS = 60 * 80; // ~80s per epoch — generous breathing room for discovery
+// Epoch ticks now comes from escalation.ts via arena's fightIndex.
 const PASTE_CURSOR_RADIUS = 9; // grid units; mirrors TOOL_TUNING.paste.radius for the draw cursor glow
 const reduceMotionPref = typeof window !== 'undefined'
   && typeof window.matchMedia === 'function'
@@ -79,6 +81,7 @@ const discoveryStorage = window.localStorage;
 applyOnboardingStateReset(discoveryStorage);
 let discoverySave: DiscoverySaveState = loadDiscoverySave(discoveryStorage);
 let discoveryProgression = createDiscoveryProgression(discoverySave);
+const strainLibrary: StrainLibrary = createStrainLibrary(discoveryStorage);
 // Allow up to PALETTE_SIZE total cell colors for evolving ecosystem spawns.
 const PALETTE_SIZE = 32;
 
@@ -102,6 +105,9 @@ let heardDishEventIds = new Set<number>();
 let pendingResearchBrief: ResearchBriefLine[] = [];
 let lastOpeningBloomCreated = false;
 let didPlaceEggThisEpoch = false;
+let discoveredBreedsThisRun = new Set<string>();
+let discoveredHybridsThisRun = new Set<string>();
+let peakBiodiversity = 0;
 
 interface RuntimeOverlayState {
   menuOpen: boolean;
@@ -293,6 +299,9 @@ screens.onTitleStart(() => {
   uiAudio.unlock();
   uiAudio.play('ui_select');
   run.start();
+  discoveredBreedsThisRun = new Set();
+  discoveredHybridsThisRun = new Set();
+  peakBiodiversity = 0;
   startNewFight();
 });
 screens.onEndRestart(() => {
@@ -407,8 +416,8 @@ function startNewFight() {
     wrap: false,
     mode: 'ecosystem',
     includeControlSample: !useOnboardingDish,
-    epochTicks: EPOCH_TICKS,
     objective: run.getObjective(),
+    fightIndex: runState.fightIndex,
   });
   renderer = createRenderer(canvas, PALETTE_SIZE);
   tickCount = 0;
@@ -434,7 +443,20 @@ function startNewFight() {
     objective.description,
   );
   // First epoch of a run: bring up the onboarding coach (first run only).
-  if (runState.fightIndex === 0) coach.beginRun();
+  if (runState.fightIndex === 0) {
+    coach.onOnboardingComplete = () => {
+      // Auto-end Epoch 1 when bloom is discovered.
+      if (arena) {
+        persistArenaDiscoveries(arena);
+        awardCompletionResearchGrant();
+      }
+      uiAudio.play('epoch_win');
+      fx.playWipe();
+      run.completeEpoch();
+      showPhase();
+    };
+    coach.beginRun();
+  }
   screens.updateToolCharges(arena.getToolStates());
   screens.updateAgitation(arena.getAgitationState());
   updateButtonHint();
@@ -477,7 +499,10 @@ function loop() {
   const currentOpeningBloomCreated = openingBloomCreatedInCurrentDish();
   if (currentOpeningBloomCreated !== lastOpeningBloomCreated) {
     lastOpeningBloomCreated = currentOpeningBloomCreated;
-    if (currentOpeningBloomCreated) advanceDiscoveryProgression(arena.getEcology().discoveries);
+    if (currentOpeningBloomCreated) {
+      advanceDiscoveryProgression(arena.getEcology().discoveries);
+      coach.report('bloom-discovered');
+    }
     applyDiscoveryProgressionUi();
     refreshArenaToolUi();
     updateButtonHint();
@@ -533,10 +558,51 @@ function loop() {
   });
   debug.updateDiscoveries(discoveryDebugInfo());
 
+  // Track peak biodiversity for lab report.
+  const livingBreeds = new Set<string>();
+  for (const [cellId, cell] of arena.state.cells) {
+    if (cell.vol <= 0) continue;
+    const spawn = arena.archetypes.get(cellId);
+    if (spawn) livingBreeds.add(spawn.breedId ?? spawn.archetype);
+  }
+  if (livingBreeds.size > peakBiodiversity) peakBiodiversity = livingBreeds.size;
+
+  // Homeostasis check: if equilibrium achieved, end the run as won.
+  if (!isOnboardingEpoch(run.getState().fightIndex) && arena.isHomeostasisAchieved()) {
+    persistArenaDiscoveries(arena);
+    awardCompletionResearchGrant();
+    bankRunStrains();
+    uiAudio.play('epoch_win');
+    fx.playWipe();
+    run.achieveHomeostasis();
+    uiAudio.stopAmbience();
+    showPhase();
+    return;
+  }
+
+  // Ecosystem collapse check: if all cells dead past onboarding, end run.
+  if (!isOnboardingEpoch(run.getState().fightIndex) && arena.isEcosystemCollapsed() && tickCount > 120) {
+    bankRunStrains();
+    uiAudio.play('epoch_fail');
+    fx.playWipe();
+    run.failEpoch();
+    uiAudio.stopAmbience();
+    showPhase();
+    return;
+  }
+
   // Status check: did this tick end the fight?
   if (resolveArenaStatus(arena.getStatus())) return;
 
   scheduleLoop();
+}
+
+function bankRunStrains(): void {
+  for (const breedId of discoveredBreedsThisRun) {
+    strainLibrary.bankStrain(breedId);
+  }
+  strainLibrary.incrementRunCount();
+  strainLibrary.save();
 }
 
 function resolveArenaStatus(status: ArenaStatus): boolean {
@@ -619,6 +685,14 @@ function advanceDiscoveryProgression(delta: DiscoveryDelta): boolean {
   if (!changed) return false;
 
   discoveryProgression = nextProgression;
+  // Track discoveries for this run (for lab report and strain banking).
+  for (const breedId of nextProgression.discoveredBreedIds) {
+    if (!previousProgression.discoveredBreedIds.includes(breedId)) {
+      discoveredBreedsThisRun.add(breedId);
+      const def = BREED_DEFS[breedId as BreedId];
+      if (def?.parents) discoveredHybridsThisRun.add(breedId);
+    }
+  }
   applyDiscoveryProgressionUi();
   announceDiscoveryProgressionChange(previousProgression, nextProgression);
   announceUnlocks(previousTools, previousLifeforms, discoveryProgression);
