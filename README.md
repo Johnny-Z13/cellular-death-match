@@ -1,6 +1,6 @@
 # Cellular Death Match
 
-Mobile-first cellular ecosystem tactics in a Petri dish. Seed lifeforms, feed them with nutrients, steer them with toxins, and complete short ecology objectives before the deadline.
+Mobile-first cellular ecosystem roguelike in a Petri dish. Seed lifeforms, feed them with nutrients, steer them with toxins, discover breeds through reagent combos, cross-breed hybrids, and nurture your ecosystem toward homeostasis — or watch it collapse under escalating pressure.
 
 The simulation is a TypeScript/Canvas port inspired by James Simon's cellular Potts model work, with a game layer built around evolving lineages, archetype eggs, lab tools, objectives, upgrades, and responsive touch-friendly play.
 
@@ -14,8 +14,13 @@ The game layer leans into that by asking the player to cultivate conditions inst
 
 ## Current Gameplay
 
-- Six ecosystem epochs per run, one per objective.
-- Objectives: create a new lifeform, protect grazer cultures, breed swarmlets, trigger catalysis, prevent monoculture, and cultivate boss anchors.
+- **Roguelike runs** — open-ended, no fixed epoch count. Runs end when the ecosystem collapses (fail) or reaches homeostasis (win).
+- **Guided onboarding** — Epoch 1 is a 3-beat auto-advancing tutorial (~30 seconds). Epochs 2-3 teach ecology and breeding.
+- **Procedural mid-game** — from Epoch 4+, choose between 2 objectives each epoch. Pressure escalates: crises come faster, outbreaks hit harder, mutations grow wilder.
+- **Homeostasis win state** — when 3+ breeds coexist in stable equilibrium for 20 seconds, the game recognizes it as a living ecosystem. No popup — just a subtle glow and the label "Equilibrium."
+- **Strain library** — discovered breeds are banked across runs. Before each run, pick an egg loadout from your collection.
+- **CPM energy profiles** — each breed has distinct physics coefficients (Ising surface tension, volume preservation, movement responsiveness). Bruisers are compact blobs; swarmlets spread thin with pseudopods; bloom mass flows like an amorphous film.
+- **Reagent energy shifts** — reagents modify CPM coefficients within their field. Salt hardens cells, acid fragments them, nutrient loosens them. Combos produce emergent visual behaviors.
 - Tools:
   - Egg: choose a lifeform strain, then seed it into the dish.
   - Nutrient: attracts nearby lifeforms and strongly catalyzes growth.

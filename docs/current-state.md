@@ -1,14 +1,19 @@
 # Current State
 
-Last updated: 2026-06-10 (premium design pass)
+Last updated: 2026-06-19 (CPM energy profiles + roguelike restructure)
 
 ## Summary
 
-Cellular Death Match is now a mobile-first Petri dish ecosystem game. The original implementation plans targeted an 8-fight keyboard shooter. The current branch has moved toward touch-friendly ecology control:
+Cellular Death Match is a mobile-first Petri dish ecosystem roguelike. Runs are open-ended with escalating pressure:
 
-- Six objective-driven epochs, one per objective.
-- Selectable egg strains.
-- Five reagent tools (nutrient, toxin, water, salt, acid) plus agitation.
+- 3-beat guided onboarding epoch (~30s), 2 fixed progression epochs, then open-ended mid-game.
+- Runs end via ecosystem collapse (fail) or homeostasis (win — 3+ breeds in stable equilibrium for 20s).
+- Per-breed CPM energy profiles: each breed has distinct Ising/volume/movement/engulf multipliers.
+- Reagent energy shifts: reagents modify CPM coefficients within field radius (salt hardens, acid fragments, etc.).
+- Strain library: discovered breeds banked across runs; players choose egg loadouts before each run.
+- Procedural objective pool: mid-game epochs offer 2 objectives to choose from.
+- Escalating pressure: hazard intervals shorten, outbreaks grow, mutations intensify per epoch.
+- Biome classification: homeostasis states are named based on dominant breed composition.
 - Catalytic reactions, rare breed discovery, and cross-breeding of hybrids.
 - Pixel-bloom dish rendering: every culture's own pixels glow in their color.
 - Mobile portrait touch shell: Lifeforms/Log drawers, tool readout, bottom tool bar.
@@ -16,15 +21,20 @@ Cellular Death Match is now a mobile-first Petri dish ecosystem game. The origin
 
 ## Main Systems
 
-- Simulation: cellular Potts model in `src/sim/`.
-- Arena: ecosystem tick loop, objective evaluation, tool effects, mutation, reseeding, and resupply in `src/game/arena.ts`.
-- Run state: title, arena, upgrade pick, run end in `src/game/run.ts`.
+- Simulation: cellular Potts model in `src/sim/`. Per-cell energy profiles in `src/sim/breedProfiles.ts`.
+- Arena: ecosystem tick loop, objective evaluation, tool effects, mutation, reseeding, homeostasis tracking, escalation, and resupply in `src/game/arena.ts`.
+- Run state: open-ended state machine with homeostasis/collapse end states in `src/game/run.ts`.
+- Homeostasis: equilibrium detection and biome classification in `src/game/homeostasis.ts`.
+- Escalation: per-epoch pressure scaling in `src/game/escalation.ts`.
+- Objective pool: procedural mid-game objectives in `src/game/objectivePool.ts`.
+- Strain library: persistent strain bank and loadout in `src/game/strainLibrary.ts`.
+- Lab report: end-of-run summary data in `src/game/labReport.ts`.
 - Lifeform data: archetypes, colors, egg metadata, and schedules in `src/content/enemies.ts`.
-- Objectives: epoch objective definitions in `src/content/objectives.ts`.
-- UI: DOM overlays in `src/ui/screens.ts`, canvas renderer in `src/ui/render.ts`, responsive CSS in `src/styles.css`.
+- Objectives: fixed epoch objectives in `src/content/objectives.ts`; procedural pool in `src/game/objectivePool.ts`.
+- UI: DOM overlays in `src/ui/screens.ts`, canvas renderer in `src/ui/render.ts`, lab report in `src/ui/labReportScreen.ts`, loadout picker in `src/ui/loadoutScreen.ts`, responsive CSS in `src/styles.css`.
 - Visual identity: "Bioluminescence: Deep Lab" — glass instrument panels, Michroma display / IBM Plex Mono data / Newsreader notebook fonts, bio-cyan/amber/violet accent system. Title key art at `public/art/title-keyart-1024.png`.
 - Game feel: `src/ui/fx.ts` drives the epoch intro banner, the arcade unlock banner ("Breed/Strain Unlocked"), discovery toasts, and phase transition wipes (DOM/CSS, reduced-motion aware).
-- Onboarding: `src/ui/coach.ts` is a skippable first-run coach (deep-lab voice) that advances on real gameplay beats — seed an egg → feed with Nutrient → draw a Paste trail → complete the objective — then retires. First run only (`cdm.coach.seen` in localStorage). Bottom-centre on desktop (over the non-interactive log zone), under the HUD on phones; hidden in presentation mode.
+- Onboarding: `src/ui/coach.ts` is a skippable first-run 3-beat coach that auto-advances on gameplay events — place egg → feed with Nutrient → watch bloom appear — then auto-ends Epoch 1 via `onOnboardingComplete` callback. First run only (`cdm.coach.seen.v3` in localStorage). Bottom-centre on desktop, under the HUD on phones; hidden in presentation mode. Beat 3 auto-spawns a second swarmlet to ensure bloom discovery.
 - Idle nudge: the same card doubles as a "Lab Assistant". If the player hasn't acted for ~22s and the objective isn't complete, it surfaces the objective's authored hint with a "Got it" dismiss — max twice per epoch, suppressed while the tutorial runs, re-armed only by another full idle stretch. Any dish action hides a visible nudge.
 - Discovery rack: undiscovered lifeforms render as inert gray specimens (identity color stashed on the swatch, cleared while locked, restored on discovery). On discovery the card fires neon echo rings and auto-sorts above the still-locked specimens; the rack keeps discovered cards on top.
 - Chimera reframe: discovered breeds are presented as chimeras (real × fantastical, e.g. "Wasp × Manticore") via `content/chimeras.ts` — a flavour/lore + portrait layer; mechanics in `BREED_DEFS` are unchanged. Each has a Nano-Banana microscope-specimen portrait (`public/art/chimera/<breed>.png`, generated by `scripts/generate-chimera-art.mjs`) shown as a round thumbnail in its notebook entry, with the splice + lore in the copy. The dish itself stays pure cells; the creature reveal lives in the notebook.
@@ -35,22 +45,16 @@ Cellular Death Match is now a mobile-first Petri dish ecosystem game. The origin
 
 ## Gameplay Loop
 
-1. Enter ecosystem.
-2. Read the current objective and deadline.
-3. Select an egg strain or lab tool.
-4. Tap the dish to seed life, feed growth, or repel colonies.
-5. Satisfy the objective: the experiment is marked Complete (ready chime, toast,
-   glowing End button) but the epoch keeps running — bank the win with End
-   whenever you like, or keep cultivating. The deadline is a soft backstop:
-   complete at the deadline banks the win; incomplete fails as before.
-   Creation objectives latch once achieved; balance objectives reflect the
-   live dish state and can drift back to incomplete.
-6. Pick an upgrade between epochs.
-7. Play through all six epochs. A missed objective no longer ends the run — the
-   player simply moves to the next epoch (forfeiting that objective's reward),
-   so the game is a forgiving, playful-discovery sandbox rather than a punisher.
-   Hazards (crisis / outbreak / accident) hold off for a calm ~25s opening window
-   each epoch and arrive on a gentler cadence; epochs run ~80s.
+1. Select egg loadout from strain library (if you have more than 1 strain).
+2. Epoch 1: guided 3-beat onboarding — place egg, feed colony, watch bloom (~30s, auto-advances).
+3. Epochs 2-3: fixed objectives (build ecology, first breed) with mild hazards.
+4. Epochs 4+: choose from 2 procedural objectives. Pressure escalates per epoch.
+5. Select an egg strain or lab tool. Tap the dish to seed life, feed growth, or repel colonies.
+6. Satisfy the objective: creation objectives latch once achieved; balance objectives reflect live state.
+7. Pick an upgrade between epochs.
+8. The run continues until the ecosystem collapses (all cultures die → fail) or reaches homeostasis (3+ breeds in stable equilibrium for 20s → win).
+9. Lab Report summarizes discoveries, ecosystem stats, and strains banked.
+10. Strains discovered during the run are banked to the strain library for future runs.
 
 ## Current Lifeforms
 
@@ -90,26 +94,14 @@ Hybrid breeds (cross-bred from two discovered base breeds under a nutrient field
 
 ## Verification Baseline
 
-As of this update:
+As of this update (2026-06-19):
 
 ```bash
-npm test
-npm run build
+npm test      # 497 passing, 4 pre-existing CSS failures
+npm run build # clean
 ```
 
-Both commands are expected to pass.
-
-Responsive smoke checks should include:
-
-- `390x844` mobile portrait.
-- `375x667` small mobile portrait.
-- `1280x720` desktop.
-
-The premium-pass features were verified responsive at all three: the arcade
-unlock banner, experiment-complete signpost/toast, glowing End button, and the
-notebook tablet + dish-docked tab all hold up in phone portrait. Discovery
-toasts are lifted clear of the bottom mobile shell. The loved desktop layout is
-unchanged; mobile keeps the bottom-shell + horizontal-tray + drawer schema.
+Both commands are expected to pass. The 4 CSS test failures are pre-existing (desktopLayoutCss, discoveryMenuPlaceholders, discoveryUnlockVisibility, uiSelectionCss).
 
 ## Historical Docs
 
