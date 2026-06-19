@@ -39,7 +39,7 @@ import { swarmletStep } from './enemies/swarmlet';
 import { mirrorStep } from './enemies/mirror';
 import { bossStep, type BossState } from './enemies/boss';
 import { displacementVec } from './geometry';
-import { getReagentShift, type BreedProfileId } from '../sim/breedProfiles';
+import { getBreedProfile, getReagentShift, type BreedProfileId } from '../sim/breedProfiles';
 import { createHomeostasisTracker } from './homeostasis';
 import { getEscalation } from './escalation';
 import {
@@ -421,6 +421,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
     archetypes.set(cellId, spawn);
     const cell = state.cells.get(cellId);
     if (cell) cell.targetVol = spawn.targetVol;
+    assignEnergyProfile(cell, spawn);
 
     const aiState: AiState = {};
     if (spawn.archetype === 'sniper')   aiState.sniper = { shootTimer: spawn.shootCooldown ?? 30 };
@@ -954,10 +955,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       // Assign breed energy profile: use breed-specific profile if available,
       // otherwise fall back to the archetype profile.
       const cell = state.cells.get(id);
-      if (cell) {
-        const profileId = (spawnOpts.spawn.breedId ?? spawnOpts.spawn.archetype) as BreedProfileId;
-        cell.breedProfileId = profileId;
-      }
+      assignEnergyProfile(cell, spawnOpts.spawn);
       archetypes.set(id, spawnOpts.spawn);
       const ai: AiState = {};
       if (spawnOpts.spawn.archetype === 'sniper')   ai.sniper = { shootTimer: spawnOpts.spawn.shootCooldown ?? 30 };
@@ -990,6 +988,12 @@ export function createArena(opts: CreateArenaOpts): Arena {
   };
 
   return arena;
+}
+
+function assignEnergyProfile(cell: Cell | undefined, spawn: EnemySpawn): void {
+  if (!cell) return;
+  const profileId = (spawn.breedId ?? spawn.archetype) as BreedProfileId;
+  cell.energyProfile = getBreedProfile(profileId);
 }
 
 function toolLoadoutFor(player: PlayerConfig): Record<LabTool, ToolState> {
