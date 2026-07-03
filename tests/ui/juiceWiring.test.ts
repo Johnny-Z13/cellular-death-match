@@ -19,4 +19,17 @@ describe('juice wiring', () => {
     expect(juiceSource).toContain('prefers-reduced-motion');
     expect(juiceSource).toContain('staticRippleVisual');
   });
+
+  it('bursts on births, deaths, and discoveries; shakes on critical events', () => {
+    expect(mainSource).toContain("'birth'");
+    expect(mainSource).toContain("'death'");
+    expect(mainSource).toContain("juice.shake('hard')");
+    expect(mainSource).toContain("juice.shake('soft')");
+  });
+
+  it('has a soft dish-shake variant with reduced amplitude', () => {
+    const css = readFileSync('src/styles.css', 'utf8') as string;
+    expect(css).toContain('.dish-shake-soft');
+    expect(css).toContain('@keyframes dish-shake-soft');
+  });
 });

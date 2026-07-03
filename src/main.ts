@@ -8,6 +8,7 @@ import { getUpgradeDef } from './content/upgrades';
 import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/enemies';
 import { BREED_DEFS, DISCOVERY_NOTES, type BreedId } from './content/catalysis';
 import { notebookViewForProgression, atlasViewForProgression } from './content/notebook';
+import { lifeformIdentityForSpawn } from './content/lifeformIdentity';
 import { createEcologyAudio } from './audio/ecologyAudio';
 import { createUiAudio, DROP_SOUND_FOR_TOOL } from './audio/uiAudio';
 import { createFx } from './ui/fx';
@@ -572,6 +573,7 @@ function startNewFight() {
   renderer = createRenderer(canvas, PALETTE_SIZE);
   tickCount = 0;
   tickerState = createTickerState();
+  cellFxTracker = createCellFxTracker();
   heardDishEventIds = new Set<number>();
   didAnnounceCompletion = false;
   didAnnounceEquilibrium = false;
@@ -640,6 +642,7 @@ function loop() {
 
   renderer.render(arena.state, arena.archetypes, arena.getDishEvents());
   renderToolEffects(arena);
+  updateJuiceEvents(arena);
   juice.draw();
 
   framesSinceTick++;
@@ -1210,6 +1213,84 @@ interface TickerState {
   didWarnCritical: boolean;
 }
 
+// Tracks per-cell life state and consumed dish-event ids so juice can fire
+// birth/death/discovery feedback exactly once per event. Reset per arena.
+interface CellFxTracker {
+  known: Map<number, { vol: number; center: [number, number] }>;
+  lastDishEventId: number;
+  primed: boolean;
+}
+
+function createCellFxTracker(): CellFxTracker {
+  return { known: new Map(), lastDishEventId: -1, primed: false };
+}
+
+let cellFxTracker: CellFxTracker = createCellFxTracker();
+
+const FALLBACK_BURST_RGB: [number, number, number] = [140, 220, 255];
+
+function burstColorFor(ar: Arena, id: number): [number, number, number] {
+  const spawn = ar.archetypes.get(id);
+  if (!spawn) return FALLBACK_BURST_RGB;
+  const [r, g, b] = lifeformIdentityForSpawn(spawn).colors.primary;
+  return [r, g, b];
+}
+
+function updateJuiceEvents(ar: Arena): void {
+  // First frame of a dish: register everything silently so the initial
+  // seeding doesn't read as a burst storm.
+  if (!cellFxTracker.primed) {
+    cellFxTracker.primed = true;
+    for (const [id, cell] of ar.state.cells) {
+      if (id === PLAYER_ID) continue;
+      cellFxTracker.known.set(id, { vol: cell.vol, center: [cell.center[0], cell.center[1]] });
+    }
+    let maxSeen = cellFxTracker.lastDishEventId;
+    for (const ev of ar.getDishEvents()) if (ev.id > maxSeen) maxSeen = ev.id;
+    cellFxTracker.lastDishEventId = maxSeen;
+    return;
+  }
+
+  // Births and deaths at their dish positions.
+  for (const [id, cell] of ar.state.cells) {
+    if (id === PLAYER_ID) continue;
+    const prev = cellFxTracker.known.get(id);
+    const alive = cell.vol > 0;
+    if (!prev && alive) {
+      juice.burst([cell.center[0], cell.center[1]], burstColorFor(ar, id), 'birth');
+      cellFxTracker.known.set(id, { vol: cell.vol, center: [cell.center[0], cell.center[1]] });
+    } else if (prev && prev.vol > 0 && !alive) {
+      // Use the last live center — a dead cell's center is stale.
+      juice.burst(prev.center, burstColorFor(ar, id), 'death');
+      prev.vol = 0;
+    } else if (prev && alive) {
+      prev.vol = cell.vol;
+      prev.center = [cell.center[0], cell.center[1]];
+    }
+  }
+
+  // A cell removed from the map entirely also counts as a death.
+  for (const [id, prev] of cellFxTracker.known) {
+    if (prev.vol > 0 && !ar.state.cells.has(id)) {
+      juice.burst(prev.center, FALLBACK_BURST_RGB, 'death');
+      prev.vol = 0;
+    }
+  }
+
+  // New dish events: discovery bursts, critical/fold hard shakes.
+  let maxId = cellFxTracker.lastDishEventId;
+  for (const ev of ar.getDishEvents()) {
+    if (ev.id <= cellFxTracker.lastDishEventId) continue;
+    if (ev.id > maxId) maxId = ev.id;
+    if (ev.kind === 'discovery') {
+      juice.burst(ev.pos, [126, 230, 255], 'discovery');
+    } else if (ev.kind === 'critical' || ev.kind === 'fold') {
+      juice.shake('hard');
+    }
+  }
+  cellFxTracker.lastDishEventId = maxId;
+}
+
 function createTickerState(): TickerState {
   return {
     lastControlSampleBand: 'unknown',
@@ -1296,6 +1377,7 @@ function updateTicker(ar: Arena): void {
   if (ecology.outbreaks > tickerState.lastOutbreakCount) {
     tickerState.lastOutbreakCount = ecology.outbreaks;
     screens.addTicker('Predator outbreak: hunter cells erupted from the dominant culture.', 'critical');
+    juice.shake('soft');
   }
 
   if (ecology.mutations > tickerState.lastMutationCount) {
