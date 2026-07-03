@@ -2824,6 +2824,31 @@ canvas {
   display: none;
 }
 
+#hud-progress {
+  display: inline-block; /* transform (pulse) needs a box on this inline span */
+}
+
+#hud-progress.hud-deadline-warning {
+  color: #f6d365;
+}
+
+#hud-progress.hud-deadline-critical {
+  color: #ff6b4a;
+}
+
+#hud-progress.hud-deadline-tick {
+  animation: hud-deadline-tick 420ms ease-out;
+}
+
+@keyframes hud-deadline-tick {
+  0% { transform: scale(1.28); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #hud-progress.hud-deadline-tick { animation: none; }
+}
+
 /* =========================  RESPONSIVE  ================================= */
 
 @media (min-width: 520px) {

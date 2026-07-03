@@ -147,6 +147,7 @@ export function createScreens(): Screens {
   const hudFight     = get('hud-fight');
   const hudVol       = get('hud-vol');
   const hudProgress  = get('hud-progress');
+  let lastDeadlineSeconds = -1;
   const hudEquilibrium = get('hud-equilibrium');
   const hudEco       = get('hud-eco');
   const hudObjective = get('hud-objective');
@@ -522,6 +523,21 @@ export function createScreens(): Screens {
       hudFight.textContent = `${info.fightIndex + 1} / ${info.totalFights}`;
       hudVol.textContent = `${info.vol} / ${Math.round(info.targetVol)}`;
       hudProgress.textContent = `${info.secondsRemaining}s`;
+      const urgent = !info.objectiveComplete;
+      hudProgress.classList.toggle(
+        'hud-deadline-warning',
+        urgent && info.secondsRemaining <= 20 && info.secondsRemaining > 10,
+      );
+      hudProgress.classList.toggle(
+        'hud-deadline-critical',
+        urgent && info.secondsRemaining <= 10,
+      );
+      if (urgent && info.secondsRemaining <= 20 && info.secondsRemaining !== lastDeadlineSeconds) {
+        hudProgress.classList.remove('hud-deadline-tick');
+        void hudProgress.offsetWidth;
+        hudProgress.classList.add('hud-deadline-tick');
+      }
+      lastDeadlineSeconds = info.secondsRemaining;
       const crisis = info.crisis === 'none' ? '' : `, ${info.crisis} active`;
       hudEco.textContent = `${info.livingEnemies} lifeforms, ${info.worldEvents} fertile events, ${info.outbreaks} outbreaks, ${info.reactions} reactions, ${info.accidents} accidents, ${info.mutations} mutations, ${info.births} births, ${info.supplyDrops} drops, ${info.dominant} dominant${crisis}`;
       hudObjective.textContent = info.objectiveComplete
