@@ -18,6 +18,9 @@ export interface DebugPanel {
   update(state: SimState, info: DebugInfo): void;
   setSwatch(cellId: CellId, color: string): void;
   updateDiscoveries(info: DebugDiscoveryInfo): void;
+  setSimSpeedBounds(min: number, max: number, step: number): void;
+  setSimSpeed(ticksPerSecond: number): void;
+  onSimSpeedChange(handler: (ticksPerSecond: number) => void): void;
   onDiscoveryPersistenceChange(handler: (enabled: boolean) => void): void;
   onClearDiscoveries(handler: () => void): void;
   onRevealDiscoveries(handler: () => void): void;
@@ -52,6 +55,8 @@ export function createDebugPanel(): DebugPanel {
   const eCenter    = get('dbg-e-center');
   const persistDiscoveries = getInput('dbg-persist-discoveries');
   const reverbToggle = getInput('dbg-reverb');
+  const simSpeed = getInput('dbg-sim-speed');
+  const simSpeedValue = get('dbg-sim-speed-value');
   const clearDiscoveries = get('dbg-clear-discoveries');
   const revealDiscoveries = get('dbg-reveal-discoveries');
   const presentationMode = get('dbg-fullscreen-mode');
@@ -95,6 +100,18 @@ export function createDebugPanel(): DebugPanel {
       discoveryStatus.textContent = `discoveries: ${mode} / ${info.discoveredCount}${reveal}`;
       discoveryCatalysts.textContent = discoveryListText('catalysts', info.discoveredCatalysts);
       discoveryLifeforms.textContent = discoveryListText('lifeforms', info.discoveredLifeforms);
+    },
+    setSimSpeedBounds(min, max, step) {
+      simSpeed.min = String(min);
+      simSpeed.max = String(max);
+      simSpeed.step = String(step);
+    },
+    setSimSpeed(ticksPerSecond) {
+      simSpeed.value = String(ticksPerSecond);
+      simSpeedValue.textContent = `${ticksPerSecond} tick/s`;
+    },
+    onSimSpeedChange(handler) {
+      simSpeed.addEventListener('input', () => handler(Number(simSpeed.value)));
     },
     onDiscoveryPersistenceChange(handler) {
       persistDiscoveries.addEventListener('change', () => handler(persistDiscoveries.checked));

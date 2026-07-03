@@ -845,6 +845,29 @@ canvas {
   font-size: 11px;
 }
 
+.debug-speed {
+  display: grid;
+  grid-template-columns: 72px 1fr 66px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--ink-dim);
+  font-size: 11px;
+}
+
+.debug-speed input {
+  min-width: 0;
+  accent-color: var(--bio);
+}
+
+.debug-speed b {
+  color: var(--ink);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
 .debug-mini-button {
   width: 100%;
   margin-top: 6px;

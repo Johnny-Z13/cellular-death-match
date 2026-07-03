@@ -12,7 +12,7 @@
       href="https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/src/styles.css?v=20260619-equilibrium-hud" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260704-speed-clamp" />
   </head>
   <body>
     <main class="layout" data-screen="title">
@@ -146,6 +146,11 @@
             <input id="dbg-reverb" type="checkbox" checked />
             reverb glue
           </label>
+          <label class="debug-speed">
+            <span>sim speed</span>
+            <input id="dbg-sim-speed" type="range" min="30" max="90" step="1" value="72" />
+            <b id="dbg-sim-speed-value">72 tick/s</b>
+          </label>
           <button id="dbg-clear-discoveries" class="debug-mini-button" type="button">clear discoveries</button>
           <button id="dbg-reveal-discoveries" class="debug-mini-button" type="button">reveal all</button>
           <button id="dbg-fullscreen-mode" class="debug-mini-button" type="button">full screen</button>
@@ -270,6 +275,6 @@
         <button id="coach-skip" class="coach-skip" type="button">Skip tutorial</button>
       </aside>
     </main>
-    <script type="module" src="/src/main.ts?v=20260619-open-ended-copy"></script>
+    <script type="module" src="/src/main.ts?v=20260704-speed-clamp"></script>
   </body>
 </html>

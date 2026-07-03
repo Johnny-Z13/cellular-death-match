@@ -11,6 +11,16 @@ export const ARENA_TIMING = {
   crisisIntervalTicks: 60 * 30,
 } as const;
 
+export const SIM_SPEED_TUNING = {
+  defaultTicksPerSecond: 72,
+  minTicksPerSecond: 30,
+  maxTicksPerSecond: 90,
+  ticksPerSecondStep: 1,
+  maxTicksPerFrame: 3,
+  maxFrameDeltaMs: 250,
+  storageKey: 'cdm.simSpeed.tps.v1',
+} as const;
+
 export const ECOSYSTEM_LIMITS = {
   minPopulation: 5,
   quietEggRefillPopulation: 2,

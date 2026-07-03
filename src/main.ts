@@ -3,6 +3,7 @@ import { createArena, type Arena, type ArenaStatus } from './game/arena';
 import { createRenderer, type Renderer } from './ui/render';
 import { createDebugPanel } from './ui/debug';
 import { createScreens, type ToolId } from './ui/screens';
+import { SIM_SPEED_TUNING } from './content/ecologyTuning';
 import { renderLoadoutScreen } from './ui/loadoutScreen';
 import { getUpgradeDef } from './content/upgrades';
 import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/enemies';
@@ -21,6 +22,7 @@ import { assembleLabReport, type LabReport } from './game/labReport';
 import { createRunTelemetry, type RunTelemetry } from './game/runTelemetry';
 import { createRunEndReportInput } from './game/runFlow';
 import { finalBreedCountsFor, finalBreedVolumesFor } from './game/runSnapshot';
+import { createFixedStepClock, normalizeSimTicksPerSecond } from './game/simClock';
 import { hash2 } from './game/hash';
 import {
   clearDiscoverySave,
@@ -86,7 +88,23 @@ const ecologyAudio = createEcologyAudio();
 const uiAudio = createUiAudio();
 const fx = createFx();
 const coach = createCoach();
-const discoveryStorage = window.localStorage;
+const runtimeStorage = window.localStorage;
+const simClock = createFixedStepClock({
+  ticksPerSecond: loadSimTicksPerSecond(runtimeStorage),
+  nowMs: performance.now(),
+});
+debug.setSimSpeedBounds(
+  SIM_SPEED_TUNING.minTicksPerSecond,
+  SIM_SPEED_TUNING.maxTicksPerSecond,
+  SIM_SPEED_TUNING.ticksPerSecondStep,
+);
+debug.setSimSpeed(simClock.getTicksPerSecond());
+debug.onSimSpeedChange((ticksPerSecond) => {
+  const normalized = simClock.setTicksPerSecond(ticksPerSecond);
+  saveSimTicksPerSecond(runtimeStorage, normalized);
+  debug.setSimSpeed(normalized);
+});
+const discoveryStorage = runtimeStorage;
 applyOnboardingStateReset(discoveryStorage);
 let discoverySave: DiscoverySaveState = loadDiscoverySave(discoveryStorage);
 let discoveryProgression = createDiscoveryProgression(discoverySave);
@@ -616,6 +634,7 @@ function startNewFight() {
   screens.updateAgitation(arena.getAgitationState());
   updateButtonHint();
   debug.updateDiscoveries(discoveryDebugInfo());
+  simClock.reset(performance.now());
   // Update debug panel swatches to match the renderer's palette.
   debug.setSwatch(1, swatchForCellId(1, PALETTE_SIZE));
   for (let i = 0; i < enemies.length; i++) {
@@ -630,15 +649,19 @@ function loop() {
   const phase = run.getState().phase;
   if (phase !== 'arena') return;            // stop the loop on any non-arena phase
 
+  const now = performance.now();
+  const ticksToRun = simClock.consumeTicks(now);
   const player = arena.state.cells.get(PLAYER_ID);
 
-  arena.tick({
-    moveVec: [0, 0],
-    shouldFire: false,
-    shouldEngulf: false,
-  });
-  ecologyAudio.update(readAudioFrame(arena));
-  tickCount++;
+  for (let i = 0; i < ticksToRun; i++) {
+    arena.tick({
+      moveVec: [0, 0],
+      shouldFire: false,
+      shouldEngulf: false,
+    });
+    tickCount++;
+  }
+  if (ticksToRun > 0) ecologyAudio.update(readAudioFrame(arena));
 
   renderer.render(arena.state, arena.archetypes, arena.getDishEvents());
   renderToolEffects(arena);
@@ -646,7 +669,6 @@ function loop() {
   juice.draw();
 
   framesSinceTick++;
-  const now = performance.now();
   if (now - lastFpsTick > 1000) {
     displayedFps = framesSinceTick;
     framesSinceTick = 0;
@@ -796,6 +818,14 @@ function scheduleLoop(): void {
   } else {
     window.setTimeout(loop, 16);
   }
+}
+
+function loadSimTicksPerSecond(storage: Storage): number {
+  return normalizeSimTicksPerSecond(storage.getItem(SIM_SPEED_TUNING.storageKey));
+}
+
+function saveSimTicksPerSecond(storage: Storage, ticksPerSecond: number): void {
+  storage.setItem(SIM_SPEED_TUNING.storageKey, String(ticksPerSecond));
 }
 
 function persistArenaDiscoveries(ar: Arena): void {
@@ -1198,6 +1228,7 @@ function setPresentationMode(enabled: boolean): void {
 }
 
 interface TickerState {
+  lastTickerUpdateTick: number;
   lastControlSampleBand: string;
   lastLifeformBand: string;
   lastCoverageBand: string;
@@ -1208,6 +1239,7 @@ interface TickerState {
   lastOutbreakCount: number;
   lastMutationCount: number;
   lastObjectiveSummary: string;
+  lastObjectiveSummaryTick: number;
   seenSignals: string[];
   didWarnDeadline: boolean;
   didWarnCritical: boolean;
@@ -1293,6 +1325,7 @@ function updateJuiceEvents(ar: Arena): void {
 
 function createTickerState(): TickerState {
   return {
+    lastTickerUpdateTick: -45,
     lastControlSampleBand: 'unknown',
     lastLifeformBand: 'unknown',
     lastCoverageBand: 'unknown',
@@ -1303,6 +1336,7 @@ function createTickerState(): TickerState {
     lastOutbreakCount: 0,
     lastMutationCount: 0,
     lastObjectiveSummary: '',
+    lastObjectiveSummaryTick: -180,
     seenSignals: [],
     didWarnDeadline: false,
     didWarnCritical: false,
@@ -1310,7 +1344,8 @@ function createTickerState(): TickerState {
 }
 
 function updateTicker(ar: Arena): void {
-  if (tickCount % 45 !== 0) return;
+  if (tickCount - tickerState.lastTickerUpdateTick < 45) return;
+  tickerState.lastTickerUpdateTick = tickCount;
   const controlSample = ar.state.cells.get(PLAYER_ID);
   const controlSampleVol = controlSample?.vol ?? 0;
   const livingLifeforms = Array.from(ar.state.cells)
@@ -1385,8 +1420,12 @@ function updateTicker(ar: Arena): void {
     screens.addTicker('Visible mutation: a culture expressed a new trait.', 'discovery');
   }
 
-  if (objective.summary !== tickerState.lastObjectiveSummary && tickCount % 180 === 0) {
+  if (
+    objective.summary !== tickerState.lastObjectiveSummary
+    && tickCount - tickerState.lastObjectiveSummaryTick >= 180
+  ) {
     tickerState.lastObjectiveSummary = objective.summary;
+    tickerState.lastObjectiveSummaryTick = tickCount;
     screens.addTicker(`Objective update: ${objective.summary}.`);
   }
 
