@@ -12,6 +12,7 @@ import { createEcologyAudio } from './audio/ecologyAudio';
 import { createUiAudio, DROP_SOUND_FOR_TOOL } from './audio/uiAudio';
 import { createFx } from './ui/fx';
 import { createCoach } from './ui/coach';
+import { createJuice } from './ui/juice';
 import { onboardingIdleNudge } from './ui/onboardingHints';
 import { isMobileViewport, shouldOpenLifeformsForNewPlayer } from './ui/mobileOnboarding';
 import { soundEventForDishSignal, type SoundEventId } from './audio/soundDesign';
@@ -233,8 +234,9 @@ document.addEventListener('fullscreenchange', () => {
 canvas.tabIndex = 0;
 canvas.focus();
 canvas.addEventListener('animationend', () => {
-  canvas.classList.remove('dish-shake');
+  canvas.classList.remove('dish-shake', 'dish-shake-soft');
 });
+const juice = createJuice(canvas, LX, LY);
 let pasteStrokeActive = false;
 let lastPasteSoundAt = 0;
 let pasteCursor: [number, number] | null = null;
@@ -256,6 +258,7 @@ canvas.addEventListener('pointerdown', (event) => {
     canvas.setPointerCapture(event.pointerId);
     if (arena.applyTool('paste', pos)) {
       uiAudio.play('drop_paste');
+      juice.ripple(pos, 'paste');
       screens.updateToolCharges(arena.getToolStates());
       coach.report('paste-drawn');
       registerPlayerAction();
@@ -268,6 +271,7 @@ canvas.addEventListener('pointerdown', (event) => {
   })) {
     // Egg keeps the soft UI tap; reagents get their own bespoke drop sound.
     uiAudio.play(DROP_SOUND_FOR_TOOL[selectedTool] ?? 'ui_tap');
+    juice.ripple(pos, selectedTool);
     screens.updateToolCharges(arena.getToolStates());
     if (selectedTool === 'egg') {
       didPlaceEggThisEpoch = true;
@@ -636,6 +640,7 @@ function loop() {
 
   renderer.render(arena.state, arena.archetypes, arena.getDishEvents());
   renderToolEffects(arena);
+  juice.draw();
 
   framesSinceTick++;
   const now = performance.now();

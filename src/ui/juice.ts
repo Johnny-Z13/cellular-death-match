@@ -147,3 +147,65 @@ export function particleVisual(p: Particle, now: number): ParticleFrame | null {
     size: p.size,
   };
 }
+
+export interface Juice {
+  ripple(pos: [number, number], tool: ToolId): void;
+  burst(pos: [number, number], rgb: [number, number, number], kind: BurstKind): void;
+  shake(intensity: ShakeIntensity): void;
+  draw(): void;
+}
+
+export function createJuice(canvas: HTMLCanvasElement, LX: number, LY: number): Juice {
+  const store = createJuiceStore();
+  const reduceMotion = typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  return {
+    ripple(pos, tool) {
+      spawnRipple(store, pos, tool, performance.now());
+    },
+    burst(pos, rgb, kind) {
+      if (reduceMotion) return;
+      spawnBurst(store, pos, rgb, kind, performance.now());
+    },
+    shake(intensity) {
+      if (reduceMotion) return;
+      const cls = intensity === 'hard' ? 'dish-shake' : 'dish-shake-soft';
+      canvas.classList.remove('dish-shake', 'dish-shake-soft');
+      void canvas.offsetWidth;
+      canvas.classList.add(cls);
+    },
+    draw() {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      const now = performance.now();
+      stepJuice(store, now);
+      const sx = canvas.width / LX;
+      const sy = canvas.height / LY;
+      const rs = (sx + sy) / 2;
+      ctx.save();
+      for (const r of store.ripples) {
+        const v = reduceMotion ? staticRippleVisual(r, now) : rippleVisual(r, now);
+        if (!v) continue;
+        ctx.globalAlpha = v.alpha;
+        ctx.strokeStyle = v.color;
+        ctx.lineWidth = v.lineWidth;
+        ctx.beginPath();
+        ctx.arc(r.x * sx, r.y * sy, v.radius * rs, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.globalCompositeOperation = 'lighter';
+      for (const p of store.particles) {
+        const v = particleVisual(p, now);
+        if (!v) continue;
+        ctx.globalAlpha = v.alpha;
+        ctx.fillStyle = `rgb(${p.rgb[0] | 0}, ${p.rgb[1] | 0}, ${p.rgb[2] | 0})`;
+        ctx.beginPath();
+        ctx.arc(v.x * sx, v.y * sy, v.size * rs * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    },
+  };
+}
