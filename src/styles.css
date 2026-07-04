@@ -2893,7 +2893,10 @@ canvas {
 
 @media (min-width: 700px) {
   .pick-choices {
-    grid-template-columns: repeat(3, 1fr);
+    /* Column count follows the card count so 1-2 choices stay centered
+       instead of hugging ghost columns. */
+    grid-template-columns: repeat(auto-fit, minmax(180px, 240px));
+    justify-content: center;
     gap: 12px;
   }
 
