@@ -6,10 +6,14 @@ const css = readFileSync('src/styles.css', 'utf8') as string;
 
 describe('pick popup layout', () => {
   it('centers trial/upgrade choice cards for any card count on desktop', () => {
-    const rules: string[] = css.match(/\.pick-choices \{[\s\S]*?\n  \}/g) ?? [];
-    const desktopRule = rules.find((r: string) => r.includes('auto-fit'));
-    expect(desktopRule).toBeTruthy();
-    expect(desktopRule).toContain('justify-content: center;');
+    // Extract the desktop media query block that contains .pick-choices
+    const mediaMatch = css.match(/@media \(min-width: 700px\) \{[\s\S]*?^\}/m);
+    expect(mediaMatch).toBeTruthy();
+    const desktopBlock = mediaMatch?.[0] ?? '';
+    expect(desktopBlock).toContain('display: flex;');
+    expect(desktopBlock).toContain('flex-wrap: wrap;');
+    expect(desktopBlock).toContain('justify-content: center;');
+    expect(css).toContain('flex: 0 1 240px;');
     expect(css).not.toContain('grid-template-columns: repeat(3, 1fr)');
   });
 });
