@@ -723,10 +723,10 @@ function loop() {
       return u.stacks > 1 ? `${def.name} x${u.stacks}` : def.name;
     }),
   });
+  screens.setEpochComplete(objective.complete || (equilibriumCanEndRun && equilibrium.achieved));
   if (player) {
     screens.updateToolCharges(arena.getToolStates());
     screens.updateAgitation(arena.getAgitationState());
-    screens.setEpochComplete(objective.complete || (equilibriumCanEndRun && equilibrium.achieved));
     updateButtonHint();
     announceEpochCompletion(objective.complete, objective.def.name);
     announceEquilibrium(equilibrium);

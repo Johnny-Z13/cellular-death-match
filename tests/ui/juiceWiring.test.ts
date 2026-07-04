@@ -37,4 +37,12 @@ describe('juice wiring', () => {
     expect(mainSource).toContain('vol: player?.vol ?? 0');
     expect(mainSource).toContain('targetVol: player?.targetVol ?? 0');
   });
+
+  it('sets the End-ready state even when the control sample is absent', () => {
+    const loopStart = mainSource.indexOf('function loop()');
+    const guardIdx = mainSource.indexOf('if (player) {', loopStart);
+    const epochCompleteIdx = mainSource.indexOf('screens.setEpochComplete(', loopStart);
+    expect(epochCompleteIdx).toBeGreaterThan(-1);
+    expect(epochCompleteIdx).toBeLessThan(guardIdx);
+  });
 });

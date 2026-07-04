@@ -16,4 +16,12 @@ describe('end button ready affordance', () => {
     expect(css).toContain('.toolbox .end-action.end-action-ready');
     expect(css).toContain('order: -1;');
   });
+
+  it('keeps the resting End button muted so only the ready state reads as lit', () => {
+    const endIconRules: string[] = css.match(/\.end-icon \{[\s\S]*?\n\}/g) ?? [];
+    const restingRule = endIconRules[0] ?? '';
+    expect(restingRule).toContain('box-shadow: none;');
+    expect(restingRule).not.toContain('0 0 14px');
+    expect(screensSource).not.toContain("endEpochButton.disabled");
+  });
 });
