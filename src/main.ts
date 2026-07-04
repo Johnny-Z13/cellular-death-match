@@ -694,36 +694,36 @@ function loop() {
   sampleRunTelemetryFromArena(arena);
 
   // HUD update.
+  const runState = run.getState();
+  const objective = arena.getObjectiveProgress();
+  screens.updateHud({
+    fightIndex: runState.fightIndex,
+    totalFights: 0,  // open-ended run
+    vol: player?.vol ?? 0,
+    targetVol: player?.targetVol ?? 0,
+    progress: ecology.progress,
+    secondsRemaining: ecology.secondsRemaining,
+    livingEnemies: ecology.livingEnemies,
+    mutations: ecology.mutations,
+    births: ecology.births,
+    supplyDrops: ecology.supplyDrops,
+    reactions: ecology.reactions,
+    accidents: ecology.accidents,
+    outbreaks: ecology.outbreaks,
+    worldEvents: ecology.worldEvents,
+    dominant: ecology.dominant,
+    crisis: ecology.crisis,
+    objectiveName: objective.def.name,
+    objectiveSummary: objective.summary,
+    objectiveHint: objective.def.hint ?? '',
+    objectiveComplete: objective.complete,
+    upgrades: runState.upgrades.map((u) => {
+      const def = getUpgradeDef(u.id);
+      if (!def) return u.id;
+      return u.stacks > 1 ? `${def.name} x${u.stacks}` : def.name;
+    }),
+  });
   if (player) {
-    const runState = run.getState();
-    const objective = arena.getObjectiveProgress();
-    screens.updateHud({
-      fightIndex: runState.fightIndex,
-      totalFights: 0,  // open-ended run
-      vol: player.vol,
-      targetVol: player.targetVol,
-      progress: ecology.progress,
-      secondsRemaining: ecology.secondsRemaining,
-      livingEnemies: ecology.livingEnemies,
-      mutations: ecology.mutations,
-      births: ecology.births,
-      supplyDrops: ecology.supplyDrops,
-      reactions: ecology.reactions,
-      accidents: ecology.accidents,
-      outbreaks: ecology.outbreaks,
-      worldEvents: ecology.worldEvents,
-      dominant: ecology.dominant,
-      crisis: ecology.crisis,
-      objectiveName: objective.def.name,
-      objectiveSummary: objective.summary,
-      objectiveHint: objective.def.hint ?? '',
-      objectiveComplete: objective.complete,
-      upgrades: runState.upgrades.map((u) => {
-        const def = getUpgradeDef(u.id);
-        if (!def) return u.id;
-        return u.stacks > 1 ? `${def.name} x${u.stacks}` : def.name;
-      }),
-    });
     screens.updateToolCharges(arena.getToolStates());
     screens.updateAgitation(arena.getAgitationState());
     screens.setEpochComplete(objective.complete || (equilibriumCanEndRun && equilibrium.achieved));

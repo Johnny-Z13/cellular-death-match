@@ -32,4 +32,9 @@ describe('juice wiring', () => {
     expect(css).toContain('.dish-shake-soft');
     expect(css).toContain('@keyframes dish-shake-soft');
   });
+
+  it('updates the HUD even when the control sample is absent (onboarding dish)', () => {
+    expect(mainSource).toContain('vol: player?.vol ?? 0');
+    expect(mainSource).toContain('targetVol: player?.targetVol ?? 0');
+  });
 });
