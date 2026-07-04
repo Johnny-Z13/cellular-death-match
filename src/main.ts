@@ -1294,18 +1294,19 @@ function updateJuiceEvents(ar: Arena): void {
     } else if (prev && prev.vol > 0 && !alive) {
       // Use the last live center — a dead cell's center is stale.
       juice.burst(prev.center, burstColorFor(ar, id), 'death');
-      prev.vol = 0;
+      cellFxTracker.known.delete(id);
     } else if (prev && alive) {
       prev.vol = cell.vol;
       prev.center = [cell.center[0], cell.center[1]];
     }
   }
 
-  // A cell removed from the map entirely also counts as a death.
+  // A cell removed from the map entirely also counts as a death. Dead
+  // entries are dropped so the tracker stays bounded over open-ended runs.
   for (const [id, prev] of cellFxTracker.known) {
-    if (prev.vol > 0 && !ar.state.cells.has(id)) {
-      juice.burst(prev.center, FALLBACK_BURST_RGB, 'death');
-      prev.vol = 0;
+    if (!ar.state.cells.has(id)) {
+      if (prev.vol > 0) juice.burst(prev.center, FALLBACK_BURST_RGB, 'death');
+      cellFxTracker.known.delete(id);
     }
   }
 
