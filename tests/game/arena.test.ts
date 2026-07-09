@@ -2817,3 +2817,49 @@ describe('arena.tick — applies input', () => {
     expect(cellsAfter).toEqual(cellsBefore);    // grid didn't change
   });
 });
+
+describe('onboarding dish — tutorial reachability', () => {
+  function onboardingArena(): Arena {
+    // fightIndex 0 + no control sample = the coach-driven onboarding dish.
+    return createArena({
+      LX: 80,
+      LY: 80,
+      seed: 7,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 120, speed: 8, engulfMultiplier: 4 }],
+      wrap: false,
+      mode: 'ecosystem',
+      includeControlSample: false,
+      fightIndex: 0,
+    });
+  }
+
+  const noInput = { moveVec: [0, 0] as [number, number], shouldFire: false, shouldEngulf: false };
+
+  it('discovers bloom_mass when a swarmlet is fed nutrient (the tutorial payoff)', () => {
+    const arena = onboardingArena();
+    // Beat 1 → 2 order: place an egg, then feed it with nutrient on the same spot.
+    const seed = arena.archetypes.get(2) ? arena.state.cells.get(2)!.center : [40, 40] as [number, number];
+    expect(arena.applyTool('egg', seed)).toBe(true);
+    expect(arena.applyTool('nutrient', seed)).toBe(true);
+    // A few ticks for the discovery scan to see the fed colony.
+    for (let i = 0; i < 6; i++) arena.tick(noInput);
+    expect(arena.getEcology().discoveries.breedIds).toContain('bloom_mass');
+  });
+
+  it('auto-spawn failsafe blooms even if the player never seeds a colony', () => {
+    const arena = onboardingArena();
+    // Player drops nutrient but places no egg; the failsafe seeds a swarmlet in it.
+    expect(arena.applyTool('nutrient', [40, 40])).toBe(true);
+    arena.spawnOnboardingSeed();
+    for (let i = 0; i < 6; i++) arena.tick(noInput);
+    expect(arena.getEcology().discoveries.breedIds).toContain('bloom_mass');
+  });
+
+  it('never resolves on the deadline — the coach owns the ending', () => {
+    const arena = onboardingArena();
+    // Push well past any epoch deadline; onboarding must stay running.
+    for (let i = 0; i < 60 * 75; i++) arena.tick(noInput);
+    expect(arena.getStatus()).toBe('running');
+  });
+});

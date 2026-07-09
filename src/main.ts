@@ -89,6 +89,24 @@ const ecologyAudio = createEcologyAudio();
 const uiAudio = createUiAudio();
 const fx = createFx();
 const coach = createCoach();
+
+// Publish the HUD's live bottom edge as a CSS var so the mobile coach card can
+// sit just below it regardless of how many lines the objective wraps to — no
+// magic offset that breaks when the objective text grows.
+const hudEl = document.getElementById('hud');
+if (hudEl && typeof ResizeObserver === 'function') {
+  const publishHudBottom = () => {
+    const r = hudEl.getBoundingClientRect();
+    const bottom = hudEl.classList.contains('visible') ? r.bottom : 0;
+    layout.style.setProperty('--hud-bottom', `${Math.round(bottom)}px`);
+  };
+  new ResizeObserver(publishHudBottom).observe(hudEl);
+  window.addEventListener('resize', publishHudBottom);
+  // Class flips (show/hide) don't trigger ResizeObserver; catch them too.
+  new MutationObserver(publishHudBottom).observe(hudEl, { attributes: true, attributeFilter: ['class'] });
+  publishHudBottom();
+}
+
 const runtimeStorage = window.localStorage;
 const simClock = createFixedStepClock({
   ticksPerSecond: loadSimTicksPerSecond(runtimeStorage),
@@ -674,6 +692,12 @@ function loop() {
     displayedFps = framesSinceTick;
     framesSinceTick = 0;
     lastFpsTick = now;
+  }
+
+  // Tutorial beat 3 failsafe: seed a helper swarmlet so bloom is guaranteed to
+  // fire even if the player's first colony died before they fed it.
+  if (coach.shouldAutoSpawn()) {
+    arena.spawnOnboardingSeed();
   }
 
   const currentOpeningBloomCreated = openingBloomCreatedInCurrentDish();

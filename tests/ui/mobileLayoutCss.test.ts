@@ -44,6 +44,9 @@ describe('mobile layout CSS', () => {
     expect(mobile).toContain('.mobile-tool-readout {');
     expect(mobile).toContain('bottom: calc(92px + env(safe-area-inset-bottom))');
     expect(mobile).toContain('.hud {');
+    // The HUD drops below the top chrome buttons (Sound / Full screen) so they
+    // never sit on top of the deadline / equilibrium values.
+    expect(mobile).toContain('top: calc(46px + env(safe-area-inset-top))');
     expect(mobile).toContain('font-size: 10px');
     expect(mobile).toContain('.hud-hint-row,');
     expect(mobile).toContain('.hud-volume-row');
@@ -89,7 +92,8 @@ describe('mobile layout CSS', () => {
     expect(smallPhone).toContain('bottom: calc(132px + env(safe-area-inset-bottom))');
     expect(smallPhone).toContain('max-height: min(45svh, 232px)');
     expect(smallPhone).toContain('.coach {');
-    expect(smallPhone).toContain('top: calc(74px + env(safe-area-inset-top))');
+    // The coach's top is driven by --hud-bottom (set in main.ts) at every
+    // breakpoint now, so the small-phone block only tightens its padding.
     expect(smallPhone).toContain('padding: 9px 11px');
     expect(smallPhone).toContain('.coach-body {');
     expect(smallPhone).toContain('margin: 4px 0 0');

@@ -2970,6 +2970,9 @@ canvas {
   }
 
   .hud {
+    /* Drop below the top chrome buttons (Sound / Full screen) so they never
+       sit on top of the deadline / equilibrium values. */
+    top: calc(46px + env(safe-area-inset-top));
     padding: 7px 9px;
     font-size: 10px;
   }
@@ -3015,14 +3018,19 @@ canvas {
   }
 
   /* Phones: the coach sits just under the HUD, over the dish's top edge —
-     clear of the bottom shell, toolbar, and the lifeform/log drawers. */
+     clear of the bottom shell, toolbar, and the lifeform/log drawers. It
+     tracks the HUD's real bottom edge (published as --hud-bottom by main.ts)
+     so a two-line objective can't push the HUD into the coach. Falls back to a
+     safe fixed offset before the var is set. */
   .coach {
     left: 10px;
     right: 10px;
     width: auto;
     transform: none;
     bottom: auto;
-    top: calc(92px + env(safe-area-inset-top));
+    /* --hud-bottom is already a viewport-absolute coordinate (includes the
+       HUD's own safe-area offset), so don't add the inset again here. */
+    top: calc(var(--hud-bottom, 100px) + 8px);
     padding: 11px 13px;
   }
 
@@ -3165,7 +3173,7 @@ canvas {
   }
 
   .coach {
-    top: calc(74px + env(safe-area-inset-top));
+    /* top is driven by --hud-bottom (set in main.ts); just tighten padding. */
     padding: 9px 11px;
   }
 
@@ -3269,9 +3277,14 @@ canvas {
     max-width: 205px;
   }
 
+  /* Keep the desktop HUD lean so it fits the band above the dish without
+     clipping: the verbose ecology stats, volume, and upgrades readouts stay
+     hidden (they live in the notebook / debug panel), leaving Epoch, Deadline,
+     Equilibrium, Objective, and Hint. */
   .hud-ecology-row,
+  .hud-volume-row,
   #hud-upgrades-row {
-    display: flex;
+    display: none;
   }
 
   .life-panel {
@@ -3319,8 +3332,16 @@ canvas {
     bottom: calc(50svh + (var(--desktop-dish-size) / 2) + var(--desktop-gap));
     transform: translateX(-50%);
     width: var(--desktop-dish-size);
-    height: var(--desktop-status-height);
-    overflow: hidden;
+    /* Sits in the short band above the centered dish (the left/right columns
+       are taken by the reagent rack and lifeform panel). The band only fits a
+       few rows, so the HUD is trimmed to Epoch / Deadline / Equilibrium /
+       Objective below — the hint (a 2-line space hog, already echoed by the
+       coach card) is dropped here so nothing needs clipping. */
+    min-height: auto;
+  }
+
+  .hud-hint-row {
+    display: none;
   }
 
   .hud-val {
@@ -3384,7 +3405,7 @@ canvas {
   .hud {
     top: 8px;
     bottom: auto;
-    height: 104px;
+    min-height: 104px;
   }
 
   .hud-hint-row,

@@ -92,6 +92,18 @@ describe('onboarding coach', () => {
     expect(coachSource).toContain("beat.trigger !== event");
     expect(mainSource).toContain("coach.report('egg-placed')");
     expect(mainSource).toContain("coach.report('nutrient-used')");
+    expect(mainSource).toContain("coach.report('bloom-discovered')");
+  });
+
+  it('wires the beat-3 auto-spawn failsafe so bloom is always reachable', () => {
+    // shouldAutoSpawn was dead code; it must actually seed a helper swarmlet.
+    expect(mainSource).toContain('coach.shouldAutoSpawn()');
+    expect(mainSource).toContain('arena.spawnOnboardingSeed()');
+  });
+
+  it('publishes the HUD bottom edge so the coach never overlaps a wrapped HUD', () => {
+    expect(mainSource).toContain("layout.style.setProperty('--hud-bottom'");
+    expect(mainSource).toContain('new ResizeObserver(publishHudBottom)');
   });
 
   it('shows on the first epoch of a first run only, persisted via localStorage', () => {
@@ -118,7 +130,9 @@ describe('onboarding coach', () => {
     expect(css).toContain('.coach.coach-show');
     expect(css).toContain('.presentation-mode .coach');
     const mobileBlockStart = css.indexOf('@media (max-width: 899px)');
-    expect(css.indexOf('top: calc(92px + env(safe-area-inset-top))')).toBeGreaterThan(mobileBlockStart);
+    // On phones the coach tracks the HUD's live bottom edge (published as
+    // --hud-bottom by main.ts) so a two-line objective can't overlap it.
+    expect(css.indexOf('top: calc(var(--hud-bottom, 100px) + 8px)')).toBeGreaterThan(mobileBlockStart);
   });
 
   it('retires itself after the final tutorial beat without requiring Skip', () => {

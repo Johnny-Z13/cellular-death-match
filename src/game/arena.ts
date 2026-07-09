@@ -93,6 +93,7 @@ export interface Arena {
   endEpochNow(): ArenaStatus;
   tick(input: ArenaInput): void;
   spawnEnemy(opts: SpawnEnemyOpts): CellId;
+  spawnOnboardingSeed(): void;
   getHomeostasisProgress(): number;
   isHomeostasisAchieved(): boolean;
   isEcosystemCollapsed(): boolean;
@@ -278,6 +279,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
   const effectiveAccidentInterval = Math.max(60, Math.round(ACCIDENT_INTERVAL_TICKS * esc.accidentIntervalMul));
   const effectiveOutbreakCount = esc.outbreakSeverity;
   const includeControlSample = opts.includeControlSample ?? true;
+  // The first epoch with the control sample removed is the coach-driven
+  // onboarding dish (Swarmlet + Nutrient only, tutorial owns its ending).
+  const isOnboardingDish = fightIndex === 0 && !includeControlSample;
   const worldEventIntensity = clamp(opts.worldEventIntensity ?? WORLD_EVENT_TUNING.defaultIntensity, 0, 1);
   const nEnemies = opts.enemies.length;
   const state = createSim({
@@ -459,6 +463,11 @@ export function createArena(opts: CreateArenaOpts): Arena {
       // sample dies — otherwise a dead dish would idle forever with no verdict.
       if ((!p || p.vol === 0) && mode !== 'ecosystem') return 'lost';
       if (mode === 'ecosystem') {
+        // The onboarding dish is coach-driven: it ends only when the tutorial
+        // fires bloom discovery (via the run's onboarding-complete callback),
+        // never on the deadline — otherwise the timer would yank the player to
+        // the upgrade pick mid-tutorial.
+        if (isOnboardingDish) return 'running';
         const progress = currentObjectiveProgress();
         // Latch achievement for "create / breed" objectives so the dish stays
         // Complete after the moment of success.
@@ -907,7 +916,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         }
         evaluateBreedDiscoveries(state, archetypes, toolEffects, new Set([...knownBreedIds, ...discoveredBreedIds]), (id, sourceCell) => {
           discoverBreed(this, id, sourceCell);
-        });
+        }, isOnboardingDish);
       }
       decayDishEvents();
 
@@ -963,6 +972,17 @@ export function createArena(opts: CreateArenaOpts): Arena {
       if (spawnOpts.spawn.archetype === 'splitter') ai.splitter = { didSpawn: false };
       aiStates.set(id, ai);
       return id;
+    },
+    spawnOnboardingSeed(): void {
+      // Tutorial failsafe: guarantee a living swarmlet inside a nutrient field so
+      // beat 3's bloom always fires, even if the player's first colony died.
+      // Prefer the newest nutrient field's center; fall back to dish center.
+      const field = [...toolEffects].reverse().find((e) =>
+        e.type === 'nutrient' || e.type === 'bloom' || e.type === 'conduit',
+      );
+      const target: [number, number] = field ? [field.pos[0], field.pos[1]] : [state.grid.LX / 2, state.grid.LY / 2];
+      const seedPos = findEggSeedPos(state, target) ?? target;
+      this.spawnEnemy({ spawn: { ...ARCHETYPE_DEFAULTS.swarmlet }, pos: seedPos });
     },
     getHomeostasisProgress(): number {
       return homeostasisTracker.progress();
@@ -1509,7 +1529,16 @@ function evaluateBreedDiscoveries(
   effects: ToolEffect[],
   discoveredBreeds: ReadonlySet<BreedId>,
   discover: (id: BreedId, sourceCell?: Cell) => void,
+  onboardingDish = false,
 ): void {
+  // Onboarding dish only ever offers Swarmlet + Nutrient, so neither the
+  // splitter pair-path nor the targetVol>420 budding path below can fire (a
+  // buffed swarmlet caps at ~146). To keep the tutorial's promised discovery
+  // real, a fed living swarmlet under any nutrient field blooms here.
+  if (onboardingDish) {
+    const source = onboardingBloomSource(state, archetypes, effects);
+    if (source) discover('bloom_mass', source);
+  }
   // Cross-breeding: any breed whose two parents are both discovered and present
   // as adjacent cells under a nutrient field hybridizes into its offspring.
   for (const def of Object.values(BREED_DEFS)) {
@@ -1601,6 +1630,33 @@ function nutrientPairSource(
   }
 
   return null;
+}
+
+// Onboarding-only: the largest living swarmlet sitting inside a nutrient/bloom/
+// conduit field. This is the guaranteed tutorial discovery — feed your culture
+// and it blooms, no second species or size threshold required.
+function onboardingBloomSource(
+  state: SimState,
+  archetypes: Map<CellId, EnemySpawn>,
+  effects: ToolEffect[],
+): Cell | null {
+  const fields = effects.filter((effect) =>
+    effect.type === 'nutrient' || effect.type === 'bloom' || effect.type === 'conduit',
+  );
+  if (fields.length === 0) return null;
+
+  let best: Cell | null = null;
+  for (const [id, spawn] of archetypes) {
+    if (spawn.archetype !== 'swarmlet') continue;
+    const cell = state.cells.get(id);
+    if (!cell || cell.vol <= 0) continue;
+    const inField = fields.some((effect) =>
+      distanceBetween(state, cell.center, effect.pos) <= effect.radius + 6,
+    );
+    if (!inField) continue;
+    if (!best || cell.vol > best.vol) best = cell;
+  }
+  return best;
 }
 
 function bloomMassPairSource(
