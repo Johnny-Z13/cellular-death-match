@@ -24,6 +24,7 @@ import { createRunEndReportInput } from './game/runFlow';
 import { finalBreedCountsFor, finalBreedVolumesFor } from './game/runSnapshot';
 import { createFixedStepClock, normalizeSimTicksPerSecond } from './game/simClock';
 import { hash2 } from './game/hash';
+import { lifeformUnlocksForCurrentRun } from './game/lifeformLoadout';
 import {
   clearDiscoverySave,
   loadDiscoverySave,
@@ -992,8 +993,11 @@ function currentLifeformUnlocks(): readonly ProgressionLifeformId[] {
   const phase = run.getState().phase;
   if (phase !== 'arena' && phase !== 'upgrade_pick') return stagedLifeforms;
 
-  const loadoutLifeforms = [...currentRunLoadout].filter(isProgressionLifeformId);
-  return loadoutLifeforms.length > 0 ? loadoutLifeforms : ['swarmlet'];
+  return lifeformUnlocksForCurrentRun(
+    stagedLifeforms,
+    currentRunLoadout,
+    discoveredBreedsThisRun,
+  );
 }
 
 function openingBloomCreatedInCurrentDish(): boolean {
