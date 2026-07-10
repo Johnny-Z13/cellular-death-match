@@ -18,6 +18,7 @@ export interface PlayerConfig {
   saltRadius?: number;
   acidRadius?: number;
   agitationCharges?: number;
+  toolCooldownMult?: number;       // scales every reagent/agitate cooldown (0 disables)
 }
 
 // A stable handle to an upgrade in the run state.

@@ -32,16 +32,19 @@ export const ECOSYSTEM_LIMITS = {
   outbreakHunterCount: 3,
 } as const;
 
+// cooldownTicks paces repeat uses of the same tool (radial wipe on the button);
+// stock charges stay the strategic budget. Paste's cooldown starts when the
+// drawn stroke ends, not per stamp.
 export const TOOL_TUNING = {
-  egg: { charges: 8, hatchRadius: 16, hatchTtl: 60 * 2 },
-  nutrient: { charges: 5, radius: 20, ttl: 60 * 8 },
-  toxin: { charges: 4, radius: 24, ttl: 60 * 7 },
-  water: { charges: 6, radius: 28, ttl: 60 * 6 },
-  salt: { charges: 4, radius: 18, ttl: 60 * 9 },
-  acid: { charges: 3, radius: 17, ttl: 60 * 5 },
+  egg: { charges: 8, hatchRadius: 16, hatchTtl: 60 * 2, cooldownTicks: 120 },
+  nutrient: { charges: 5, radius: 20, ttl: 60 * 8, cooldownTicks: 90 },
+  toxin: { charges: 4, radius: 24, ttl: 60 * 7, cooldownTicks: 180 },
+  water: { charges: 6, radius: 28, ttl: 60 * 6, cooldownTicks: 90 },
+  salt: { charges: 4, radius: 18, ttl: 60 * 9, cooldownTicks: 180 },
+  acid: { charges: 3, radius: 17, ttl: 60 * 5, cooldownTicks: 240 },
   // Paste draws a trail: each charge buys a length of drawn path. Stamps are
   // small, long-lived nutrient fields so colonies gently drift along the line.
-  paste: { charges: 3, radius: 9, ttl: 60 * 7 } as const,
+  paste: { charges: 3, radius: 9, ttl: 60 * 7, cooldownTicks: 180 } as const,
 } as const;
 
 export const PASTE_TUNING = {
@@ -96,4 +99,5 @@ export const AGITATION_TUNING = {
   durationTicks: 90,
   minSpeed: 10,
   extraSpeed: 14,
+  cooldownTicks: 300,
 } as const;

@@ -131,6 +131,8 @@ export interface EcologyInfo {
 export interface ToolState {
   charges: number;
   maxCharges: number;
+  cooldownRemainingTicks: number;
+  cooldownTicks: number;
 }
 
 export interface AgitationState extends ToolState {
@@ -327,6 +329,19 @@ export function createArena(opts: CreateArenaOpts): Arena {
   const dishEvents: DishEventMarker[] = [];
   let nextDishEventId = 1;
   const toolStates: Record<LabTool, ToolState> = toolLoadoutFor(opts.player);
+  // Cooldown pacing between same-tool uses; charges stay the strategic budget.
+  const toolReadyAtTick: Record<LabTool, number> = {
+    egg: 0, nutrient: 0, toxin: 0, water: 0, salt: 0, acid: 0, paste: 0,
+  };
+  const agitationCooldownTicks = Math.round(
+    AGITATION_TUNING.cooldownTicks * (opts.player.toolCooldownMult ?? 1),
+  );
+  let agitationReadyAtTick = 0;
+  let pasteStrokeStamped = false;
+  const toolIsCooling = (tool: LabTool): boolean => tickNo < toolReadyAtTick[tool];
+  const startToolCooldown = (tool: LabTool): void => {
+    toolReadyAtTick[tool] = tickNo + toolStates[tool].cooldownTicks;
+  };
   const signals: string[] = [];
   const knownBreedIds = new Set<BreedId>(opts.knownBreedIds ?? []);
   const discoveredBreedIds = new Set<BreedId>();
@@ -533,14 +548,18 @@ export function createArena(opts: CreateArenaOpts): Arena {
       return { ...progress, complete };
     },
     getToolStates(): Record<LabTool, ToolState> {
+      const snapshot = (tool: LabTool): ToolState => ({
+        ...toolStates[tool],
+        cooldownRemainingTicks: Math.max(0, toolReadyAtTick[tool] - tickNo),
+      });
       return {
-        egg: { ...toolStates.egg },
-        nutrient: { ...toolStates.nutrient },
-        toxin: { ...toolStates.toxin },
-        water: { ...toolStates.water },
-        salt: { ...toolStates.salt },
-        acid: { ...toolStates.acid },
-        paste: { ...toolStates.paste },
+        egg: snapshot('egg'),
+        nutrient: snapshot('nutrient'),
+        toxin: snapshot('toxin'),
+        water: snapshot('water'),
+        salt: snapshot('salt'),
+        acid: snapshot('acid'),
+        paste: snapshot('paste'),
       };
     },
     getAgitationState(): AgitationState {
@@ -548,6 +567,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
         charges: agitationCharges,
         maxCharges: maxAgitationCharges,
         activeTicks: agitationTicksRemaining,
+        cooldownRemainingTicks: Math.max(0, agitationReadyAtTick - tickNo),
+        cooldownTicks: agitationCooldownTicks,
       };
     },
     getToolEffects(): ToolEffect[] {
@@ -558,8 +579,13 @@ export function createArena(opts: CreateArenaOpts): Arena {
     },
     endPasteStroke(): void {
       // Called on pointerup so the next drawn stroke starts fresh (and pays its
-      // opening charge) rather than continuing the previous line.
+      // opening charge) rather than continuing the previous line. The cooldown
+      // runs per stroke, so it starts here rather than per stamp.
       lastTrailStamp = null;
+      if (pasteStrokeStamped) {
+        pasteStrokeStamped = false;
+        startToolCooldown('paste');
+      }
     },
     getDishEvents(): DishEventMarker[] {
       return dishEvents.map((event) => ({
@@ -570,10 +596,13 @@ export function createArena(opts: CreateArenaOpts): Arena {
     applyTool(tool: LabTool, pos: [number, number], applyOpts: ApplyToolOpts = {}): boolean {
       const toolState = toolStates[tool];
       if (toolState.charges <= 0) return false;
+      // Paste is gated per stroke (see endPasteStroke), not per stamp.
+      if (tool !== 'paste' && toolIsCooling(tool)) return false;
       if (tool === 'egg') {
         const seedPos = findEggSeedPos(state, pos);
         if (!seedPos) return false;
         toolState.charges -= 1;
+        startToolCooldown('egg');
         const spawn = applyOpts.eggBreedId
           ? breedSpawnFor(applyOpts.eggBreedId)
           : eggSpawnFor(applyOpts.eggArchetype ?? 'swarmlet', state.rng.random());
@@ -628,7 +657,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
         } else {
           // First stamp of a stroke always costs the opening charge.
           if (toolState.charges <= 0) return false;
+          if (toolIsCooling('paste')) return false;
         }
+        pasteStrokeStamped = true;
         lastTrailStamp = [pos[0], pos[1]];
         const maxTtl = TOOL_TUNING.paste.ttl;
         trailEffects.push({
@@ -644,6 +675,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       }
 
       toolState.charges -= 1;
+      startToolCooldown(tool);
       const effect = toolEffectFor(tool, pos, opts.player, state.rng.randInt(1_000_000));
       toolEffects.push(effect);
       const catalyticReaction = catalyticReactionFor(
@@ -734,7 +766,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
     },
     agitate(): boolean {
       if (this.getStatus() !== 'running' || agitationCharges <= 0) return false;
+      if (tickNo < agitationReadyAtTick) return false;
       agitationCharges -= 1;
+      agitationReadyAtTick = tickNo + agitationCooldownTicks;
       agitationTicksRemaining = AGITATION_DURATION_TICKS;
       const hadNutrient = toolEffects.some((effect) => effect.type === 'nutrient');
       const hadToxin = toolEffects.some((effect) => effect.type === 'toxin');
@@ -1024,14 +1058,23 @@ function toolLoadoutFor(player: PlayerConfig): Record<LabTool, ToolState> {
   const saltCharges = player.saltCharges ?? TOOL_TUNING.salt.charges;
   const acidCharges = player.acidCharges ?? TOOL_TUNING.acid.charges;
   const pasteCharges = player.pasteCharges ?? TOOL_TUNING.paste.charges;
+  const cooldownMult = player.toolCooldownMult ?? 1;
+  const cooldown = (tool: LabTool): number =>
+    Math.round(TOOL_TUNING[tool].cooldownTicks * cooldownMult);
+  const state = (tool: LabTool, charges: number): ToolState => ({
+    charges,
+    maxCharges: charges,
+    cooldownRemainingTicks: 0,
+    cooldownTicks: cooldown(tool),
+  });
   return {
-    egg: { charges: eggCharges, maxCharges: eggCharges },
-    nutrient: { charges: nutrientCharges, maxCharges: nutrientCharges },
-    toxin: { charges: toxinCharges, maxCharges: toxinCharges },
-    water: { charges: waterCharges, maxCharges: waterCharges },
-    salt: { charges: saltCharges, maxCharges: saltCharges },
-    acid: { charges: acidCharges, maxCharges: acidCharges },
-    paste: { charges: pasteCharges, maxCharges: pasteCharges },
+    egg: state('egg', eggCharges),
+    nutrient: state('nutrient', nutrientCharges),
+    toxin: state('toxin', toxinCharges),
+    water: state('water', waterCharges),
+    salt: state('salt', saltCharges),
+    acid: state('acid', acidCharges),
+    paste: state('paste', pasteCharges),
   };
 }
 

@@ -749,9 +749,11 @@ function loop() {
     }),
   });
   screens.setEpochComplete(objective.complete || (equilibriumCanEndRun && equilibrium.achieved));
+  // Tool state (charges + cooldown wipes) refreshes every frame regardless of
+  // the control sample — the onboarding dish has no player cell.
+  screens.updateToolCharges(arena.getToolStates());
+  screens.updateAgitation(arena.getAgitationState());
   if (player) {
-    screens.updateToolCharges(arena.getToolStates());
-    screens.updateAgitation(arena.getAgitationState());
     updateButtonHint();
     announceEpochCompletion(objective.complete, objective.def.name);
     announceEquilibrium(equilibrium);

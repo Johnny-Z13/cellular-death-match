@@ -556,11 +556,30 @@ canvas {
 }
 
 .tool-icon {
+  position: relative;
   width: 22px;
   height: 22px;
   border-radius: 50%;
   justify-self: center;
   box-shadow: 0 0 16px currentColor;
+}
+
+/* Classic radial cooldown: a dark conic wipe covers the remaining fraction
+   (--cooldown 1 → 0, set per frame from the sim) and unwinds clockwise as the
+   reagent recharges. Charges text stays bright — only the icon reads "cooling". */
+.tool-cooling .tool-icon {
+  filter: saturate(0.45) brightness(0.8);
+}
+
+.tool-cooling .tool-icon::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: conic-gradient(
+    rgba(3, 10, 12, 0.82) calc(var(--cooldown, 0) * 1turn),
+    transparent calc(var(--cooldown, 0) * 1turn)
+  );
 }
 
 .egg-icon {

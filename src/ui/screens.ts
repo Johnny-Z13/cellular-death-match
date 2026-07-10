@@ -176,7 +176,13 @@ export function createScreens(): Screens {
   let unlockedLifeformIds = new Set<string>();
   let unlockedToolIds = new Set<ToolId>(['egg', 'nutrient']);
   let agitationUnlocked = true;
-  let currentAgitationState: AgitationState = { charges: 0, maxCharges: 0, activeTicks: 0 };
+  let currentAgitationState: AgitationState = {
+    charges: 0,
+    maxCharges: 0,
+    activeTicks: 0,
+    cooldownRemainingTicks: 0,
+    cooldownTicks: 0,
+  };
   let eggSelectHandler: ((archetype: EnemyArchetype) => void) | null = null;
   let lifeformSelectHandler: ((id: string) => void) | null = null;
   const optionByArchetype = new Map<EnemyArchetype, EggOption>();
@@ -313,6 +319,20 @@ export function createScreens(): Screens {
     }
   }
 
+  // Radial cooldown wipe: --cooldown is the remaining fraction (1 → 0) that
+  // CSS renders as a conic sweep over the tool icon.
+  function applyCooldownUi(
+    btn: HTMLButtonElement,
+    state: { cooldownRemainingTicks: number; cooldownTicks: number },
+  ): void {
+    const cooling = state.cooldownTicks > 0 && state.cooldownRemainingTicks > 0;
+    btn.style.setProperty(
+      '--cooldown',
+      cooling ? (state.cooldownRemainingTicks / state.cooldownTicks).toFixed(3) : '0',
+    );
+    btn.classList.toggle('tool-cooling', cooling);
+  }
+
   function applyAgitationUi(): void {
     agitateButton.hidden = !agitationUnlocked;
     agitateButton.disabled = !agitationUnlocked || currentAgitationState.charges <= 0;
@@ -320,6 +340,7 @@ export function createScreens(): Screens {
     agitateCount.textContent = agitationUnlocked
       ? `${currentAgitationState.charges}/${currentAgitationState.maxCharges}`
       : '?';
+    applyCooldownUi(agitateButton, currentAgitationState);
   }
 
   return {
@@ -401,6 +422,7 @@ export function createScreens(): Screens {
           continue;
         }
         if (count) count.textContent = `${state.charges}/${state.maxCharges}`;
+        applyCooldownUi(btn, state);
       }
     },
     updateAgitation(state) {

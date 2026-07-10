@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createArena, type Arena } from '../../src/game/arena';
+import { TOOL_TUNING, AGITATION_TUNING } from '../../src/content/ecologyTuning';
 import { getCell, setCell, updateBoundaryAround } from '../../src/sim/grid';
 import { removePixel } from '../../src/sim/cell';
 
@@ -161,7 +162,9 @@ describe('arena ecosystem mode', () => {
       LX: 50,
       LY: 50,
       seed: 1,
-      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      // Cooldowns off: the subject is the epoch timer, and both eggs must land
+      // before the 1-tick deadline.
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3, toolCooldownMult: 0 },
       enemies: [{ archetype: 'bruiser' as const, targetVol: 150, speed: 8, engulfMultiplier: 6.5 }],
       wrap: true,
       mode: 'ecosystem',
@@ -423,7 +426,9 @@ describe('arena ecosystem mode', () => {
       LX: 80,
       LY: 80,
       seed: 21,
-      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      // Cooldowns off: the subject is stroke/stamp charge mechanics, and the
+      // second stroke starts inside the per-stroke cooldown window.
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3, toolCooldownMult: 0 },
       enemies: [{ archetype: 'swarmlet' as const, targetVol: 120, speed: 8, engulfMultiplier: 4 }],
       wrap: true,
       mode: 'ecosystem',
@@ -503,7 +508,13 @@ describe('arena ecosystem mode', () => {
       epochTicks: 60 * 20,
     });
 
-    expect(arena.getAgitationState()).toEqual({ charges: 2, maxCharges: 2, activeTicks: 0 });
+    expect(arena.getAgitationState()).toEqual({
+      charges: 2,
+      maxCharges: 2,
+      activeTicks: 0,
+      cooldownRemainingTicks: 0,
+      cooldownTicks: AGITATION_TUNING.cooldownTicks,
+    });
     expect(arena.agitate()).toBe(true);
     expect(arena.getAgitationState().charges).toBe(1);
     arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
@@ -529,7 +540,13 @@ describe('arena ecosystem mode', () => {
       epochTicks: 60 * 20,
     });
 
-    expect(arena.getAgitationState()).toEqual({ charges: 3, maxCharges: 3, activeTicks: 0 });
+    expect(arena.getAgitationState()).toEqual({
+      charges: 3,
+      maxCharges: 3,
+      activeTicks: 0,
+      cooldownRemainingTicks: 0,
+      cooldownTicks: AGITATION_TUNING.cooldownTicks,
+    });
   });
 
   it('seeds an egg near the click when the clicked cell is occupied', () => {
@@ -928,10 +945,16 @@ describe('arena ecosystem mode', () => {
       mode: 'ecosystem',
       epochTicks: 60 * 20,
     });
-    const tools = arena.getToolStates() as Record<string, { charges: number; maxCharges: number }>;
-    expect(tools.water).toEqual({ charges: 6, maxCharges: 6 });
-    expect(tools.salt).toEqual({ charges: 4, maxCharges: 4 });
-    expect(tools.acid).toEqual({ charges: 3, maxCharges: 3 });
+    const tools = arena.getToolStates();
+    expect(tools.water).toEqual({
+      charges: 6, maxCharges: 6, cooldownRemainingTicks: 0, cooldownTicks: TOOL_TUNING.water.cooldownTicks,
+    });
+    expect(tools.salt).toEqual({
+      charges: 4, maxCharges: 4, cooldownRemainingTicks: 0, cooldownTicks: TOOL_TUNING.salt.cooldownTicks,
+    });
+    expect(tools.acid).toEqual({
+      charges: 3, maxCharges: 3, cooldownRemainingTicks: 0, cooldownTicks: TOOL_TUNING.acid.cooldownTicks,
+    });
   });
 
   it('makes salt desiccate nearby organisms and damp their movement', () => {
@@ -1055,7 +1078,9 @@ describe('arena ecosystem mode', () => {
       LX: 80,
       LY: 80,
       seed: 212,
-      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      // Cooldowns off: the repeat acid+water pair must land while the first
+      // pair's fields are still live.
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3, toolCooldownMult: 0 },
       enemies: [{ archetype: 'swarmlet' as const, targetVol: 120, speed: 8, engulfMultiplier: 4 }],
       wrap: false,
       mode: 'ecosystem',
@@ -1166,6 +1191,9 @@ describe('arena ecosystem mode', () => {
         nutrientCharges: 2,
         waterCharges: 2,
         agitationCharges: 1,
+        // Cooldowns off: the second nutrient must land inside the bloom field
+        // while agitation is still active.
+        toolCooldownMult: 0,
       },
       enemies: [
         { archetype: 'splitter' as const, targetVol: 220, speed: 8, engulfMultiplier: 5, traits: ['budding'] },
@@ -1383,6 +1411,9 @@ describe('arena ecosystem mode', () => {
         bulletSize: 3,
         waterCharges: 2,
         toxinCharges: 1,
+        // Cooldowns off: the second water drop must land while the foam from
+        // the first is still live.
+        toolCooldownMult: 0,
       },
       enemies: [
         { archetype: 'swarmlet' as const, targetVol: 160, speed: 12, engulfMultiplier: 4 },
@@ -1529,6 +1560,8 @@ describe('arena ecosystem mode', () => {
         engulfMultiplier: 5,
         bulletSize: 3,
         nutrientCharges: 6,
+        // Cooldowns off: the pairing sites are re-fed every tick while pinned.
+        toolCooldownMult: 0,
       },
       // A sniper beside two swarmlets discovers Needle Swarm; a swarmlet beside a
       // splitter under nutrient discovers Bloom Mass. Both parents of Quill Bloom.
@@ -1697,6 +1730,9 @@ describe('arena ecosystem mode', () => {
         bulletSize: 3,
         waterCharges: 2,
         toxinCharges: 1,
+        // Cooldowns off: the second water drop must land while the foam from
+        // the first is still live.
+        toolCooldownMult: 0,
       },
       enemies: [
         { archetype: 'swarmlet' as const, targetVol: 160, speed: 12, engulfMultiplier: 4 },
@@ -1758,6 +1794,9 @@ describe('arena ecosystem mode', () => {
         bulletSize: 3,
         acidCharges: 2,
         toxinCharges: 2,
+        // Cooldowns off: the repeat acid+toxin pair must land while the first
+        // flare is still live.
+        toolCooldownMult: 0,
       },
       enemies: [
         { archetype: 'sniper' as const, targetVol: 160, speed: 10, engulfMultiplier: 1, traits: ['fragile'] },
