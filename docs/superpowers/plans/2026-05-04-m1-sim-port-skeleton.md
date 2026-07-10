@@ -204,7 +204,7 @@ ctx.fillRect(10, 10, 50, 50);
 
 - [ ] **Step 1.8: Install dependencies**
 
-Run: `cd /Users/Shared/Projects/Web/cellular-death-match && npm install`
+Run from the repository root: `npm install`
 Expected: creates `node_modules/`, `package-lock.json`, no errors.
 
 - [ ] **Step 1.9: Verify dev server starts**
