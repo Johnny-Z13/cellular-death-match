@@ -2946,6 +2946,10 @@ canvas {
     top: 12px;
     right: -9px;
     padding: 10px 5px;
+    /* Keep the tab above the coach card (z-index 8), which floats over the
+       dish's top-right edge during the first-run tutorial, so it stays legible
+       and tappable instead of being clipped by the coach's corner. */
+    z-index: 9;
   }
 
   .mobile-shell {
@@ -3464,54 +3468,117 @@ canvas {
 }
 
 @media (min-width: 900px) and (max-width: 1180px) {
-  .toolbox {
-    left: 50%;
+  /* Small-desktop / tablet-landscape windows use the SAME centered-instrument
+     layout as wide desktop (>=1181px) — dish centered, reagent rack left,
+     lifeform panel right, HUD above — just with narrower racks and a recomputed
+     dish size so all three columns fit the smaller window instead of piling up
+     as overlapping top bars. */
+  .layout {
+    min-height: 100svh;
+    padding: 0;
+    place-items: center;
+    overflow: hidden;
+    --desktop-rack-width: clamp(190px, 20vw, 300px);
+    --desktop-dish-size: min(
+      72svh,
+      calc(100svw - (2 * var(--desktop-rack-width)) - (4 * var(--desktop-gap))),
+      760px
+    );
+  }
+
+  canvas {
+    width: var(--desktop-dish-size);
+    height: var(--desktop-dish-size);
+  }
+
+  .hud {
+    left: 50vw;
     right: auto;
-    top: 16px;
-    bottom: auto;
+    top: auto;
+    bottom: calc(50svh + (var(--desktop-dish-size) / 2) + var(--desktop-gap));
     transform: translateX(-50%);
-    width: min(92vw, 560px);
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    width: var(--desktop-dish-size);
+    min-height: auto;
+  }
+
+  .hud-hint-row {
+    display: none;
+  }
+
+  .hud-val {
+    max-width: calc(var(--desktop-dish-size) - 110px);
+  }
+
+  .toolbox {
+    left: calc(50vw - (var(--desktop-dish-size) / 2) - var(--desktop-gap) - var(--desktop-rack-width));
+    top: calc(50svh - (var(--desktop-dish-size) / 2));
+    bottom: auto;
+    transform: none;
+    width: var(--desktop-rack-width);
+    height: var(--desktop-dish-size);
+    max-height: none;
+    grid-template-columns: 1fr;
+    overflow-x: hidden;
+    overflow-y: auto;
+    align-content: start;
+  }
+
+  .toolbox-head {
+    display: grid;
+    gap: 4px;
+    padding: 14px 16px 4px;
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+  }
+
+  .tool-button.selected {
+    transform: none;
   }
 
   .debug {
     display: none;
   }
 
-  .ticker {
-    width: min(92vw, 800px);
-    top: calc(50% + min(46vw, 400px) + 14px);
-    bottom: auto;
-  }
-
   .life-panel {
-    left: 50%;
+    left: calc(50vw + (var(--desktop-dish-size) / 2) + var(--desktop-gap));
     right: auto;
-    top: 86px;
+    top: calc(50svh - (var(--desktop-dish-size) / 2));
     bottom: auto;
-    transform: translateX(-50%);
-    width: min(92vw, 680px);
-    max-height: 220px;
+    transform: none;
+    width: var(--desktop-rack-width);
+    height: var(--desktop-dish-size);
+    max-height: none;
     min-height: 0;
+    align-content: start;
   }
 
   .life-list {
-    display: grid;
-  }
-}
-
-@media (min-width: 900px) and (max-width: 980px) {
-  .layout {
-    align-content: center;
+    grid-template-columns: 1fr;
   }
 
-  canvas {
-    width: min(92vw, 800px);
-    height: min(92vw, 800px);
+  .ticker {
+    left: 50vw;
+    right: auto;
+    top: calc(50svh + (var(--desktop-dish-size) / 2) + var(--desktop-gap));
+    bottom: auto;
+    transform: translateX(-50%);
+    width: var(--desktop-dish-size);
+    max-height: calc(50svh - (var(--desktop-dish-size) / 2) - var(--desktop-gap) - 12px);
+    overflow: hidden;
   }
 }
 
 @media (min-width: 900px) and (max-width: 1180px) and (max-height: 780px) {
+  /* Short landscape windows in this band: the strip above the centered dish is
+     too shallow for the HUD, so pin it to the top (matching the wide-desktop
+     short-height fallback) and drop the log to the bottom edge. */
+  .hud {
+    top: 8px;
+    bottom: auto;
+    min-height: 104px;
+  }
+
   .ticker {
     top: auto;
     bottom: 8px;
