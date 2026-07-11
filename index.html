@@ -14,7 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/src/styles.css?v=20260710-log-clip" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260711-title-palette" />
   </head>
   <body>
     <main class="layout" data-screen="title">
@@ -164,7 +164,9 @@
 
       <!-- Overlay screens. Hidden by default; shown by .visible. -->
       <div id="screen-title" class="screen screen-title-screen visible">
+        <canvas id="title-automata" class="title-automata" data-palette="egg-duotone" aria-hidden="true"></canvas>
         <div class="title-art" aria-hidden="true"></div>
+        <div class="title-vignette" aria-hidden="true"></div>
         <div class="screen-card title-card">
           <p class="title-eyebrow">Bioluminescent Culture Lab</p>
           <h1 class="screen-title title-wordmark">Cellular<br /><span>Death Match</span></h1>
@@ -277,6 +279,6 @@
         <button id="coach-skip" class="coach-skip" type="button">Skip tutorial</button>
       </aside>
     </main>
-    <script type="module" src="/src/main.ts?v=20260710-mute-both-engines"></script>
+    <script type="module" src="/src/main.ts?v=20260711-title-palette"></script>
   </body>
 </html>

@@ -53,6 +53,7 @@ import {
   toolUnlocksForCurrentStage,
 } from './game/onboardingStage';
 import { createStrainLibrary, type StrainLibrary } from './game/strainLibrary';
+import { createTitleAutomata } from './ui/titleAutomata';
 
 declare const __COMMIT_MESSAGE__: string;
 
@@ -89,6 +90,7 @@ const ecologyAudio = createEcologyAudio();
 const uiAudio = createUiAudio();
 const fx = createFx();
 const coach = createCoach();
+createTitleAutomata();
 
 // Publish the HUD's live bottom edge as a CSS var so the mobile coach card can
 // sit just below it regardless of how many lines the objective wraps to — no
