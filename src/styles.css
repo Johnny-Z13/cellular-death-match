@@ -156,6 +156,7 @@ canvas {
 .mobile-shell-button,
 .mobile-tool-readout,
 .notebook-button,
+.options-button,
 .fullscreen-button {
   user-select: none;
   -webkit-user-select: none;
@@ -179,7 +180,7 @@ canvas {
   pointer-events: none;
 }
 
-/* ---- Top chrome buttons (Sound / Full screen) --------------------------- */
+/* ---- Top chrome buttons (Options / Full screen) ------------------------- */
 .chrome-button,
 .fullscreen-button {
   position: fixed;
@@ -207,7 +208,7 @@ canvas {
   right: max(12px, env(safe-area-inset-right));
 }
 
-.audio-button {
+.options-button {
   right: calc(106px + env(safe-area-inset-right));
 }
 
@@ -251,23 +252,6 @@ canvas {
   border-color: var(--bio);
   transform: translateX(3px);
   box-shadow: inset 0 0 14px rgba(91, 233, 214, 0.12), 4px 4px 18px rgba(0, 0, 0, 0.5), 0 0 18px rgba(91, 233, 214, 0.25);
-}
-
-.audio-button[aria-pressed="true"] {
-  color: var(--ink-faint);
-  border-color: rgba(120, 196, 200, 0.1);
-}
-
-.audio-button[aria-pressed="true"]::before {
-  content: "";
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  top: 50%;
-  height: 1px;
-  background: var(--danger);
-  transform: rotate(-12deg);
-  opacity: 0.8;
 }
 
 /* ---- Mobile shell ------------------------------------------------------ */
@@ -780,7 +764,8 @@ canvas {
 /* ---- Debug inspector --------------------------------------------------- */
 .debug {
   display: none;
-  width: min(320px, 100%);
+  width: min(520px, calc(100vw - 24px));
+  box-sizing: border-box;
   background: var(--panel-solid);
   border: 1px solid var(--hairline);
   border-radius: 12px;
@@ -790,14 +775,74 @@ canvas {
   user-select: text;
 }
 
+.options-scrim {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 11;
+  border: 0;
+  background: rgba(1, 4, 5, 0.72);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+  cursor: default;
+}
+
+.menu-open .options-scrim {
+  display: block;
+}
+
 .debug-open .debug {
   display: block;
   position: fixed;
-  right: max(12px, env(safe-area-inset-right));
-  top: max(12px, env(safe-area-inset-top));
-  max-height: calc(100svh - 24px);
+  left: 50%;
+  right: auto;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-height: calc(100svh - 32px);
   overflow: auto;
   z-index: 12;
+}
+
+.options-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.options-header .debug-title {
+  margin: 0;
+}
+
+.options-close {
+  border: 1px solid var(--hairline);
+  border-radius: 7px;
+  background: rgba(18, 32, 36, 0.84);
+  color: var(--ink-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 6px 9px;
+  cursor: pointer;
+}
+
+.debug-option-button {
+  width: 100%;
+  margin: 0 0 8px;
+  border: 1px solid var(--bio-deep);
+  border-radius: 8px;
+  background: rgba(13, 27, 20, 0.82);
+  color: var(--bio);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: left;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.debug-option-button[aria-pressed="true"] {
+  color: var(--ink-faint);
+  border-color: rgba(120, 196, 200, 0.1);
 }
 
 .debug-title {
@@ -1812,7 +1857,8 @@ canvas {
 .presentation-mode .ticker,
 .presentation-mode .mobile-shell,
 .presentation-mode .notebook-button,
-.presentation-mode .audio-button,
+.presentation-mode .options-button,
+.presentation-mode .options-scrim,
 .presentation-mode .debug,
 .presentation-mode .fx-banner,
 .presentation-mode .fx-toasts,
@@ -2986,7 +3032,7 @@ canvas {
     right: max(10px, env(safe-area-inset-right));
   }
 
-  .audio-button {
+  .options-button {
     top: max(8px, env(safe-area-inset-top));
     padding: 8px 9px;
     font-size: 10px;
@@ -3285,9 +3331,11 @@ canvas {
   .debug-open .debug {
     display: block;
     position: fixed;
-    right: 24px;
-    top: 356px;
-    max-height: calc(100vh - 380px);
+    left: 50%;
+    right: auto;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    max-height: calc(100svh - 32px);
     overflow: auto;
     z-index: 12;
   }

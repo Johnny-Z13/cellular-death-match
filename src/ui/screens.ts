@@ -101,6 +101,8 @@ export interface Screens {
   onNotebookClose(handler: () => void): void;
   onFullscreenOpen(handler: () => void): void;
   setFullscreenActive(active: boolean): void;
+  onOptionsOpen(handler: () => void): void;
+  onOptionsClose(handler: () => void): void;
   onAudioToggle(handler: () => void): void;
   setAudioMuted(muted: boolean): void;
   setEpochComplete(complete: boolean): void;
@@ -129,6 +131,9 @@ export function createScreens(): Screens {
   const titleStart   = get('title-start');
   const notebookButton = get('notebook-button') as HTMLButtonElement;
   const fullscreenButton = get('fullscreen-button') as HTMLButtonElement;
+  const optionsButton = get('options-button') as HTMLButtonElement;
+  const optionsClose = get('options-close') as HTMLButtonElement;
+  const optionsScrim = get('options-scrim') as HTMLButtonElement;
   const audioButton = get('audio-button') as HTMLButtonElement;
   const notebookClose = get('notebook-close') as HTMLButtonElement;
   const notebookProgress = get('notebook-progress');
@@ -771,13 +776,20 @@ export function createScreens(): Screens {
       fullscreenButton.setAttribute('aria-label', active ? 'Exit full screen' : 'Enter full screen');
       fullscreenButton.title = active ? 'Exit full screen' : 'Enter full screen';
     },
+    onOptionsOpen(handler) {
+      optionsButton.addEventListener('click', handler);
+    },
+    onOptionsClose(handler) {
+      optionsClose.addEventListener('click', handler);
+      optionsScrim.addEventListener('click', handler);
+    },
     onAudioToggle(handler) {
       audioButton.addEventListener('click', handler);
     },
     setAudioMuted(muted) {
       audioButton.setAttribute('aria-pressed', String(muted));
       audioButton.setAttribute('aria-label', muted ? 'Unmute audio' : 'Mute audio');
-      audioButton.textContent = muted ? 'Muted' : 'Sound';
+      audioButton.textContent = muted ? 'Sound — Muted' : 'Sound — On';
     },
     setEpochComplete(complete) {
       // Glow the End button + flag the HUD so the player sees the experiment is

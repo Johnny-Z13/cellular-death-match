@@ -14,7 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/src/styles.css?v=20260711-title-palette" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260711-options-menu" />
   </head>
   <body>
     <main class="layout" data-screen="title">
@@ -24,7 +24,7 @@
         <div class="dish-glass" aria-hidden="true"></div>
         <button id="notebook-button" class="notebook-button notebook-tab" type="button" aria-label="Open Discoverer's Notebook">Notebook</button>
       </div>
-      <button id="audio-button" class="chrome-button audio-button" type="button" aria-label="Mute audio" aria-pressed="false">Sound</button>
+      <button id="options-button" class="chrome-button options-button" type="button" aria-label="Open options" aria-haspopup="dialog">Options</button>
       <button id="fullscreen-button" class="chrome-button fullscreen-button" type="button" aria-label="Enter full screen">Full screen</button>
       <div id="mobile-shell" class="mobile-shell" aria-label="Mobile dish controls">
         <button id="mobile-lifeforms-toggle" class="mobile-shell-button" type="button" aria-expanded="false" aria-controls="life-panel">Lifeforms</button>
@@ -112,8 +112,12 @@
           <b data-tool-count>3/3</b>
         </button>
       </aside>
-      <aside id="debug" class="debug">
-        <h2 class="debug-title">DISH INSPECTOR</h2>
+      <button id="options-scrim" class="options-scrim" type="button" aria-label="Close options"></button>
+      <aside id="debug" class="debug options-panel" role="dialog" aria-modal="true" aria-labelledby="options-title">
+        <header class="options-header">
+          <h2 id="options-title" class="debug-title">OPTIONS</h2>
+          <button id="options-close" class="options-close" type="button" aria-label="Close options">Close</button>
+        </header>
         <section class="debug-block">
           <div class="debug-row"><span class="debug-key">FPS</span><span id="dbg-fps" class="debug-val">—</span></div>
           <div class="debug-row"><span class="debug-key">tick</span><span id="dbg-tick" class="debug-val">0</span></div>
@@ -136,6 +140,7 @@
         </section>
         <section class="debug-block">
           <h3 class="debug-subtitle">controls</h3>
+          <button id="audio-button" class="debug-option-button" type="button" aria-label="Mute audio" aria-pressed="false">Sound — On</button>
           <div class="debug-help">select a lab tool</div>
           <div class="debug-help">click dish: apply tool</div>
           <div class="debug-help">complete objective: unlock research</div>
@@ -279,6 +284,6 @@
         <button id="coach-skip" class="coach-skip" type="button">Skip tutorial</button>
       </aside>
     </main>
-    <script type="module" src="/src/main.ts?v=20260711-title-palette"></script>
+    <script type="module" src="/src/main.ts?v=20260711-options-menu"></script>
   </body>
 </html>

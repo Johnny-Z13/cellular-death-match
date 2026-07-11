@@ -228,6 +228,16 @@ screens.onFullscreenOpen(() => {
   setPresentationMode(!overlayState.presentationMode);
 });
 
+screens.onOptionsOpen(() => {
+  uiAudio.unlock();
+  uiAudio.play('ui_tap');
+  setOptionsMenuOpen(true);
+});
+screens.onOptionsClose(() => {
+  uiAudio.play('ui_tap');
+  setOptionsMenuOpen(false);
+});
+
 screens.onAudioToggle(() => {
   uiAudio.unlock();
   const nowMuted = uiAudio.toggleMuted();
@@ -262,9 +272,7 @@ window.addEventListener('keydown', (event) => {
     closeNotebook();
     return;
   }
-  overlayState.menuOpen = !overlayState.menuOpen;
-  overlayState.debugOpen = overlayState.menuOpen;
-  applyOverlayState();
+  setOptionsMenuOpen(!overlayState.menuOpen);
 });
 
 document.addEventListener('fullscreenchange', () => {
@@ -673,6 +681,18 @@ function loop() {
   if (phase !== 'arena') return;            // stop the loop on any non-arena phase
 
   const now = performance.now();
+  if (overlayState.menuOpen) {
+    // Reset on every paused frame so closing Options never replays accumulated
+    // wall-clock time as a burst of simulation ticks.
+    simClock.reset(now);
+    debug.update(arena.state, {
+      fps: displayedFps,
+      tick: tickCount,
+      status: 'paused',
+    });
+    scheduleLoop();
+    return;
+  }
   const ticksToRun = simClock.consumeTicks(now);
   const player = arena.state.cells.get(PLAYER_ID);
 
@@ -1204,6 +1224,13 @@ function applyOverlayState(): void {
   layout.classList.toggle('debug-open', overlayState.debugOpen);
   layout.classList.toggle('menu-open', overlayState.menuOpen);
   layout.classList.toggle('presentation-mode', overlayState.presentationMode);
+}
+
+function setOptionsMenuOpen(open: boolean): void {
+  overlayState.menuOpen = open;
+  overlayState.debugOpen = open;
+  simClock.reset(performance.now());
+  applyOverlayState();
 }
 
 function refreshNotebook(): void {
