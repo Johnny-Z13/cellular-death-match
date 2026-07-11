@@ -229,6 +229,7 @@ screens.onFullscreenOpen(() => {
 screens.onAudioToggle(() => {
   uiAudio.unlock();
   const nowMuted = uiAudio.toggleMuted();
+  ecologyAudio.setMuted(nowMuted);
   screens.setAudioMuted(nowMuted);
   if (!nowMuted) {
     uiAudio.play('ui_select');
@@ -236,6 +237,7 @@ screens.onAudioToggle(() => {
   }
 });
 screens.setAudioMuted(uiAudio.isMuted());
+ecologyAudio.setMuted(uiAudio.isMuted());
 
 screens.onLifeformSelect((id) => {
   if (!isSeedableLifeformId(id)) return;

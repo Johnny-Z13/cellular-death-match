@@ -3422,6 +3422,13 @@ canvas {
     max-height: calc(50svh - (var(--desktop-dish-size) / 2) - var(--desktop-gap) - 12px);
     overflow: hidden;
   }
+
+  /* The >=900px layout shows six log lines for its roomy bottom strip, but the
+     band under the centered dish only fits the title plus two — cap the rest
+     so the third line hides instead of rendering as a half-clipped strip. */
+  .ticker-line:nth-child(n + 3) {
+    display: none;
+  }
 }
 
 @media (min-width: 1181px) and (max-height: 780px) {
@@ -3435,6 +3442,24 @@ canvas {
   .hud-volume-row,
   .hud-ecology-row,
   #hud-upgrades-row {
+    display: none;
+  }
+
+  /* Short windows: the band under the dish is too shallow even for the title
+     plus two lines — pin a single line to the bottom edge, matching the
+     900-1180 short-height fallback. */
+  .ticker {
+    top: auto;
+    bottom: 8px;
+    max-height: 76px;
+    overflow: hidden;
+  }
+
+  .ticker-title {
+    display: none;
+  }
+
+  .ticker-line:nth-child(n + 2) {
     display: none;
   }
 }
@@ -3585,6 +3610,13 @@ canvas {
     width: var(--desktop-dish-size);
     max-height: calc(50svh - (var(--desktop-dish-size) / 2) - var(--desktop-gap) - 12px);
     overflow: hidden;
+  }
+
+  /* The >=900px layout shows six log lines for its roomy bottom strip, but the
+     band under the centered dish only fits the title plus two — cap the rest
+     so the third line hides instead of rendering as a half-clipped strip. */
+  .ticker-line:nth-child(n + 3) {
+    display: none;
   }
 }
 

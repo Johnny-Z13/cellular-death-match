@@ -16,11 +16,15 @@ export interface EcologyAudioFrame {
 export interface EcologyAudio {
   unlock(): void;
   update(frame: EcologyAudioFrame): void;
+  setMuted(muted: boolean): void;
 }
+
+const MASTER_GAIN = 0.45;
 
 export function createEcologyAudio(): EcologyAudio {
   let ctx: AudioContext | null = null;
   let out: GainNode | null = null;
+  let muted = false;
   let lastEatAt = 0;
   let lastFightAt = 0;
   let lastReactionAt = 0;
@@ -38,7 +42,7 @@ export function createEcologyAudio(): EcologyAudio {
     if (!Ctor) throw new Error('Web Audio API not available');
     ctx = new Ctor();
     out = ctx.createGain();
-    out.gain.value = 0.45;
+    out.gain.value = muted ? 0 : MASTER_GAIN;
     out.connect(ctx.destination);
     void preloadSoundAssets(ctx);
     return ctx;
@@ -373,7 +377,13 @@ export function createEcologyAudio(): EcologyAudio {
       const c = ensureContext();
       if (c.state === 'suspended') void c.resume();
     },
+    setMuted(next) {
+      muted = next;
+      // Zero the master bus too so already-scheduled tails cut off instantly.
+      if (out) out.gain.value = next ? 0 : MASTER_GAIN;
+    },
     update(frame) {
+      if (muted) return;
       if (
         frame.eating <= 0
         && frame.fighting <= 0

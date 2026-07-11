@@ -48,4 +48,35 @@ describe('desktop layout CSS', () => {
     expect(wideBlock).toContain('display: none;');
     expect(wideBlock).toContain('min-height: auto;');
   });
+
+  it('caps the centered-layout dish log to lines that fit — hidden, not half-clipped', () => {
+    // The >=900px legacy layout re-enables log lines 3-6 for its roomy bottom
+    // strip, but the centered-instrument layouts box the ticker into the shallow
+    // overflow:hidden band below the dish (~2 lines tall), so they must cap the
+    // visible lines back down or the third line renders as a half-cut strip.
+    const wideBlock = css.slice(
+      css.indexOf('@media (min-width: 1181px) {'),
+      css.indexOf('@media (min-width: 1181px) and (max-height: 780px) {'),
+    );
+    const bandBlock = css.slice(
+      css.indexOf('@media (min-width: 900px) and (max-width: 1180px) {'),
+      css.indexOf('@media (min-width: 900px) and (max-width: 1180px) and (max-height: 780px) {'),
+    );
+    expect(wideBlock).toContain('.ticker-line:nth-child(n + 3) {\n    display: none;\n  }');
+    expect(bandBlock).toContain('.ticker-line:nth-child(n + 3) {\n    display: none;\n  }');
+  });
+
+  it('drops the wide-desktop log to a single pinned line on short windows', () => {
+    // Mirrors the 900-1180 short-height fallback: below 780px the band under
+    // the dish is too shallow even for title + two lines.
+    const wideShortBlock = css.slice(
+      css.indexOf('@media (min-width: 1181px) and (max-height: 780px) {'),
+      css.indexOf('@media (min-width: 1600px) {'),
+    );
+    expect(wideShortBlock).toContain('.ticker {');
+    expect(wideShortBlock).toContain('bottom: 8px;');
+    expect(wideShortBlock).toContain('max-height: 76px;');
+    expect(wideShortBlock).toContain('.ticker-title {\n    display: none;\n  }');
+    expect(wideShortBlock).toContain('.ticker-line:nth-child(n + 2) {\n    display: none;\n  }');
+  });
 });
