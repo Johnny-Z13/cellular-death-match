@@ -12,6 +12,10 @@ export interface Renderer {
   ): void;
 }
 
+export interface RendererOptions {
+  additiveBloom?: boolean;
+}
+
 const DISH_EVENT_PALETTES = {
   mutation: ['#f6d365', '#fda085', '#b771ff', '#66e3ff'],
   fold: ['#8f7cff', '#45f0d1', '#f6d365', '#ff6b9d'],
@@ -83,6 +87,7 @@ function lighten(c: Uint8ClampedArray, factor: number): Uint8ClampedArray {
 export function createRenderer(
   canvas: HTMLCanvasElement,
   nCells: number,
+  options: RendererOptions = {},
 ): Renderer {
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('No 2D context');
@@ -99,6 +104,7 @@ export function createRenderer(
     && typeof window.matchMedia === 'function'
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const supportsCanvasFilter = typeof ctx.filter === 'string';
+  const additiveBloom = options.additiveBloom !== false;
 
   return {
     render(
@@ -164,13 +170,15 @@ export function createRenderer(
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(offscreen!, 0, 0, canvas.width, canvas.height);
 
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.imageSmoothingEnabled = true;
-      if (supportsCanvasFilter) ctx.filter = `blur(${Math.max(2, canvas.width / 160)}px)`;
-      ctx.globalAlpha = 0.18;
-      ctx.drawImage(offscreen!, 0, 0, canvas.width, canvas.height);
-      ctx.restore();
+      if (additiveBloom) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.imageSmoothingEnabled = true;
+        if (supportsCanvasFilter) ctx.filter = `blur(${Math.max(2, canvas.width / 160)}px)`;
+        ctx.globalAlpha = 0.18;
+        ctx.drawImage(offscreen!, 0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
 
       const flash = dishFlashForEvents(dishEvents, reduceMotion);
       if (flash) {

@@ -28,7 +28,17 @@ describe('options menu', () => {
     expect(screensSource).toContain('onOptionsClose(handler: () => void): void;');
     expect(mainSource).toContain('screens.onOptionsOpen(() => {');
     expect(mainSource).toContain('screens.onOptionsClose(() => {');
-    expect(mainSource).toContain('setOptionsMenuOpen(!overlayState.menuOpen);');
+    expect(mainSource).toContain('if (overlayState.menuOpen) {');
+    expect(mainSource).toContain('setOptionsMenuOpen(false);');
+  });
+
+  it('announces modal state, traps focus, and restores the opener', () => {
+    expect(html).toContain('aria-haspopup="dialog" aria-expanded="false"');
+    expect(html).toContain('aria-labelledby="options-title" aria-hidden="true"');
+    expect(mainSource).toContain("event.key === 'Tab' && overlayState.menuOpen");
+    expect(mainSource).toContain('trapOptionsFocus(event);');
+    expect(mainSource).toContain("document.getElementById('options-close')?.focus();");
+    expect(mainSource).toContain('optionsReturnFocus?.focus();');
   });
 
   it('pauses ticks and resets the clock so resume cannot catch up paused time', () => {

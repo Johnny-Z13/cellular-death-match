@@ -34,9 +34,11 @@ describe('mobile layout CSS', () => {
   it('switches phones to compact horizontal trays instead of desktop-length fixed lists', () => {
     const mobile = mediaBlock('(max-width: 899px)');
 
-    expect(mobile).toContain('padding: calc(70px + env(safe-area-inset-top)) 10px calc(146px + env(safe-area-inset-bottom))');
+    expect(mobile).toContain('padding: calc(80px + env(safe-area-inset-top)) 10px calc(146px + env(safe-area-inset-bottom))');
     expect(mobile).toContain('width: min(94vw, calc(100svh - 236px), 800px)');
     expect(mobile).toContain('height: min(94vw, calc(100svh - 236px), 800px)');
+    expect(mobile).toContain('width: min(94vw, calc(100dvh - 236px), 800px)');
+    expect(mobile).toContain('height: min(94vw, calc(100dvh - 236px), 800px)');
 
     expect(mobile).toContain('.mobile-shell {');
     expect(mobile).toContain('display: grid');
@@ -46,7 +48,7 @@ describe('mobile layout CSS', () => {
     expect(mobile).toContain('.hud {');
     // The HUD drops below the top chrome buttons (Sound / Full screen) so they
     // never sit on top of the deadline / equilibrium values.
-    expect(mobile).toContain('top: calc(46px + env(safe-area-inset-top))');
+    expect(mobile).toContain('top: calc(58px + env(safe-area-inset-top))');
     expect(mobile).toContain('font-size: 10px');
     expect(mobile).toContain('.hud-hint-row,');
     expect(mobile).toContain('.hud-volume-row');
@@ -62,6 +64,7 @@ describe('mobile layout CSS', () => {
     expect(mobile).toContain('.life-panel {');
     expect(mobile).toContain('bottom: calc(146px + env(safe-area-inset-bottom))');
     expect(mobile).toContain('max-height: min(42svh, 284px)');
+    expect(mobile).toContain('max-height: min(42dvh, 284px)');
     expect(mobile).toContain('overflow: hidden');
     expect(mobile).toContain('transform: translateY(calc(100% + 160px))');
     expect(mobile).toContain('pointer-events: none');
@@ -87,6 +90,8 @@ describe('mobile layout CSS', () => {
     expect(smallPhone).toContain('padding: calc(60px + env(safe-area-inset-top)) 10px calc(132px + env(safe-area-inset-bottom))');
     expect(smallPhone).toContain('width: min(92vw, calc(100svh - 218px), 800px)');
     expect(smallPhone).toContain('height: min(92vw, calc(100svh - 218px), 800px)');
+    expect(smallPhone).toContain('width: min(92vw, calc(100dvh - 218px), 800px)');
+    expect(smallPhone).toContain('height: min(92vw, calc(100dvh - 218px), 800px)');
     expect(smallPhone).toContain('bottom: calc(82px + env(safe-area-inset-bottom))');
     expect(smallPhone).toContain('grid-auto-columns: minmax(64px, 1fr)');
     expect(smallPhone).toContain('bottom: calc(132px + env(safe-area-inset-bottom))');
@@ -160,5 +165,42 @@ describe('mobile layout CSS', () => {
     expect(mobile).toContain('"body body"');
     expect(mobile).toContain('.coach-body:empty {');
     expect(mobile).toContain('display: none');
+  });
+
+  it('uses full touch targets and safe-area-aware mobile overlays', () => {
+    const mobile = mediaBlock('(max-width: 899px)');
+
+    expect(mobile).toContain('.fullscreen-button {');
+    expect(mobile).toContain('min-height: 44px');
+    expect(mobile).toContain('.screen {');
+    expect(mobile).toContain('env(safe-area-inset-left)');
+    expect(mobile).toContain('env(safe-area-inset-right)');
+  });
+
+  it('gives phone landscape a centered dish with separate side rails', () => {
+    const landscape = mediaBlock(
+      '(max-width: 899px) and (orientation: landscape) and (max-height: 520px)',
+    );
+
+    expect(landscape).toContain('--landscape-dish-size: min(48svw, calc(100dvh - 104px), 420px)');
+    expect(landscape).toContain('--landscape-rail-width: clamp(');
+    expect(landscape).toContain('width: var(--landscape-dish-size)');
+    expect(landscape).toContain('width: var(--landscape-rail-width)');
+    expect(landscape).toContain('transform: translateX(calc(100% + 24px + env(safe-area-inset-right)))');
+    expect(landscape).toContain('.mobile-lifeforms-open .life-panel,');
+    expect(landscape).toContain('.mobile-log-open .ticker {');
+    expect(landscape).toContain('transform: translateX(0)');
+  });
+
+  it('scales the tablet portrait dish as an intentional instrument', () => {
+    const tablet = mediaBlock(
+      '(min-width: 600px) and (max-width: 899px) and (orientation: portrait)',
+    );
+
+    expect(tablet).toContain('width: min(78vw, calc(100dvh - 260px), 720px)');
+    expect(tablet).toContain('height: min(78vw, calc(100dvh - 260px), 720px)');
+    expect(tablet).toContain('.hud,');
+    expect(tablet).toContain('left: 24px');
+    expect(tablet).toContain('right: 24px');
   });
 });

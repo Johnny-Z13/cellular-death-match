@@ -47,7 +47,11 @@ export function createTitleAutomata(): void {
   let next = new Uint8Array();
   let frame = 0;
   let lastStep = 0;
+  let lastDraw = 0;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const drawInterval = window.matchMedia('(max-width: 899px)').matches
+    ? 1000 / 30
+    : 1000 / 60;
 
   const seedColony = (x: number, y: number, radius: number, species: number): void => {
     const radiusSq = radius * radius;
@@ -131,13 +135,18 @@ export function createTitleAutomata(): void {
   };
 
   const animate = (now: number): void => {
-    if (screen.classList.contains('visible')) {
+    if (
+      screen.classList.contains('visible')
+      && !document.hidden
+      && now - lastDraw >= drawInterval
+    ) {
       if (!reducedMotion && now - lastStep >= STEP_MS) {
         step();
         lastStep = now;
       }
       draw();
       frame += 1;
+      lastDraw = now;
     }
     requestAnimationFrame(animate);
   };

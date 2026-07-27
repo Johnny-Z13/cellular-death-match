@@ -19,6 +19,16 @@ describe('mobile shell DOM', () => {
     expect(html.match(/id="ticker"/g)?.length).toBe(1);
   });
 
+  it('opts into notched-device safe areas and labels the interactive dish', () => {
+    expect(html).toContain('viewport-fit=cover');
+    expect(html).toContain('id="game"');
+    expect(html).toContain('role="button"');
+    expect(html).toContain('tabindex="0"');
+    expect(html).toContain('aria-keyshortcuts="Enter Space"');
+    expect(mainSource).toContain("canvas.addEventListener('keydown'");
+    expect(mainSource).toContain("event.key !== 'Enter' && event.key !== ' '");
+  });
+
   it('starts mobile drawer toggles collapsed for touch play', () => {
     expect(html).toContain('id="mobile-lifeforms-toggle" class="mobile-shell-button" type="button" aria-expanded="false" aria-controls="life-panel"');
     expect(html).toContain('id="mobile-log-toggle" class="mobile-shell-button" type="button" aria-expanded="false" aria-controls="ticker"');

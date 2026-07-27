@@ -367,6 +367,22 @@ export function createScreens(): Screens {
       }
       elFor[name].classList.add('visible');
       syncLayoutScreen();
+      const focusTarget = name === 'title'
+        ? titleStart
+        : name === 'loadout'
+          ? screenLoadout.querySelector<HTMLButtonElement>('button')
+          : name === 'pick'
+            ? pickChoices.querySelector<HTMLButtonElement>('button')
+            : name === 'objective'
+              ? objectiveChoices.querySelector<HTMLButtonElement>('button')
+              : name === 'end'
+                ? endRestart
+                : name === 'notebook'
+                  ? notebookClose
+                  : name === 'hud'
+                    ? document.getElementById('game')
+                    : null;
+      window.requestAnimationFrame(() => focusTarget?.focus({ preventScroll: true }));
     },
     hide(name) {
       elFor[name].classList.remove('visible');

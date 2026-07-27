@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
+    "qa:mobile": "node scripts/qa-mobile-hardening.mjs",
     "preview": "vite preview",
     "generate:audio": "node scripts/generate-audio-assets.mjs",
     "generate:keyart": "node scripts/generate-keyart.mjs",

@@ -55,6 +55,12 @@ import {
 import { createStrainLibrary, type StrainLibrary } from './game/strainLibrary';
 import { createTitleAutomata } from './ui/titleAutomata';
 import { createHaptics } from './ui/haptics';
+import {
+  applyCanvasProfile,
+  browserPerformanceSignals,
+  performanceProfileFor,
+  shouldRenderFrame,
+} from './ui/mobilePerformance';
 
 declare const __COMMIT_MESSAGE__: string;
 
@@ -74,6 +80,9 @@ const canvas: HTMLCanvasElement = canvasMaybe;
 const layoutMaybe = document.querySelector('.layout');
 if (!(layoutMaybe instanceof HTMLElement)) throw new Error('Missing .layout');
 const layout: HTMLElement = layoutMaybe;
+let visualProfile = performanceProfileFor(browserPerformanceSignals());
+applyCanvasProfile(canvas, visualProfile);
+layout.dataset.visualQuality = visualProfile.id;
 const commitDebug = document.getElementById('commit-debug');
 // Build identity readout — lets us confirm a deploy is the latest at a glance.
 // Cap to a gist; the full subject can be long.
@@ -127,6 +136,16 @@ debug.onSimSpeedChange((ticksPerSecond) => {
   saveSimTicksPerSecond(runtimeStorage, normalized);
   debug.setSimSpeed(normalized);
 });
+document.addEventListener('visibilitychange', () => {
+  simClock.reset(performance.now());
+  lastRenderAt = Number.NEGATIVE_INFINITY;
+  if (document.hidden) {
+    uiAudio.stopAmbience();
+  } else if (!uiAudio.isMuted() && run.getState().phase === 'arena') {
+    uiAudio.startAmbience();
+  }
+});
+window.addEventListener('pagehide', () => uiAudio.stopAmbience());
 const discoveryStorage = runtimeStorage;
 applyOnboardingStateReset(discoveryStorage);
 let discoverySave: DiscoverySaveState = loadDiscoverySave(discoveryStorage);
@@ -137,6 +156,7 @@ const PALETTE_SIZE = 32;
 
 let arena: Arena | null = null;
 let renderer: Renderer | null = null;
+let lastRenderAt = Number.NEGATIVE_INFINITY;
 let selectedTool: ToolId = 'egg';
 let selectedEggArchetype: EnemyArchetype = 'swarmlet';
 let currentRunLoadout = new Set<string>(['swarmlet']);
@@ -168,6 +188,29 @@ let didBankRunStrains = false;
 let newStrainsBankedThisRun: string[] = [];
 let notebookEntryCountAtRunStart = notebookViewForProgression(discoveryProgression).discoveredCount;
 let finalLabReport: LabReport | null = null;
+
+let performanceResizeFrame = 0;
+function refreshVisualPerformanceProfile(): void {
+  const next = performanceProfileFor(browserPerformanceSignals());
+  const profileChanged = next.id !== visualProfile.id;
+  visualProfile = next;
+  layout.dataset.visualQuality = next.id;
+  const canvasChanged = applyCanvasProfile(canvas, next);
+  if ((profileChanged || canvasChanged) && arena) {
+    renderer = createRenderer(canvas, PALETTE_SIZE, {
+      additiveBloom: next.additiveBloom,
+    });
+  }
+  if (profileChanged || canvasChanged) lastRenderAt = Number.NEGATIVE_INFINITY;
+}
+
+function schedulePerformanceProfileRefresh(): void {
+  window.cancelAnimationFrame(performanceResizeFrame);
+  performanceResizeFrame = window.requestAnimationFrame(refreshVisualPerformanceProfile);
+}
+
+window.addEventListener('resize', schedulePerformanceProfileRefresh);
+window.visualViewport?.addEventListener('resize', schedulePerformanceProfileRefresh);
 
 interface RuntimeOverlayState {
   menuOpen: boolean;
@@ -272,17 +315,25 @@ screens.onLifeformSelect((id) => {
 });
 
 window.addEventListener('keydown', (event) => {
+  if (event.key === 'Tab' && overlayState.menuOpen) {
+    trapOptionsFocus(event);
+    return;
+  }
   if (event.key !== 'Escape') return;
-  event.preventDefault();
   if (overlayState.presentationMode) {
+    event.preventDefault();
     setPresentationMode(false);
     return;
   }
   if (overlayState.notebookOpen) {
+    event.preventDefault();
     closeNotebook();
     return;
   }
-  setOptionsMenuOpen(!overlayState.menuOpen);
+  if (overlayState.menuOpen) {
+    event.preventDefault();
+    setOptionsMenuOpen(false);
+  }
 });
 
 document.addEventListener('fullscreenchange', () => {
@@ -291,8 +342,6 @@ document.addEventListener('fullscreenchange', () => {
   }
 });
 
-canvas.tabIndex = 0;
-canvas.focus();
 canvas.addEventListener('animationend', () => {
   canvas.classList.remove('dish-shake', 'dish-shake-soft');
 });
@@ -307,15 +356,10 @@ function registerPlayerAction(): void {
   coach.hideNudge();
 }
 
-canvas.addEventListener('pointerdown', (event) => {
-  if (!arena || run.getState().phase !== 'arena') return;
+function applySelectedToolAt(pos: [number, number]): boolean {
+  if (!arena || run.getState().phase !== 'arena') return false;
   ecologyAudio.unlock();
-  const pos = canvasEventToGridPos(event);
   if (selectedTool === 'paste') {
-    // Begin a drawn stroke; subsequent pointermove events lay the trail.
-    pasteStrokeActive = true;
-    pasteCursor = pos;
-    canvas.setPointerCapture(event.pointerId);
     if (arena.applyTool('paste', pos)) {
       uiAudio.play('drop_paste');
       juice.ripple(pos, 'paste');
@@ -323,8 +367,9 @@ canvas.addEventListener('pointerdown', (event) => {
       coach.report('paste-drawn');
       screens.closeMobileDrawers();
       registerPlayerAction();
+      return true;
     }
-    return;
+    return false;
   }
   if (arena.applyTool(selectedTool, pos, {
     eggArchetype: selectedEggArchetype,
@@ -343,7 +388,30 @@ canvas.addEventListener('pointerdown', (event) => {
     updateButtonHint();
     screens.closeMobileDrawers();
     registerPlayerAction();
+    return true;
   }
+  return false;
+}
+
+canvas.addEventListener('pointerdown', (event) => {
+  if (!arena || run.getState().phase !== 'arena') return;
+  const pos = canvasEventToGridPos(event);
+  if (selectedTool === 'paste') {
+    // Begin a drawn stroke; subsequent pointermove events lay the trail.
+    pasteStrokeActive = true;
+    pasteCursor = pos;
+    canvas.setPointerCapture(event.pointerId);
+  }
+  applySelectedToolAt(pos);
+});
+
+canvas.addEventListener('keydown', (event) => {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  if (!applySelectedToolAt([LX / 2, LY / 2])) return;
+  // Keyboard Paste places one deliberate stamp rather than entering a drag
+  // state that cannot be completed without a pointer.
+  if (selectedTool === 'paste') arena?.endPasteStroke();
 });
 
 canvas.addEventListener('pointermove', (event) => {
@@ -637,7 +705,10 @@ function startNewFight() {
     fightIndex: runState.fightIndex,
     knownBreedIds: new Set(discoveryProgression.discoveredBreedIds),
   });
-  renderer = createRenderer(canvas, PALETTE_SIZE);
+  renderer = createRenderer(canvas, PALETTE_SIZE, {
+    additiveBloom: visualProfile.additiveBloom,
+  });
+  lastRenderAt = Number.NEGATIVE_INFINITY;
   tickCount = 0;
   tickerState = createTickerState();
   cellFxTracker = createCellFxTracker();
@@ -700,6 +771,13 @@ function loop() {
   if (phase !== 'arena') return;            // stop the loop on any non-arena phase
 
   const now = performance.now();
+  if (document.hidden) {
+    // Browsers normally suspend rAF in the background, but explicitly reset
+    // the clock so returning to the tab can never replay hidden wall time.
+    simClock.reset(now);
+    scheduleLoop();
+    return;
+  }
   if (overlayState.menuOpen) {
     // Reset on every paused frame so closing Options never replays accumulated
     // wall-clock time as a burst of simulation ticks.
@@ -725,12 +803,14 @@ function loop() {
   }
   if (ticksToRun > 0) ecologyAudio.update(readAudioFrame(arena));
 
-  renderer.render(arena.state, arena.archetypes, arena.getDishEvents());
-  renderToolEffects(arena);
   updateJuiceEvents(arena);
-  juice.draw();
-
-  framesSinceTick++;
+  if (shouldRenderFrame(lastRenderAt, now, visualProfile.targetRenderFps)) {
+    renderer.render(arena.state, arena.archetypes, arena.getDishEvents());
+    renderToolEffects(arena);
+    juice.draw();
+    lastRenderAt = now;
+    framesSinceTick++;
+  }
   if (now - lastFpsTick > 1000) {
     displayedFps = framesSinceTick;
     framesSinceTick = 0;
@@ -1254,11 +1334,48 @@ function applyOverlayState(): void {
   layout.classList.toggle('presentation-mode', overlayState.presentationMode);
 }
 
+let optionsReturnFocus: HTMLElement | null = null;
+
 function setOptionsMenuOpen(open: boolean): void {
+  const optionsPanel = document.getElementById('debug');
+  const optionsButton = document.getElementById('options-button');
+  if (open) {
+    const activeElement = document.activeElement;
+    optionsReturnFocus = activeElement instanceof HTMLElement && activeElement !== document.body
+      ? activeElement
+      : optionsButton;
+    screens.closeMobileDrawers();
+  }
   overlayState.menuOpen = open;
   overlayState.debugOpen = open;
   simClock.reset(performance.now());
   applyOverlayState();
+  optionsPanel?.setAttribute('aria-hidden', String(!open));
+  optionsButton?.setAttribute('aria-expanded', String(open));
+  if (open) {
+    document.getElementById('options-close')?.focus();
+  } else {
+    optionsReturnFocus?.focus();
+    optionsReturnFocus = null;
+  }
+}
+
+function trapOptionsFocus(event: KeyboardEvent): void {
+  const optionsPanel = document.getElementById('debug');
+  if (!optionsPanel) return;
+  const focusable = Array.from(optionsPanel.querySelectorAll<HTMLElement>(
+    'button:not([disabled]):not([hidden]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+  )).filter((element) => element.getClientRects().length > 0);
+  if (focusable.length === 0) return;
+  const first = focusable[0]!;
+  const last = focusable[focusable.length - 1]!;
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
 }
 
 function refreshNotebook(): void {

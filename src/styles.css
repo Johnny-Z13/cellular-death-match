@@ -49,6 +49,7 @@ html, body {
   margin: 0;
   padding: 0;
   min-height: 100%;
+  min-height: 100dvh;
   background:
     radial-gradient(120% 90% at 50% -10%, rgba(91, 233, 214, 0.06), transparent 55%),
     radial-gradient(100% 80% at 50% 120%, rgba(176, 132, 235, 0.05), transparent 60%),
@@ -82,6 +83,7 @@ body::after {
 
 .layout {
   min-height: 100svh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: calc(82px + env(safe-area-inset-top)) 12px calc(190px + env(safe-area-inset-bottom));
@@ -145,6 +147,16 @@ canvas {
   height: min(94vw, calc(100svh - 306px), 800px);
   max-width: 100%;
   max-height: 100%;
+}
+
+#game:focus-visible {
+  outline: 2px solid var(--bio-bright);
+  outline-offset: 4px;
+  box-shadow:
+    0 0 0 1px #050708,
+    0 0 0 5px rgba(91, 233, 214, 0.18),
+    0 0 38px rgba(91, 233, 214, 0.2),
+    0 20px 60px rgba(0, 0, 0, 0.45);
 }
 
 .toolbox,
@@ -799,6 +811,7 @@ canvas {
   top: 50%;
   transform: translate(-50%, -50%);
   max-height: calc(100svh - 32px);
+  max-height: calc(100dvh - 32px);
   overflow: auto;
   z-index: 12;
 }
@@ -2323,6 +2336,7 @@ canvas {
   position: relative;
   width: min(980px, calc(100vw - 28px));
   max-height: calc(100svh - 28px);
+  max-height: calc(100dvh - 28px);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 8px;
@@ -3018,12 +3032,14 @@ canvas {
 
 @media (max-width: 899px) {
   .layout {
-    padding: calc(70px + env(safe-area-inset-top)) 10px calc(146px + env(safe-area-inset-bottom));
+    padding: calc(80px + env(safe-area-inset-top)) 10px calc(146px + env(safe-area-inset-bottom));
   }
 
   canvas {
     width: min(94vw, calc(100svh - 236px), 800px);
     height: min(94vw, calc(100svh - 236px), 800px);
+    width: min(94vw, calc(100dvh - 236px), 800px);
+    height: min(94vw, calc(100dvh - 236px), 800px);
   }
 
   .fullscreen-button {
@@ -3031,6 +3047,7 @@ canvas {
     padding: 8px 9px;
     font-size: 10px;
     right: max(10px, env(safe-area-inset-right));
+    min-height: 44px;
   }
 
   .options-button {
@@ -3038,6 +3055,7 @@ canvas {
     padding: 8px 9px;
     font-size: 10px;
     right: calc(92px + env(safe-area-inset-right));
+    min-height: 44px;
   }
 
   .notebook-button.notebook-tab {
@@ -3074,9 +3092,27 @@ canvas {
   .hud {
     /* Drop below the top chrome buttons (Sound / Full screen) so they never
        sit on top of the deadline / equilibrium values. */
-    top: calc(46px + env(safe-area-inset-top));
+    top: calc(58px + env(safe-area-inset-top));
     padding: 7px 9px;
     font-size: 10px;
+  }
+
+  .screen {
+    padding:
+      calc(12px + env(safe-area-inset-top))
+      calc(12px + env(safe-area-inset-right))
+      calc(12px + env(safe-area-inset-bottom))
+      calc(12px + env(safe-area-inset-left));
+  }
+
+  .debug-open .debug {
+    max-height: calc(
+      100dvh
+      - env(safe-area-inset-top)
+      - env(safe-area-inset-bottom)
+      - 24px
+    );
+    z-index: 12;
   }
 
   .hud-objective-row .hud-val {
@@ -3318,6 +3354,7 @@ canvas {
     right: 10px;
     bottom: calc(146px + env(safe-area-inset-bottom));
     max-height: min(42svh, 284px);
+    max-height: min(42dvh, 284px);
     grid-template-rows: auto minmax(0, 1fr);
     overflow: hidden;
     padding: 10px;
@@ -3388,16 +3425,22 @@ canvas {
   canvas {
     width: min(92vw, calc(100svh - 218px), 800px);
     height: min(92vw, calc(100svh - 218px), 800px);
+    width: min(92vw, calc(100dvh - 218px), 800px);
+    height: min(92vw, calc(100dvh - 218px), 800px);
   }
 
   .screen {
-    padding: 12px;
+    padding:
+      calc(12px + env(safe-area-inset-top))
+      calc(12px + env(safe-area-inset-right))
+      calc(12px + env(safe-area-inset-bottom))
+      calc(12px + env(safe-area-inset-left));
   }
 
   .screen-card {
     position: fixed;
-    left: 12px;
-    right: 12px;
+    left: calc(12px + env(safe-area-inset-left));
+    right: calc(12px + env(safe-area-inset-right));
     width: auto;
     padding: 24px 18px;
   }
@@ -3435,6 +3478,7 @@ canvas {
 
   .life-panel {
     max-height: min(45svh, 232px);
+    max-height: min(45dvh, 232px);
     padding: 8px;
   }
 
@@ -3465,6 +3509,193 @@ canvas {
 
   .fx-banner-title {
     font-size: clamp(21px, 7.5vw, 28px);
+  }
+}
+
+/* Tablet portrait gets an intentional instrument scale instead of stretching
+   the phone dish until it crowds the HUD and bottom controls. */
+@media (min-width: 600px) and (max-width: 899px) and (orientation: portrait) {
+  .layout {
+    padding:
+      calc(88px + env(safe-area-inset-top))
+      24px
+      calc(154px + env(safe-area-inset-bottom));
+  }
+
+  #game {
+    width: min(78vw, calc(100svh - 260px), 720px);
+    height: min(78vw, calc(100svh - 260px), 720px);
+    width: min(78vw, calc(100dvh - 260px), 720px);
+    height: min(78vw, calc(100dvh - 260px), 720px);
+  }
+
+  .hud,
+  .mobile-shell,
+  .fx-toasts,
+  .coach,
+  .life-panel,
+  .ticker {
+    left: 24px;
+    right: 24px;
+  }
+
+  .life-list {
+    grid-auto-columns: minmax(220px, 42vw);
+  }
+}
+
+/* Phone landscape is a separate composition: the dish owns the centre, while
+   the HUD and drawers become narrow side rails. The bottom tool strip remains
+   thumb-reachable and no longer forces the dish down to postage-stamp size. */
+@media (max-width: 899px) and (orientation: landscape) and (max-height: 520px) {
+  .layout {
+    --landscape-dish-size: min(48svw, calc(100dvh - 104px), 420px);
+    --landscape-rail-width: clamp(
+      156px,
+      calc((100svw - var(--landscape-dish-size)) / 2 - 28px),
+      240px
+    );
+    min-height: 100dvh;
+    padding:
+      calc(8px + env(safe-area-inset-top))
+      calc(10px + env(safe-area-inset-right))
+      calc(78px + env(safe-area-inset-bottom))
+      calc(10px + env(safe-area-inset-left));
+  }
+
+  #game {
+    width: var(--landscape-dish-size);
+    height: var(--landscape-dish-size);
+  }
+
+  .hud {
+    left: calc(10px + env(safe-area-inset-left));
+    right: auto;
+    top: calc(8px + env(safe-area-inset-top));
+    width: var(--landscape-rail-width);
+    padding: 6px 8px;
+    font-size: 9px;
+  }
+
+  .hud-row + .hud-row {
+    margin-top: 2px;
+  }
+
+  .hud-objective-row .hud-val {
+    max-width: 68%;
+    font-size: 9px;
+    line-height: 1.15;
+  }
+
+  .fullscreen-button,
+  .options-button {
+    top: max(6px, env(safe-area-inset-top));
+  }
+
+  .mobile-shell {
+    left: auto;
+    right: calc(10px + env(safe-area-inset-right));
+    top: calc(56px + env(safe-area-inset-top));
+    bottom: auto;
+    width: var(--landscape-rail-width);
+    grid-template-columns: minmax(52px, auto) minmax(0, 1fr) minmax(52px, auto);
+    gap: 6px;
+  }
+
+  .mobile-shell-button {
+    padding-inline: 6px;
+    font-size: 9px;
+  }
+
+  .mobile-tool-readout {
+    padding-inline: 6px;
+  }
+
+  .mobile-tool-readout span {
+    display: none;
+  }
+
+  .toolbox {
+    grid-auto-columns: minmax(68px, 1fr);
+    gap: 6px;
+    padding:
+      6px
+      calc(10px + env(safe-area-inset-right))
+      calc(6px + env(safe-area-inset-bottom))
+      calc(10px + env(safe-area-inset-left));
+  }
+
+  .tool-button {
+    min-width: 68px;
+    min-height: 62px;
+    padding: 5px;
+  }
+
+  .life-panel,
+  .ticker {
+    left: auto;
+    right: calc(10px + env(safe-area-inset-right));
+    top: calc(108px + env(safe-area-inset-top));
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    width: var(--landscape-rail-width);
+    max-height: none;
+    transform: translateX(calc(100% + 24px + env(safe-area-inset-right)));
+  }
+
+  .life-panel {
+    padding: 8px;
+  }
+
+  .mobile-lifeforms-open .life-panel,
+  .mobile-log-open .ticker {
+    transform: translateX(0);
+  }
+
+  .life-list {
+    grid-auto-columns: minmax(154px, 1fr);
+  }
+
+  .coach,
+  .fx-toasts {
+    left: calc(10px + env(safe-area-inset-left));
+    right: auto;
+    width: var(--landscape-rail-width);
+  }
+
+  .coach {
+    top: calc(var(--hud-bottom, 100px) + 6px);
+    bottom: auto;
+  }
+
+  .mobile-lifeforms-open .coach,
+  .mobile-log-open .coach {
+    top: calc(var(--hud-bottom, 100px) + 6px);
+    bottom: auto;
+  }
+
+  .fx-toasts,
+  .coach-active .fx-toasts {
+    top: calc(var(--hud-bottom, 100px) + 6px);
+  }
+
+  .fx-banner-inner {
+    width: min(42vw, 320px);
+    padding: 12px 15px;
+  }
+
+  .fx-banner-title,
+  .fx-banner-arcade .fx-banner-title {
+    font-size: clamp(19px, 4.4vw, 30px);
+  }
+
+  .screen-card {
+    max-height: calc(
+      100dvh
+      - env(safe-area-inset-top)
+      - env(safe-area-inset-bottom)
+      - 24px
+    );
+    overflow: auto;
   }
 }
 

@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-06-19 (roguelike surfacing repair)
+Last updated: 2026-07-27 (mobile production hardening)
 
 ## Summary
 
@@ -17,6 +17,10 @@ Cellular Death Match is a mobile-first Petri dish ecosystem roguelike. Runs are 
 - Catalytic reactions, rare breed discovery, and cross-breeding of hybrids.
 - Pixel-bloom dish rendering: every culture's own pixels glow in their color.
 - Mobile portrait touch shell: Lifeforms/Log drawers, tool readout, bottom tool bar.
+- Mobile landscape side-rail composition and intentionally scaled tablet portrait layout.
+- Priority-directed mobile feedback: banners and toasts deduplicate, queue, and interrupt by importance instead of stacking over the dish.
+- Mobile performance profiles: 640px/45fps balanced presentation, 480px/30fps constrained presentation, fixed-tick simulation unchanged, and hidden-tab catch-up/audio suppression.
+- Notch/home-indicator safe areas, dynamic viewport units, 44px mobile chrome targets, labelled keyboard-operable dish, and focus-managed modal journeys.
 - Desktop layout with side panels, lifeform guide, inspector, and dish log.
 
 ## Main Systems
@@ -96,11 +100,12 @@ Hybrid breeds (cross-bred from two discovered base breeds under a nutrient field
 
 ## Verification Baseline
 
-As of this update (2026-06-19):
+As of this update (2026-07-27):
 
 ```bash
-npm test      # 61 files, 554 tests passing
-npm run build # clean
+npm test          # 77 files, 642 tests passing
+npm run build     # clean production build
+npm run qa:mobile # 5 responsive layouts, no overflow/browser errors
 ```
 
 Both commands are expected to pass.

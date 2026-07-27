@@ -81,6 +81,7 @@ http://192.168.1.144:5178/
 npm test          # Run the Vitest suite
 npm run build    # Typecheck and create a production build
 npm run typecheck
+npm run qa:mobile # With the dev server running, verify five responsive layouts in Chrome
 npm run preview
 ```
 
@@ -100,7 +101,15 @@ src/
 The game is designed mobile-first:
 
 - Portrait phone: centered dish, compact HUD, lifeform egg picker, and bottom tool sheet.
+- Landscape phone: centered dish with HUD/coach and controls moved into side rails.
+- Tablet portrait: a deliberately scaled instrument layout with more breathing room.
 - Desktop: centered dish, richer side panels, lab log, inspector, and a compact run HUD above the culture.
+
+Mobile notifications use one priority-directed attention channel, so a major
+discovery replaces or queues minor messages instead of stacking over the dish.
+The viewport honors device safe areas and dynamically follows browser chrome.
+Presentation quality scales on constrained mobile hardware while fixed-tick
+simulation behavior remains unchanged.
 
 ## Repository Readiness
 
