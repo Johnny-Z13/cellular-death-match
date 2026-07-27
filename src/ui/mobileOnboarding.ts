@@ -8,9 +8,11 @@ export function isMobileViewport(win: Pick<Window, 'matchMedia'> = window): bool
 export function shouldOpenLifeformsForNewPlayer({
   hasSeenTutorial,
   isMobileViewport,
+  viewportHeight,
 }: {
   hasSeenTutorial: boolean;
   isMobileViewport: boolean;
+  viewportHeight: number;
 }): boolean {
-  return isMobileViewport && !hasSeenTutorial;
+  return isMobileViewport && !hasSeenTutorial && viewportHeight > 700;
 }

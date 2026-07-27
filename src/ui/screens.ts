@@ -105,8 +105,12 @@ export interface Screens {
   onOptionsClose(handler: () => void): void;
   onAudioToggle(handler: () => void): void;
   setAudioMuted(muted: boolean): void;
+  onHapticsToggle(handler: () => void): void;
+  setHapticsAvailable(available: boolean): void;
+  setHapticsEnabled(enabled: boolean): void;
   setEpochComplete(complete: boolean): void;
   openMobileLifeformsDrawer(): void;
+  closeMobileDrawers(): void;
 }
 
 export type TickerTone = 'normal' | 'discovery' | 'caution' | 'critical';
@@ -135,6 +139,7 @@ export function createScreens(): Screens {
   const optionsClose = get('options-close') as HTMLButtonElement;
   const optionsScrim = get('options-scrim') as HTMLButtonElement;
   const audioButton = get('audio-button') as HTMLButtonElement;
+  const hapticsButton = get('haptics-button') as HTMLButtonElement;
   const notebookClose = get('notebook-close') as HTMLButtonElement;
   const notebookProgress = get('notebook-progress');
   const notebookList = get('notebook-list');
@@ -791,6 +796,17 @@ export function createScreens(): Screens {
       audioButton.setAttribute('aria-label', muted ? 'Unmute audio' : 'Mute audio');
       audioButton.textContent = muted ? 'Sound — Muted' : 'Sound — On';
     },
+    onHapticsToggle(handler) {
+      hapticsButton.addEventListener('click', handler);
+    },
+    setHapticsAvailable(available) {
+      hapticsButton.hidden = !available;
+    },
+    setHapticsEnabled(enabled) {
+      hapticsButton.setAttribute('aria-pressed', String(!enabled));
+      hapticsButton.setAttribute('aria-label', enabled ? 'Disable haptics' : 'Enable haptics');
+      hapticsButton.textContent = enabled ? 'Haptics — On' : 'Haptics — Off';
+    },
     setEpochComplete(complete) {
       // Glow the End button + flag the HUD so the player sees the experiment is
       // ready to bank, without forcing them out of a flourishing dish.
@@ -803,6 +819,9 @@ export function createScreens(): Screens {
     },
     openMobileLifeformsDrawer() {
       setMobileDrawer('lifeforms');
+    },
+    closeMobileDrawers() {
+      closeMobileDrawers();
     },
   };
 }

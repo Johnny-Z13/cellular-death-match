@@ -32,6 +32,9 @@ const SEEN_KEY = 'cdm.coach.seen.v3';
 
 export function createCoach(): Coach {
   const root = document.getElementById('coach');
+  const layout = typeof document.querySelector === 'function'
+    ? document.querySelector<HTMLElement>('.layout')
+    : null;
   const kickerEl = document.getElementById('coach-kicker');
   const titleEl = document.getElementById('coach-title');
   const bodyEl = document.getElementById('coach-body');
@@ -63,14 +66,36 @@ export function createCoach(): Coach {
     bodyEl.textContent = '';
     stepEl.textContent = `${beatIndex + 1} / ${ONBOARDING_BEATS.length}`;
     if (skipBtn) skipBtn.textContent = 'Skip tutorial';
+    show();
+  }
+
+  function publishCoachBottom(): void {
+    if (!root || !layout) return;
+    const bottom = root.classList.contains('coach-show') && typeof root.getBoundingClientRect === 'function'
+      ? Math.round(root.getBoundingClientRect().bottom)
+      : 0;
+    layout.style.setProperty('--coach-bottom', `${bottom}px`);
+  }
+
+  function show(): void {
+    if (!root) return;
     root.classList.add('coach-show');
     root.setAttribute('aria-hidden', 'false');
+    layout?.classList.add('coach-active');
+    publishCoachBottom();
   }
 
   function hide(): void {
     if (!root) return;
     root.classList.remove('coach-show');
     root.setAttribute('aria-hidden', 'true');
+    layout?.classList.remove('coach-active');
+    publishCoachBottom();
+  }
+
+  if (root && typeof ResizeObserver === 'function') {
+    new ResizeObserver(publishCoachBottom).observe(root);
+    window.addEventListener('resize', publishCoachBottom);
   }
 
   function finish(): void {
@@ -138,8 +163,7 @@ export function createCoach(): Coach {
           titleEl.textContent = 'You created a new lifeform!';
           bodyEl.textContent = 'Your Notebook logs every breed you find. Seed, feed, and discover.';
           stepEl.textContent = `${ONBOARDING_BEATS.length} / ${ONBOARDING_BEATS.length}`;
-          root.classList.add('coach-show');
-          root.setAttribute('aria-hidden', 'false');
+          show();
         }
         active = false;
         window.setTimeout(() => {
@@ -162,8 +186,7 @@ export function createCoach(): Coach {
       bodyEl.textContent = body;
       stepEl.textContent = '';
       if (skipBtn) skipBtn.textContent = 'Got it';
-      root.classList.add('coach-show');
-      root.setAttribute('aria-hidden', 'false');
+      show();
       window.clearTimeout(nudgeTimer);
       nudgeTimer = window.setTimeout(() => hideNudgeNow(), 9000);
     },

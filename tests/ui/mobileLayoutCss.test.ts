@@ -92,13 +92,14 @@ describe('mobile layout CSS', () => {
     expect(smallPhone).toContain('bottom: calc(132px + env(safe-area-inset-bottom))');
     expect(smallPhone).toContain('max-height: min(45svh, 232px)');
     expect(smallPhone).toContain('.coach {');
-    // The coach's top is driven by --hud-bottom (set in main.ts) at every
-    // breakpoint now, so the small-phone block only tightens its padding.
-    expect(smallPhone).toContain('padding: 9px 11px');
+    expect(smallPhone).toContain('bottom: calc(138px + env(safe-area-inset-bottom))');
+    expect(smallPhone).toContain('padding: 7px 9px');
+    expect(smallPhone).toContain('.mobile-lifeforms-open .coach,');
+    expect(smallPhone).toContain('.coach-active .fx-toasts {');
     expect(smallPhone).toContain('.coach-body {');
-    expect(smallPhone).toContain('margin: 4px 0 0');
+    expect(smallPhone).toContain('margin: 2px 0 0');
     expect(smallPhone).toContain('.fx-banner-title {');
-    expect(smallPhone).toContain('font-size: clamp(22px, 8vw, 34px)');
+    expect(smallPhone).toContain('font-size: clamp(21px, 7.5vw, 28px)');
   });
 
   it('resets desktop controls back to rack flow so the desktop layout remains unchanged', () => {
@@ -123,15 +124,41 @@ describe('mobile layout CSS', () => {
     expect(reducedMotion).toContain('transition: none !important');
   });
 
-  it('repositions chrome buttons and lifts discovery toasts clear of the bottom shell on phones', () => {
+  it('repositions chrome and choreographs one compact mobile event rail', () => {
     const mobile = mediaBlock('(max-width: 899px)');
     // Options + Full screen tuck to the top-right; the Notebook tab is on the dish.
     expect(mobile).toContain('.fullscreen-button {');
     expect(mobile).toContain('.options-button {');
     expect(mobile).toContain('.notebook-button.notebook-tab {');
-    // Toasts sit above the toolbar zone so completion/discovery messages are
-    // never hidden behind the bottom controls.
     expect(mobile).toContain('.fx-toasts {');
-    expect(mobile).toContain('bottom: calc(212px + env(safe-area-inset-bottom))');
+    expect(mobile).toContain('top: calc(var(--hud-bottom, 100px) + 8px)');
+    expect(mobile).toContain('bottom: auto');
+    expect(mobile).toContain('.coach-active .fx-toasts {');
+    expect(mobile).toContain('top: calc(var(--coach-bottom, var(--hud-bottom, 100px)) + 8px)');
+    expect(mobile).toContain('.fx-toast:not(:last-child) {');
+    expect(mobile).toContain('.fx-toasts.fx-toasts-banner-active {');
+  });
+
+  it('keeps mobile celebrations smaller without changing the desktop defaults', () => {
+    const mobile = mediaBlock('(max-width: 899px)');
+
+    expect(mobile).toContain('.fx-banner-inner {');
+    expect(mobile).toContain('width: calc(100vw - 64px)');
+    expect(mobile).toContain('.fx-banner-arcade .fx-banner-title {');
+    expect(mobile).toContain('animation: fx-arcade-title-mobile 1500ms');
+    expect(css.slice(0, css.indexOf('@media (max-width: 899px)'))).toContain(
+      'animation: fx-arcade-title 1800ms',
+    );
+  });
+
+  it('turns the mobile coach into a compact measured instruction strip', () => {
+    const mobile = mediaBlock('(max-width: 899px)');
+
+    expect(mobile).toContain('grid-template-areas:');
+    expect(mobile).toContain('"head skip"');
+    expect(mobile).toContain('"title skip"');
+    expect(mobile).toContain('"body body"');
+    expect(mobile).toContain('.coach-body:empty {');
+    expect(mobile).toContain('display: none');
   });
 });

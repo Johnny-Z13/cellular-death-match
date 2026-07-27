@@ -14,7 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/src/styles.css?v=20260711-options-menu" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260727-mobile-ux" />
   </head>
   <body>
     <main class="layout" data-screen="title">
@@ -141,6 +141,7 @@
         <section class="debug-block">
           <h3 class="debug-subtitle">controls</h3>
           <button id="audio-button" class="debug-option-button" type="button" aria-label="Mute audio" aria-pressed="false">Sound — On</button>
+          <button id="haptics-button" class="debug-option-button" type="button" aria-label="Disable haptics" aria-pressed="false" hidden>Haptics — On</button>
           <div class="debug-help">select a lab tool</div>
           <div class="debug-help">click dish: apply tool</div>
           <div class="debug-help">complete objective: unlock research</div>
@@ -271,7 +272,7 @@
           <span id="fx-banner-sub" class="fx-banner-sub"></span>
         </div>
       </div>
-      <div id="fx-toasts" class="fx-toasts" aria-live="polite"></div>
+      <div id="fx-toasts" class="fx-toasts" aria-live="polite" aria-atomic="true"></div>
       <div id="fx-wipe" class="fx-wipe" aria-hidden="true"></div>
 
       <aside id="coach" class="coach" aria-hidden="true" aria-live="polite">
@@ -284,6 +285,6 @@
         <button id="coach-skip" class="coach-skip" type="button">Skip tutorial</button>
       </aside>
     </main>
-    <script type="module" src="/src/main.ts?v=20260711-options-menu"></script>
+    <script type="module" src="/src/main.ts?v=20260727-mobile-ux"></script>
   </body>
 </html>

@@ -29,6 +29,13 @@ describe('mobile shell DOM', () => {
     expect(screensSource).toContain("setMobileDrawer('lifeforms');");
     expect(mainSource).toContain('shouldOpenLifeformsForNewPlayer({');
     expect(mainSource).toContain('hasSeenTutorial: coach.hasSeenTutorial()');
+    expect(mainSource).toContain('viewportHeight: window.innerHeight');
     expect(mainSource).toContain('screens.openMobileLifeformsDrawer();');
+  });
+
+  it('returns the dish to full focus after a mobile selection or successful action', () => {
+    expect(screensSource).toContain('closeMobileDrawers(): void;');
+    expect(screensSource).toContain("setMobileDrawer('none');");
+    expect(mainSource).toContain('screens.closeMobileDrawers();');
   });
 });

@@ -54,6 +54,7 @@ import {
 } from './game/onboardingStage';
 import { createStrainLibrary, type StrainLibrary } from './game/strainLibrary';
 import { createTitleAutomata } from './ui/titleAutomata';
+import { createHaptics } from './ui/haptics';
 
 declare const __COMMIT_MESSAGE__: string;
 
@@ -88,6 +89,7 @@ const screens = createScreens();
 const debug = createDebugPanel();
 const ecologyAudio = createEcologyAudio();
 const uiAudio = createUiAudio();
+const haptics = createHaptics();
 const fx = createFx();
 const coach = createCoach();
 createTitleAutomata();
@@ -250,6 +252,13 @@ screens.onAudioToggle(() => {
 });
 screens.setAudioMuted(uiAudio.isMuted());
 ecologyAudio.setMuted(uiAudio.isMuted());
+screens.onHapticsToggle(() => {
+  const enabled = haptics.toggle();
+  screens.setHapticsEnabled(enabled);
+  if (enabled) haptics.play('impact');
+});
+screens.setHapticsAvailable(haptics.isSupported());
+screens.setHapticsEnabled(haptics.isEnabled());
 
 screens.onLifeformSelect((id) => {
   if (!isSeedableLifeformId(id)) return;
@@ -259,6 +268,7 @@ screens.onLifeformSelect((id) => {
   // away. A discovered breed hatches as that breed; a base strain as its egg.
   selectedTool = 'egg';
   screens.setTool('egg');
+  screens.closeMobileDrawers();
 });
 
 window.addEventListener('keydown', (event) => {
@@ -311,6 +321,7 @@ canvas.addEventListener('pointerdown', (event) => {
       juice.ripple(pos, 'paste');
       screens.updateToolCharges(arena.getToolStates());
       coach.report('paste-drawn');
+      screens.closeMobileDrawers();
       registerPlayerAction();
     }
     return;
@@ -330,6 +341,7 @@ canvas.addEventListener('pointerdown', (event) => {
       coach.report('nutrient-used');
     }
     updateButtonHint();
+    screens.closeMobileDrawers();
     registerPlayerAction();
   }
 });
@@ -388,13 +400,16 @@ screens.onToolSelect((tool) => {
   uiAudio.play('ui_select');
   selectedTool = tool;
   screens.setTool(tool);
+  screens.closeMobileDrawers();
 });
 screens.onAgitate(() => {
   if (!arena || run.getState().phase !== 'arena') return;
   ecologyAudio.unlock();
   uiAudio.play('ui_tap');
   if (!arena.agitate()) return;
+  haptics.play('impact');
   registerPlayerAction();
+  screens.closeMobileDrawers();
   screens.updateAgitation(arena.getAgitationState());
   screens.addTicker('Dish agitated: lifeforms are mixing.');
   canvas.classList.remove('dish-shake');
@@ -412,6 +427,7 @@ screens.onEndEpoch(() => {
     sampleRunTelemetryFromArena(arena);
     bankRunStrains();
     uiAudio.play('epoch_win');
+    haptics.play('success');
     fx.playWipe();
     run.achieveHomeostasis();
     uiAudio.stopAmbience();
@@ -434,6 +450,7 @@ screens.onEggSelect((archetype) => {
   screens.setTool(selectedTool);
   screens.setEggArchetype(archetype);
   screens.setSelectedLifeform(archetype);
+  screens.closeMobileDrawers();
 });
 screens.setTool(selectedTool);
 screens.setEggArchetype(selectedEggArchetype);
@@ -443,6 +460,7 @@ showPhase();
 if (shouldOpenLifeformsForNewPlayer({
   hasSeenTutorial: coach.hasSeenTutorial(),
   isMobileViewport: isMobileViewport(),
+  viewportHeight: window.innerHeight,
 })) {
   screens.openMobileLifeformsDrawer();
 }
@@ -639,6 +657,7 @@ function startNewFight() {
   replayPendingResearchBrief();
   if (!uiAudio.isMuted()) uiAudio.startAmbience();
   uiAudio.play('epoch_begin');
+  haptics.play('impact');
   fx.showEpochBanner(
     `Epoch ${runState.fightIndex + 1}`,
     objective.name,
@@ -799,6 +818,7 @@ function loop() {
     sampleRunTelemetryFromArena(arena);
     bankRunStrains();
     uiAudio.play('epoch_fail');
+    haptics.play('failure');
     fx.playWipe();
     run.failEpoch();
     uiAudio.stopAmbience();
@@ -837,6 +857,7 @@ function resolveArenaStatus(status: ArenaStatus): boolean {
     }
     runTelemetry.recordEpochCompleted();
     uiAudio.play('epoch_win');
+    haptics.play('success');
     fx.playWipe();
     run.completeEpoch();
     if (run.getState().phase === 'run_end') uiAudio.stopAmbience();
@@ -852,6 +873,7 @@ function resolveArenaStatus(status: ArenaStatus): boolean {
       sampleRunTelemetryFromArena(arena);
     }
     uiAudio.play('epoch_fail');
+    haptics.play('warning');
     fx.playWipe();
     fx.showToast('catalyst', 'Objective Lapsed', 'Moving to the next ecosystem');
     runTelemetry.recordEpochLapsed();
@@ -1106,8 +1128,10 @@ function announceUnlocks(
   previousLifeforms: readonly ProgressionLifeformId[],
   next: { unlockedTools: readonly ToolId[]; unlockedLifeforms: readonly ProgressionLifeformId[] },
 ): void {
+  let didUnlock = false;
   for (const tool of next.unlockedTools) {
     if (previousTools.includes(tool)) continue;
+    didUnlock = true;
     screens.showcaseToolUnlock(tool);
     screens.addTicker(`Research unlocked: ${capitalize(tool)} reagent available.`, 'discovery');
     fx.showToast('catalyst', 'Reagent Unlocked', `${capitalize(tool)} now available`);
@@ -1118,6 +1142,7 @@ function announceUnlocks(
   let bannerStrain: string | null = null;
   for (const lifeform of next.unlockedLifeforms) {
     if (previousLifeforms.includes(lifeform)) continue;
+    didUnlock = true;
     screens.showcaseLifeformUnlock(lifeform);
     if (isBaseArchetype(lifeform)) {
       screens.addTicker(`Research unlocked: ${ARCHETYPE_INFO[lifeform].name} eggs available.`, 'discovery');
@@ -1134,6 +1159,7 @@ function announceUnlocks(
   } else if (bannerStrain) {
     fx.showUnlockBanner('Strain Unlocked', bannerStrain, 'New egg available', 'bio');
   }
+  if (didUnlock) haptics.play('discovery');
 }
 
 // Gentle idle nudge: if the player hasn't touched the dish for a while and the
@@ -1168,6 +1194,7 @@ function announceEpochCompletion(complete: boolean, objectiveName: string): void
   if (complete && !didAnnounceCompletion) {
     didAnnounceCompletion = true;
     uiAudio.play('experiment_ready');
+    haptics.play('success');
     fx.showToast('discovery', 'Experiment Complete', `${objectiveName} — finish when ready`);
     screens.addTicker('Experiment complete: press End to finish, or keep cultivating.', 'discovery');
     coach.report('objective-complete');
@@ -1180,6 +1207,7 @@ function announceEquilibrium(info: { achieved: boolean; progress: number; biomeN
   if (!info.achieved || didAnnounceEquilibrium || isOnboardingEpoch(run.getState().fightIndex)) return;
   didAnnounceEquilibrium = true;
   uiAudio.play('epoch_win');
+  haptics.play('success');
   fx.showToast('discovery', 'Stable Ecosystem', info.biomeName ?? 'Equilibrium');
   screens.addTicker('Equilibrium reached: pressure paused. End when ready, or keep observing.', 'discovery');
 }
@@ -1378,8 +1406,10 @@ function updateJuiceEvents(ar: Arena): void {
     if (ev.id > maxId) maxId = ev.id;
     if (ev.kind === 'discovery') {
       juice.burst(ev.pos, [126, 230, 255], 'discovery');
+      haptics.play('discovery');
     } else if (ev.kind === 'critical' || ev.kind === 'fold') {
       juice.shake('hard');
+      haptics.play('warning');
     }
   }
   cellFxTracker.lastDishEventId = maxId;
@@ -1475,6 +1505,7 @@ function updateTicker(ar: Arena): void {
     tickerState.lastOutbreakCount = ecology.outbreaks;
     screens.addTicker('Predator outbreak: hunter cells erupted from the dominant culture.', 'critical');
     juice.shake('soft');
+    haptics.play('warning');
   }
 
   if (ecology.mutations > tickerState.lastMutationCount) {
@@ -1497,6 +1528,7 @@ function updateTicker(ar: Arena): void {
   } else if (!tickerState.didWarnCritical && objective.urgency === 'critical') {
     tickerState.didWarnCritical = true;
     screens.addTicker('Final seconds: finish the objective now.', 'critical');
+    haptics.play('warning');
   }
 }
 

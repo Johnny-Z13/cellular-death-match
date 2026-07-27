@@ -12,6 +12,15 @@ describe('options menu', () => {
     expect(html).toContain('aria-haspopup="dialog"');
     expect(html).toContain('id="debug" class="debug options-panel" role="dialog"');
     expect(html).toContain('id="audio-button" class="debug-option-button"');
+    expect(html).toContain('id="haptics-button" class="debug-option-button"');
+    expect(html).toContain('hidden>Haptics — On</button>');
+  });
+
+  it('exposes haptics only when the browser supports the mobile feature', () => {
+    expect(screensSource).toContain('setHapticsAvailable(available: boolean): void;');
+    expect(screensSource).toContain('hapticsButton.hidden = !available;');
+    expect(mainSource).toContain('screens.setHapticsAvailable(haptics.isSupported());');
+    expect(mainSource).toContain('screens.onHapticsToggle(() => {');
   });
 
   it('uses the same menu state path for the Options button, close controls, and Escape', () => {

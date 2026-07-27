@@ -37,10 +37,13 @@ export function createFx(): Fx {
     // Force reflow so re-triggering the animation restarts it.
     void banner.offsetWidth;
     banner.classList.add('fx-banner-show');
-    if (reduceMotion) {
-      window.clearTimeout(bannerTimer);
-      bannerTimer = window.setTimeout(() => banner.classList.remove('fx-banner-show'), accent ? 1900 : 2600);
-    }
+    toasts?.classList.add('fx-toasts-banner-active');
+    window.clearTimeout(bannerTimer);
+    const bannerLife = reduceMotion ? (accent ? 1900 : 2600) : (accent ? 1900 : 3250);
+    bannerTimer = window.setTimeout(() => {
+      banner.classList.remove('fx-banner-show');
+      toasts?.classList.remove('fx-toasts-banner-active');
+    }, bannerLife);
   }
 
   return {
@@ -67,9 +70,11 @@ export function createFx(): Fx {
       text.append(k, t);
       el.append(dot, text);
       toasts.append(el);
-      while (toasts.children.length > 3) toasts.firstElementChild?.remove();
+      const compactMobile = window.matchMedia('(max-width: 899px)').matches;
+      const visibleToastLimit = compactMobile ? 1 : 3;
+      while (toasts.children.length > visibleToastLimit) toasts.firstElementChild?.remove();
 
-      const life = reduceMotion ? 2600 : 3200;
+      const life = reduceMotion ? 2600 : compactMobile ? 3800 : 3200;
       window.setTimeout(() => {
         el.classList.add('fx-toast-out');
         window.setTimeout(() => el.remove(), 460);
