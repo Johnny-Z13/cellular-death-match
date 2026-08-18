@@ -133,7 +133,7 @@ The project should treat these as product gates, not vanity metrics.
 | Average play time | 10+ min | 5+ min | under 4 min | Improve loop depth, retry, and short-run chaining |
 | Runs per session | 2.2+ | 1.8+ | under 1.5 | Improve death-to-retry and first upgrade |
 | First meta upgrade purchase | 60%+ of one-minute converters | 40%+ | under 30% | Make upgrade clearer and cheaper |
-| D1 retention | 10-15%+ | 8%+ | under 7% | Strengthen open loops and return claim |
+| D1 retention | 10-15% | 8%+ | under 7% | Strengthen open loops and return claim |
 | Load failure/crash | under 1% | under 2% | over 2% | Stop feature work and fix stability |
 
 Ad metrics are secondary until core retention clears minimum viable thresholds.
