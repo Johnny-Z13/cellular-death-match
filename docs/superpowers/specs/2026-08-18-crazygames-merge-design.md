@@ -104,7 +104,7 @@ Important platform facts from the research:
 - CrazyGames Basic Launch watches average play time, Day 1 retention, and conversion. Their guide frames successful average play time as often 10+ minutes, strong Day 1 retention around 10-15%, and top titles as capable of 80%+ one-minute conversion.
 - CrazyGames SDK gameplay events must be accurate. `gameplayStart()` should fire only when playable gameplay starts or resumes; `gameplayStop()` should fire on menus, pause, level switches, and ads.
 - Ads must be SDK-driven, non-deceptive, and placed at natural breaks. Video ads must not interrupt gameplay.
-- Data SDK should be used for CrazyGames save sync. Its API mirrors localStorage and uses localStorage for guests, with a 1 MB storage limit.
+- Data SDK should be used for CrazyGames Full Launch save sync, or earlier only if CrazyGames approves it for the submission path. Its API mirrors localStorage and uses localStorage for guests, with a 1 MB storage limit.
 - CrazyGames app webviews require safe-area handling, fullscreen awareness, and legibility at devicePixelRatio 1.
 - Game covers require landscape, portrait, and square assets. They should be simple, professional, non-blurry, and not just screenshots. Cover text should be the game title only, so the merge mechanic must be communicated through title choice and art, not extra promo copy.
 
@@ -1313,6 +1313,7 @@ The first cover review should happen before implementation reaches Phase 2. If t
 - Add first-frame and first-input timing.
 - Add DPR 1/mobile quality checks to QA.
 - Add fresh-save CG boot decision behind a build flag, but do not add new content yet.
+- Prepare rough title/cover variants and test them at 200 px before Phase 2 art direction hardens.
 
 Exit criteria:
 
@@ -1363,7 +1364,7 @@ Exit criteria:
 - Expand atlas gaps and hints.
 - Expand from three to five merge families.
 - Ensure one upgrade is affordable after any first run.
-- Prepare cover and metadata variants.
+- Finalize cover, metadata, and preview video variants.
 - Hide all ad buttons and interstitial paths.
 
 Exit criteria:
@@ -1530,6 +1531,7 @@ Second-pass amendments incorporated:
 - Removed standalone "MERGE CELLS" cover copy and required the cover to sell merge through compliant title/art.
 - Added cover asset and preview-video requirements.
 - Corrected SDK lifecycle language so `gameplayStart()` fires when the dish is playable, not after the player hesitates.
+- Clarified that Basic Launch may omit SDK and that Data/Ads belong to Full Launch unless CrazyGames explicitly approves earlier Data usage.
 - Added CrazyGames UI compliance gates: no custom fullscreen button, safe-area support, muted play, DPR 1, non-color-only reads, and PEGI 12 tone.
 
 Cut from Internal MVP v1:
