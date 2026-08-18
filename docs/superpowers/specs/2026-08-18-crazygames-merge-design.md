@@ -263,7 +263,7 @@ Internal MVP v1 is not a CrazyGames submission candidate. It is the smallest com
 - Incubator slot 1 and slot 2 with offline accrual capped at 4 hours.
 - Daily specimen seed visible after the first run, not in the first 90 seconds.
 - Three independent return hooks: atlas collection, incubator accrual, daily specimen.
-- Basic Launch build may omit the SDK entirely because CrazyGames tracks Basic Launch KPIs automatically. If SDK is integrated, use only safe Game/Data integration and keep Ads fully disabled.
+- Basic Launch build may omit the SDK entirely because CrazyGames tracks Basic Launch KPIs automatically. If SDK is integrated for Basic Launch, use the Game module only unless CrazyGames explicitly confirms Data module usage; keep Ads fully disabled.
 - Three cover assets and preview video plan.
 - Submission-safe privacy/cross-promotion posture: no external analytics endpoint, no outbound store links, no custom fullscreen button.
 
@@ -1062,7 +1062,7 @@ Worker migration trigger:
 
 Implement a storage adapter:
 
-1. CrazyGames Data SDK if initialized and Progress Save is enabled.
+1. CrazyGames Data SDK for Full Launch or approved Basic Launch if initialized and Progress Save is enabled.
 2. localStorage fallback for local/non-CG builds or when SDK Data is unavailable.
 3. in-memory fallback if all persistent storage is unavailable.
 
@@ -1508,10 +1508,15 @@ Second-pass blockers found:
 5. The pre-code checklist mixed design commitments with future implementation proof.
 6. Platform adapters needed method-level contracts to prevent SDK/storage/analytics churn.
 7. Save schema needed a named versioned root and reload acceptance tests.
+8. Cover direction allowed non-title promo copy, which conflicts with CrazyGames cover guidance.
+9. The recommended title still buried "Merge" after the internal identity.
+10. `gameplayStart()` timing risked being tied to first input rather than the moment the dish becomes playable.
+11. Custom fullscreen UI, PEGI 12 tone, and DPR 1 readability needed explicit platform gates.
 
 Second-pass amendments incorporated:
 
 - Separated Internal MVP v1 from CrazyGames Basic Launch candidate.
+- Added a smaller First Playable Slice before Internal MVP v1 to prove first merge comprehension before building wider systems.
 - Required the Basic Launch candidate to ship the three return hooks: atlas, incubator, and daily specimen.
 - Raised strong average play-time target to 10+ minutes, with 5+ minutes as minimum viable.
 - Moved monetisation to a Full Launch phase after Basic Launch review.
@@ -1521,6 +1526,24 @@ Second-pass amendments incorporated:
 - Added exact first-time boot condition based on `save.flags.cgFirstRunComplete`.
 - Added evidence requirements for screenshot, reload, performance, and build-size sign-off.
 - Converted pre-code sign-off into explicit product commitments rather than implementation proof.
+- Changed the preferred CrazyGames title to "Merge Lab: Cellular Death Match" so the mechanic leads.
+- Removed standalone "MERGE CELLS" cover copy and required the cover to sell merge through compliant title/art.
+- Added cover asset and preview-video requirements.
+- Corrected SDK lifecycle language so `gameplayStart()` fires when the dish is playable, not after the player hesitates.
+- Added CrazyGames UI compliance gates: no custom fullscreen button, safe-area support, muted play, DPR 1, non-color-only reads, and PEGI 12 tone.
+
+Cut from Internal MVP v1:
+
+- Playable daily mode.
+- Incubator depth beyond a visible teaser.
+- Any user-facing ad or rewarded button.
+- Interstitial logic.
+- More than three merge families.
+- More than Tier 4.
+- Hybrid recipe UI.
+- Catalyst terminology.
+- Live-colony fusion.
+- Cosmetic collection depth.
 
 Remaining validation gates are implementation checks, not unresolved design decisions:
 
