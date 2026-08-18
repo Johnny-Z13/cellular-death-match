@@ -250,7 +250,7 @@ Exit rule:
 - Live DNA meter with immediate persistence.
 - First atlas page with visible silhouettes and partial reveals.
 - Three lab upgrades: Merge Magnet, Starter Cell II, Nutrient Radius.
-- Storage adapter with CrazyGames Data SDK/localStorage/memory fallback.
+- Storage adapter with localStorage/memory fallback and a CrazyGames Data-ready interface.
 - Local analytics adapter with required funnel events.
 - DPR 1 portrait UI support at 375x667 and 390x844.
 - Clean desktop controls and keyboard/mouse fallback.
@@ -725,7 +725,7 @@ Design:
 Persistence:
 
 - Save timestamp and incubator slot state continuously.
-- Use CrazyGames Data SDK when available, localStorage fallback otherwise.
+- Use the active storage adapter so Basic Launch, Full Launch, and local builds share the same product behavior.
 
 ### Mechanism 2: Daily Specimen
 
