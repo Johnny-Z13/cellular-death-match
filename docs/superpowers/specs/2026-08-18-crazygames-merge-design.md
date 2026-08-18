@@ -1,14 +1,15 @@
 # Cellular Death Match: CrazyGames Merge Design
 
 Date: 2026-08-18
-Status: Draft, amended after adversarial review
+Status: Pre-code sign-off candidate, refined after second adversarial review
 Target platform: CrazyGames web, mobile web, CrazyGames iOS/Android app webviews
-Working platform title: Cellular Death Match
-Platform-facing subtitle to test: Merge Lab
+Internal project identity: Cellular Death Match
+Recommended CrazyGames listing candidate: Merge Lab: Cellular Death Match
+Short cover lockup to test: Merge Lab
 
 ## 1. Executive Decision
 
-Cellular Death Match should become a portrait-first, one-thumb, short-session merge survival game for CrazyGames.
+Cellular Death Match should become a portrait-first, one-thumb, short-session merge survival game for CrazyGames, listed and presented with "Merge Lab" first because the portal player must understand the mechanic before they care about the internal identity.
 
 The current project has strong raw material: live cellular simulation, strain discovery, persistent library, catalysts, mobile hardening, and a distinct look. The current risk is that the best parts are too abstract and delayed for portal traffic. A CrazyGames player needs to understand the first action immediately, earn a visible reward fast, and see permanent progression before closing the tab.
 
@@ -21,6 +22,47 @@ The design change is not "add a merge menu." Merge becomes the first verb and th
 5. Fill a visible atlas and incubator that create return hooks.
 
 The CPM ecosystem remains the differentiator, but it moves behind a clear merge-survival surface.
+
+### Product Thesis
+
+We are trying to create a mobile portal merge survival game that makes players feel clever and powerful by combining simple living cells into escalating organisms under readable pressure.
+
+This is the tradeoff that should govern every implementation decision:
+
+- The player-facing game is merge survival.
+- The simulation is the hidden depth and visual distinction.
+- Any system that delays the first merge, first reward, or first permanent progress is out of scope for the first CrazyGames build.
+
+### Product Sign-Off Standard
+
+The design is ready for implementation only when these statements are true:
+
+- The CrazyGames listing and cover strategy are compliant with CrazyGames cover rules and sell merge at small size.
+- A first-time CrazyGames player starts in live gameplay, not a menu.
+- The first action is obvious from a still frame.
+- The first reward is designed to happen inside 15 seconds.
+- The first run has a real 3-4 minute endpoint.
+- Permanent progress is saved at the moment it is earned.
+- The MVP scope is small enough to ship and measure before adding advanced systems.
+- Every retained system maps to at least one CrazyGames metric: one-minute conversion, average play time, D1 retention, runs per session, or rewarded engagement.
+- Ads do not appear in the Basic Launch user experience.
+
+### Locked Product Decisions
+
+These decisions are intentionally fixed for the CrazyGames build unless measured data disproves them:
+
+| Decision | Locked Choice | Reason |
+| --- | --- | --- |
+| Platform-facing promise | Merge Lab | The platform listing must communicate the verb before the lore. |
+| First verb | Merge | Merge is more immediately readable than ecology management or hidden discovery. |
+| First input | Drag/tap a matching capsule into a merge ring | The player can infer this from a still frame. |
+| First run | Designed 3-4 minute trial | Portal users need a conclusion and permanent gain quickly. |
+| First merge implementation | Capsule-first, not live CPM-cell fusion | Reduces simulation risk and makes the first action legible. |
+| Save model | Immediate continuous banking | Tab closes must not erase progress. |
+| Monetisation priority | No ads in Basic Launch gameplay | Basic Launch is about conversion, play time, and D1 retention. |
+| Expansion rule | Metric-gated | New systems must answer measured funnel problems. |
+
+Unresolved design choices must be resolved in this document before code starts. Do not use implementation as a way to decide the core loop.
 
 ## 2. Research Inputs
 
@@ -37,6 +79,7 @@ CrazyGames official requirements and guidance:
 - Ads requirements: https://docs.crazygames.com/requirements/ads/
 - Data SDK: https://docs.crazygames.com/sdk/data/
 - CrazyGames app notes: https://docs.crazygames.com/resources/crazygames-app/
+- Game covers: https://docs.crazygames.com/requirements/game-covers/
 
 Market reference pages:
 
@@ -44,16 +87,26 @@ Market reference pages:
 - Tropical Merge: https://www.crazygames.com/game/tropical-merge
 - Merge Galaxy: https://www.crazygames.com/game/merge-galaxy/
 
+Market takeaways:
+
+- Merge games sell curiosity: the player wants to know what the next merge becomes.
+- The merge chain must be visible before it is owned; silhouettes and next-tier previews matter.
+- Input needs to be physically simple: drag, tap, aim, or stack. Do not make the first merge a rules puzzle.
+- Space pressure works well for merge because it creates urgency without requiring text.
+- Quest/checklist structures can guide progression, but the first minute should not feel like task admin.
+- Some merge games use energy gates; this project should reject hard energy gating because portal players can leave permanently.
+
 Important platform facts from the research:
 
 - New users should land directly in simple gameplay or be one click from it.
 - CrazyGames measures initial load until the first `gameplayStart` SDK event once SDK integration exists.
 - Mobile homepage candidates should keep initial download under 20 MB; top performers often stay below that.
-- CrazyGames Basic Launch watches average play time, Day 1 retention, and conversion. Their guide frames strong Day 1 retention around 10-15%, and top titles can reach 80%+ one-minute conversion.
+- CrazyGames Basic Launch watches average play time, Day 1 retention, and conversion. Their guide frames successful average play time as often 10+ minutes, strong Day 1 retention around 10-15%, and top titles as capable of 80%+ one-minute conversion.
 - CrazyGames SDK gameplay events must be accurate. `gameplayStart()` should fire only when playable gameplay starts or resumes; `gameplayStop()` should fire on menus, pause, level switches, and ads.
 - Ads must be SDK-driven, non-deceptive, and placed at natural breaks. Video ads must not interrupt gameplay.
 - Data SDK should be used for CrazyGames save sync. Its API mirrors localStorage and uses localStorage for guests, with a 1 MB storage limit.
 - CrazyGames app webviews require safe-area handling, fullscreen awareness, and legibility at devicePixelRatio 1.
+- Game covers require landscape, portrait, and square assets. They should be simple, professional, non-blurry, and not just screenshots. Cover text should be the game title only, so the merge mechanic must be communicated through title choice and art, not extra promo copy.
 
 ### Current Codebase Implications
 
@@ -65,7 +118,33 @@ Local audit, 2026-08-18:
 - Current strain banking is run-end oriented. CrazyGames retention needs immediate banking for DNA, atlas progress, merge tiers, incubator timestamps, and unlocked strains.
 - Current onboarding is a 3-beat coach around egg, nutrient, and bloom. The CrazyGames first minute needs to be rebuilt around merge first, then feed.
 
-## 3. Product Positioning
+## 3. Success Metrics
+
+The project should treat these as product gates, not vanity metrics.
+
+### Basic Launch Targets
+
+| Metric | Strong Target | Minimum Viable | Failure Signal | Design Response |
+| --- | ---: | ---: | ---: | --- |
+| First interaction | median under 5s | p90 under 8s | median over 8s | Rework first frame and input affordance |
+| First reward | median under 15s | p90 under 25s | median over 25s | Move reward earlier or simplify merge |
+| One-minute conversion | 80%+ | 70%+ | under 65% | Rebuild onboarding before adding content |
+| 90-second reach | 80%+ | 65%+ | under 60% | Reduce early confusion, deaths, or waiting |
+| Average play time | 10+ min | 5+ min | under 4 min | Improve loop depth, retry, and short-run chaining |
+| Runs per session | 2.2+ | 1.8+ | under 1.5 | Improve death-to-retry and first upgrade |
+| First meta upgrade purchase | 60%+ of one-minute converters | 40%+ | under 30% | Make upgrade clearer and cheaper |
+| D1 retention | 10-15%+ | 8%+ | under 7% | Strengthen open loops and return claim |
+| Load failure/crash | under 1% | under 2% | over 2% | Stop feature work and fix stability |
+
+Ad metrics are secondary until core retention clears minimum viable thresholds.
+
+### Release Rule
+
+After every CrazyGames candidate release, report the single largest funnel drop-off and make the next design/code iteration address that drop-off first. Do not add new systems while first input, first reward, one-minute conversion, or save reliability are failing.
+
+CrazyGames Basic Launch should be treated as a product test window: at least 7 days and 500 plays, or up to 21 days if 500 plays is not reached. Do not interpret early dashboard noise before the game has enough plays to expose the real drop-off.
+
+## 4. Product Positioning
 
 ### Player Promise
 
@@ -95,7 +174,7 @@ Secondary:
 
 Most merge games on CrazyGames are board, farm, city, or object-stack games. Cellular Death Match can own "living merge survival": the joy of merge chains plus the spectacle of organisms behaving in a real simulated dish.
 
-## 4. Core Design Pillars
+## 5. Core Design Pillars
 
 1. First frame is playable.
    The first-time player starts inside the dish, not on a title screen.
@@ -115,12 +194,12 @@ Most merge games on CrazyGames are board, farm, city, or object-stack games. Cel
 6. Every close leaves an open loop.
    The player should leave with an incubator growing, a daily specimen unresolved, or an atlas silhouette visible.
 
-## 5. Core Loop
+## 6. Core Loop
 
 ### Moment-to-Moment Loop
 
 1. Place or drag cell eggs into the dish.
-2. Merge matching live cells or capsules.
+2. Merge matching capsules in the MVP; live-colony merge is later.
 3. Merged organism fights, feeds, spreads, or stabilizes.
 4. Collect DNA drops and strain fragments.
 5. Choose a simple upgrade.
@@ -131,19 +210,129 @@ Most merge games on CrazyGames are board, farm, city, or object-stack games. Cel
 1. Start a 3-8 minute lab trial.
 2. Complete three to five outbreak waves.
 3. Earn live DNA, strain XP, atlas entries, and incubator charge throughout the run.
-4. End at collapse, extraction, or stabilised homeostasis.
+4. End at collapse or extraction; stabilised homeostasis is a later premium success state.
 5. Spend one obvious affordable upgrade.
 6. Start again with a stronger starting egg or new strain.
 
 ### Return Loop
 
 1. Return to see incubator growth in the dish.
-2. Claim or double the growth.
+2. Claim the growth; Full Launch can optionally offer a rewarded double.
 3. Run the daily specimen seed.
 4. Fill missing atlas silhouettes.
 5. Upgrade the lab and improve future merges.
 
-## 6. First 90 Seconds
+## 7. CrazyGames MVP Scope
+
+This section separates the internal prototype from the actual CrazyGames Basic Launch candidate. The internal MVP proves the first minute. The Basic Launch candidate must satisfy the platform retention architecture.
+
+### First Playable Slice
+
+This is the first implementation slice and is not a release candidate:
+
+- One merge family.
+- Tier 1 to Tier 2 only.
+- Fresh-save boot into live dish.
+- First prompt, first merge, first reward, and first saved DNA event.
+- One local save/reload test proving the reward survives tab close.
+- No daily, no incubator, no ads, no live-colony merge, no hybrid recipes, no deep atlas.
+
+Exit rule:
+
+- Do not build the wider MVP until 4 out of 5 cold players complete the first merge without verbal help.
+
+### Internal MVP v1 Must Ship
+
+- CrazyGames first-time boot route that starts in live dish gameplay.
+- Capsule-first merge MVP.
+- Three merge families, Tier 1 through Tier 4.
+- First 3-4 minute run with a real endpoint.
+- Live DNA meter with immediate persistence.
+- First atlas page with visible silhouettes and partial reveals.
+- Three lab upgrades: Merge Magnet, Starter Cell II, Nutrient Radius.
+- Storage adapter with CrazyGames Data SDK/localStorage/memory fallback.
+- Local analytics adapter with required funnel events.
+- DPR 1 portrait UI support at 375x667 and 390x844.
+- Clean desktop controls and keyboard/mouse fallback.
+
+Internal MVP v1 is not a CrazyGames submission candidate. It is the smallest complete local product loop that can answer whether the first run and second-run pull work.
+
+### CrazyGames Basic Launch Candidate Must Ship
+
+- Five merge families.
+- Incubator slot 1 and slot 2 with offline accrual capped at 4 hours.
+- Daily specimen seed visible after the first run, not in the first 90 seconds.
+- Three independent return hooks: atlas collection, incubator accrual, daily specimen.
+- Basic Launch build may omit the SDK entirely because CrazyGames tracks Basic Launch KPIs automatically. If SDK is integrated, use only safe Game/Data integration and keep Ads fully disabled.
+- Three cover assets and preview video plan.
+- Submission-safe privacy/cross-promotion posture: no external analytics endpoint, no outbound store links, no custom fullscreen button.
+
+Basic Launch is still ads-off. If the Ads SDK is integrated, ad buttons remain hidden because CrazyGames disables ads in Basic Launch and rejects dead ad UI.
+
+### Cut From MVP v1
+
+These are specifically cut from the internal MVP even if they are attractive:
+
+- Playable daily mode.
+- Incubator depth beyond a visible teaser.
+- Any user-facing ad or rewarded button.
+- Interstitial logic.
+- More than three families.
+- More than Tier 4.
+- Hybrid recipe UI.
+- Catalyst terminology.
+- Live-colony fusion.
+- Cosmetic collection depth.
+
+### Explicitly Deferred
+
+- Live-colony merge inside the CPM topology.
+- Hybrid/catalyst recipes in the first session.
+- Homeostasis sandbox as a primary endpoint.
+- Full lab hub.
+- Deep atlas pages.
+- Prestige, crafting, or specialist terminology.
+- Interstitial monetisation tuning.
+- Large audio/music pass.
+- Any system requiring a backend or account.
+
+### Non-Goals
+
+- A scientific simulation game that expects players to read before acting.
+- A 20-minute survivors run.
+- A title/menu-first web game.
+- A landscape-first control scheme.
+- An energy system that gates play.
+- A monetisation-first build.
+
+### Scope Kill Rule
+
+If a proposed feature does not improve first input, first reward, one-minute conversion, first-session length, D1 retention, or rewarded engagement, it does not enter the CrazyGames MVP.
+
+### Metric-Gated Expansion
+
+Only expand after the relevant metric is healthy:
+
+| Expansion | Required Signal |
+| --- | --- |
+| More merge families | One-minute conversion and first reward timing are healthy |
+| Daily depth beyond one seeded specimen | Basic Launch D1 retention is below target but first-session metrics are healthy |
+| Incubator depth | D1 retention is below target but first-session metrics are healthy |
+| Hybrid recipes | Players complete multiple runs and understand base merge |
+| Live-colony merge | Main-thread performance stays inside budget after MVP VFX |
+| Rewarded ad UI | Full Launch path approved and runs per session/play time are healthy enough to absorb offers |
+| Interstitials | Only after platform guidance and after first-session retention is stable |
+
+### Phase Dependency Rule
+
+Do not start a later phase if an earlier phase exit criterion is failing. Specifically:
+
+- No additional merge families until first input and first reward timings pass.
+- No Daily prompt in the first 90 seconds; the lightweight daily seed surfaces only after the first run.
+- No rewarded buttons until CrazyGames Full Launch monetisation is being prepared.
+- No live-colony merge until target-device profiling passes with MVP VFX enabled.
+
+## 8. First 90 Seconds
 
 ### CrazyGames First-Time Boot Contract
 
@@ -159,10 +348,24 @@ They boot into a playable dish with a first mergeable pair already visible. Audi
 
 Returning players may see a lightweight hub/title only after completing at least one run. Even then, the dominant action is "Play" and a resumed playable dish is no more than one tap away.
 
+Exact first-time condition:
+
+- Use `save.flags.cgFirstRunComplete !== true` as the product condition.
+- If there is no save, corrupt save, storage unavailable, or migration failure, default to the first-time dish route.
+- If a player closes during the first run, reload into the current first-run dish state when possible; otherwise reload into the first-time dish with already-earned DNA/atlas progress preserved.
+- Do not show title, loadout, settings, notebook, atlas, lab report, or daily screens before the first accepted merge input.
+
+Implementation entrypoint:
+
+- `main.ts` should route through a single boot decision function before showing any screen.
+- Current title and loadout routes remain available for normal/local builds and returning players.
+- The CrazyGames first-time route uses a fixed starter loadout and ignores user loadout selection until after the first run endpoint.
+
 Instrumentation requirements:
 
 - Fire `first_frame` when live dish motion is visible.
-- Fire `gameplay_start` when the dish accepts input.
+- Fire local `gameplay_start` when the dish accepts input.
+- If the CrazyGames SDK is integrated, call SDK `gameplayStart()` at the same moment.
 - Fire `first_input` on the first drag/tap that affects the merge state.
 - A clean install must not render the title or loadout before `first_input`.
 
@@ -236,7 +439,39 @@ First-run minimum:
 - If the player completes the first merge, they must be able to buy the cheapest meta upgrade after the run.
 - If they collapse after 45 seconds but before earning enough DNA, grant a one-time novice stabilization bonus that tops them up to the cheapest upgrade cost. This bonus is saved immediately on collapse.
 
-## 7. Merge Mechanic
+### First-Session Playtest Script
+
+Use this test before implementation expands beyond MVP v1.
+
+Setup:
+
+- Fresh save.
+- Sound muted.
+- Mobile portrait viewport first, then desktop.
+- No explanation from the observer.
+- Let the player play for five minutes or until they quit.
+
+Pass/fail checklist:
+
+| Moment | Pass Condition | Fail Condition |
+| --- | --- | --- |
+| First still frame | Player can point to what they would interact with | Player asks "what is this?" or scans menus |
+| First 5s | Player attempts merge or taps the merge target | Player waits, reads, or opens pause/settings |
+| First 15s | First reward fires | Player has not completed a rewarding action |
+| First 45s | Player understands feed/stabilize as second action | Player cannot distinguish owned cell from threat |
+| First 90s | Player has picked an upgrade and predicts next wave | Player thinks the game is over or aimless |
+| First run end | Player sees permanent gain and obvious retry | Player sees stats but no reason to return |
+
+Minimum qualitative bar:
+
+- 4 out of 5 cold players complete the first merge without verbal help.
+- 4 out of 5 understand that merging made them stronger.
+- 3 out of 5 voluntarily start a second run.
+- Any player who closes the tab after a reward must keep that reward on reload.
+
+If this playtest fails, do not add content. Fix the first-frame composition, merge affordance, reward timing, or retry loop.
+
+## 9. Merge Mechanic
 
 ### Merge Objects
 
@@ -251,6 +486,17 @@ The tray handles early readability. The dish merge provides the differentiator.
 
 MVP rule: merge two matching Tier 1 capsules of the same family.
 
+MVP object model:
+
+| Field | Required Values |
+| --- | --- |
+| `familyId` | `sprinter`, `bulwark`, `grazer` for internal MVP; add `spark`, `medic` for Basic Launch |
+| `tier` | `1`, `2`, `3`, `4` |
+| `capsuleId` | Stable per spawned capsule during a run |
+| `position` | Dish-space x/y plus screen-space hit target |
+| `state` | `idle`, `dragging`, `validTarget`, `merging`, `spent` |
+| `spawnSource` | `scriptedFirstRun`, `tray`, `drop`, `upgrade`, `incubator` |
+
 MVP implementation:
 
 - The first-run merge inputs are capsules, not arbitrary live CPM cells.
@@ -259,6 +505,9 @@ MVP implementation:
 - One upgraded colony spawns at the merge centroid.
 - The underlying sim receives one new owned colony with the upgraded breed/tier profile.
 - DNA, atlas progress, and first-merge instrumentation fire immediately.
+- The merge capsule does not mutate existing CPM cells in place during MVP.
+- The output colony is a normal arena-owned entity after spawn.
+- The merge system owns capsule input/readability; `arena` owns spawned colony behavior.
 
 Reason for capsule-first MVP:
 
@@ -266,6 +515,42 @@ Reason for capsule-first MVP:
 - It keeps the first action visually obvious.
 - It still lets the resulting merged organism use the current simulation.
 - Live-colony merging can unlock later as a richer expression of the same verb.
+
+### Merge Visual Prototype Spec
+
+First-frame layout, mobile portrait:
+
+- Dish centered, occupying roughly 70% of viewport width.
+- Two matching Tier 1 capsules visible inside the lower half of the dish.
+- Pulsing merge ring centered between them.
+- Bottom tray contains one large spare capsule in the thumb zone.
+- Threat colony appears near the upper rim, moving slowly toward the owned cells.
+- DNA meter is visible but secondary.
+- Atlas/incubator teasers are visible as small locked silhouettes, not panels.
+
+Touch and pointer behavior:
+
+- Minimum draggable capsule target: 52 CSS px.
+- Minimum merge ring target: 56 CSS px.
+- Mobile magnetic radius: at least 48 CSS px.
+- Dragged capsule scales to 1.08x and casts a clear shadow/ring.
+- Valid target pulses and shows matching pips.
+- Invalid drop snaps back within 180 ms and briefly highlights the correct target.
+- If idle for 3 seconds, show a ghost drag path once.
+
+Animation timing:
+
+- Successful merge anticipation: 150 ms inward pull.
+- Merge flash and tier reveal: 300-450 ms.
+- DNA burst reaches the HUD within 600 ms.
+- Atlas partial reveal starts within 800 ms.
+- Total time from valid drop to clear reward: under 1 second.
+
+Text limit:
+
+- First prompt: "Merge cells."
+- Second prompt: "Feed it."
+- No other tutorial copy in the first 30 seconds.
 
 ### Merge Rules
 
@@ -332,7 +617,7 @@ Rule:
 
 The current hidden discovery system becomes a visible "try this pair" goal instead of a background surprise.
 
-## 8. Run Structure
+## 10. Run Structure
 
 ### Run Length
 
@@ -343,6 +628,13 @@ Target run length:
 - Daily run: 4-6 minutes.
 
 Open-ended sandbox can exist after a successful stabilization, but the default CrazyGames run needs a clear conclusion.
+
+Run endpoint rule:
+
+- The first run endpoint is a scripted extraction gate at 180-240 seconds.
+- The endpoint is not dependent on hidden homeostasis detection.
+- The player may collapse earlier, but collapse still shows permanent gains and retry within 3 seconds.
+- Normal runs may include optional continue/sandbox, but the default action after a chapter is extraction or next short chamber, not indefinite observation.
 
 ### First Run Structure
 
@@ -395,9 +687,29 @@ Homeostasis:
 - Pressure pauses.
 - Player gets an atlas reveal and optional "End Trial" action.
 
-## 9. Progression and Retention
+## 11. Progression and Retention
 
 The game needs at least three independent return mechanisms.
+
+### Retention Priority
+
+Build retention in this order:
+
+1. Live DNA and first affordable lab upgrade.
+2. Atlas silhouettes and partial reveals.
+3. Incubator offline accrual.
+4. Daily specimen.
+5. Rewarded accelerators.
+
+Reason:
+
+- Live DNA and the first upgrade protect second-run conversion.
+- Atlas gaps create the clearest early "unfinished collection" loop.
+- Incubator creates return intent, but it only matters if players already understand why DNA is valuable.
+- Daily specimens matter after the player has enough context to care about a daily variant.
+- Rewarded engagement should accelerate a healthy loop, not compensate for a weak one.
+
+Do not build Daily before Atlas and the first upgrade are working. Do not tune rewarded ads before the first session retains.
 
 ### Mechanism 1: Incubator Accrual
 
@@ -408,7 +720,7 @@ Design:
 - Incubator is visible during play as three glass slots.
 - A slot fills with animated culture, not just a number.
 - Returning player sees the dish changed: culture growth, new egg, or mutation chance.
-- Rewarded video can double the claim, but basic claim is always available.
+- Full Launch can offer a rewarded double claim, but the basic claim is always available.
 
 Persistence:
 
@@ -503,15 +815,24 @@ Daily streak:
 - UTC-date seed.
 - One grace miss is allowed before streak reset.
 - Daily completion gives 80 DNA and one atlas fragment.
-- Rewarded video may grant one extra attempt, not a better reward tier.
+- Full Launch rewarded video may grant one extra attempt, not a better reward tier.
 
-## 10. Monetisation
+## 12. Monetisation
 
 ### Launch Policy
 
-During CrazyGames Basic Launch, prioritize conversion, retention, and playtime. Ads can be integrated safely but should remain conservative until the game proves the first-session loop.
+During CrazyGames Basic Launch, prioritize conversion, retention, and playtime. Ads are disabled by CrazyGames during Basic Launch. The code may contain safe wrappers, but the player must not see rewarded buttons, interstitial paths, or dead ad UI until Full Launch monetisation is being prepared.
+
+Revenue rule:
+
+- Do not optimize revenue until one-minute conversion, average play time, save reliability, and first meta upgrade purchase clear minimum viable thresholds.
+- Rewarded placements may be implemented behind feature flags for platform verification.
+- Interstitials stay disabled during first-session testing and any build where one-minute conversion is below target.
+- If an ad placement lowers retry rate, runs per session, or D1 retention, remove or delay it even if short-term revenue rises.
 
 ### Rewarded Video Placements
+
+Full Launch only.
 
 Rewarded ads accelerate, rescue, or reroll. They never unlock required progression.
 
@@ -544,6 +865,81 @@ Implement a platform wrapper:
 - Mute game audio on `adStarted`.
 - Restore prior audio state on ad finish or error.
 - Treat ad errors as no-reward/no-penalty, with clean UI recovery.
+- Honor SDK `muteAudio` above the player's own audio preference.
+- Do not add an in-game fullscreen button; CrazyGames provides fullscreen.
+- Do not show rewarded buttons during Basic Launch because ads are disabled there.
+
+### Adapter Contracts
+
+All platform code must be behind narrow adapters so local development, Basic Launch, and Full Launch behave predictably.
+
+`crazyGames` adapter:
+
+| Method | Requirement |
+| --- | --- |
+| `init()` | Safe no-op when SDK script is absent; resolves once. |
+| `isAvailable()` | True only after SDK init succeeds. |
+| `getSystemInfo()` | Returns SDK system info when available; otherwise local browser fallback. |
+| `startGameplay(reason)` | Idempotent; calls SDK `gameplayStart()` only on stopped-to-started transition. |
+| `stopGameplay(reason)` | Idempotent; calls SDK `gameplayStop()` only on started-to-stopped transition. |
+| `applySettings(listener)` | Applies `muteAudio`; local fallback returns default settings. |
+
+`storage` adapter:
+
+| Method | Requirement |
+| --- | --- |
+| `load()` | Returns validated save or default save; never throws to caller. |
+| `save(patch, reason)` | Synchronously commits to active store where possible; queues retry if SDK store is temporarily unavailable. |
+| `flush(reason)` | Attempts to write all queued changes on pause, chamber end, visibility change, and run end. |
+| `migrate()` | Imports existing discovery/strain saves once and records migration version. |
+| `health()` | Reports active backend: `crazygames-data`, `localstorage`, or `memory`. |
+
+`analytics` adapter:
+
+| Method | Requirement |
+| --- | --- |
+| `track(name, payload)` | Non-blocking; never delays first frame or input. |
+| `mark(name)` | Stores high-resolution local timing marks for funnel durations. |
+| `flush()` | Batches asynchronously; local/dev builds log to console/debug overlay. |
+| `largestDropoff(report)` | Computes release review summary from captured funnel counts. |
+
+`ads` adapter:
+
+| Method | Requirement |
+| --- | --- |
+| `isEnabled()` | False during Basic Launch and local builds unless explicitly enabled. |
+| `offerRewarded(placement)` | Returns disabled state instead of rendering dead buttons when unavailable. |
+| `requestRewarded(placement)` | Blocks UI, stops gameplay, requests SDK ad, handles finish/error. |
+| `requestMidgame(reason)` | Full Launch only; natural breaks only; SDK cap handles frequency. |
+
+### Save Schema
+
+Use one versioned CrazyGames save root:
+
+`cellular-death-match.cg.v1`
+
+Minimum shape:
+
+| Field | Purpose |
+| --- | --- |
+| `version` | Save schema version. |
+| `createdAt`, `lastSeenAt` | Return-session and incubator calculations. |
+| `dna` | Live currency, saved immediately. |
+| `metaUpgrades` | Purchased lab upgrades and levels. |
+| `atlas` | Entry states: `locked`, `hinted`, `partial`, `complete`. |
+| `mergeTiers` | Highest tier seen per family. |
+| `incubator` | Slot states, last update time, accrued DNA. |
+| `daily` | UTC date seed, attempts, completion, forgiving streak. |
+| `run` | Current first-run checkpoint if `cgFirstRunComplete` is false. |
+| `flags` | `cgFirstRunComplete`, `noviceTopUpUsed`, migration markers. |
+
+Save acceptance tests:
+
+- Reload after first merge preserves DNA, atlas partial reveal, and `mergeTiers`.
+- Reload after upgrade purchase preserves the upgrade and subtracts DNA exactly once.
+- Reload after first-run collapse preserves novice top-up state and does not grant it twice.
+- LocalStorage blocked/private mode does not crash and clearly degrades to session-only memory.
+- CrazyGames Data unavailable locally does not change game behavior.
 
 ### Platform State Machine
 
@@ -559,7 +955,7 @@ Runtime states:
 | State | Meaning | SDK Gameplay State |
 | --- | --- | --- |
 | `booting` | JS loaded, no live gameplay | stopped |
-| `firstPlayable` | live dish visible, input about to unlock | call `gameplayStart()` once input is accepted |
+| `firstPlayable` | live dish visible and accepting input | call `gameplayStart()` when this state begins |
 | `activeRun` | dish simulation accepts input | started |
 | `softPaused` | pause/settings visible | stopped |
 | `betweenChambers` | upgrade/extract/menu choice | stopped |
@@ -570,8 +966,8 @@ Runtime states:
 
 Transitions:
 
-- `booting -> firstPlayable`: first live dish frame rendered; fire `first_frame`.
-- `firstPlayable -> activeRun`: first input accepted; fire `first_input` and `gameplayStart()`.
+- `booting -> firstPlayable`: first live dish frame rendered and input enabled; fire `first_frame`, local `gameplay_start`, and SDK `gameplayStart()` if integrated.
+- `firstPlayable -> activeRun`: first input accepted; fire `first_input`.
 - `activeRun -> betweenChambers`: chamber ends; call `gameplayStop()`.
 - `betweenChambers -> activeRun`: next chamber starts; call `gameplayStart()`.
 - `activeRun -> adPending`: pause simulation and input, call `gameplayStop()`, request ad.
@@ -580,7 +976,7 @@ Transitions:
 - `adPending/adPlaying -> betweenChambers`: on error or dismissed menu path, keep gameplay stopped and recover UI.
 - Do not call gameplay lifecycle events solely for browser focus loss.
 
-## 11. Technical Plan
+## 13. Technical Plan
 
 ### Performance Targets
 
@@ -603,7 +999,7 @@ Ship only the first playable dish:
 
 Lazy-load after first input:
 
-- Atlas.
+- Full Atlas screen.
 - Lab upgrades.
 - Daily trial.
 - Audio.
@@ -666,9 +1062,9 @@ Worker migration trigger:
 
 Implement a storage adapter:
 
-1. CrazyGames Data SDK if initialized.
-2. localStorage fallback.
-3. in-memory fallback if storage is unavailable.
+1. CrazyGames Data SDK if initialized and Progress Save is enabled.
+2. localStorage fallback for local/non-CG builds or when SDK Data is unavailable.
+3. in-memory fallback if all persistent storage is unavailable.
 
 Rules:
 
@@ -676,6 +1072,7 @@ Rules:
 - Migrate current localStorage progress into the adapter.
 - Save progress at every reward, atlas reveal, merge tier unlock, incubator update, and upgrade purchase.
 - Keep CrazyGames cloud data below 1 MB.
+- On CrazyGames with Data SDK enabled, the Data module is the authoritative store. localStorage is only a migration source or verified backup, not a separate competing save.
 
 Continuous banking contract:
 
@@ -693,7 +1090,7 @@ Migration requirements:
 - Convert old localStorage-only data into the storage adapter once, then mark migration complete.
 - If CrazyGames Data SDK is available after guest progress already exists, merge guest progress into SDK data without deleting the local backup until a successful SDK write is confirmed.
 
-## 12. UI and UX Requirements
+## 14. UI and UX Requirements
 
 ### Portrait HUD
 
@@ -704,6 +1101,18 @@ Mobile first layout:
 - Top-left shows DNA and run progress.
 - Top-right shows pause/settings icon only.
 - Atlas/incubator teasers are small side tabs, not permanent panels covering the dish.
+
+### CrazyGames UI Compliance
+
+- Do not render a custom fullscreen button in the CrazyGames build. CrazyGames provides fullscreen.
+- Do not require landscape. Configure supported orientations in the submission flow and keep portrait as the primary experience.
+- Add `user-select: none` and related touch handling to prevent long-press selection/context-menu friction in the game surface.
+- All core controls must have at least 44 CSS px targets; first-run merge targets are larger.
+- All important UI must respect safe-area insets in CrazyGames app webviews.
+- The game must be playable with sound muted and with `devicePixelRatio` forced to 1.
+- Owned/threat distinction cannot rely on color alone.
+- Keep the game PEGI 12 compliant: stylized cellular conflict, no gore, no realistic disease panic, no graphic body horror.
+- English is the first required localization. Any later localization must fall back cleanly to English.
 
 ### Visual Readability
 
@@ -741,9 +1150,23 @@ Later:
 - Hybrid.
 - Homeostasis.
 
-## 13. Instrumentation
+## 15. Instrumentation
 
 Add a non-blocking analytics adapter with local dev logging and platform-ready batching.
+
+No external analytics endpoint is required for Basic Launch. CrazyGames provides the platform KPIs in the developer dashboard. The local analytics adapter exists to verify funnel timing and event order during development and QA.
+
+Event payload minimum:
+
+| Field | Requirement |
+| --- | --- |
+| `sessionId` | Random per browser session; not personally identifying. |
+| `saveId` | Locally generated ID; no account dependency. |
+| `buildMode` | `local`, `cg-basic`, or `cg-full`. |
+| `deviceTier` | `low`, `mid`, `high` from boot detector. |
+| `viewport` | Width, height, DPR. |
+| `elapsedMs` | Milliseconds since `load_started`. |
+| `runId` | Current run identifier where applicable. |
 
 Required funnel events:
 
@@ -800,9 +1223,13 @@ Automated gates before a CrazyGames candidate build:
 - `survived_90s` or equivalent 90-second reach event fires during the first run.
 - Reload immediately after first merge preserves DNA, atlas progress, and merge tier.
 - Reload immediately after chamber clear preserves upgrade eligibility.
-- Ad wrapper recovers cleanly from success, cooldown, unfilled, and adblock errors.
+- Full Launch only: ad wrapper recovers cleanly from success, cooldown, unfilled, and adblock errors.
 - Storage unavailable mode does not crash.
 - DPR 1 screenshots at 375x667, 390x844, and 1280x720 show no overlapping HUD and readable merge targets.
+- Desktop iframe screenshots at 907x510, 1216x684, 821x462, and 1280x720 are readable at DPR 1.
+- Touch targets for first merge are at least 44x44 CSS px; target spec is 52-56 CSS px.
+- `user-select: none` and equivalent touch-callout prevention are applied to the game surface.
+- `muteAudio` SDK setting, if present, overrides in-game audio state.
 - Build output remains below the project target unless a conscious release exception is documented.
 
 Manual gates:
@@ -810,19 +1237,37 @@ Manual gates:
 - CrazyGames iOS app webview.
 - CrazyGames Android app webview.
 - Low-end Android Chrome or equivalent throttled profile.
-- Thumbnail tested at 200 px in a portal-style grid.
+- Cover tested at 200 px in a portal-style grid.
 
-## 14. Thumbnail and Store Assets
+Evidence required for sign-off:
 
-The thumbnail must sell merge before it sells simulation.
+- Fresh-save first-frame screenshot at 375x667 DPR 1.
+- First-merge success screenshot at 375x667 DPR 1.
+- First-run endpoint screenshot.
+- Reload-after-first-merge proof from storage state.
+- Performance trace or frame-time log from a low-end Android target or an agreed throttled substitute.
+- Build size report showing total files, total size, and initial critical assets.
 
-Thumbnail composition:
+## 16. Cover and Store Assets
+
+The cover must sell merge before it sells simulation while staying compliant with CrazyGames cover rules.
+
+CrazyGames cover constraints:
+
+- Prepare landscape 16:9, portrait 2:3, and square 1:1 cover assets.
+- Do not use blurry, pixelated, copyrighted, bordered, or store-logo visuals.
+- Do not use promo copy such as "Play now", "New", or "Merge cells" unless it is the actual game title.
+- Do not submit a raw gameplay screenshot as the cover.
+- Use the game title on the cover and make it legible at small size.
+
+Cover composition:
 
 - Two small cells combining into one large monster cell.
-- Big visible "MERGE" or visual merge arrow if text is allowed.
+- A visual merge arrow, motion trail, or collision burst.
 - Bright organism silhouette with teeth/spikes/energy ring.
 - Petri dish rim.
 - High contrast at 200 px.
+- Title lockup with "Merge Lab" dominant.
 
 Avoid:
 
@@ -830,31 +1275,54 @@ Avoid:
 - Dense organism soup.
 - Tiny UI screenshots.
 - Dark, low-contrast lab ambience.
+- Any non-title promotional text.
 
 Store title guidance:
 
-- Keep "Cellular Death Match" as the game identity if the user wants continuity.
-- Test metadata/subtitle around "Merge Lab" or "Cell Merge" because the portal audience needs the verb before the lore.
+- Keep "Cellular Death Match" as the internal game identity.
+- Preferred listing candidate: "Merge Lab: Cellular Death Match."
+- Mechanic-led alternate: "Cell Merge Lab."
+- Cover lockup should use the game title only, with "Merge Lab" dominant.
+- Do not submit or test "Cellular Death Match" alone unless CrazyGames advises it; the merge verb is too commercially important to hide.
 
-## 15. Implementation Roadmap
+Metadata variants to prepare:
 
-### Phase 0: Measurement and Platform Foundation
+| Variant | Title | Cover Promise | Risk |
+| --- | --- | --- | --- |
+| Recommended | Merge Lab: Cellular Death Match | Merge cells into living monsters | Longer title needs careful cover typography |
+| Short lockup | Merge Lab | Immediate merge promise | Less continuity with current project identity |
+| Mechanic-led fallback | Cell Merge Lab | Merge cells into monsters | Generic, but highly legible |
+
+Preview video:
+
+- 15-20 seconds maximum.
+- No sound dependency.
+- Opening frame should match the static cover.
+- Show first merge, first reward, a short outbreak, and upgrade/atlas progress.
+- No black-screen logo transition, black bars, default cursor, or promo text.
+
+The first cover review should happen before implementation reaches Phase 2. If the merge promise is not visible at 200 px without prohibited text, the art direction is wrong for CrazyGames.
+
+## 17. Implementation Roadmap
+
+### Phase 0: Platform Foundation, No Gameplay Expansion
 
 - Add `crazyGames`, `storage`, `analytics`, and `ads` platform wrappers.
 - Add data storage adapter and migration path from current localStorage saves.
 - Add funnel instrumentation and local debug overlay/logging.
 - Add first-frame and first-input timing.
 - Add DPR 1/mobile quality checks to QA.
-- Add fresh-save CG boot route that bypasses title/loadout behind a build flag.
+- Add fresh-save CG boot decision behind a build flag, but do not add new content yet.
 
 Exit criteria:
 
 - Existing game still builds and tests.
 - Local SDK absence is safe.
 - Save progress works with localStorage fallback.
-- Fresh-save CG route can prove live dish first frame, first input, and first reward timings.
+- Boot decision can route to CG first-run mode without showing title/loadout.
+- No regression to current non-CG route.
 
-### Phase 1: First 90 Seconds Rebuild
+### Phase 1: First 90 Seconds Internal MVP
 
 - First-time users boot directly into playable dish.
 - Add capsule-first merge MVP.
@@ -869,36 +1337,67 @@ Exit criteria:
 - Mobile portrait has no blocked dish area.
 - 375x667 and 390x844 pass visual checks.
 - Cheapest meta upgrade is affordable after first run.
+- Reload-after-first-merge preserves progress.
 
-### Phase 2: Merge System
+### Phase 2: Internal MVP Completion
 
 - Add cell tier model.
 - Add tray/capsule merge interactions.
 - Add merge rewards and atlas progression.
 - Convert hidden discoveries into visible hints after first run.
-- Add first five merge families.
-- Profile and decide whether live-colony merge belongs in Phase 2 or a later release.
+- Add first three merge families.
+- Add three lab upgrades.
+- Profile MVP VFX on target device class.
 
 Exit criteria:
 
 - Merge is useful, readable, and repeatable.
 - Same-family merge works in run one.
-- Hybrid merge unlocks later without first-run overload.
+- First 90-second playtest passes the qualitative bar.
+- Hybrid and live-colony merge remain deferred.
 
-### Phase 3: Retention Systems
+### Phase 3: CrazyGames Basic Launch Candidate
 
 - Add incubator offline accrual.
 - Add daily specimen seed.
 - Expand atlas gaps and hints.
+- Expand from three to five merge families.
 - Ensure one upgrade is affordable after any first run.
+- Prepare cover and metadata variants.
+- Hide all ad buttons and interstitial paths.
 
 Exit criteria:
 
 - Three return hooks are visible.
 - Progress saves continuously.
 - Return session has changed world state, not just claim text.
+- Candidate satisfies CrazyGames Basic Launch constraints and has no dead ad UI.
 
-### Phase 4: Monetisation
+### Phase 4: CrazyGames Submission Hardening
+
+- Payload audit.
+- Low-end Android profiling.
+- CrazyGames app webview tests.
+- Cover at 200 px against a real portal grid.
+- Fresh-save and reload persistence QA.
+- Basic Launch ad-disabled QA.
+
+Exit criteria:
+
+- Candidate satisfies technical, gameplay, quality, app, and Basic Launch constraints.
+- Evidence package exists for screenshots, storage, performance, build size, and first-run funnel.
+
+### Phase 5: Basic Launch Review and Iteration
+
+- Basic Launch metrics review.
+
+Exit criteria:
+
+- Conversion, average play time, and Day 1 retention data decide next work.
+- Largest funnel drop-off is reported after each release.
+- No new systems are added until the largest funnel drop-off has an explicit fix.
+
+### Phase 6: Full Launch Monetisation, Metric-Gated
 
 - Add rewarded slots.
 - Add safe midgame interstitial boundaries.
@@ -907,24 +1406,58 @@ Exit criteria:
 
 Exit criteria:
 
+- Full Launch path is approved or actively being prepared.
 - Ads never gate progression.
 - First session has no interstitial.
 - Ad callbacks pause, mute, restore, and resume correctly.
+- Monetisation does not reduce retry rate, runs per session, or D1 retention below thresholds.
 
-### Phase 5: CrazyGames Submission Hardening
+## 18. Pre-Code Sign-Off Checklist
 
-- Payload audit.
-- Low-end Android profiling.
-- CrazyGames app webview tests.
-- Thumbnail at 200 px against a real portal grid.
-- Basic Launch metrics review.
+Implementation should not begin until this checklist is accepted as the product contract. These are design commitments; the QA gates above are the later proof that implementation satisfies them.
 
-Exit criteria:
+Product:
 
-- Conversion and Day 1 retention data decide next work.
-- Largest funnel drop-off is reported after each release.
+- [ ] The CrazyGames listing candidate is accepted: "Merge Lab: Cellular Death Match."
+- [ ] The player promise is accepted: merge living cells, grow organisms, survive a five-minute lab outbreak.
+- [ ] The distinction between Internal MVP v1 and CrazyGames Basic Launch candidate is accepted.
+- [ ] The explicitly deferred scope is accepted.
+- [ ] The non-goals are accepted.
 
-## 16. Key Risks
+First session:
+
+- [ ] Fresh-save CrazyGames boot must bypass title/loadout.
+- [ ] First frame must contain live dish, two matching capsules, merge ring, visible threat, and minimal HUD.
+- [ ] First prompt is exactly "Merge cells."
+- [ ] First reward target is under 15 seconds.
+- [ ] First run endpoint is 3-4 minutes.
+- [ ] First meta upgrade is guaranteed affordable after engaged play.
+
+Retention:
+
+- [ ] Live DNA and atlas progress must save immediately.
+- [ ] First atlas page must have visible missing silhouettes.
+- [ ] Incubator must be visible during play before it becomes a deep system.
+- [ ] Daily specimen is required for Basic Launch, but not Internal MVP v1.
+
+Platform:
+
+- [ ] SDK wrapper state machine is accepted.
+- [ ] Storage adapter and migration strategy are accepted.
+- [ ] Analytics events and metric gates are accepted.
+- [ ] Ads remain secondary until core retention thresholds are healthy.
+- [ ] DPR 1 mobile portrait requirements are accepted.
+- [ ] CrazyGames build removes custom fullscreen UI and respects safe areas.
+- [ ] PEGI 12/stylized cellular conflict tone is accepted.
+
+Commercial:
+
+- [ ] Basic Launch success/failure thresholds are accepted.
+- [ ] Cover promise is merge-first at 200 px without non-title promo copy.
+- [ ] Any added feature must map to a target metric.
+- [ ] The next iteration after release addresses the largest measured funnel drop-off.
+
+## 19. Key Risks
 
 | Risk | Impact | Mitigation |
 | --- | --- | --- |
@@ -935,13 +1468,16 @@ Exit criteria:
 | Performance degrades on low-end mobile | Bad reviews, rejection risk | Device quality tiers, effect caps, profiling, possible worker migration |
 | Ads hurt retention | Revenue gains offset by churn | Conservative slots, no first-session interstitial, rewarded only at desire points |
 | Save sync breaks existing progress | Player trust loss | Versioned adapter and migration tests |
-| "Death Match" underperforms in merge category | Lower CTR or wrong expectations | Keep identity but test subtitle/thumbnail around "merge cells" |
+| "Death Match" underperforms in merge category | Lower CTR or wrong expectations | Put "Merge Lab" first in title and cover; keep Cellular Death Match as internal identity |
 
-## 17. Adversarial Review Amendments
+## 20. Adversarial Review Amendments
 
-An adversarial review pass was run against the first draft. The reviewer was asked to optimize for one-minute conversion, Day 1 retention, session length, monetisation safety, mobile performance, and platform acceptance.
+Adversarial review passes were run against the draft with two lenses:
 
-Highest-risk findings:
+1. Product/platform lens: optimize for one-minute conversion, Day 1 retention, session length, monetisation safety, mobile performance, and CrazyGames acceptance.
+2. Implementation/spec precision lens: identify any ambiguity likely to cause code churn around boot flow, merge MVP, adapters, performance, QA, and phase boundaries.
+
+First-pass highest-risk findings:
 
 1. Progression was not concrete enough and the current game banks key progress too late for portal behavior.
 2. First-frame gameplay conflicted with the current title/loadout route.
@@ -963,10 +1499,33 @@ Amendments incorporated:
 - Added continuous banking contract and migration requirements.
 - Added automated and manual CrazyGames QA gates.
 
-Open validation questions before implementation:
+Second-pass blockers found:
 
-- Confirm fresh-save CG boot can bypass title/loadout without breaking current run initialization.
-- Confirm capsule-first merge can spawn upgraded colonies cleanly through `arena` without invasive CPM mutation.
-- Confirm old discovery/strain save data can migrate into the storage adapter with tests.
-- Confirm low-end mobile performance before live-colony merge or persistent VFX.
-- Decide whether CrazyGames metadata should lead with "Cellular Death Match: Merge Lab" or a more direct title like "Cell Merge Lab" while preserving the internal game identity.
+1. Internal MVP and CrazyGames Basic Launch were not clearly separated.
+2. Ad wrappers and rewarded placements could be misread as Basic Launch scope, even though CrazyGames disables ads during Basic Launch.
+3. Average play-time targets were too soft for a successful CrazyGames product.
+4. The roadmap put monetisation before Basic Launch review.
+5. The pre-code checklist mixed design commitments with future implementation proof.
+6. Platform adapters needed method-level contracts to prevent SDK/storage/analytics churn.
+7. Save schema needed a named versioned root and reload acceptance tests.
+
+Second-pass amendments incorporated:
+
+- Separated Internal MVP v1 from CrazyGames Basic Launch candidate.
+- Required the Basic Launch candidate to ship the three return hooks: atlas, incubator, and daily specimen.
+- Raised strong average play-time target to 10+ minutes, with 5+ minutes as minimum viable.
+- Moved monetisation to a Full Launch phase after Basic Launch review.
+- Stated that Basic Launch must show no rewarded buttons, interstitial paths, or dead ad UI.
+- Added adapter method contracts for `crazyGames`, `storage`, `analytics`, and `ads`.
+- Added versioned save schema `cellular-death-match.cg.v1`.
+- Added exact first-time boot condition based on `save.flags.cgFirstRunComplete`.
+- Added evidence requirements for screenshot, reload, performance, and build-size sign-off.
+- Converted pre-code sign-off into explicit product commitments rather than implementation proof.
+
+Remaining validation gates are implementation checks, not unresolved design decisions:
+
+- Prove fresh-save CG boot bypasses title/loadout without breaking current run initialization.
+- Prove capsule-first merge can spawn upgraded colonies cleanly through `arena` without invasive CPM mutation.
+- Prove old discovery/strain save data migrates into the storage adapter with tests.
+- Prove low-end mobile performance before live-colony merge or persistent VFX.
+- Test title/cover variants, with "Merge Lab: Cellular Death Match" as the preferred listing candidate.
