@@ -61,6 +61,11 @@ import {
   performanceProfileFor,
   shouldRenderFrame,
 } from './ui/mobilePerformance';
+import { createAnalytics } from './platform/analytics';
+import { createCrazyGamesPlatform } from './platform/crazyGames';
+import { shouldLaunchMergeLab } from './platform/launchMode';
+import { createStorageAdapter } from './platform/storage';
+import { startMergeLabExperience } from './ui/mergeLabExperience';
 
 declare const __COMMIT_MESSAGE__: string;
 
@@ -93,6 +98,71 @@ if (commitDebug) {
   commitDebug.textContent = `build · ${gist}`;
 }
 
+function safeRuntimeStorage(): Storage {
+  try {
+    return window.localStorage;
+  } catch {
+    return createFallbackStorage();
+  }
+}
+
+function createFallbackStorage(): Storage {
+  const values = new Map<string, string>();
+  return {
+    get length() {
+      return values.size;
+    },
+    clear() {
+      values.clear();
+    },
+    getItem(key: string) {
+      return values.get(String(key)) ?? null;
+    },
+    key(index: number) {
+      return Array.from(values.keys())[index] ?? null;
+    },
+    removeItem(key: string) {
+      values.delete(String(key));
+    },
+    setItem(key: string, value: string) {
+      values.set(String(key), String(value));
+    },
+  };
+}
+
+const runtimeStorage = safeRuntimeStorage();
+
+if (shouldLaunchMergeLab(window.location, runtimeStorage)) {
+  startMergeLabRoute();
+} else {
+  startClassicGame();
+}
+
+function startMergeLabRoute(): void {
+  const platform = createCrazyGamesPlatform({ win: window });
+  void platform.init();
+  const storage = createStorageAdapter({
+    namespace: 'cellular-death-match.cg.v1',
+    localStorage: runtimeStorage,
+  });
+  const analytics = createAnalytics({
+    nowMs: () => performance.now(),
+    sink: (event) => {
+      if (import.meta.env.DEV) console.debug('[merge-lab]', event.name, event.data ?? {});
+    },
+  });
+  startMergeLabExperience({
+    canvas,
+    layout,
+    storage,
+    analytics,
+    platform,
+    nowMs: () => performance.now(),
+    eventNowMs: () => Date.now(),
+  });
+}
+
+function startClassicGame(): void {
 const run = createRun(Date.now() & 0xffffffff);
 const screens = createScreens();
 const debug = createDebugPanel();
@@ -120,7 +190,6 @@ if (hudEl && typeof ResizeObserver === 'function') {
   publishHudBottom();
 }
 
-const runtimeStorage = window.localStorage;
 const simClock = createFixedStepClock({
   ticksPerSecond: loadSimTicksPerSecond(runtimeStorage),
   nowMs: performance.now(),
@@ -1832,4 +1901,5 @@ function swatchForCellId(cellId: number, _paletteSize: number): string {
 function swatchForArchetype(archetype: EnemyArchetype): string {
   const [r, g, b] = ARCHETYPE_INFO[archetype].color;
   return `rgb(${r}, ${g}, ${b})`;
+}
 }

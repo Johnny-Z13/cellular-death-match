@@ -5,15 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Cellular Death Match</title>
     <meta name="theme-color" content="#04080a" />
+    <script>
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (
+          params.get('cg') === '1'
+          || params.get('cg') === 'true'
+          || params.get('mergeLab') === '1'
+          || params.get('mergeLab') === 'true'
+          || params.get('mode') === 'merge-lab'
+          || window.location.hash === '#merge-lab'
+        ) {
+          document.documentElement.dataset.launch = 'merge-lab';
+        }
+      } catch {}
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1" />
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon.png?v=1" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=1" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap"
-      rel="stylesheet"
-    />
+    <script>
+      if (document.documentElement.dataset.launch !== 'merge-lab') {
+        const googleFonts = document.createElement('link');
+        googleFonts.rel = 'stylesheet';
+        googleFonts.href = 'https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap';
+        document.head.append(googleFonts);
+      }
+    </script>
     <link rel="stylesheet" href="/src/styles.css?v=20260727-mobile-hardening" />
   </head>
   <body>

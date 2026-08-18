@@ -65,6 +65,10 @@ html, body {
   display: none !important;
 }
 
+html[data-launch="merge-lab"] .screen-title-screen {
+  display: none;
+}
+
 /* Faint grain/scanline atmosphere over the whole document */
 body::after {
   content: "";
@@ -190,6 +194,186 @@ canvas {
 .layout[data-screen="loadout"] .hud {
   opacity: 0;
   pointer-events: none;
+}
+
+.layout.merge-lab-active {
+  padding: calc(54px + env(safe-area-inset-top)) 10px calc(96px + env(safe-area-inset-bottom));
+  grid-template-rows: 1fr;
+}
+
+.layout.merge-lab-active .screen,
+.layout.merge-lab-active .toolbox,
+.layout.merge-lab-active .life-panel,
+.layout.merge-lab-active .ticker,
+.layout.merge-lab-active .hud,
+.layout.merge-lab-active .mobile-shell,
+.layout.merge-lab-active .notebook-button,
+.layout.merge-lab-active .fullscreen-button,
+.layout.merge-lab-active .options-button,
+.layout.merge-lab-active .options-panel,
+.layout.merge-lab-active .options-scrim {
+  display: none !important;
+}
+
+.layout.merge-lab-active canvas {
+  width: min(94vw, calc(100svh - 178px), 760px);
+  height: min(94vw, calc(100svh - 178px), 760px);
+  border-color: rgba(255, 219, 112, 0.45);
+  cursor: grab;
+}
+
+.layout.merge-lab-active canvas:active {
+  cursor: grabbing;
+}
+
+.merge-lab-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  color: var(--ink);
+  font-family: var(--font-mono);
+}
+
+.merge-lab-hud {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  left: max(10px, env(safe-area-inset-left));
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: calc(100vw - 108px - env(safe-area-inset-left) - env(safe-area-inset-right));
+}
+
+.merge-lab-chip {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid rgba(135, 222, 226, 0.26);
+  border-radius: 8px;
+  background: rgba(6, 13, 16, 0.78);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 0 16px rgba(91, 233, 214, 0.05), 0 8px 20px rgba(0, 0, 0, 0.34);
+  color: var(--ink-dim);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.merge-lab-chip strong {
+  color: var(--amber);
+  font-size: 13px;
+}
+
+.merge-lab-prompt {
+  position: fixed;
+  left: 50%;
+  bottom: max(48px, calc(30px + env(safe-area-inset-bottom)));
+  transform: translateX(-50%);
+  min-width: min(280px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  padding: 13px 16px;
+  border: 1px solid rgba(240, 195, 90, 0.42);
+  border-radius: 8px;
+  background: rgba(13, 17, 14, 0.86);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  color: #fff4c4;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.38), inset 0 0 22px rgba(240, 195, 90, 0.08);
+  font-family: var(--font-display);
+  font-size: clamp(15px, 3.8vw, 22px);
+  letter-spacing: 0;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.merge-lab-status {
+  position: fixed;
+  left: 50%;
+  bottom: max(14px, calc(8px + env(safe-area-inset-bottom)));
+  transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+  color: var(--ink-dim);
+  font-size: 11px;
+  line-height: 1.3;
+  text-align: center;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.72);
+}
+
+.merge-lab-reward {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0.86);
+  min-width: 132px;
+  padding: 10px 14px;
+  border: 1px solid rgba(240, 195, 90, 0.66);
+  border-radius: 8px;
+  background: rgba(8, 13, 12, 0.84);
+  color: #fff4c4;
+  font-family: var(--font-display);
+  font-size: clamp(18px, 5vw, 34px);
+  letter-spacing: 0;
+  text-align: center;
+  opacity: 0;
+  box-shadow: 0 0 38px rgba(240, 195, 90, 0.22), inset 0 0 22px rgba(240, 195, 90, 0.12);
+}
+
+.merge-lab-reward-pop .merge-lab-reward {
+  animation: merge-lab-reward-pop 900ms ease-out forwards;
+}
+
+.merge-lab-reward-pop [data-merge-lab-atlas-chip] {
+  border-color: rgba(240, 195, 90, 0.8);
+  box-shadow: 0 0 24px rgba(240, 195, 90, 0.22), inset 0 0 16px rgba(240, 195, 90, 0.12);
+}
+
+@keyframes merge-lab-reward-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -38%) scale(0.78);
+  }
+  18% {
+    opacity: 1;
+    transform: translate(-50%, -58%) scale(1.08);
+  }
+  72% {
+    opacity: 1;
+    transform: translate(-50%, -72%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -92%) scale(0.96);
+  }
+}
+
+.merge-lab-invalid .merge-lab-prompt {
+  border-color: rgba(255, 123, 92, 0.68);
+  color: #ffd2c8;
+}
+
+.merge-lab-merged .merge-lab-chip:first-child {
+  border-color: rgba(240, 195, 90, 0.64);
+}
+
+@media (max-width: 420px) {
+  .layout.merge-lab-active {
+    padding-top: calc(64px + env(safe-area-inset-top));
+    padding-bottom: calc(106px + env(safe-area-inset-bottom));
+  }
+
+  .merge-lab-hud {
+    max-width: calc(100vw - 88px);
+    gap: 6px;
+  }
+
+  .merge-lab-chip {
+    min-height: 30px;
+    padding: 6px 8px;
+    font-size: 10px;
+  }
 }
 
 /* ---- Top chrome buttons (Options / Full screen) ------------------------- */
