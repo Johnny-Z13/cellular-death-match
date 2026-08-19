@@ -8,7 +8,9 @@ export const FEED_DNA = 10;
 export const NOVICE_UPGRADE_DNA = 30;
 export const SECOND_MERGE_DNA = 90;
 
-export type MergeLabUpgradeChoice = 'quick_split' | 'hard_shell';
+// These are existing ecosystem upgrade ids so the onboarding choice can carry
+// directly into the live run instead of becoming throwaway tutorial state.
+export type MergeLabUpgradeChoice = 'egg_1' | 'red_buffer_1';
 
 export interface MergeLabSave {
   version: typeof MERGE_LAB_SAVE_VERSION;
@@ -262,5 +264,9 @@ function clampInt(value: unknown, min: number, max: number): number {
 }
 
 function upgradeChoice(value: unknown): MergeLabUpgradeChoice | null {
-  return value === 'quick_split' || value === 'hard_shell' ? value : null;
+  if (value === 'egg_1' || value === 'red_buffer_1') return value;
+  // Migrate the two labels used by the initial isolated Merge Lab slice.
+  if (value === 'quick_split') return 'egg_1';
+  if (value === 'hard_shell') return 'red_buffer_1';
+  return null;
 }

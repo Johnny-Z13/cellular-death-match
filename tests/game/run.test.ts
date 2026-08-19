@@ -30,6 +30,27 @@ describe('start', () => {
     expect(run.getState().phase).toBe('arena');
     expect(run.getState().fightIndex).toBe(0);
   });
+
+  it('can enter the first live ecosystem after an external onboarding handoff', () => {
+    const run = createRun(42);
+    run.startAfterOnboarding('egg_1');
+
+    expect(run.getState()).toMatchObject({
+      phase: 'arena',
+      fightIndex: 1,
+      upgrades: [{ id: 'egg_1', stacks: 1 }],
+      epochResults: ['completed'],
+    });
+    expect(run.getObjective().kind).toBe('preserve_grazers');
+    expect(run.getPlayerConfig().eggCharges).toBe(10);
+  });
+
+  it('rejects an unknown external onboarding upgrade before starting', () => {
+    const run = createRun(42);
+
+    expect(() => run.startAfterOnboarding('not_an_upgrade')).toThrow(/unknown onboarding upgrade/);
+    expect(run.getState().phase).toBe('title');
+  });
 });
 
 describe('winFight — non-final fight', () => {

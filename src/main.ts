@@ -72,6 +72,7 @@ import { createCrazyGamesPlatform } from './platform/crazyGames';
 import { shouldLaunchMergeLab } from './platform/launchMode';
 import { createStorageAdapter } from './platform/storage';
 import { startMergeLabExperience } from './ui/mergeLabExperience';
+import type { MergeLabUpgradeChoice } from './game/mergeLab';
 
 declare const __COMMIT_MESSAGE__: string;
 
@@ -163,7 +164,8 @@ function startMergeLabRoute(): void {
       if (import.meta.env.DEV) console.debug('[merge-lab]', event.name, event.data ?? {});
     },
   });
-  startMergeLabExperience({
+  let experience: ReturnType<typeof startMergeLabExperience> | null = null;
+  experience = startMergeLabExperience({
     canvas,
     layout,
     storage,
@@ -171,10 +173,17 @@ function startMergeLabRoute(): void {
     platform,
     nowMs: () => performance.now(),
     eventNowMs: () => Date.now(),
+    onEnterEcosystem: (choice) => {
+      experience?.destroy();
+      experience = null;
+      delete document.documentElement.dataset.launch;
+      document.title = 'Cellular Death Match';
+      startClassicGame({ handoffChoice: choice });
+    },
   });
 }
 
-function startClassicGame(): void {
+function startClassicGame(options: { handoffChoice?: MergeLabUpgradeChoice } = {}): void {
 const run = createRun(Date.now() & 0xffffffff);
 const screens = createScreens();
 const debug = createDebugPanel();
@@ -232,6 +241,23 @@ applyOnboardingStateReset(discoveryStorage);
 let discoverySave: DiscoverySaveState = loadDiscoverySave(discoveryStorage);
 let discoveryProgression = createDiscoveryProgression(discoverySave);
 const strainLibrary: StrainLibrary = createStrainLibrary(discoveryStorage);
+let pendingHandoffChoice = options.handoffChoice ?? null;
+if (pendingHandoffChoice) {
+  // The Merge Lab replaces the old first dish: carry its guaranteed Bloom
+  // discovery and completion grant forward before entering the live ecosystem.
+  // Gate on Bloom so re-entering a completed Merge Lab cannot farm grants.
+  if (!discoveryProgression.discoveredBreedIds.includes('bloom_mass')) {
+    discoveryProgression = updateDiscoveryProgression(discoveryProgression, {
+      breedIds: ['bloom_mass'],
+      noteIds: ['breed_bloom_mass'],
+    });
+    const onboardingGrant = applyCompletionResearchGrant(discoveryProgression);
+    if (onboardingGrant) discoveryProgression = onboardingGrant.progression;
+    saveRuntimeDiscoveryState();
+  }
+  strainLibrary.bankStrain('bloom_mass');
+  strainLibrary.save();
+}
 // Allow up to PALETTE_SIZE total cell colors for evolving ecosystem spawns.
 const PALETTE_SIZE = 32;
 
@@ -550,16 +576,18 @@ function endPasteStroke(event?: PointerEvent): void {
 canvas.addEventListener('pointerup', endPasteStroke);
 canvas.addEventListener('pointercancel', endPasteStroke);
 
-screens.onTitleStart(() => {
+function enterClassicEcosystem(): void {
   ecologyAudio.unlock();
   uiAudio.unlock();
   uiAudio.play('ui_select');
-  if (strainLibrary.getAvailableStrains().length > 1) {
+  if (!pendingHandoffChoice && strainLibrary.getAvailableStrains().length > 1) {
     showLoadoutPicker();
     return;
   }
   beginRunWithCurrentLoadout();
-});
+}
+
+screens.onTitleStart(enterClassicEcosystem);
 screens.onEndRestart(() => {
   uiAudio.play('ui_select');
   fx.playWipe();
@@ -630,13 +658,19 @@ screens.setTool(selectedTool);
 screens.setEggArchetype(selectedEggArchetype);
 screens.setSelectedLifeform(selectedEggArchetype);
 
-showPhase();
-if (shouldOpenLifeformsForNewPlayer({
-  hasSeenTutorial: coach.hasSeenTutorial(),
-  isMobileViewport: isMobileViewport(),
-  viewportHeight: window.innerHeight,
-})) {
-  screens.openMobileLifeformsDrawer();
+if (pendingHandoffChoice) {
+  // startClassicGame is intentionally one large closure; defer until its later
+  // state initializers have run before startNewFight touches them.
+  queueMicrotask(enterClassicEcosystem);
+} else {
+  showPhase();
+  if (shouldOpenLifeformsForNewPlayer({
+    hasSeenTutorial: coach.hasSeenTutorial(),
+    isMobileViewport: isMobileViewport(),
+    viewportHeight: window.innerHeight,
+  })) {
+    screens.openMobileLifeformsDrawer();
+  }
 }
 
 function showPhase() {
@@ -721,7 +755,10 @@ function beginRunWithCurrentLoadout(loadout = strainLibrary.getPlayableLoadout()
   const playableLoadout = playableLifeformIds(loadout);
   currentRunLoadout = new Set(playableLoadout);
   setEggLifeformSelection(playableLoadout[0] ?? 'swarmlet');
-  run.start();
+  const handoffChoice = pendingHandoffChoice;
+  pendingHandoffChoice = null;
+  if (handoffChoice) run.startAfterOnboarding(handoffChoice);
+  else run.start();
   resetRunTelemetry();
   startNewFight();
 }
