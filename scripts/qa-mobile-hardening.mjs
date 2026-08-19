@@ -121,7 +121,15 @@ for (const viewport of viewports) {
 
   await page.click('#options-button');
   const optionsPanel = await page.locator('#debug').boundingBox();
+  const resetControls = await page.evaluate(() => ({
+    reset: document.querySelector('#reset-onboarding-button')?.textContent,
+    deleteSave: document.querySelector('#delete-save-data-button')?.textContent,
+    statusLive: document.querySelector('#save-data-status')?.getAttribute('aria-live'),
+  }));
   assert(optionsPanel, `${viewport.name}: options did not open`);
+  assert(resetControls.reset === 'Reset onboarding', `${viewport.name}: reset onboarding control missing`);
+  assert(resetControls.deleteSave === 'Delete all save data', `${viewport.name}: delete save data control missing`);
+  assert(resetControls.statusLive === 'polite', `${viewport.name}: save data status is not announced`);
   assert(
     await page.evaluate(() => document.activeElement?.id) === 'options-close',
     `${viewport.name}: options did not receive focus`,

@@ -47,6 +47,12 @@ import {
 import { researchBriefForGrant, type ResearchBriefLine } from './game/researchBrief';
 import { applyOnboardingStateReset } from './game/onboardingReset';
 import {
+  deleteAllGameSaveData,
+  resetOnboardingSaveData,
+  shouldResetOnboardingFromLocation,
+  stripOnboardingResetParamsFromUrl,
+} from './game/saveDataReset';
+import {
   isOnboardingEpoch,
   lifeformUnlocksForCurrentStage,
   shouldUseOnboardingDishForCurrentStage,
@@ -131,6 +137,12 @@ function createFallbackStorage(): Storage {
 }
 
 const runtimeStorage = safeRuntimeStorage();
+
+if (shouldResetOnboardingFromLocation(window.location)) {
+  resetOnboardingSaveData(runtimeStorage);
+  const nextUrl = stripOnboardingResetParamsFromUrl(new URL(window.location.href));
+  window.history.replaceState(null, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+}
 
 if (shouldLaunchMergeLab(window.location, runtimeStorage)) {
   startMergeLabRoute();
@@ -350,6 +362,31 @@ screens.onOptionsOpen(() => {
 screens.onOptionsClose(() => {
   uiAudio.play('ui_tap');
   setOptionsMenuOpen(false);
+});
+
+const saveDataStatus = document.getElementById('save-data-status');
+const resetOnboardingButton = document.getElementById('reset-onboarding-button');
+const deleteSaveDataButton = document.getElementById('delete-save-data-button');
+
+resetOnboardingButton?.addEventListener('click', () => {
+  uiAudio.unlock();
+  uiAudio.play('ui_select');
+  const removed = resetOnboardingSaveData(runtimeStorage);
+  if (saveDataStatus) saveDataStatus.textContent = `onboarding reset: ${removed} key${removed === 1 ? '' : 's'}`;
+  window.setTimeout(() => window.location.reload(), 220);
+});
+
+deleteSaveDataButton?.addEventListener('click', () => {
+  uiAudio.unlock();
+  uiAudio.play('ui_tap');
+  const confirmed = window.confirm('Delete all Cellular Death Match save data on this device? This cannot be undone.');
+  if (!confirmed) {
+    if (saveDataStatus) saveDataStatus.textContent = 'delete cancelled';
+    return;
+  }
+  const removed = deleteAllGameSaveData(runtimeStorage);
+  if (saveDataStatus) saveDataStatus.textContent = `save data deleted: ${removed} key${removed === 1 ? '' : 's'}`;
+  window.setTimeout(() => window.location.reload(), 220);
 });
 
 screens.onAudioToggle(() => {

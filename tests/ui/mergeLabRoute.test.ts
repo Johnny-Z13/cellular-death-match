@@ -24,6 +24,12 @@ describe('Merge Lab CrazyGames route', () => {
     expect(mainSource).toContain('startMergeLabExperience({');
   });
 
+  it('supports phone-friendly onboarding reset before Merge Lab route selection', () => {
+    expect(mainSource.indexOf('shouldResetOnboardingFromLocation(window.location)'))
+      .toBeLessThan(mainSource.indexOf('shouldLaunchMergeLab(window.location, runtimeStorage)'));
+    expect(mainSource).toContain('stripOnboardingResetParamsFromUrl(new URL(window.location.href))');
+  });
+
   it('renders the required first playable HUD language', () => {
     expect(mergeLabSource).toContain('Merge cells.');
     expect(mergeLabSource).toContain('Feed it.');

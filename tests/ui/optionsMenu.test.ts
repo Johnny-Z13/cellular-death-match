@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 const html = readFileSync('index.html', 'utf8');
 const mainSource = readFileSync('src/main.ts', 'utf8');
 const screensSource = readFileSync('src/ui/screens.ts', 'utf8');
+const styles = readFileSync('src/styles.css', 'utf8');
 
 describe('options menu', () => {
   it('replaces the chrome sound control with Options and keeps Sound inside the dialog', () => {
@@ -14,6 +15,17 @@ describe('options menu', () => {
     expect(html).toContain('id="audio-button" class="debug-option-button"');
     expect(html).toContain('id="haptics-button" class="debug-option-button"');
     expect(html).toContain('hidden>Haptics — On</button>');
+  });
+
+  it('exposes reset controls inside Options with destructive confirmation wiring', () => {
+    expect(html).toContain('id="reset-onboarding-button"');
+    expect(html).toContain('Reset onboarding');
+    expect(html).toContain('id="delete-save-data-button"');
+    expect(html).toContain('Delete all save data');
+    expect(html).toContain('id="save-data-status" aria-live="polite"');
+    expect(mainSource).toContain('resetOnboardingSaveData(runtimeStorage)');
+    expect(mainSource).toContain('deleteAllGameSaveData(runtimeStorage)');
+    expect(mainSource).toContain("window.confirm('Delete all Cellular Death Match save data");
   });
 
   it('exposes haptics only when the browser supports the mobile feature', () => {
@@ -39,6 +51,8 @@ describe('options menu', () => {
     expect(mainSource).toContain('trapOptionsFocus(event);');
     expect(mainSource).toContain("document.getElementById('options-close')?.focus();");
     expect(mainSource).toContain('optionsReturnFocus?.focus();');
+    expect(styles).toContain('.title-automata {\n  position: absolute;');
+    expect(styles).toContain('pointer-events: none;');
   });
 
   it('pauses ticks and resets the clock so resume cannot catch up paused time', () => {
