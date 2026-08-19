@@ -108,6 +108,89 @@ try {
 
     await page.reload({ waitUntil: 'networkidle' });
     await page.waitForSelector('.merge-lab-overlay');
+    const afterMergeReload = await page.evaluate((key) => {
+      const save = localStorage.getItem(key);
+      return {
+        prompt: document.querySelector('[data-merge-lab-prompt]')?.textContent,
+        dna: document.querySelector('[data-merge-lab-dna]')?.textContent,
+        atlas: document.querySelector('[data-merge-lab-atlas]')?.textContent,
+        parsed: save ? JSON.parse(save) : null,
+      };
+    }, saveKey);
+
+    assert(afterMergeReload.prompt === 'Feed it.', `${name}: reload did not preserve prompt`);
+    assert(afterMergeReload.dna === '70', `${name}: reload did not preserve DNA`);
+    assert(afterMergeReload.atlas === '1/3', `${name}: reload did not preserve atlas`);
+    assert(afterMergeReload.parsed?.run?.dna === 70, `${name}: reload save shape invalid`);
+
+    const nutrientX = box.x + box.width * 0.53;
+    const nutrientY = box.y + box.height * 0.69;
+    if (mobile) await page.touchscreen.tap(nutrientX, nutrientY);
+    else await page.mouse.click(nutrientX, nutrientY);
+    await page.waitForTimeout(140);
+
+    const afterFeed = await page.evaluate((key) => {
+      const save = localStorage.getItem(key);
+      return {
+        prompt: document.querySelector('[data-merge-lab-prompt]')?.textContent,
+        dna: document.querySelector('[data-merge-lab-dna]')?.textContent,
+        atlas: document.querySelector('[data-merge-lab-atlas]')?.textContent,
+        rewardVisible: document.querySelector('.merge-lab-reward')?.textContent,
+        upgradeHidden: document.querySelector('[data-merge-lab-choice-panel]')?.hasAttribute('hidden'),
+        parsed: save ? JSON.parse(save) : null,
+      };
+    }, saveKey);
+
+    assert(afterFeed.prompt === 'Choose upgrade.', `${name}: feed did not advance to upgrade choice`);
+    assert(afterFeed.dna === '80', `${name}: feed DNA did not update to 80`);
+    assert(afterFeed.atlas === '1/3', `${name}: feed should preserve first atlas reveal`);
+    assert(afterFeed.rewardVisible === '+10 DNA', `${name}: feed reward burst missing`);
+    assert(afterFeed.upgradeHidden === false, `${name}: upgrade panel is hidden after feed`);
+    assert(afterFeed.parsed?.run?.firstFeedAtMs !== null, `${name}: feed timestamp missing`);
+
+    await page.getByRole('button', { name: 'Quick split' }).click();
+    await page.waitForTimeout(140);
+    const afterUpgrade = await page.evaluate((key) => {
+      const save = localStorage.getItem(key);
+      return {
+        prompt: document.querySelector('[data-merge-lab-prompt]')?.textContent,
+        dna: document.querySelector('[data-merge-lab-dna]')?.textContent,
+        atlas: document.querySelector('[data-merge-lab-atlas]')?.textContent,
+        upgradeHidden: document.querySelector('[data-merge-lab-choice-panel]')?.hasAttribute('hidden'),
+        parsed: save ? JSON.parse(save) : null,
+      };
+    }, saveKey);
+
+    assert(afterUpgrade.prompt === 'Merge II cells.', `${name}: upgrade did not expose next merge`);
+    assert(afterUpgrade.dna === '110', `${name}: upgrade DNA did not update to 110`);
+    assert(afterUpgrade.atlas === '1/3', `${name}: upgrade should not consume atlas slot`);
+    assert(afterUpgrade.upgradeHidden === true, `${name}: upgrade panel did not hide`);
+    assert(afterUpgrade.parsed?.flags?.noviceTopUpClaimed === true, `${name}: upgrade flag missing`);
+    assert(afterUpgrade.parsed?.upgrade?.firstChoice === 'quick_split', `${name}: upgrade choice missing`);
+
+    if (mobile) await page.touchscreen.tap(x, y);
+    else await page.mouse.click(x, y);
+    await page.waitForTimeout(140);
+    const afterSecondMerge = await page.evaluate((key) => {
+      const save = localStorage.getItem(key);
+      return {
+        prompt: document.querySelector('[data-merge-lab-prompt]')?.textContent,
+        dna: document.querySelector('[data-merge-lab-dna]')?.textContent,
+        atlas: document.querySelector('[data-merge-lab-atlas]')?.textContent,
+        replayHidden: document.querySelector('[data-merge-lab-complete-panel]')?.hasAttribute('hidden'),
+        parsed: save ? JSON.parse(save) : null,
+      };
+    }, saveKey);
+
+    assert(afterSecondMerge.prompt === 'Sample secured.', `${name}: second merge did not complete the mini-loop`);
+    assert(afterSecondMerge.dna === '200', `${name}: second merge DNA did not update to 200`);
+    assert(afterSecondMerge.atlas === '2/3', `${name}: second atlas reveal missing`);
+    assert(afterSecondMerge.replayHidden === false, `${name}: replay CTA is hidden after mini-loop`);
+    assert(afterSecondMerge.parsed?.run?.secondMergeAtMs !== null, `${name}: second merge timestamp missing`);
+    assert(afterSecondMerge.parsed?.mergeTiers?.sprinter === 3, `${name}: second merge tier missing`);
+
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForSelector('.merge-lab-overlay');
     const afterReload = await page.evaluate((key) => {
       const save = localStorage.getItem(key);
       return {
@@ -118,25 +201,40 @@ try {
       };
     }, saveKey);
 
-    assert(afterReload.prompt === 'Feed it.', `${name}: reload did not preserve prompt`);
-    assert(afterReload.dna === '70', `${name}: reload did not preserve DNA`);
-    assert(afterReload.atlas === '1/3', `${name}: reload did not preserve atlas`);
-    assert(afterReload.parsed?.run?.dna === 70, `${name}: reload save shape invalid`);
+    assert(afterReload.prompt === 'Sample secured.', `${name}: final reload did not preserve mini-loop completion`);
+    assert(afterReload.dna === '200', `${name}: final reload did not preserve DNA`);
+    assert(afterReload.atlas === '2/3', `${name}: final reload did not preserve atlas`);
+    assert(afterReload.parsed?.run?.dna === 200, `${name}: final reload save shape invalid`);
 
     await page.screenshot({ path: `/private/tmp/merge-lab-qa-${name}.png`, fullPage: true });
-    results.push({ name, firstFrame, afterMerge, afterReload });
+    results.push({ name, firstFrame, afterMerge, afterFeed, afterUpgrade, afterSecondMerge, afterReload });
     await context.close();
   }
 } finally {
   await browser.close();
 }
 
-console.log(JSON.stringify(results.map(({ name, afterMerge, afterReload }) => ({
+console.log(JSON.stringify(results.map(({ name, afterMerge, afterFeed, afterUpgrade, afterSecondMerge, afterReload }) => ({
   name,
   afterMerge: {
     prompt: afterMerge.prompt,
     dna: afterMerge.dna,
     atlas: afterMerge.atlas,
+  },
+  afterFeed: {
+    prompt: afterFeed.prompt,
+    dna: afterFeed.dna,
+    atlas: afterFeed.atlas,
+  },
+  afterUpgrade: {
+    prompt: afterUpgrade.prompt,
+    dna: afterUpgrade.dna,
+    atlas: afterUpgrade.atlas,
+  },
+  afterSecondMerge: {
+    prompt: afterSecondMerge.prompt,
+    dna: afterSecondMerge.dna,
+    atlas: afterSecondMerge.atlas,
   },
   afterReload: {
     prompt: afterReload.prompt,

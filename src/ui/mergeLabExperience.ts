@@ -1,4 +1,9 @@
-import { createMergeLabRuntime, type MergeLabRuntime } from '../game/mergeLab';
+import {
+  MERGE_LAB_SAVE_KEY,
+  createMergeLabRuntime,
+  type MergeLabRuntime,
+  type MergeLabUpgradeChoice,
+} from '../game/mergeLab';
 import type { Analytics } from '../platform/analytics';
 import type { CrazyGamesPlatform } from '../platform/crazyGames';
 import type { GameStorage } from '../platform/storage';
@@ -71,10 +76,29 @@ export function startMergeLabExperience(options: MergeLabExperienceOptions): Mer
     overlay.root.classList.remove('merge-lab-idle');
     window.clearTimeout(idleTimer);
     runtime.recordFirstInput(eventNowMs());
-    if (runtime.state.run.firstMergeAtMs !== null && near(pos, NUTRIENT, FEED_RADIUS)) {
+    if (
+      runtime.state.run.firstMergeAtMs !== null
+      && runtime.state.run.firstFeedAtMs === null
+      && near(pos, NUTRIENT, FEED_RADIUS)
+    ) {
       runtime.performFeed(eventNowMs());
+      flashReward(overlay, '+10 DNA');
       updateHud(overlay, runtime);
       render();
+      return;
+    }
+    if (runtime.state.flags.noviceTopUpClaimed && runtime.state.run.secondMergeAtMs === null) {
+      if (near(pos, RING, MERGE_RADIUS * 0.72)) {
+        performSecondMerge();
+        return;
+      }
+      const secondDragTarget = dragTargetAt(pos);
+      dragTarget = secondDragTarget === 'tray' ? null : secondDragTarget;
+      dragPoint = dragTarget ? pos : null;
+      if (dragTarget) {
+        options.canvas.setPointerCapture(event.pointerId);
+        render();
+      }
       return;
     }
     if (runtime.state.run.firstMergeAtMs !== null) return;
@@ -99,12 +123,15 @@ export function startMergeLabExperience(options: MergeLabExperienceOptions): Mer
   const pointerUp = (event: PointerEvent) => {
     if (!dragTarget) return;
     const pos = pointerToCanvasPoint(options.canvas, event);
-    const validDrop = near(pos, RING, MERGE_RADIUS) || near(pos, oppositeCell(dragTarget), MERGE_RADIUS);
+    const secondMerge = runtime.state.flags.noviceTopUpClaimed && runtime.state.run.secondMergeAtMs === null;
+    const validDrop = near(pos, RING, MERGE_RADIUS)
+      || (!secondMerge && near(pos, oppositeCell(dragTarget), MERGE_RADIUS));
     dragTarget = null;
     dragPoint = null;
     try { options.canvas.releasePointerCapture(event.pointerId); } catch { /* already released */ }
     if (validDrop) {
-      performMerge();
+      if (secondMerge) performSecondMerge();
+      else performMerge();
     } else {
       overlay.root.classList.add('merge-lab-invalid');
       window.setTimeout(() => overlay.root.classList.remove('merge-lab-invalid'), 220);
@@ -121,17 +148,54 @@ export function startMergeLabExperience(options: MergeLabExperienceOptions): Mer
     runtime.recordFirstInput(eventNowMs());
     if (runtime.state.run.firstMergeAtMs === null) {
       performMerge();
-    } else {
+    } else if (runtime.state.run.firstFeedAtMs === null) {
       runtime.performFeed(eventNowMs());
+      flashReward(overlay, '+10 DNA');
       updateHud(overlay, runtime);
       render();
+    } else if (!runtime.state.flags.noviceTopUpClaimed) {
+      performUpgrade('quick_split');
+    } else if (runtime.state.run.secondMergeAtMs === null) {
+      performSecondMerge();
     }
+  };
+
+  const upgradeClick = (event: MouseEvent) => {
+    const target = event.target instanceof HTMLElement
+      ? event.target.closest<HTMLButtonElement>('[data-merge-lab-upgrade]')
+      : null;
+    if (!target) return;
+    const choice = target.dataset.mergeLabUpgrade;
+    if (choice !== 'quick_split' && choice !== 'hard_shell') return;
+    runtime.recordFirstInput(eventNowMs());
+    performUpgrade(choice);
+  };
+
+  const replayClick = () => {
+    options.storage.remove(MERGE_LAB_SAVE_KEY);
+    window.location.reload();
   };
 
   function performMerge(): void {
     runtime.performFirstMerge(eventNowMs());
     overlay.root.classList.add('merge-lab-merged');
     flashReward(overlay, '+70 DNA');
+    updateHud(overlay, runtime);
+    render();
+  }
+
+  function performUpgrade(choice: MergeLabUpgradeChoice): void {
+    runtime.performNoviceUpgrade(choice, eventNowMs());
+    overlay.root.classList.add('merge-lab-upgraded');
+    flashReward(overlay, '+30 DNA');
+    updateHud(overlay, runtime);
+    render();
+  }
+
+  function performSecondMerge(): void {
+    runtime.performSecondMerge(eventNowMs());
+    overlay.root.classList.add('merge-lab-second-merged');
+    flashReward(overlay, '+90 DNA');
     updateHud(overlay, runtime);
     render();
   }
@@ -145,6 +209,8 @@ export function startMergeLabExperience(options: MergeLabExperienceOptions): Mer
   options.canvas.addEventListener('pointerup', pointerUp);
   options.canvas.addEventListener('pointercancel', pointerUp);
   options.canvas.addEventListener('keydown', keyDown);
+  overlay.upgradePanel.addEventListener('click', upgradeClick);
+  overlay.replayButton.addEventListener('click', replayClick);
 
   let raf = window.requestAnimationFrame(function frame() {
     if (destroyed) return;
@@ -164,6 +230,8 @@ export function startMergeLabExperience(options: MergeLabExperienceOptions): Mer
       options.canvas.removeEventListener('pointerup', pointerUp);
       options.canvas.removeEventListener('pointercancel', pointerUp);
       options.canvas.removeEventListener('keydown', keyDown);
+      overlay.upgradePanel.removeEventListener('click', upgradeClick);
+      overlay.replayButton.removeEventListener('click', replayClick);
       overlay.root.remove();
       for (const item of hiddenClassicUi) {
         item.element.hidden = item.wasHidden;
@@ -198,15 +266,20 @@ function drawMergeLab(
   drawDish(ctx, w, h);
   drawThreat(ctx, w, h, runtime.state.run.firstFeedAtMs !== null ? 0.52 : 1, nowMs);
 
-  if (runtime.state.run.firstMergeAtMs === null) {
+  if (runtime.state.run.firstMergeAtMs === null || (runtime.state.flags.noviceTopUpClaimed && runtime.state.run.secondMergeAtMs === null)) {
     drawMergeRing(ctx, w, h, pulse);
-    drawCapsule(ctx, w, h, pointForDrag('left', dragTarget, dragPoint), '#4de1ff', 'I', dragTarget === 'left');
-    drawCapsule(ctx, w, h, pointForDrag('right', dragTarget, dragPoint), '#4de1ff', 'I', dragTarget === 'right');
-    drawTrayDock(ctx, w, h, pulse);
-    drawCapsule(ctx, w, h, pointForDrag('tray', dragTarget, dragPoint), '#4de1ff', 'I', dragTarget === 'tray');
-    if (showIdleGhost) drawGhostPath(ctx, w, h, pulse);
+    const secondMerge = runtime.state.flags.noviceTopUpClaimed && runtime.state.run.secondMergeAtMs === null;
+    const tier = secondMerge ? 'II' : 'I';
+    const color = secondMerge ? '#8dff6e' : '#4de1ff';
+    drawCapsule(ctx, w, h, pointForDrag('left', dragTarget, dragPoint), color, tier, dragTarget === 'left');
+    drawCapsule(ctx, w, h, pointForDrag('right', dragTarget, dragPoint), color, tier, dragTarget === 'right');
+    if (!secondMerge) {
+      drawTrayDock(ctx, w, h, pulse);
+      drawCapsule(ctx, w, h, pointForDrag('tray', dragTarget, dragPoint), '#4de1ff', 'I', dragTarget === 'tray');
+    }
+    if (showIdleGhost && !secondMerge) drawGhostPath(ctx, w, h, pulse);
   } else {
-    drawMergedCell(ctx, w, h, pulse, runtime.state.run.firstFeedAtMs !== null);
+    drawMergedCell(ctx, w, h, pulse, runtime.state.run.firstFeedAtMs !== null, runtime.state.run.secondMergeAtMs !== null);
     drawNutrient(ctx, w, h, runtime.state.run.firstFeedAtMs === null, pulse);
   }
 }
@@ -218,6 +291,8 @@ function createOverlay(layout: HTMLElement): {
   atlas: HTMLElement;
   reward: HTMLElement;
   status: HTMLElement;
+  upgradePanel: HTMLElement;
+  replayButton: HTMLButtonElement;
 } {
   const existing = layout.querySelector<HTMLElement>('.merge-lab-overlay');
   existing?.remove();
@@ -230,6 +305,13 @@ function createOverlay(layout: HTMLElement): {
       <span class="merge-lab-chip" data-merge-lab-atlas-chip>Atlas <strong data-merge-lab-atlas>0/3</strong></span>
     </div>
     <div class="merge-lab-reward" data-merge-lab-reward aria-live="polite"></div>
+    <div class="merge-lab-choice-panel" data-merge-lab-choice-panel hidden>
+      <button type="button" data-merge-lab-upgrade="quick_split">Quick split</button>
+      <button type="button" data-merge-lab-upgrade="hard_shell">Hard shell</button>
+    </div>
+    <div class="merge-lab-complete-panel" data-merge-lab-complete-panel hidden>
+      <button type="button" data-merge-lab-replay>Run again</button>
+    </div>
     <div class="merge-lab-prompt" data-merge-lab-prompt>Merge cells.</div>
     <div class="merge-lab-status" data-merge-lab-status>Drag matching cells together.</div>
   `;
@@ -241,6 +323,8 @@ function createOverlay(layout: HTMLElement): {
     atlas: root.querySelector('[data-merge-lab-atlas]')!,
     reward: root.querySelector('[data-merge-lab-reward]')!,
     status: root.querySelector('[data-merge-lab-status]')!,
+    upgradePanel: root.querySelector('[data-merge-lab-choice-panel]')!,
+    replayButton: root.querySelector('[data-merge-lab-replay]')!,
   };
 }
 
@@ -290,15 +374,25 @@ function updateHud(
   const state = runtime.state;
   overlay.dna.textContent = String(state.run.dna);
   overlay.atlas.textContent = `${state.atlas.reveals}/3`;
+  overlay.upgradePanel.hidden = true;
+  overlay.replayButton.parentElement!.hidden = true;
   if (state.run.firstMergeAtMs === null) {
     overlay.prompt.textContent = 'Merge cells.';
     overlay.status.textContent = 'Drag matching cells together.';
   } else if (state.run.firstFeedAtMs === null) {
     overlay.prompt.textContent = 'Feed it.';
     overlay.status.textContent = '+70 DNA saved. Atlas reveal started.';
+  } else if (!state.flags.noviceTopUpClaimed) {
+    overlay.prompt.textContent = 'Choose upgrade.';
+    overlay.status.textContent = '+80 DNA saved. Pick the first trait.';
+    overlay.upgradePanel.hidden = false;
+  } else if (state.run.secondMergeAtMs === null) {
+    overlay.prompt.textContent = 'Merge II cells.';
+    overlay.status.textContent = '+110 DNA saved. Build the next sample.';
   } else {
-    overlay.prompt.textContent = 'Cell II stable.';
-    overlay.status.textContent = '+80 DNA saved. First upgrade path unlocked soon.';
+    overlay.prompt.textContent = 'Sample secured.';
+    overlay.status.textContent = '+200 DNA saved. Atlas 2/3 leaves the next slot open.';
+    overlay.replayButton.parentElement!.hidden = false;
   }
 }
 
@@ -413,15 +507,22 @@ function drawTrayDock(ctx: CanvasRenderingContext2D, w: number, h: number, pulse
   ctx.restore();
 }
 
-function drawMergedCell(ctx: CanvasRenderingContext2D, w: number, h: number, pulse: number, fed: boolean): void {
+function drawMergedCell(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  pulse: number,
+  fed: boolean,
+  complete = false,
+): void {
   const pos = RING;
-  const r = w * (fed ? 0.085 : 0.073) + pulse * w * 0.006;
+  const r = w * (complete ? 0.098 : fed ? 0.085 : 0.073) + pulse * w * 0.006;
   ctx.save();
-  ctx.shadowColor = fed ? '#9dff6e' : '#4de1ff';
-  ctx.shadowBlur = fed ? 34 : 24;
+  ctx.shadowColor = complete ? '#ffd96a' : fed ? '#9dff6e' : '#4de1ff';
+  ctx.shadowBlur = complete ? 44 : fed ? 34 : 24;
   const grad = ctx.createRadialGradient(w * pos.x - r * 0.3, h * pos.y - r * 0.28, r * 0.2, w * pos.x, h * pos.y, r);
   grad.addColorStop(0, '#ffffff');
-  grad.addColorStop(0.22, fed ? '#a8ff76' : '#7cf3ff');
+  grad.addColorStop(0.22, complete ? '#ffe98c' : fed ? '#a8ff76' : '#7cf3ff');
   grad.addColorStop(0.72, '#1d8393');
   grad.addColorStop(1, '#093039');
   ctx.fillStyle = grad;
@@ -436,7 +537,7 @@ function drawMergedCell(ctx: CanvasRenderingContext2D, w: number, h: number, pul
   ctx.font = `800 ${Math.max(18, w * 0.04)}px sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('II', w * pos.x, h * pos.y + 1);
+  ctx.fillText(complete ? 'III' : 'II', w * pos.x, h * pos.y + 1);
   ctx.restore();
 }
 

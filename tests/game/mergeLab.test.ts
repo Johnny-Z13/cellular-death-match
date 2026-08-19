@@ -5,6 +5,8 @@ import {
   FEED_DNA,
   FIRST_MERGE_DNA,
   MERGE_LAB_SAVE_KEY,
+  NOVICE_UPGRADE_DNA,
+  SECOND_MERGE_DNA,
   createEmptyMergeLabSave,
   createMergeLabRuntime,
   loadMergeLabSave,
@@ -54,6 +56,35 @@ describe('Merge Lab runtime', () => {
     expect(runtime.state.run.dna).toBe(FIRST_MERGE_DNA + FEED_DNA);
     expect(runtime.state.run.firstFeedAtMs).toBe(300);
     expect(loadMergeLabSave(storage).run.dna).toBe(FIRST_MERGE_DNA + FEED_DNA);
+  });
+
+  it('continues after feed through an upgrade choice and second merge', () => {
+    const storage = createStorageAdapter({
+      namespace: 'cellular-death-match.cg.v1',
+      localStorage: createMemoryKeyValueStorage(),
+    });
+    const analytics = createAnalytics({ nowMs: () => 0 });
+    const runtime = createMergeLabRuntime(storage, analytics, 0);
+
+    runtime.performFirstMerge(100);
+    runtime.performFeed(200);
+    runtime.performSecondMerge(250);
+    expect(runtime.state.run.secondMergeAtMs).toBeNull();
+
+    runtime.performNoviceUpgrade('quick_split', 300);
+    runtime.performSecondMerge(400);
+
+    const expectedDna = FIRST_MERGE_DNA + FEED_DNA + NOVICE_UPGRADE_DNA + SECOND_MERGE_DNA;
+    expect(runtime.state.run.dna).toBe(expectedDna);
+    expect(runtime.state.flags.noviceTopUpClaimed).toBe(true);
+    expect(runtime.state.upgrade.firstChoice).toBe('quick_split');
+    expect(runtime.state.run.firstUpgradeAtMs).toBe(300);
+    expect(runtime.state.run.secondMergeAtMs).toBe(400);
+    expect(runtime.state.atlas.reveals).toBe(2);
+    expect(runtime.state.mergeTiers.sprinter).toBe(3);
+    expect(loadMergeLabSave(storage).run.dna).toBe(expectedDna);
+    expect(analytics.events().map((event) => event.name)).toContain('next_goal_shown');
+    expect(analytics.events().map((event) => event.name)).toContain('second_merge');
   });
 
   it('recovers safely from corrupt saved state', () => {

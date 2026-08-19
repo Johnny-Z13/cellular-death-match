@@ -33,6 +33,11 @@ describe('Merge Lab CrazyGames route', () => {
   it('renders the required first playable HUD language', () => {
     expect(mergeLabSource).toContain('Merge cells.');
     expect(mergeLabSource).toContain('Feed it.');
+    expect(mergeLabSource).toContain('Choose upgrade.');
+    expect(mergeLabSource).toContain('Merge II cells.');
+    expect(mergeLabSource).toContain('Sample secured.');
+    expect(mergeLabSource).toContain('Quick split');
+    expect(mergeLabSource).toContain('Run again');
     expect(mergeLabSource).toContain('Atlas');
     expect(mergeLabSource).not.toContain('Incubator locked');
   });
@@ -41,6 +46,7 @@ describe('Merge Lab CrazyGames route', () => {
     expect(mergeLabSource).toContain("options.analytics.record('first_frame'");
     expect(mergeLabSource).toContain("options.analytics.record('gameplay_start'");
     expect(readFileSync('src/game/mergeLab.ts', 'utf8')).toContain("analytics.record('first_reward'");
+    expect(readFileSync('src/game/mergeLab.ts', 'utf8')).toContain("analytics.record('next_goal_shown'");
   });
 
   it('has a repeatable browser QA gate for the CrazyGames route', () => {

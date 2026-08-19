@@ -5,6 +5,10 @@ export const MERGE_LAB_SAVE_KEY = 'save';
 export const MERGE_LAB_SAVE_VERSION = 1;
 export const FIRST_MERGE_DNA = 70;
 export const FEED_DNA = 10;
+export const NOVICE_UPGRADE_DNA = 30;
+export const SECOND_MERGE_DNA = 90;
+
+export type MergeLabUpgradeChoice = 'quick_split' | 'hard_shell';
 
 export interface MergeLabSave {
   version: typeof MERGE_LAB_SAVE_VERSION;
@@ -19,10 +23,15 @@ export interface MergeLabSave {
     firstMergeAtMs: number | null;
     firstRewardAtMs: number | null;
     firstFeedAtMs: number | null;
+    firstUpgradeAtMs: number | null;
+    secondMergeAtMs: number | null;
   };
   atlas: {
     reveals: number;
     firstFamily: string | null;
+  };
+  upgrade: {
+    firstChoice: MergeLabUpgradeChoice | null;
   };
   mergeTiers: Record<string, number>;
   updatedAtMs: number;
@@ -33,6 +42,8 @@ export interface MergeLabRuntime {
   recordFirstInput(nowMs: number): MergeLabSave;
   performFirstMerge(nowMs: number): MergeLabSave;
   performFeed(nowMs: number): MergeLabSave;
+  performNoviceUpgrade(choice: MergeLabUpgradeChoice, nowMs: number): MergeLabSave;
+  performSecondMerge(nowMs: number): MergeLabSave;
 }
 
 export function createEmptyMergeLabSave(nowMs = 0): MergeLabSave {
@@ -49,10 +60,15 @@ export function createEmptyMergeLabSave(nowMs = 0): MergeLabSave {
       firstMergeAtMs: null,
       firstRewardAtMs: null,
       firstFeedAtMs: null,
+      firstUpgradeAtMs: null,
+      secondMergeAtMs: null,
     },
     atlas: {
       reveals: 0,
       firstFamily: null,
+    },
+    upgrade: {
+      firstChoice: null,
     },
     mergeTiers: {
       sprinter: 1,
@@ -138,6 +154,51 @@ export function createMergeLabRuntime(
         dna: FEED_DNA,
       });
     },
+    performNoviceUpgrade(choice, atMs) {
+      if (state.run.firstFeedAtMs === null || state.flags.noviceTopUpClaimed) return state;
+      const next = commit({
+        ...state,
+        flags: { ...state.flags, noviceTopUpClaimed: true },
+        run: {
+          ...state.run,
+          dna: state.run.dna + NOVICE_UPGRADE_DNA,
+          firstUpgradeAtMs: atMs,
+        },
+        upgrade: {
+          firstChoice: choice,
+        },
+        updatedAtMs: atMs,
+      }, 'first_upgrade', {
+        choice,
+        dna: NOVICE_UPGRADE_DNA,
+      });
+      analytics.record('next_goal_shown', { goal: 'second_merge' });
+      return next;
+    },
+    performSecondMerge(atMs) {
+      if (!state.flags.noviceTopUpClaimed || state.run.secondMergeAtMs !== null) return state;
+      return commit({
+        ...state,
+        run: {
+          ...state.run,
+          dna: state.run.dna + SECOND_MERGE_DNA,
+          secondMergeAtMs: atMs,
+        },
+        atlas: {
+          reveals: Math.max(state.atlas.reveals, 2),
+          firstFamily: state.atlas.firstFamily ?? 'sprinter',
+        },
+        mergeTiers: {
+          ...state.mergeTiers,
+          sprinter: Math.max(state.mergeTiers.sprinter ?? 1, 3),
+        },
+        updatedAtMs: atMs,
+      }, 'second_merge', {
+        dna: SECOND_MERGE_DNA,
+        atlasReveals: 2,
+        mergeTier: 3,
+      });
+    },
   };
 }
 
@@ -163,10 +224,15 @@ export function sanitizeMergeLabSave(value: unknown): MergeLabSave {
       firstMergeAtMs: nullableNonNegativeNumber(run.firstMergeAtMs),
       firstRewardAtMs: nullableNonNegativeNumber(run.firstRewardAtMs),
       firstFeedAtMs: nullableNonNegativeNumber(run.firstFeedAtMs),
+      firstUpgradeAtMs: nullableNonNegativeNumber(run.firstUpgradeAtMs),
+      secondMergeAtMs: nullableNonNegativeNumber(run.secondMergeAtMs),
     },
     atlas: {
       reveals: clampInt(atlas.reveals, 0, 12),
       firstFamily: typeof atlas.firstFamily === 'string' ? atlas.firstFamily : null,
+    },
+    upgrade: {
+      firstChoice: upgradeChoice(objectValue(input.upgrade).firstChoice),
     },
     mergeTiers: sanitizeMergeTiers(mergeTiers),
     updatedAtMs: nonNegativeNumber(input.updatedAtMs),
@@ -193,4 +259,8 @@ function nullableNonNegativeNumber(value: unknown): number | null {
 function clampInt(value: unknown, min: number, max: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return min;
   return Math.max(min, Math.min(max, Math.floor(value)));
+}
+
+function upgradeChoice(value: unknown): MergeLabUpgradeChoice | null {
+  return value === 'quick_split' || value === 'hard_shell' ? value : null;
 }
