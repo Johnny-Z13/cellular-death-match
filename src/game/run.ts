@@ -34,6 +34,7 @@ export interface RunState {
 export interface Run {
   getState(): RunState;
   start(): void;
+  startAfterOnboarding(upgradeId: string): void;
   completeEpoch(): void;
   skipEpoch(): void;
   failEpoch(): void;
@@ -107,6 +108,19 @@ export function createRun(seed: number): Run {
       outcome = null;
       pendingPickChoices = [];
       epochResults = [];
+      chosenObjective = undefined;
+    },
+    startAfterOnboarding(upgradeId) {
+      if (!UPGRADES.some((upgrade) => upgrade.id === upgradeId)) {
+        throw new Error(`unknown onboarding upgrade "${upgradeId}"`);
+      }
+      phase = 'arena';
+      fightIndex = 1;
+      upgrades.length = 0;
+      upgrades.push({ id: upgradeId, stacks: 1 });
+      outcome = null;
+      pendingPickChoices = [];
+      epochResults = ['completed'];
       chosenObjective = undefined;
     },
     completeEpoch() {

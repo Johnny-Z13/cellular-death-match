@@ -71,13 +71,13 @@ describe('Merge Lab runtime', () => {
     runtime.performSecondMerge(250);
     expect(runtime.state.run.secondMergeAtMs).toBeNull();
 
-    runtime.performNoviceUpgrade('quick_split', 300);
+    runtime.performNoviceUpgrade('egg_1', 300);
     runtime.performSecondMerge(400);
 
     const expectedDna = FIRST_MERGE_DNA + FEED_DNA + NOVICE_UPGRADE_DNA + SECOND_MERGE_DNA;
     expect(runtime.state.run.dna).toBe(expectedDna);
     expect(runtime.state.flags.noviceTopUpClaimed).toBe(true);
-    expect(runtime.state.upgrade.firstChoice).toBe('quick_split');
+    expect(runtime.state.upgrade.firstChoice).toBe('egg_1');
     expect(runtime.state.run.firstUpgradeAtMs).toBe(300);
     expect(runtime.state.run.secondMergeAtMs).toBe(400);
     expect(runtime.state.atlas.reveals).toBe(2);
@@ -95,5 +95,19 @@ describe('Merge Lab runtime', () => {
     storage.setRaw(MERGE_LAB_SAVE_KEY, '{bad json');
 
     expect(loadMergeLabSave(storage)).toEqual(createEmptyMergeLabSave(0));
+  });
+
+  it('migrates the original isolated tutorial choices to ecosystem upgrade ids', () => {
+    const storage = createStorageAdapter({
+      namespace: 'cellular-death-match.cg.v1',
+      localStorage: createMemoryKeyValueStorage(),
+    });
+    storage.setRaw(MERGE_LAB_SAVE_KEY, JSON.stringify({
+      ...createEmptyMergeLabSave(10),
+      flags: { firstPlayableSeen: true, firstMergeRewardClaimed: true, noviceTopUpClaimed: true },
+      upgrade: { firstChoice: 'quick_split' },
+    }));
+
+    expect(loadMergeLabSave(storage).upgrade.firstChoice).toBe('egg_1');
   });
 });

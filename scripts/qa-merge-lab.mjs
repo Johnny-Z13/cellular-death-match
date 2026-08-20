@@ -2,11 +2,12 @@ import { chromium } from '@playwright/test';
 
 const url = process.env.MERGE_LAB_URL ?? 'http://localhost:5199/?cg=1';
 const saveKey = 'cellular-death-match.cg.v1.save';
+const requestedViewport = process.env.MERGE_LAB_VIEWPORT;
 const viewports = [
   ['desktop', { width: 1280, height: 720 }, false],
   ['mobile', { width: 390, height: 844 }, true],
   ['small-mobile', { width: 375, height: 667 }, true],
-];
+].filter(([name]) => !requestedViewport || name === requestedViewport);
 
 const browser = await chromium.launch({ headless: true });
 const results = [];
@@ -26,7 +27,9 @@ try {
     }, saveKey);
     const page = await context.newPage();
     const requests = [];
+    const pageErrors = [];
     page.on('request', (request) => requests.push(request.url()));
+    page.on('pageerror', (error) => pageErrors.push(error.message));
 
     await page.goto(url, { waitUntil: 'networkidle' });
     await page.waitForSelector('.merge-lab-overlay');
@@ -148,7 +151,7 @@ try {
     assert(afterFeed.upgradeHidden === false, `${name}: upgrade panel is hidden after feed`);
     assert(afterFeed.parsed?.run?.firstFeedAtMs !== null, `${name}: feed timestamp missing`);
 
-    await page.getByRole('button', { name: 'Quick split' }).click();
+    await page.getByRole('button', { name: 'Spore rack' }).click();
     await page.waitForTimeout(140);
     const afterUpgrade = await page.evaluate((key) => {
       const save = localStorage.getItem(key);
@@ -166,7 +169,7 @@ try {
     assert(afterUpgrade.atlas === '1/3', `${name}: upgrade should not consume atlas slot`);
     assert(afterUpgrade.upgradeHidden === true, `${name}: upgrade panel did not hide`);
     assert(afterUpgrade.parsed?.flags?.noviceTopUpClaimed === true, `${name}: upgrade flag missing`);
-    assert(afterUpgrade.parsed?.upgrade?.firstChoice === 'quick_split', `${name}: upgrade choice missing`);
+    assert(afterUpgrade.parsed?.upgrade?.firstChoice === 'egg_1', `${name}: upgrade choice missing`);
 
     if (mobile) await page.touchscreen.tap(x, y);
     else await page.mouse.click(x, y);
@@ -177,15 +180,15 @@ try {
         prompt: document.querySelector('[data-merge-lab-prompt]')?.textContent,
         dna: document.querySelector('[data-merge-lab-dna]')?.textContent,
         atlas: document.querySelector('[data-merge-lab-atlas]')?.textContent,
-        replayHidden: document.querySelector('[data-merge-lab-complete-panel]')?.hasAttribute('hidden'),
+        continueHidden: document.querySelector('[data-merge-lab-complete-panel]')?.hasAttribute('hidden'),
         parsed: save ? JSON.parse(save) : null,
       };
     }, saveKey);
 
-    assert(afterSecondMerge.prompt === 'Sample secured.', `${name}: second merge did not complete the mini-loop`);
+    assert(afterSecondMerge.prompt === 'Culture ready.', `${name}: second merge did not complete the mini-loop`);
     assert(afterSecondMerge.dna === '200', `${name}: second merge DNA did not update to 200`);
     assert(afterSecondMerge.atlas === '2/3', `${name}: second atlas reveal missing`);
-    assert(afterSecondMerge.replayHidden === false, `${name}: replay CTA is hidden after mini-loop`);
+    assert(afterSecondMerge.continueHidden === false, `${name}: ecosystem handoff CTA is hidden after mini-loop`);
     assert(afterSecondMerge.parsed?.run?.secondMergeAtMs !== null, `${name}: second merge timestamp missing`);
     assert(afterSecondMerge.parsed?.mergeTiers?.sprinter === 3, `${name}: second merge tier missing`);
 
@@ -201,20 +204,57 @@ try {
       };
     }, saveKey);
 
-    assert(afterReload.prompt === 'Sample secured.', `${name}: final reload did not preserve mini-loop completion`);
+    assert(afterReload.prompt === 'Culture ready.', `${name}: final reload did not preserve mini-loop completion`);
     assert(afterReload.dna === '200', `${name}: final reload did not preserve DNA`);
     assert(afterReload.atlas === '2/3', `${name}: final reload did not preserve atlas`);
     assert(afterReload.parsed?.run?.dna === 200, `${name}: final reload save shape invalid`);
 
     await page.screenshot({ path: `/private/tmp/merge-lab-qa-${name}.png`, fullPage: true });
-    results.push({ name, firstFrame, afterMerge, afterFeed, afterUpgrade, afterSecondMerge, afterReload });
+
+    await page.getByRole('button', { name: 'Enter ecosystem' }).click();
+    try {
+      await page.waitForSelector('#hud.visible');
+    } catch (error) {
+      const diagnostic = await page.evaluate(() => ({
+        title: document.title,
+        screen: document.querySelector('.layout')?.getAttribute('data-screen'),
+        body: document.body.innerText,
+        mergeLabPresent: Boolean(document.querySelector('.merge-lab-overlay')),
+        hudClass: document.querySelector('#hud')?.className,
+      }));
+      throw new Error(`${name}: handoff timeout; page errors: ${pageErrors.join('; ')}; state: ${JSON.stringify(diagnostic)}`, {
+        cause: error,
+      });
+    }
+    await page.waitForTimeout(300);
+    const afterHandoff = await page.evaluate(() => ({
+      title: document.title,
+      screen: document.querySelector('.layout')?.getAttribute('data-screen'),
+      mergeLabPresent: Boolean(document.querySelector('.merge-lab-overlay')),
+      epoch: document.querySelector('#hud-fight')?.textContent,
+      objective: document.querySelector('#hud-objective')?.textContent,
+      upgrades: document.querySelector('#hud-upgrades')?.textContent,
+      coachVisible: document.querySelector('#coach')?.classList.contains('coach-show'),
+    }));
+
+    assert(pageErrors.length === 0, `${name}: page error during handoff: ${pageErrors.join('; ')}`);
+    assert(afterHandoff.title === 'Cellular Death Match', `${name}: classic title was not restored`);
+    assert(afterHandoff.screen === 'arena', `${name}: handoff did not enter the live arena`);
+    assert(afterHandoff.mergeLabPresent === false, `${name}: Merge Lab overlay survived handoff`);
+    assert(afterHandoff.epoch?.startsWith('2 /'), `${name}: handoff repeated onboarding instead of entering epoch 2`);
+    assert(afterHandoff.objective?.includes('Protect Grazer Cultures'), `${name}: wrong first live objective`);
+    assert(afterHandoff.upgrades?.includes('Spore Rack'), `${name}: onboarding upgrade did not carry forward`);
+    assert(afterHandoff.coachVisible === false, `${name}: old tutorial coach reappeared after handoff`);
+
+    await page.screenshot({ path: `/private/tmp/merge-lab-handoff-${name}.png`, fullPage: true });
+    results.push({ name, firstFrame, afterMerge, afterFeed, afterUpgrade, afterSecondMerge, afterReload, afterHandoff });
     await context.close();
   }
 } finally {
   await browser.close();
 }
 
-console.log(JSON.stringify(results.map(({ name, afterMerge, afterFeed, afterUpgrade, afterSecondMerge, afterReload }) => ({
+console.log(JSON.stringify(results.map(({ name, afterMerge, afterFeed, afterUpgrade, afterSecondMerge, afterReload, afterHandoff }) => ({
   name,
   afterMerge: {
     prompt: afterMerge.prompt,
@@ -241,6 +281,7 @@ console.log(JSON.stringify(results.map(({ name, afterMerge, afterFeed, afterUpgr
     dna: afterReload.dna,
     atlas: afterReload.atlas,
   },
+  afterHandoff,
 })), null, 2));
 
 function assert(condition, message) {

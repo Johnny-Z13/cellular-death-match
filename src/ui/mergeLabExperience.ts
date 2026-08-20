@@ -1,5 +1,4 @@
 import {
-  MERGE_LAB_SAVE_KEY,
   createMergeLabRuntime,
   type MergeLabRuntime,
   type MergeLabUpgradeChoice,
@@ -16,6 +15,7 @@ export interface MergeLabExperienceOptions {
   platform: CrazyGamesPlatform;
   nowMs?: () => number;
   eventNowMs?: () => number;
+  onEnterEcosystem(choice: MergeLabUpgradeChoice): void;
 }
 
 export interface MergeLabExperience {
@@ -154,7 +154,7 @@ export function startMergeLabExperience(options: MergeLabExperienceOptions): Mer
       updateHud(overlay, runtime);
       render();
     } else if (!runtime.state.flags.noviceTopUpClaimed) {
-      performUpgrade('quick_split');
+      performUpgrade('egg_1');
     } else if (runtime.state.run.secondMergeAtMs === null) {
       performSecondMerge();
     }
@@ -166,14 +166,19 @@ export function startMergeLabExperience(options: MergeLabExperienceOptions): Mer
       : null;
     if (!target) return;
     const choice = target.dataset.mergeLabUpgrade;
-    if (choice !== 'quick_split' && choice !== 'hard_shell') return;
+    if (choice !== 'egg_1' && choice !== 'red_buffer_1') return;
     runtime.recordFirstInput(eventNowMs());
     performUpgrade(choice);
   };
 
-  const replayClick = () => {
-    options.storage.remove(MERGE_LAB_SAVE_KEY);
-    window.location.reload();
+  const enterEcosystemClick = () => {
+    if (runtime.state.run.secondMergeAtMs === null) return;
+    const choice = runtime.state.upgrade.firstChoice ?? 'egg_1';
+    overlay.continueButton.disabled = true;
+    overlay.continueButton.textContent = 'Opening live dish...';
+    overlay.status.textContent = 'Transferring your culture and upgrade into the ecosystem.';
+    options.analytics.record('ecosystem_handoff', { choice });
+    options.onEnterEcosystem(choice);
   };
 
   function performMerge(): void {
@@ -210,7 +215,7 @@ export function startMergeLabExperience(options: MergeLabExperienceOptions): Mer
   options.canvas.addEventListener('pointercancel', pointerUp);
   options.canvas.addEventListener('keydown', keyDown);
   overlay.upgradePanel.addEventListener('click', upgradeClick);
-  overlay.replayButton.addEventListener('click', replayClick);
+  overlay.continueButton.addEventListener('click', enterEcosystemClick);
 
   let raf = window.requestAnimationFrame(function frame() {
     if (destroyed) return;
@@ -231,7 +236,7 @@ export function startMergeLabExperience(options: MergeLabExperienceOptions): Mer
       options.canvas.removeEventListener('pointercancel', pointerUp);
       options.canvas.removeEventListener('keydown', keyDown);
       overlay.upgradePanel.removeEventListener('click', upgradeClick);
-      overlay.replayButton.removeEventListener('click', replayClick);
+      overlay.continueButton.removeEventListener('click', enterEcosystemClick);
       overlay.root.remove();
       for (const item of hiddenClassicUi) {
         item.element.hidden = item.wasHidden;
@@ -292,7 +297,7 @@ function createOverlay(layout: HTMLElement): {
   reward: HTMLElement;
   status: HTMLElement;
   upgradePanel: HTMLElement;
-  replayButton: HTMLButtonElement;
+  continueButton: HTMLButtonElement;
 } {
   const existing = layout.querySelector<HTMLElement>('.merge-lab-overlay');
   existing?.remove();
@@ -306,11 +311,11 @@ function createOverlay(layout: HTMLElement): {
     </div>
     <div class="merge-lab-reward" data-merge-lab-reward aria-live="polite"></div>
     <div class="merge-lab-choice-panel" data-merge-lab-choice-panel hidden>
-      <button type="button" data-merge-lab-upgrade="quick_split">Quick split</button>
-      <button type="button" data-merge-lab-upgrade="hard_shell">Hard shell</button>
+      <button type="button" data-merge-lab-upgrade="egg_1">Spore rack</button>
+      <button type="button" data-merge-lab-upgrade="red_buffer_1">Control buffer</button>
     </div>
     <div class="merge-lab-complete-panel" data-merge-lab-complete-panel hidden>
-      <button type="button" data-merge-lab-replay>Run again</button>
+      <button type="button" data-merge-lab-continue>Enter ecosystem</button>
     </div>
     <div class="merge-lab-prompt" data-merge-lab-prompt>Merge cells.</div>
     <div class="merge-lab-status" data-merge-lab-status>Drag matching cells together.</div>
@@ -324,7 +329,7 @@ function createOverlay(layout: HTMLElement): {
     reward: root.querySelector('[data-merge-lab-reward]')!,
     status: root.querySelector('[data-merge-lab-status]')!,
     upgradePanel: root.querySelector('[data-merge-lab-choice-panel]')!,
-    replayButton: root.querySelector('[data-merge-lab-replay]')!,
+    continueButton: root.querySelector('[data-merge-lab-continue]')!,
   };
 }
 
@@ -375,7 +380,7 @@ function updateHud(
   overlay.dna.textContent = String(state.run.dna);
   overlay.atlas.textContent = `${state.atlas.reveals}/3`;
   overlay.upgradePanel.hidden = true;
-  overlay.replayButton.parentElement!.hidden = true;
+  overlay.continueButton.parentElement!.hidden = true;
   if (state.run.firstMergeAtMs === null) {
     overlay.prompt.textContent = 'Merge cells.';
     overlay.status.textContent = 'Drag matching cells together.';
@@ -384,15 +389,15 @@ function updateHud(
     overlay.status.textContent = '+70 DNA saved. Atlas reveal started.';
   } else if (!state.flags.noviceTopUpClaimed) {
     overlay.prompt.textContent = 'Choose upgrade.';
-    overlay.status.textContent = '+80 DNA saved. Pick the first trait.';
+    overlay.status.textContent = '+80 DNA saved. This upgrade carries into the live dish.';
     overlay.upgradePanel.hidden = false;
   } else if (state.run.secondMergeAtMs === null) {
     overlay.prompt.textContent = 'Merge II cells.';
     overlay.status.textContent = '+110 DNA saved. Build the next sample.';
   } else {
-    overlay.prompt.textContent = 'Sample secured.';
-    overlay.status.textContent = '+200 DNA saved. Atlas 2/3 leaves the next slot open.';
-    overlay.replayButton.parentElement!.hidden = false;
+    overlay.prompt.textContent = 'Culture ready.';
+    overlay.status.textContent = '+200 DNA banked. Your first live ecosystem is ready.';
+    overlay.continueButton.parentElement!.hidden = false;
   }
 }
 
