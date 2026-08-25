@@ -78,6 +78,7 @@ const reduceMotionPref = typeof window !== 'undefined'
 const canvasMaybe = document.getElementById('game') as HTMLCanvasElement | null;
 if (!canvasMaybe) throw new Error('Missing #game canvas');
 const canvas: HTMLCanvasElement = canvasMaybe;
+const onboardingDishPointer = document.getElementById('onboarding-dish-pointer');
 const layoutMaybe = document.querySelector('.layout');
 if (!(layoutMaybe instanceof HTMLElement)) throw new Error('Missing .layout');
 const layout: HTMLElement = layoutMaybe;
@@ -383,6 +384,7 @@ function applySelectedToolAt(pos: [number, number]): boolean {
     screens.updateToolCharges(arena.getToolStates());
     if (selectedTool === 'egg') {
       didPlaceEggThisEpoch = true;
+      setOnboardingDishPointerTarget(pos, true);
       coach.report('egg-placed');
     } else if (selectedTool === 'nutrient') {
       coach.report('nutrient-used');
@@ -471,6 +473,7 @@ screens.onToolSelect((tool) => {
   selectedTool = tool;
   screens.setTool(tool);
   screens.closeMobileDrawers();
+  updateButtonHint();
 });
 screens.onAgitate(() => {
   if (!arena || run.getState().phase !== 'arena') return;
@@ -521,6 +524,7 @@ screens.onEggSelect((archetype) => {
   screens.setEggArchetype(archetype);
   screens.setSelectedLifeform(archetype);
   screens.closeMobileDrawers();
+  updateButtonHint();
 });
 screens.setTool(selectedTool);
 screens.setEggArchetype(selectedEggArchetype);
@@ -1185,7 +1189,32 @@ function openingBloomCreatedInCurrentDish(): boolean {
   return arena?.getEcology().discoveries.breedIds.includes('bloom_mass') === true;
 }
 
+function setOnboardingDishPointerTarget(pos: [number, number], besideEgg = false): void {
+  if (!onboardingDishPointer) return;
+  const offsetX = besideEgg ? 12 : 0;
+  const offsetY = besideEgg ? 8 : 0;
+  const x = Math.max(12, Math.min(86, ((pos[0] + offsetX) / LX) * 100));
+  const y = Math.max(16, Math.min(86, ((pos[1] + offsetY) / LY) * 100));
+  onboardingDishPointer.style.setProperty('--onboarding-pointer-x', `${x}%`);
+  onboardingDishPointer.style.setProperty('--onboarding-pointer-y', `${y}%`);
+}
+
+function syncOnboardingPointer(): void {
+  layout.classList.remove('onboarding-point-dish', 'onboarding-point-nutrient');
+  const state = run.getState();
+  if (state.phase !== 'arena' || !arena || !coach.isActive()) return;
+  if (!shouldUseOnboardingDishForCurrentStage(state.fightIndex, openingBloomCreatedInCurrentDish())) return;
+
+  const beatIndex = coach.getBeatIndex();
+  if (beatIndex === 0) {
+    layout.classList.add('onboarding-point-dish');
+  } else if (beatIndex === 1) {
+    layout.classList.add(selectedTool === 'nutrient' ? 'onboarding-point-dish' : 'onboarding-point-nutrient');
+  }
+}
+
 function updateButtonHint(): void {
+  syncOnboardingPointer();
   const state = run.getState();
   if (state.phase !== 'arena' || !arena) {
     screens.setButtonHint(null);
@@ -1208,6 +1237,10 @@ function updateButtonHint(): void {
 
   screens.setButtonHint(null);
 }
+
+document.getElementById('coach-skip')?.addEventListener('click', () => {
+  window.requestAnimationFrame(syncOnboardingPointer);
+});
 
 function refreshArenaToolUi(): void {
   if (!arena) return;

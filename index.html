@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/src/styles.css?v=20260825-dish-first-1" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260825-onboarding-pointer-1" />
   </head>
   <body>
     <main class="layout" data-screen="title">
@@ -33,6 +33,15 @@
         ></canvas>
         <div class="dish-glass" aria-hidden="true"></div>
         <button id="notebook-button" class="notebook-button notebook-tab" type="button" aria-label="Open Discoverer's Notebook">Notebook</button>
+        <img
+          id="onboarding-dish-pointer"
+          class="onboarding-pointer onboarding-pointer-dish"
+          src="/art/ui/onboarding-pointer.png"
+          width="256"
+          height="256"
+          alt=""
+          aria-hidden="true"
+        />
       </div>
       <button id="options-button" class="chrome-button options-button" type="button" aria-label="Open options" aria-haspopup="dialog" aria-expanded="false">Options</button>
       <button id="fullscreen-button" class="chrome-button fullscreen-button" type="button" aria-label="Enter full screen">Full screen</button>
@@ -64,6 +73,7 @@
             <small>attract and feed</small>
           </span>
           <b data-tool-count>5/5</b>
+          <img class="onboarding-pointer onboarding-pointer-tool" src="/art/ui/onboarding-pointer.png" width="256" height="256" alt="" aria-hidden="true" />
         </button>
         <button class="tool-button" type="button" data-tool="paste">
           <span class="tool-icon paste-icon"></span>
@@ -331,6 +341,6 @@
         </div>
       </aside>
     </main>
-    <script type="module" src="/src/main.ts?v=20260825-dish-first-1"></script>
+    <script type="module" src="/src/main.ts?v=20260825-onboarding-pointer-1"></script>
   </body>
 </html>
