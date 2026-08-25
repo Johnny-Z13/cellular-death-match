@@ -79,7 +79,7 @@ const reduceMotionPref = typeof window !== 'undefined'
 const canvasMaybe = document.getElementById('game') as HTMLCanvasElement | null;
 if (!canvasMaybe) throw new Error('Missing #game canvas');
 const canvas: HTMLCanvasElement = canvasMaybe;
-const onboardingDishPointer = document.getElementById('onboarding-dish-pointer');
+const onboardingGuidePointer = document.getElementById('onboarding-guide-pointer');
 const layoutMaybe = document.querySelector('.layout');
 if (!(layoutMaybe instanceof HTMLElement)) throw new Error('Missing .layout');
 const layout: HTMLElement = layoutMaybe;
@@ -180,7 +180,7 @@ let nudgeCountThisEpoch = 0;
 let heardDishEventIds = new Set<number>();
 let pendingResearchBrief: ResearchBriefLine[] = [];
 let lastOpeningBloomCreated = false;
-let didPlaceEggThisEpoch = false;
+let onboardingDishGuidePos: [number, number] = [LX * 0.58, LY * 0.52];
 let discoveredBreedsThisRun = new Set<string>();
 let stabilizedBreedsThisRun = new Set<string>();
 let lastArenaEvidenceSignature = '';
@@ -212,7 +212,10 @@ function refreshVisualPerformanceProfile(): void {
 
 function schedulePerformanceProfileRefresh(): void {
   window.cancelAnimationFrame(performanceResizeFrame);
-  performanceResizeFrame = window.requestAnimationFrame(refreshVisualPerformanceProfile);
+  performanceResizeFrame = window.requestAnimationFrame(() => {
+    refreshVisualPerformanceProfile();
+    syncOnboardingPointer();
+  });
 }
 
 window.addEventListener('resize', schedulePerformanceProfileRefresh);
@@ -311,6 +314,7 @@ screens.setHapticsEnabled(haptics.isEnabled());
 
 screens.onLifeformSelect((id) => {
   if (!isSeedableLifeformId(id)) return;
+  coach.report(`lifeform:${id}`);
   setEggLifeformSelection(id);
   screens.setSelectedLifeform(id);
   // Picking any lifeform arms the egg tool so the player can drop it straight
@@ -318,6 +322,7 @@ screens.onLifeformSelect((id) => {
   selectedTool = 'egg';
   screens.setTool('egg');
   screens.closeMobileDrawers();
+  updateButtonHint();
 });
 
 window.addEventListener('keydown', (event) => {
@@ -385,12 +390,9 @@ function applySelectedToolAt(pos: [number, number]): boolean {
     uiAudio.play(DROP_SOUND_FOR_TOOL[selectedTool] ?? 'ui_tap');
     juice.ripple(pos, selectedTool);
     screens.updateToolCharges(arena.getToolStates());
+    coach.report(`${selectedTool}-used`);
     if (selectedTool === 'egg') {
-      didPlaceEggThisEpoch = true;
       setOnboardingDishPointerTarget(pos, true);
-      coach.report('egg-placed');
-    } else if (selectedTool === 'nutrient') {
-      coach.report('nutrient-used');
     }
     updateButtonHint();
     screens.closeMobileDrawers();
@@ -472,6 +474,7 @@ screens.onEndRestart(() => {
 });
 screens.onToolSelect((tool) => {
   if (!currentToolUnlocks().includes(tool)) return;
+  coach.report(`${tool}-selected`);
   uiAudio.play('ui_select');
   selectedTool = tool;
   screens.setTool(tool);
@@ -733,7 +736,6 @@ function startNewFight() {
   didAnnounceCompletion = false;
   didAnnounceEquilibrium = false;
   lastOpeningBloomCreated = false;
-  didPlaceEggThisEpoch = false;
   lastActionTick = 0;
   nudgeCountThisEpoch = 0;
   applyDiscoveryProgressionUi();
@@ -741,7 +743,7 @@ function startNewFight() {
   screens.clearTicker();
   screens.setPickResearchBrief([]);
   const objective = run.getObjective();
-  screens.addTicker(`Objective received: ${objective.name}.`);
+  screens.addTicker(`Dr. E: ${objective.name}. ${objective.hint ?? objective.description}`);
   replayPendingResearchBrief();
   if (!uiAudio.isMuted()) uiAudio.startAmbience();
   uiAudio.play('epoch_begin');
@@ -757,6 +759,10 @@ function startNewFight() {
       // Auto-end Epoch 1 when bloom is discovered.
       if (arena) {
         persistArenaDiscoveries(arena, true);
+        // Trial 1 explicitly awards the specimen Dr. E just taught. Bank it
+        // even if the live culture expires during his success presentation,
+        // otherwise Trial 2 can ask for a Bloom Mass the player cannot select.
+        advanceDiscoveryProgression({ breedIds: ['bloom_mass'] }, { breed: 'stabilized' });
         awardCompletionResearchGrant();
         sampleRunTelemetryFromArena(arena);
       }
@@ -770,8 +776,8 @@ function startNewFight() {
       run.completeEpoch();
       showPhase();
     };
-    coach.beginRun();
   }
+  coach.beginTrial(runState.fightIndex);
   screens.updateToolCharges(arena.getToolStates());
   screens.updateAgitation(arena.getAgitationState());
   updateButtonHint();
@@ -814,9 +820,9 @@ function loop() {
   // The opening Doctor entrance is a reading beat, not free simulation time.
   // It slides away on its own, leaving the live dish ready for the first egg,
   // but the ecosystem does not advance until the player has acted.
-  const holdingForFirstEgg = coach.isActive() && coach.getBeatIndex() === 0;
-  if (holdingForFirstEgg) simClock.reset(now);
-  const ticksToRun = holdingForFirstEgg ? 0 : simClock.consumeTicks(now);
+  const holdingForFirstInstruction = coach.isActive() && coach.getBeatIndex() === 0;
+  if (holdingForFirstInstruction) simClock.reset(now);
+  const ticksToRun = holdingForFirstInstruction ? 0 : simClock.consumeTicks(now);
   const player = arena.state.cells.get(PLAYER_ID);
 
   for (let i = 0; i < ticksToRun; i++) {
@@ -1256,27 +1262,51 @@ function openingBloomCreatedInCurrentDish(): boolean {
 }
 
 function setOnboardingDishPointerTarget(pos: [number, number], besideEgg = false): void {
-  if (!onboardingDishPointer) return;
   const offsetX = besideEgg ? 12 : 0;
   const offsetY = besideEgg ? 8 : 0;
-  const x = Math.max(12, Math.min(86, ((pos[0] + offsetX) / LX) * 100));
-  const y = Math.max(16, Math.min(86, ((pos[1] + offsetY) / LY) * 100));
-  onboardingDishPointer.style.setProperty('--onboarding-pointer-x', `${x}%`);
-  onboardingDishPointer.style.setProperty('--onboarding-pointer-y', `${y}%`);
+  onboardingDishGuidePos = [
+    Math.max(12, Math.min(LX * 0.86, pos[0] + offsetX)),
+    Math.max(16, Math.min(LY * 0.86, pos[1] + offsetY)),
+  ];
 }
 
 function syncOnboardingPointer(): void {
-  layout.classList.remove('onboarding-point-dish', 'onboarding-point-nutrient');
+  if (!onboardingGuidePointer) return;
+  onboardingGuidePointer.classList.remove('is-visible');
   const state = run.getState();
   if (state.phase !== 'arena' || !arena || !coach.isActive()) return;
-  if (!shouldUseOnboardingDishForCurrentStage(state.fightIndex, openingBloomCreatedInCurrentDish())) return;
+  const target = coach.getCurrentPointerTarget();
+  if (!target) return;
 
-  const beatIndex = coach.getBeatIndex();
-  if (beatIndex === 0) {
-    layout.classList.add('onboarding-point-dish');
-  } else if (beatIndex === 1) {
-    layout.classList.add(selectedTool === 'nutrient' ? 'onboarding-point-dish' : 'onboarding-point-nutrient');
+  let x = 0;
+  let y = 0;
+  if (target === 'dish') {
+    const rect = canvas.getBoundingClientRect();
+    x = rect.left + (onboardingDishGuidePos[0] / LX) * rect.width;
+    y = rect.top + (onboardingDishGuidePos[1] / LY) * rect.height;
+  } else {
+    const needsMobileDrawer = target.startsWith('lifeform:')
+      && window.matchMedia('(max-width: 899px)').matches
+      && layout.dataset.mobileDrawer !== 'lifeforms';
+    const selector = needsMobileDrawer
+      ? '#mobile-lifeforms-toggle'
+      : target.startsWith('tool:')
+      ? `[data-tool="${target.slice('tool:'.length)}"]`
+      : target.startsWith('lifeform:')
+        ? `[data-lifeform-id="${target.slice('lifeform:'.length)}"]`
+        : null;
+    if (!selector) return;
+    const targetElement = document.querySelector<HTMLElement>(selector);
+    if (!targetElement || targetElement.hidden) return;
+    const rect = targetElement.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    x = rect.left + rect.width * 0.5;
+    y = rect.top + Math.min(18, rect.height * 0.25);
   }
+  onboardingGuidePointer.style.left = `${Math.round(x)}px`;
+  onboardingGuidePointer.style.top = `${Math.round(y)}px`;
+  onboardingGuidePointer.dataset.target = target;
+  onboardingGuidePointer.classList.add('is-visible');
 }
 
 function updateButtonHint(): void {
@@ -1292,12 +1322,9 @@ function updateButtonHint(): void {
     return;
   }
 
-  if (shouldUseOnboardingDishForCurrentStage(state.fightIndex, openingBloomCreatedInCurrentDish())) {
-    if (!didPlaceEggThisEpoch) {
-      screens.setButtonHint('egg', 'hint');
-    } else {
-      screens.setButtonHint('nutrient', 'hint');
-    }
+  const coachButtonHint = coach.getCurrentButtonHint();
+  if (coachButtonHint) {
+    screens.setButtonHint(coachButtonHint as ToolId, 'hint');
     return;
   }
 
@@ -1305,6 +1332,9 @@ function updateButtonHint(): void {
 }
 
 document.getElementById('coach-skip')?.addEventListener('click', () => {
+  window.requestAnimationFrame(syncOnboardingPointer);
+});
+document.getElementById('mobile-lifeforms-toggle')?.addEventListener('click', () => {
   window.requestAnimationFrame(syncOnboardingPointer);
 });
 
@@ -1404,8 +1434,9 @@ function announceEpochCompletion(complete: boolean, objectiveName: string): void
     uiAudio.play('experiment_ready');
     haptics.play('success');
     fx.showToast('discovery', 'Experiment Complete', `${objectiveName} — finish when ready`);
-    screens.addTicker('Experiment complete: press End to finish, or keep cultivating.', 'discovery');
+    screens.addTicker('Dr. E: That is the result. Press End to finish, or keep cultivating.', 'discovery');
     coach.report('objective-complete');
+    updateButtonHint();
   } else if (!complete && didAnnounceCompletion) {
     didAnnounceCompletion = false;
   }

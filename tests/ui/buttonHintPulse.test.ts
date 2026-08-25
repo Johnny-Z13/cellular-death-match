@@ -19,13 +19,12 @@ describe('button hint pulse', () => {
     expect(css).toContain('.button-ready-pulse');
   });
 
-  it('drives the first dish action hint from egg to nutrient before Bloom', () => {
-    expect(mainSource).toContain('let didPlaceEggThisEpoch = false;');
-    expect(mainSource).toContain("screens.setButtonHint('egg', 'hint');");
-    expect(mainSource).toContain("screens.setButtonHint('nutrient', 'hint');");
+  it('drives each Professor-directed tool hint from the current precise beat', () => {
+    expect(mainSource).toContain('const coachButtonHint = coach.getCurrentButtonHint();');
+    expect(mainSource).toContain("screens.setButtonHint(coachButtonHint as ToolId, 'hint');");
     expect(mainSource).toContain('screens.setAgitateUnlocked(run.getState().fightIndex >= 3);');
     expect(mainSource).toContain('updateButtonHint();');
-    expect(mainSource).toContain("if (selectedTool === 'egg') {");
-    expect(mainSource).toContain('didPlaceEggThisEpoch = true;');
+    expect(mainSource).toContain('coach.report(`${tool}-selected`)');
+    expect(mainSource).toContain('coach.report(`${selectedTool}-used`)');
   });
 });

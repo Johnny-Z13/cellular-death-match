@@ -78,12 +78,12 @@ describe('run telemetry', () => {
   it('samples the current arena before every run phase transition that can replace it', () => {
     expect(mainSource).toContain('function sampleRunTelemetryFromArena(ar: Arena): void');
     expect(appearsBefore(
-      branchSource('coach.onOnboardingComplete = () => {', 'coach.beginRun();'),
+      branchSource('coach.onOnboardingComplete = () => {', 'coach.beginTrial(runState.fightIndex);'),
       'sampleRunTelemetryFromArena(arena);',
       'run.completeEpoch();',
     )).toBe(true);
     expect(appearsBefore(
-      branchSource('coach.onOnboardingComplete = () => {', 'coach.beginRun();'),
+      branchSource('coach.onOnboardingComplete = () => {', 'coach.beginTrial(runState.fightIndex);'),
       'runTelemetry.recordEpochCompleted();',
       'run.completeEpoch();',
     )).toBe(true);

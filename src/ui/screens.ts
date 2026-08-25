@@ -608,8 +608,8 @@ export function createScreens(): Screens {
         ? `${info.objectiveName}: complete — finish when ready`
         : `${info.objectiveName}: ${info.objectiveSummary}`;
       hudHint.textContent = info.objectiveComplete
-        ? 'Experiment complete. Press End to bank it, or keep cultivating.'
-        : info.objectiveHint;
+        ? 'Dr. E: That is the result. Press End to bank it, or keep cultivating.'
+        : `Dr. E: ${info.objectiveHint}`;
       hudUpgrades.textContent = info.upgrades.length === 0 ? 'none' : info.upgrades.join(', ');
     },
     setEquilibrium(info) {

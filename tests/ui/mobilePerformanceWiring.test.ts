@@ -9,7 +9,7 @@ const titleSource = readFileSync('src/ui/titleAutomata.ts', 'utf8');
 describe('mobile performance wiring', () => {
   it('keeps fixed simulation ticks while pacing presentation frames', () => {
     expect(mainSource).toContain('shouldRenderFrame(lastRenderAt, now, visualProfile.targetRenderFps)');
-    expect(mainSource).toContain('const ticksToRun = holdingForFirstEgg ? 0 : simClock.consumeTicks(now);');
+    expect(mainSource).toContain('const ticksToRun = holdingForFirstInstruction ? 0 : simClock.consumeTicks(now);');
     expect(mainSource).toContain('additiveBloom: visualProfile.additiveBloom');
     expect(renderSource).toContain('if (additiveBloom) {');
   });

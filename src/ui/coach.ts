@@ -2,31 +2,28 @@
 // character beat, gives one instruction, then clears the dish before the
 // player acts. Trial 1 is intentionally only: place one egg, feed it, succeed.
 
-import { ONBOARDING_BEATS } from '../game/onboardingStage';
+import { ONBOARDING_BEATS, TRIAL_ONBOARDING_BEATS, type OnboardingBeat } from '../game/onboardingStage';
 
-export type CoachEvent =
-  | 'arena-start'
-  | 'egg-placed'
-  | 'nutrient-used'
-  | 'paste-drawn'
-  | 'objective-complete'
-  | 'bloom-discovered';
+export type CoachEvent = string;
 
 export interface Coach {
   isActive(): boolean;
   hasSeenTutorial(): boolean;
   beginRun(): void;
+  beginTrial(trialIndex: number): void;
   report(event: CoachEvent): void;
   dismiss(): void;
   getBeatIndex(): number;
   getCurrentButtonHint(): string | undefined;
+  getCurrentPointerTarget(): string | undefined;
   shouldAutoSpawn(): boolean;
   onOnboardingComplete: (() => void) | null;
   showNudge(title: string, body: string, opts?: { interruptTutorial?: boolean }): void;
   hideNudge(): void;
 }
 
-const SEEN_KEY = 'cdm.coach.seen.v7';
+const SEEN_KEY = 'cdm.coach.seen.v8';
+const SEEN_TRIALS_KEY = 'cdm.coach.trials.v1';
 const PROMPT_HOLD_MS = 3000;
 const SUCCESS_HOLD_MS = 4800;
 const SLIDE_OUT_MS = 520;
@@ -44,8 +41,11 @@ export function createCoach(): Coach {
   const skipBtn = document.getElementById('coach-skip');
 
   let active = false;
-  let awaitingBloom = false;
+  let awaitingObjective = false;
+  let objectiveObserved = false;
   let beatIndex = 0;
+  let currentTrialIndex = 0;
+  let currentBeats: readonly OnboardingBeat[] = ONBOARDING_BEATS;
   let mode: 'tutorial' | 'nudge' | 'success' = 'tutorial';
   let nudgeTimer = 0;
   let presentationTimer = 0;
@@ -53,11 +53,27 @@ export function createCoach(): Coach {
   let autoSpawnTriggered = false;
 
   function seen(): boolean {
-    try { return window.localStorage.getItem(SEEN_KEY) === '1'; } catch { return false; }
+    return seenTrials().has(0) || (() => {
+      try { return window.localStorage.getItem(SEEN_KEY) === '1'; } catch { return false; }
+    })();
   }
 
-  function markSeen(): void {
-    try { window.localStorage.setItem(SEEN_KEY, '1'); } catch { /* ignore */ }
+  function seenTrials(): Set<number> {
+    try {
+      const value = JSON.parse(window.localStorage.getItem(SEEN_TRIALS_KEY) ?? '[]');
+      return new Set(Array.isArray(value) ? value.filter(Number.isInteger) : []);
+    } catch {
+      return new Set();
+    }
+  }
+
+  function markSeen(trialIndex: number): void {
+    try {
+      const trials = seenTrials();
+      trials.add(trialIndex);
+      window.localStorage.setItem(SEEN_TRIALS_KEY, JSON.stringify([...trials]));
+      if (trialIndex === 0) window.localStorage.setItem(SEEN_KEY, '1');
+    } catch { /* ignore */ }
   }
 
   function clearPresentationTimers(): void {
@@ -131,19 +147,20 @@ export function createCoach(): Coach {
 
   function finish(): void {
     active = false;
-    awaitingBloom = false;
-    markSeen();
+    awaitingObjective = false;
+    objectiveObserved = false;
+    markSeen(currentTrialIndex);
     hide();
   }
 
   function render(): void {
     if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
-    const beat = ONBOARDING_BEATS[beatIndex];
+    const beat = currentBeats[beatIndex];
     if (!beat) { hidePresentation(); return; }
     mode = 'tutorial';
     clearPresentationTimers();
     clearPresentationClasses();
-    const isIntroduction = beat.id === 'place-egg';
+    const isIntroduction = currentTrialIndex === 0 && beatIndex === 0;
     root.classList.add(isIntroduction ? 'coach-intro' : 'coach-prompt');
     layout?.classList.add(isIntroduction ? 'coach-intro-active' : 'coach-prompt-active');
     kickerEl.textContent = isIntroduction
@@ -151,12 +168,8 @@ export function createCoach(): Coach {
       : 'Dr. E. Mergent · Next action';
     titleEl.textContent = beat.title;
     bodyEl.textContent = beat.body;
-    stepEl.textContent = `${beatIndex + 1} / ${ONBOARDING_BEATS.length}`;
-    if (actionEl) {
-      actionEl.textContent = isIntroduction
-        ? 'Egg armed · Tap the dish'
-        : 'Nutrient ready · Feed the egg';
-    }
+    stepEl.textContent = `${beatIndex + 1} / ${currentBeats.length}`;
+    if (actionEl) actionEl.textContent = beat.action;
     if (skipBtn) skipBtn.textContent = 'Let me experiment';
     show();
     scheduleSlideOut(PROMPT_HOLD_MS);
@@ -165,7 +178,7 @@ export function createCoach(): Coach {
   function celebrateSuccess(coach: Coach): void {
     if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
     active = false;
-    awaitingBloom = false;
+    awaitingObjective = false;
     mode = 'success';
     clearPresentationTimers();
     clearPresentationClasses();
@@ -173,23 +186,27 @@ export function createCoach(): Coach {
     root.classList.add('coach-success');
     layout?.classList.add('coach-prompt-active');
     layout?.classList.add('coach-success-active');
-    kickerEl.textContent = 'Trial 01 · Success';
-    titleEl.textContent = 'Excellent work. It changed.';
-    bodyEl.textContent = 'One egg. One feed. One new form. That was the easy part — ahead are competing strains, unstable reagents, and a much larger experiment.';
+    kickerEl.textContent = `Trial ${String(currentTrialIndex + 1).padStart(2, '0')} · Success`;
+    const success = trialSuccessCopy(currentTrialIndex);
+    titleEl.textContent = success.title;
+    bodyEl.textContent = success.body;
     stepEl.textContent = 'Complete';
     if (actionEl) actionEl.textContent = 'Culture logged · The real work begins';
     if (skipBtn) skipBtn.textContent = 'Continue';
     show();
-    scheduleSlideOut(SUCCESS_HOLD_MS, () => {
-      finish();
-      coach.onOnboardingComplete?.();
-    });
+    scheduleSlideOut(SUCCESS_HOLD_MS, () => finishSuccess(coach));
+  }
+
+  function finishSuccess(coach: Coach): void {
+    const shouldAdvanceFirstTrial = currentTrialIndex === 0;
+    finish();
+    if (shouldAdvanceFirstTrial) coach.onOnboardingComplete?.();
   }
 
   function hideNudgeNow(): void {
     window.clearTimeout(nudgeTimer);
     if (mode !== 'nudge') return;
-    if (active && !awaitingBloom) render();
+    if (active && !awaitingObjective) render();
     else hidePresentation();
   }
 
@@ -206,35 +223,56 @@ export function createCoach(): Coach {
       return beatIndex;
     },
     getCurrentButtonHint() {
-      if (!active || awaitingBloom) return undefined;
-      return ONBOARDING_BEATS[beatIndex]?.buttonHint;
+      if (!active || awaitingObjective) return undefined;
+      const target = currentBeats[beatIndex]?.pointerTarget;
+      return target?.startsWith('tool:') ? target.slice('tool:'.length) : undefined;
+    },
+    getCurrentPointerTarget() {
+      if (!active || awaitingObjective) return undefined;
+      return currentBeats[beatIndex]?.pointerTarget;
     },
     shouldAutoSpawn() {
-      if (!awaitingBloom || autoSpawnTriggered) return false;
+      if (currentTrialIndex !== 0 || !awaitingObjective || autoSpawnTriggered) return false;
       autoSpawnTriggered = true;
       return true;
     },
     beginRun() {
-      if (seen()) { active = false; hide(); return; }
+      coach.beginTrial(0);
+    },
+    beginTrial(trialIndex) {
+      const beats = TRIAL_ONBOARDING_BEATS[trialIndex];
+      if (!beats || seenTrials().has(trialIndex) || (trialIndex === 0 && seen())) {
+        active = false;
+        hide();
+        return;
+      }
+      currentTrialIndex = trialIndex;
+      currentBeats = beats;
       active = true;
-      awaitingBloom = false;
+      awaitingObjective = false;
+      objectiveObserved = false;
       beatIndex = 0;
       autoSpawnTriggered = false;
       render();
     },
     report(event) {
       if (!active) return;
-      if (awaitingBloom) {
-        if (event === 'bloom-discovered') celebrateSuccess(coach);
+      const isCompletionEvent = currentTrialIndex === 0
+        ? event === 'bloom-discovered' || event === 'objective-complete'
+        : event === 'objective-complete';
+      if (isCompletionEvent) objectiveObserved = true;
+      if (awaitingObjective) {
+        if (objectiveObserved) celebrateSuccess(coach);
         return;
       }
-      const beat = ONBOARDING_BEATS[beatIndex];
+      const beat = currentBeats[beatIndex];
       if (!beat || beat.trigger !== event) return;
       beatIndex += 1;
-      if (beatIndex >= ONBOARDING_BEATS.length) {
-        awaitingBloom = true;
+      if (beatIndex >= currentBeats.length) {
+        awaitingObjective = true;
         autoSpawnTriggered = false;
-        slideOut();
+        if (objectiveObserved) celebrateSuccess(coach);
+        else slideOut();
         return;
       }
       render();
@@ -266,9 +304,36 @@ export function createCoach(): Coach {
   if (skipBtn) {
     skipBtn.addEventListener('click', () => {
       if (mode === 'nudge') hideNudgeNow();
+      else if (mode === 'success') finishSuccess(coach);
       else finish();
     });
   }
 
   return coach;
+}
+
+function trialSuccessCopy(trialIndex: number): { title: string; body: string } {
+  const copy = [
+    {
+      title: 'Excellent work. It changed.',
+      body: 'One egg. One feed. One new form. That was the easy part — ahead are competing strains, unstable reagents, and a much larger experiment.',
+    },
+    {
+      title: 'Bitter Bloom. Precisely.',
+      body: 'You fed budding tissue, then pressured it with Toxin. The order produced a repeatable protocol.',
+    },
+    {
+      title: 'The Nutrient moved.',
+      body: 'Water carried food through the Bloom Mass without suppressing it. Record the conduit.',
+    },
+    {
+      title: 'There’s the lightning.',
+      body: 'The first Water pulse made Foam. The second discharged it. Chained reactions are where this gets interesting.',
+    },
+    {
+      title: 'A viable channel.',
+      body: 'Salt defined it, Nutrient supplied it, and Water opened it. Now keep the rest of the dish alive.',
+    },
+  ];
+  return copy[trialIndex] ?? { title: 'Good work.', body: 'The result is logged.' };
 }

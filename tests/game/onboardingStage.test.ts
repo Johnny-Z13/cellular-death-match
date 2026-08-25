@@ -9,6 +9,7 @@ import {
   toolUnlocksForCurrentStage,
   shouldUseOnboardingDishForCurrentStage,
   ONBOARDING_BEATS,
+  TRIAL_ONBOARDING_BEATS,
   isOnboardingEpoch,
   isFixedEpoch,
   isMidGameEpoch,
@@ -49,23 +50,41 @@ describe('onboarding stage gates', () => {
 });
 
 describe('onboarding beats', () => {
-  it('defines exactly 2 player-action beats', () => {
-    expect(ONBOARDING_BEATS).toHaveLength(2);
+  it('defines four precise press-then-place actions for Trial 1', () => {
+    expect(ONBOARDING_BEATS).toHaveLength(4);
+    expect(ONBOARDING_BEATS.map((beat) => beat.trigger)).toEqual([
+      'egg-selected',
+      'egg-used',
+      'nutrient-selected',
+      'nutrient-used',
+    ]);
   });
 
-  it('beat 1 is place-egg', () => {
-    expect(ONBOARDING_BEATS[0]!.id).toBe('place-egg');
+  it('starts by pointing at Egg before pointing into the dish', () => {
+    expect(ONBOARDING_BEATS[0]!.id).toBe('select-egg');
+    expect(ONBOARDING_BEATS[0]!.pointerTarget).toBe('tool:egg');
+    expect(ONBOARDING_BEATS[1]!.id).toBe('place-egg');
+    expect(ONBOARDING_BEATS[1]!.pointerTarget).toBe('dish');
   });
 
-  it('beat 2 is feed-colony', () => {
-    expect(ONBOARDING_BEATS[1]!.id).toBe('feed-colony');
+  it('points at Nutrient before asking the player to feed the colony', () => {
+    expect(ONBOARDING_BEATS[2]!.id).toBe('select-nutrient');
+    expect(ONBOARDING_BEATS[2]!.pointerTarget).toBe('tool:nutrient');
+    expect(ONBOARDING_BEATS[3]!.id).toBe('feed-colony');
+    expect(ONBOARDING_BEATS[3]!.pointerTarget).toBe('dish');
   });
 
-  it('each beat has Professor copy and a trigger event', () => {
-    for (const beat of ONBOARDING_BEATS) {
-      expect(beat.title.length).toBeGreaterThan(0);
-      expect(beat.body.length).toBeGreaterThan(0);
-      expect(beat.trigger.length).toBeGreaterThan(0);
+  it('guides all five authored trials with Professor copy and an exact target', () => {
+    expect(TRIAL_ONBOARDING_BEATS).toHaveLength(5);
+    for (const trial of TRIAL_ONBOARDING_BEATS) {
+      expect(trial.length).toBeGreaterThanOrEqual(4);
+      for (const beat of trial) {
+        expect(beat.title.length).toBeGreaterThan(0);
+        expect(beat.body.length).toBeGreaterThan(0);
+        expect(beat.trigger.length).toBeGreaterThan(0);
+        expect(beat.action.length).toBeGreaterThan(0);
+        expect(beat.pointerTarget.length).toBeGreaterThan(0);
+      }
     }
   });
 });

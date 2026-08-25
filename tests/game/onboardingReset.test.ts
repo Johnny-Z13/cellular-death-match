@@ -14,6 +14,8 @@ describe('onboarding state reset', () => {
     storage.setItem('cdm.coach.seen.v5', '1');
     storage.setItem('cdm.coach.seen.v6', '1');
     storage.setItem('cdm.coach.seen.v7', '1');
+    storage.setItem('cdm.coach.seen.v8', '1');
+    storage.setItem('cdm.coach.trials.v1', '[0,1,2]');
     storage.setItem('cdm.audio.muted', '1');
 
     expect(applyOnboardingStateReset(storage)).toBe(true);
@@ -27,6 +29,8 @@ describe('onboarding state reset', () => {
     expect(storage.getItem('cdm.coach.seen.v5')).toBeNull();
     expect(storage.getItem('cdm.coach.seen.v6')).toBeNull();
     expect(storage.getItem('cdm.coach.seen.v7')).toBeNull();
+    expect(storage.getItem('cdm.coach.seen.v8')).toBeNull();
+    expect(storage.getItem('cdm.coach.trials.v1')).toBeNull();
     expect(storage.getItem('cdm.audio.muted')).toBe('1');
     expect(storage.getItem(ONBOARDING_RESET_KEY)).toBe('1');
 
