@@ -62,7 +62,7 @@ describe('notebook catalogue content', () => {
     expect(catalyst?.isFresh).toBe(true);
     expect(catalyst?.discoveredAtLabel).toBe('Discovered on Jun 7, 2026');
     expect(catalyst?.displayNotes).toContain(DISCOVERY_NOTES.recipe_nutrient_conduit.body);
-    expect(catalyst?.displayRecipe).toContain('Water plus Nutrient');
+    expect(catalyst?.displayRecipe).toBe('Protocol: Nutrient + Water → Conduit');
     expect(view.entries.find((entry) => entry.id === 'lab_note_water_carries')?.discovered).toBe(true);
     expect(view.discoveredCount).toBe(6);
     expect(view.entries).toHaveLength(6);
@@ -79,6 +79,19 @@ describe('notebook catalogue content', () => {
     expect(view.entries.find((entry) => entry.id === 'lifeform_bloom_mass')?.isFresh).toBe(true);
     expect(view.entries.find((entry) => entry.id === 'catalyst_recipe_nutrient_conduit')?.isFresh).toBe(true);
     expect(view.entries.find((entry) => entry.id === 'lifeform_swarmlet')?.isFresh).toBe(false);
+  });
+
+  it('shows observed evidence without revealing the full protocol', () => {
+    const progression = updateDiscoveryProgression(createDiscoveryProgression(), {
+      noteIds: ['recipe_bitter_bloom'],
+    }, '2026-06-07T13:20:00.000Z', { note: 'observed' });
+    const entry = notebookViewForProgression(progression).entries.find(
+      (candidate) => candidate.id === 'catalyst_recipe_bitter_bloom',
+    );
+
+    expect(entry?.researchStage).toBe('observed');
+    expect(entry?.displayRecipe).toBe('Protocol: unresolved');
+    expect(entry?.displayNotes).toContain('reaction signature');
   });
 
   it('reveals every entry in reveal-all mode and returns to starters after clear', () => {
@@ -148,7 +161,7 @@ describe('notebook atlas (progression map)', () => {
     // Group tallies are internally consistent.
     for (const group of atlas.groups) {
       expect(group.nodes.length).toBe(group.total);
-      expect(group.nodes.filter((n) => n.state === 'discovered').length).toBe(group.discovered);
+      expect(group.nodes.filter((n) => n.state !== 'locked').length).toBe(group.discovered);
     }
   });
 
@@ -156,7 +169,7 @@ describe('notebook atlas (progression map)', () => {
     const atlas = atlasViewForProgression(revealAllDiscoveryProgression(createDiscoveryProgression()));
     expect(atlas.discoveredCount).toBe(atlas.totalCount);
     const lifeforms = atlas.groups.find((g) => g.key === 'lifeform');
-    expect(lifeforms?.nodes.every((n) => n.state === 'discovered')).toBe(true);
+    expect(lifeforms?.nodes.every((n) => n.state === 'stabilized')).toBe(true);
     expect(lifeforms?.nodes.every((n) => Array.isArray(n.color))).toBe(true);
   });
 });

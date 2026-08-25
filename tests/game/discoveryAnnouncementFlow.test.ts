@@ -6,7 +6,7 @@ const mainSource = readFileSync('src/main.ts', 'utf8');
 
 describe('organic discovery announcement flow', () => {
   it('announces newly discovered catalysts before reward unlocks', () => {
-    const functionStart = mainSource.indexOf('function advanceDiscoveryProgression(delta: DiscoveryDelta): boolean {');
+    const functionStart = mainSource.indexOf('function advanceDiscoveryProgression(');
     expect(functionStart).toBeGreaterThan(-1);
     const functionEnd = mainSource.indexOf('\n}\n\nfunction discoveryDebugInfo', functionStart);
     const body = mainSource.slice(functionStart, functionEnd);

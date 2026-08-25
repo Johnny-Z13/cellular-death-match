@@ -4,11 +4,11 @@ import { OBJECTIVES, objectiveForEpoch } from '../../src/content/objectives';
 describe('OBJECTIVES', () => {
   it('defines ecology-first objective kinds', () => {
     expect(OBJECTIVES.map((objective) => objective.kind)).toEqual([
-      'discover_breed',
-      'preserve_grazers',
-      'breed_archetype',
-      'controlled_reaction',
-      'balanced_ecology',
+      'stabilize_breed',
+      'understand_recipe',
+      'understand_recipe',
+      'understand_recipe',
+      'apply_recipe',
       'dominant_archetype',
     ]);
   });
@@ -32,7 +32,7 @@ describe('OBJECTIVES', () => {
   it('keeps the opening dish hint focused on egg and nutrient concepts', () => {
     const opening = objectiveForEpoch(0);
 
-    expect(opening.kind).toBe('discover_breed');
+    expect(opening.kind).toBe('stabilize_breed');
     expect(opening.hint).toContain('Swarmlet');
     expect(opening.hint).toContain('Nutrient');
     expect(opening.hint).not.toContain('Splitter');

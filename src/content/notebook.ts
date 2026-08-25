@@ -1,6 +1,7 @@
 import {
   BREED_DEFS,
   DISCOVERY_NOTES,
+  REACTION_RECIPES,
   type BreedId,
   type CautionLevel,
   type DiscoveryNoteId,
@@ -8,6 +9,7 @@ import {
 import { LIFEFORM_IDENTITIES, type LifeformIdentityId } from './lifeformIdentity';
 import { CHIMERA_LORE } from './chimeras';
 import type { DiscoveryProgressionState } from '../game/discoveryProgression';
+import type { ResearchStage } from '../game/discoverySave';
 
 export type NotebookCategory = 'lifeform' | 'catalyst' | 'lab_note' | 'event';
 
@@ -27,6 +29,7 @@ export interface NotebookEntry {
 
 export interface NotebookViewEntry extends NotebookEntry {
   discovered: boolean;
+  researchStage: ResearchStage;
   displayTitle: string;
   displayNotes: string;
   displayRecipe: string;
@@ -39,6 +42,9 @@ export interface NotebookViewEntry extends NotebookEntry {
 
 export interface NotebookView {
   discoveredCount: number;
+  observedCount: number;
+  understoodCount: number;
+  stabilizedCount: number;
   totalCount: number;
   entries: NotebookViewEntry[];
 }
@@ -112,14 +118,24 @@ export function notebookViewForProgression(
       : entry.unlock.noteId
         ? noteRecords.get(entry.unlock.noteId)
         : null;
+    const researchStage: ResearchStage = progression.revealAll
+      ? entry.category === 'lifeform' ? 'stabilized' : 'understood'
+      : entry.unlock.starter === true
+        ? 'stabilized'
+        : record?.stage ?? 'observed';
 
     const chimera = entry.unlock.breedId ? CHIMERA_LORE[entry.unlock.breedId] : null;
     return [{
       ...entry,
       discovered,
+      researchStage,
       displayTitle: entry.title,
-      displayNotes: `Notes: ${chimera ? `${chimera.lore} ` : ''}${entry.body}`,
-      displayRecipe: recipeLabelFor(entry.category, entry.clue),
+      displayNotes: researchStage === 'observed'
+        ? `Evidence: ${entry.category === 'lifeform' ? 'A viable phenotype appeared. Keep it alive through a successful trial to stabilize the specimen.' : 'A reaction signature was recorded. Reproduce it in an assigned trial to resolve the protocol.'}`
+        : `Notes: ${chimera ? `${chimera.lore} ` : ''}${entry.body}`,
+      displayRecipe: researchStage === 'observed'
+        ? 'Protocol: unresolved'
+        : recipeLabelFor(entry),
       discoveredAtLabel: `Discovered on ${formatDiscoveryDate(record?.discoveredAt ?? viewedAt)}`,
       isFresh: record?.fresh === true,
       chimeraSplice: chimera ? chimera.splice : null,
@@ -129,6 +145,9 @@ export function notebookViewForProgression(
 
   return {
     discoveredCount: entries.length,
+    observedCount: entries.filter((entry) => entry.researchStage === 'observed').length,
+    understoodCount: entries.filter((entry) => entry.researchStage === 'understood').length,
+    stabilizedCount: entries.filter((entry) => entry.researchStage === 'stabilized').length,
     totalCount: NOTEBOOK_ENTRIES.length,
     entries,
   };
@@ -136,7 +155,7 @@ export function notebookViewForProgression(
 
 // ---- Atlas: the full progression map (discovered + still-locked) -----------
 
-export type AtlasNodeState = 'discovered' | 'locked';
+export type AtlasNodeState = ResearchStage | 'locked';
 
 export interface AtlasNode {
   id: string;
@@ -180,6 +199,8 @@ function atlasColorFor(entry: NotebookEntry): [number, number, number] | null {
 export function atlasViewForProgression(progression: DiscoveryProgressionState): AtlasView {
   const discoveredBreeds = new Set(progression.discoveredBreedIds);
   const discoveredNotes = new Set(progression.discoveredNoteIds);
+  const breedStages = new Map(progression.breedDiscoveryRecords.map((record) => [record.id, record.stage]));
+  const noteStages = new Map(progression.noteDiscoveryRecords.map((record) => [record.id, record.stage]));
 
   const groups: AtlasGroup[] = ATLAS_GROUP_ORDER.map((key) => ({
     key,
@@ -203,9 +224,20 @@ export function atlasViewForProgression(progression: DiscoveryProgressionState):
       group.discovered += 1;
       discoveredCount += 1;
     }
+    const state: AtlasNodeState = !discovered
+      ? 'locked'
+      : progression.revealAll
+        ? entry.category === 'lifeform' ? 'stabilized' : 'understood'
+        : entry.unlock.starter
+          ? 'stabilized'
+          : entry.unlock.breedId
+            ? breedStages.get(entry.unlock.breedId) ?? 'observed'
+            : entry.unlock.noteId
+              ? noteStages.get(entry.unlock.noteId) ?? 'observed'
+              : 'understood';
     group.nodes.push({
       id: entry.id,
-      state: discovered ? 'discovered' : 'locked',
+      state,
       title: discovered ? entry.title : 'Undiscovered',
       hint: entry.clue,
       caution: entry.caution,
@@ -284,8 +316,21 @@ function clueForNote(noteId: DiscoveryNoteId, category: NotebookCategory): strin
     : 'Repeat the experiment and watch the dish log.';
 }
 
-function recipeLabelFor(category: NotebookCategory, clue: string): string {
-  return category === 'lab_note' ? `Evidence: ${clue}` : `Recipe: ${clue}`;
+function recipeLabelFor(entry: NotebookEntry): string {
+  if (entry.category === 'lab_note') return `Evidence: ${entry.clue}`;
+  if (entry.category === 'lifeform') return `Origin: ${entry.clue}`;
+  const noteId = entry.unlock.noteId;
+  const recipe = noteId?.startsWith('recipe_')
+    ? REACTION_RECIPES.find((candidate) => candidate.discoveryNoteId === noteId)
+    : null;
+  if (!recipe) return `Protocol: ${entry.clue}`;
+  const inputs = recipe.inputs.map(formatRecipeTerm).join(' + ');
+  const trigger = recipe.trigger ? ` · finish with ${formatRecipeTerm(recipe.trigger)}` : '';
+  return `Protocol: ${inputs} → ${formatRecipeTerm(recipe.effect.type)}${trigger}`;
+}
+
+function formatRecipeTerm(value: string): string {
+  return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function formatDiscoveryDate(isoDate: string): string {

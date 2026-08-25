@@ -1244,6 +1244,7 @@ describe('arena ecosystem mode', () => {
 
     expect(arena.getToolEffects().some((effect) => effect.type === 'lysis')).toBe(true);
     expect(arena.getEcology().discoveries.noteIds).toContain('recipe_bitter_bloom');
+    expect(arena.getEcology().discoveries.recipeIds).toContain('bitter_bloom');
     expect(arena.getEcology().signals.some((signal) => signal.includes('Bitter Bloom'))).toBe(true);
     expect(arena.getDishEvents().some((event) =>
       event.kind === 'caution' && event.label.includes('Bitter Bloom'),

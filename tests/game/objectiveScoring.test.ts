@@ -5,6 +5,7 @@ import {
   createObjectiveRuntime,
   evaluateObjective,
   type ObjectiveMetrics,
+  type ObjectiveEvaluationContext,
   type ObjectiveRuntime,
 } from '../../src/game/objectiveScoring';
 
@@ -22,21 +23,69 @@ function metrics(overrides: Partial<ObjectiveMetrics> = {}): ObjectiveMetrics {
     maxLifeformVolume: 320,
     maxBreedDominance: 0.36,
     nearbyDifferentBreedPair: false,
+    livingBreedIds: new Set(),
     ...overrides,
   };
 }
 
-function context(runtime: ObjectiveRuntime = createObjectiveRuntime()) {
+function context(runtime: ObjectiveRuntime = createObjectiveRuntime()): ObjectiveEvaluationContext {
   return {
     tickNo: 60,
     epochTicks: 60 * 80,
     reactions: 0,
     discoveredBreedTicks: new Map(),
+    triggeredRecipeIds: new Set(),
     runtime,
   };
 }
 
 describe('evaluateObjective procedural objectives', () => {
+  it('stabilizes a discovered breed only while a specimen is still alive', () => {
+    const objective: ObjectiveDef = {
+      kind: 'stabilize_breed',
+      name: 'Culture Shock',
+      description: 'Stabilize Bloom Mass.',
+      target: 'Bloom Mass stabilized',
+      breedId: 'bloom_mass',
+    };
+    const observed = { ...context(), discoveredBreedTicks: new Map([['bloom_mass' as const, 20]]) };
+
+    expect(evaluateObjective(objective, metrics(), observed).complete).toBe(false);
+    expect(evaluateObjective(objective, metrics({ livingBreedIds: new Set(['bloom_mass']) }), observed).complete).toBe(true);
+  });
+
+  it('understands a named recipe when that exact reaction is reproduced', () => {
+    const objective: ObjectiveDef = {
+      kind: 'understand_recipe',
+      name: 'Bitter Medicine',
+      description: 'Reproduce Bitter Bloom.',
+      target: 'Protocol understood',
+      recipeId: 'bitter_bloom',
+    };
+
+    expect(evaluateObjective(objective, metrics(), context()).complete).toBe(false);
+    expect(evaluateObjective(objective, metrics(), {
+      ...context(),
+      triggeredRecipeIds: new Set(['bitter_bloom']),
+    }).complete).toBe(true);
+  });
+
+  it('requires both recipe application and a balanced living dish', () => {
+    const objective: ObjectiveDef = {
+      kind: 'apply_recipe',
+      name: 'The Cure-ish',
+      description: 'Apply Brine Channel.',
+      target: 'Applied in a diverse dish',
+      recipeId: 'brine_channel',
+      minCount: 3,
+      maxDominance: 0.6,
+    };
+    const applied = { ...context(), triggeredRecipeIds: new Set(['brine_channel' as const]) };
+
+    expect(evaluateObjective(objective, metrics({ livingLifeforms: 2 }), applied).complete).toBe(false);
+    expect(evaluateObjective(objective, metrics({ livingLifeforms: 3, maxBreedDominance: 0.59 }), applied).complete).toBe(true);
+  });
+
   it('satisfies mega_culture when any lifeform volume exceeds 800', () => {
     const objective: ObjectiveDef = {
       kind: 'mega_culture',

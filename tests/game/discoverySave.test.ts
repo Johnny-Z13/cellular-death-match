@@ -108,11 +108,13 @@ describe('discovery save', () => {
         id: 'needle_swarm',
         discoveredAt: expect.any(String),
         fresh: false,
+        stage: 'stabilized',
       }],
       noteDiscoveryRecords: [{
         id: 'breed_needle_swarm',
         discoveredAt: expect.any(String),
         fresh: false,
+        stage: 'understood',
       }],
       revealAll: false,
     });

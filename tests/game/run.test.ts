@@ -212,10 +212,10 @@ describe('first-run onboarding spawn list', () => {
 });
 
 describe('objectives', () => {
-  it('epoch 0 is discover_breed (onboarding)', () => {
+  it('epoch 0 stabilizes the onboarding breed', () => {
     const run = createRun(42);
     run.start();
-    expect(run.getObjective().kind).toBe('discover_breed');
+    expect(run.getObjective().kind).toBe('stabilize_breed');
     expect(run.getObjective().breedId).toBe('bloom_mass');
   });
 

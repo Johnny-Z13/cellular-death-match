@@ -514,11 +514,9 @@ canvas {
 
 @keyframes button-hint-breathe {
   0%, 100% {
-    transform: translateY(0);
     filter: brightness(1);
   }
   50% {
-    transform: translateY(-2px);
     filter: brightness(1.16);
   }
 }
@@ -2707,6 +2705,21 @@ canvas {
   box-shadow: inset 3px 0 0 rgba(91, 233, 214, 0.5);
 }
 
+.notebook-entry-stage-observed {
+  border-color: rgba(214, 200, 94, 0.5);
+  box-shadow: inset 3px 0 0 rgba(214, 200, 94, 0.72);
+}
+
+.notebook-entry-stage-understood {
+  border-color: rgba(91, 190, 233, 0.44);
+  box-shadow: inset 3px 0 0 rgba(91, 190, 233, 0.68);
+}
+
+.notebook-entry-stage-stabilized {
+  border-color: rgba(91, 233, 214, 0.44);
+  box-shadow: inset 3px 0 0 rgba(91, 233, 214, 0.68);
+}
+
 .notebook-entry-new {
   border-color: var(--amber);
   background:
@@ -2792,6 +2805,21 @@ canvas {
   border-color: var(--amber);
   color: #fff4bd;
   background: rgba(38, 32, 8, 0.84);
+}
+
+.notebook-status-observed {
+  border-color: rgba(214, 200, 94, 0.62);
+  color: #fff4bd;
+}
+
+.notebook-status-understood {
+  border-color: rgba(91, 190, 233, 0.62);
+  color: #bfeeff;
+}
+
+.notebook-status-stabilized {
+  border-color: rgba(91, 233, 214, 0.62);
+  color: var(--bio-bright);
 }
 
 .notebook-meta,
@@ -2983,9 +3011,20 @@ canvas {
   color: var(--ink-dim);
 }
 
-.atlas-node-discovered {
+.atlas-node-observed,
+.atlas-node-understood,
+.atlas-node-stabilized {
   border-color: color-mix(in srgb, var(--node-color) 45%, transparent);
   box-shadow: inset 3px 0 0 var(--node-color);
+}
+
+.atlas-node-observed {
+  border-style: dashed;
+  opacity: 0.78;
+}
+
+.atlas-node-understood {
+  border-color: rgba(91, 190, 233, 0.46);
 }
 
 /* Locked nodes are teased silhouettes — present but inert, to pull the player

@@ -629,7 +629,7 @@ export function createScreens(): Screens {
       }
     },
     updateNotebook(view) {
-      notebookProgress.textContent = `${view.discoveredCount} ${view.discoveredCount === 1 ? 'discovery' : 'discoveries'} logged`;
+      notebookProgress.textContent = `${view.observedCount} observed · ${view.understoodCount} understood · ${view.stabilizedCount} stabilized`;
       notebookList.replaceChildren();
       for (const entry of view.entries) {
         if (!entry.discovered) continue;
@@ -638,6 +638,7 @@ export function createScreens(): Screens {
           'notebook-entry',
           `notebook-entry-${entry.category}`,
           `notebook-entry-${entry.caution}`,
+          `notebook-entry-stage-${entry.researchStage}`,
           entry.isFresh ? 'notebook-entry-new' : 'notebook-entry-discovered',
           entry.chimeraPortrait ? 'notebook-entry-chimera' : '',
         ].filter(Boolean).join(' ');
@@ -654,7 +655,9 @@ export function createScreens(): Screens {
         } else {
           const span = document.createElement('span');
           span.className = 'notebook-marker';
-          span.textContent = entry.isFresh ? 'NEW' : 'OK';
+          span.textContent = entry.researchStage === 'observed'
+            ? 'OBS'
+            : entry.researchStage === 'understood' ? 'HYP' : 'STB';
           marker = span;
         }
 
@@ -664,8 +667,8 @@ export function createScreens(): Screens {
         const title = document.createElement('strong');
         title.textContent = entry.displayTitle;
         const status = document.createElement('span');
-        status.className = entry.isFresh ? 'notebook-status notebook-status-new' : 'notebook-status';
-        status.textContent = entry.isFresh ? 'NEW DISCOVERY' : 'DISCOVERED';
+        status.className = `notebook-status notebook-status-${entry.researchStage}${entry.isFresh ? ' notebook-status-new' : ''}`;
+        status.textContent = entry.researchStage.toUpperCase();
         header.append(title, status);
 
         const meta = document.createElement('div');
@@ -715,7 +718,7 @@ export function createScreens(): Screens {
           const text = document.createElement('div');
           text.className = 'atlas-node-text';
           const title = document.createElement('strong');
-          title.textContent = node.state === 'discovered' ? node.title : '? ? ?';
+          title.textContent = node.state !== 'locked' ? node.title : '? ? ?';
           const hint = document.createElement('small');
           hint.textContent = node.hint;
           text.append(title, hint);

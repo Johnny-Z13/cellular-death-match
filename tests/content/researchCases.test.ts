@@ -16,7 +16,12 @@ describe('Common Cold research Case', () => {
       expect(trial.hypothesis.length).toBeGreaterThan(20);
       expect(trial.introducedFeature.length).toBeGreaterThan(0);
     }
-    expect(OBJECTIVES[1]?.sustainTicks).toBe(60 * 12);
+    expect(OBJECTIVES.slice(1, 4).map((objective) => objective.recipeId)).toEqual([
+      'bitter_bloom',
+      'nutrient_conduit',
+      'foam_lightning',
+    ]);
+    expect(OBJECTIVES[4]?.recipeId).toBe('brine_channel');
   });
 
   it('clamps UI lookups to an authored Trial', () => {

@@ -11,10 +11,13 @@ export interface DiscoveryStorage {
   removeItem(key: string): void;
 }
 
+export type ResearchStage = 'observed' | 'understood' | 'stabilized';
+
 export interface DiscoverySaveRecord<Id extends string> {
   id: Id;
   discoveredAt: string;
   fresh: boolean;
+  stage: ResearchStage;
 }
 
 export interface DiscoverySaveState {
@@ -111,8 +114,18 @@ export function revealAllDiscoveries(storage: DiscoveryStorage): DiscoverySaveSt
     persistenceEnabled: current.persistenceEnabled,
     discoveredBreedIds,
     discoveredNoteIds,
-    breedDiscoveryRecords: discoveredBreedIds.map((id) => ({ id, discoveredAt, fresh: true })),
-    noteDiscoveryRecords: discoveredNoteIds.map((id) => ({ id, discoveredAt, fresh: true })),
+    breedDiscoveryRecords: discoveredBreedIds.map((id) => ({
+      id,
+      discoveredAt,
+      fresh: true,
+      stage: 'stabilized' as const,
+    })),
+    noteDiscoveryRecords: discoveredNoteIds.map((id) => ({
+      id,
+      discoveredAt,
+      fresh: true,
+      stage: 'understood' as const,
+    })),
     revealAll: true,
   });
 }
@@ -135,12 +148,14 @@ function sanitizeState(value: unknown): DiscoverySaveState {
       discoveredBreedIds,
       BREED_IDS,
       false,
+      'stabilized',
     ),
     noteDiscoveryRecords: sanitizeRecords(
       value.noteDiscoveryRecords,
       discoveredNoteIds,
       NOTE_IDS,
       false,
+      'understood',
     ),
     revealAll: value.revealAll === true,
   };
@@ -162,6 +177,7 @@ function sanitizeRecords<Id extends string>(
   ids: readonly Id[],
   allowed: Set<string>,
   fallbackFresh: boolean,
+  fallbackStage: ResearchStage,
 ): DiscoverySaveRecord<Id>[] {
   const allowedIds = new Set<string>(ids);
   const records = new Map<string, DiscoverySaveRecord<Id>>();
@@ -174,6 +190,7 @@ function sanitizeRecords<Id extends string>(
         id: item.id as Id,
         discoveredAt: validDateString(item.discoveredAt),
         fresh: item.fresh === true,
+        stage: validResearchStage(item.stage, fallbackStage),
       });
     }
   }
@@ -184,10 +201,17 @@ function sanitizeRecords<Id extends string>(
       id,
       discoveredAt: new Date().toISOString(),
       fresh: fallbackFresh,
+      stage: fallbackStage,
     });
   }
 
   return ids.map((id) => records.get(id)!);
+}
+
+function validResearchStage(value: unknown, fallback: ResearchStage): ResearchStage {
+  return value === 'observed' || value === 'understood' || value === 'stabilized'
+    ? value
+    : fallback;
 }
 
 function uniqueValidIds(value: unknown, allowed: Set<string>): string[] {

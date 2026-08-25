@@ -1,5 +1,5 @@
 import type { EnemyArchetype } from '../content/enemies';
-import { BREED_DEFS, type BreedId } from '../content/catalysis';
+import { BREED_DEFS, REACTION_RECIPES, type BreedId, type ReactionRecipeId } from '../content/catalysis';
 import { OBJECTIVE_TUNING } from '../content/ecologyTuning';
 import type { ObjectiveDef } from '../content/objectives';
 
@@ -28,6 +28,7 @@ export interface ObjectiveMetrics {
   maxLifeformVolume: number;
   maxBreedDominance: number;
   nearbyDifferentBreedPair: boolean;
+  livingBreedIds: ReadonlySet<BreedId>;
 }
 
 export interface ObjectiveRuntime {
@@ -52,6 +53,7 @@ export interface ObjectiveEvaluationContext {
   epochTicks: number;
   reactions: number;
   discoveredBreedTicks: ReadonlyMap<BreedId, number>;
+  triggeredRecipeIds: ReadonlySet<ReactionRecipeId>;
   runtime: ObjectiveRuntime;
   forceShowcase?: boolean;
 }
@@ -108,6 +110,40 @@ export function evaluateObjective(
   const urgency = objectiveUrgency(context.tickNo, context.epochTicks);
 
   switch (objective.kind) {
+    case 'stabilize_breed': {
+      const breedId = objective.breedId ?? 'bloom_mass';
+      const discoveredTick = context.discoveredBreedTicks.get(breedId);
+      const alive = metrics.livingBreedIds.has(breedId);
+      const name = BREED_DEFS[breedId]?.name ?? breedId;
+      const stabilized = discoveredTick !== undefined && alive;
+      return progress(objective, stabilized, true, deadline && !stabilized, urgency, stabilized
+        ? `${name} alive · specimen ready to bank`
+        : discoveredTick !== undefined
+          ? `${name} observed · keep it alive`
+          : `${name} not yet observed`);
+    }
+    case 'understand_recipe': {
+      const recipeId = objective.recipeId;
+      const triggered = recipeId ? context.triggeredRecipeIds.has(recipeId) : false;
+      const name = REACTION_RECIPES.find((recipe) => recipe.id === recipeId)?.name ?? 'Target reaction';
+      return progress(objective, triggered, true, deadline && !triggered, urgency, triggered
+        ? `${name} reproduced · protocol understood`
+        : `${name} not yet reproduced`);
+    }
+    case 'apply_recipe': {
+      const recipeId = objective.recipeId;
+      const triggered = recipeId ? context.triggeredRecipeIds.has(recipeId) : false;
+      const minCount = objective.minCount ?? 2;
+      const minCoverage = objective.minCoverage ?? 0;
+      const maxDominance = objective.maxDominance ?? 1;
+      const ecologyStable = metrics.livingLifeforms >= minCount
+        && metrics.coverage >= minCoverage
+        && metrics.maxBreedDominance <= maxDominance;
+      const ok = triggered && ecologyStable;
+      const name = REACTION_RECIPES.find((recipe) => recipe.id === recipeId)?.name ?? 'Target reaction';
+      return progress(objective, ok, true, deadline && !ok, urgency,
+        `${triggered ? `${name} applied` : `${name} missing`} · ${metrics.livingLifeforms}/${minCount} cultures · ${Math.round(metrics.maxBreedDominance * 100)}%/${Math.round(maxDominance * 100)}% dominance`);
+    }
     case 'discover_breed': {
       const breedId = objective.breedId ?? 'bloom_mass';
       const discoveredTick = context.discoveredBreedTicks.get(breedId);

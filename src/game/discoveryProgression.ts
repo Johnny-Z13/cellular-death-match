@@ -6,7 +6,7 @@ import {
   type CautionLevel,
   type DiscoveryNoteId,
 } from '../content/catalysis';
-import type { DiscoverySaveRecord, DiscoverySaveState } from './discoverySave';
+import type { DiscoverySaveRecord, DiscoverySaveState, ResearchStage } from './discoverySave';
 
 export type ProgressionToolId = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' | 'paste';
 export type ProgressionLifeformId = EnemyArchetype | BreedId;
@@ -25,6 +25,11 @@ export interface DiscoveryProgressionState {
 export interface DiscoveryDelta {
   breedIds?: readonly BreedId[];
   noteIds?: readonly DiscoveryNoteId[];
+}
+
+export interface DiscoveryStageDelta {
+  breed?: ResearchStage;
+  note?: ResearchStage;
 }
 
 export interface ResearchGrant {
@@ -174,6 +179,7 @@ export function createDiscoveryProgression(
       discoveredAt,
       false,
       VALID_BREEDS,
+      'stabilized',
     ),
     noteDiscoveryRecords: discoveryRecordsForIds(
       saved?.noteDiscoveryRecords,
@@ -181,6 +187,7 @@ export function createDiscoveryProgression(
       discoveredAt,
       false,
       VALID_NOTES,
+      'understood',
     ),
     revealAll: false,
   });
@@ -192,8 +199,11 @@ export function updateDiscoveryProgression(
   state: DiscoveryProgressionState,
   delta: DiscoveryDelta,
   discoveredAt = new Date().toISOString(),
+  stages: DiscoveryStageDelta = {},
 ): DiscoveryProgressionState {
   if (state.revealAll) return revealAllDiscoveryProgression(state, discoveredAt);
+  const breedStage = stages.breed ?? 'stabilized';
+  const noteStage = stages.note ?? 'understood';
   const discoveredBreedIds = uniqueValid([
     ...state.discoveredBreedIds,
     ...(delta.breedIds ?? []),
@@ -211,6 +221,9 @@ export function updateDiscoveryProgression(
       discoveredAt,
       true,
       VALID_BREEDS,
+      breedStage,
+      breedStage,
+      delta.breedIds,
     ),
     noteDiscoveryRecords: discoveryRecordsForIds(
       state.noteDiscoveryRecords,
@@ -218,6 +231,9 @@ export function updateDiscoveryProgression(
       discoveredAt,
       true,
       VALID_NOTES,
+      noteStage,
+      noteStage,
+      delta.noteIds,
     ),
     revealAll: false,
   });
@@ -245,6 +261,9 @@ export function revealAllDiscoveryProgression(
       discoveredAt,
       freshForMissing,
       VALID_BREEDS,
+      'stabilized',
+      'stabilized',
+      discoveredBreedIds,
     ),
     noteDiscoveryRecords: discoveryRecordsForIds(
       state?.noteDiscoveryRecords,
@@ -252,6 +271,9 @@ export function revealAllDiscoveryProgression(
       discoveredAt,
       freshForMissing,
       VALID_NOTES,
+      'understood',
+      'understood',
+      discoveredNoteIds,
     ),
     unlockedTools: [...ALL_PROGRESSION_TOOLS],
     unlockedLifeforms: [...ALL_PROGRESSION_LIFEFORMS],
@@ -312,21 +334,33 @@ export function discoveryAnnouncementsForProgressionChange(
 ): DiscoveryAnnouncement[] {
   const previousBreeds = new Set(previous.discoveredBreedIds);
   const previousNotes = new Set(previous.discoveredNoteIds);
+  const previousBreedStages = new Map(previous.breedDiscoveryRecords.map((record) => [record.id, record.stage]));
+  const previousNoteStages = new Map(previous.noteDiscoveryRecords.map((record) => [record.id, record.stage]));
+  const nextBreedStages = new Map(next.breedDiscoveryRecords.map((record) => [record.id, record.stage]));
+  const nextNoteStages = new Map(next.noteDiscoveryRecords.map((record) => [record.id, record.stage]));
   const announcements: DiscoveryAnnouncement[] = [];
 
   for (const breedId of next.discoveredBreedIds) {
-    if (previousBreeds.has(breedId)) continue;
+    const stage = nextBreedStages.get(breedId) ?? 'observed';
+    const previousStage = previousBreedStages.get(breedId);
+    if (previousBreeds.has(breedId) && stageRank(previousStage) >= stageRank(stage)) continue;
     announcements.push({
-      message: `New lifeform discovered: ${BREED_DEFS[breedId].name}.`,
+      message: stage === 'stabilized'
+        ? `Specimen stabilized: ${BREED_DEFS[breedId].name}. Egg now available.`
+        : `New lifeform observed: ${BREED_DEFS[breedId].name}. Stabilize it alive to bank the egg.`,
       tone: toneForCaution(DISCOVERY_NOTES[`breed_${breedId}`].caution),
     });
   }
 
   for (const noteId of next.discoveredNoteIds) {
-    if (previousNotes.has(noteId) || noteId.startsWith('breed_')) continue;
+    const stage = nextNoteStages.get(noteId) ?? 'observed';
+    const previousStage = previousNoteStages.get(noteId);
+    if ((previousNotes.has(noteId) && stageRank(previousStage) >= stageRank(stage)) || noteId.startsWith('breed_')) continue;
     const note = DISCOVERY_NOTES[noteId];
     announcements.push({
-      message: `${noteId.startsWith('recipe_') ? 'New catalyst discovered' : 'Lab note discovered'}: ${note.title}.`,
+      message: stage === 'observed'
+        ? `Reaction observed: ${note.title}. Reproduce it to understand the protocol.`
+        : `${noteId.startsWith('recipe_') ? 'Protocol understood' : 'Lab note understood'}: ${note.title}.`,
       tone: toneForCaution(note.caution),
     });
   }
@@ -343,8 +377,12 @@ function buildProgression(base: {
 }): DiscoveryProgressionState {
   const toolSet = new Set<ProgressionToolId>(STARTER_PROGRESSION_TOOLS);
   const lifeformSet = new Set<ProgressionLifeformId>(STARTER_PROGRESSION_LIFEFORMS);
-  const breeds = new Set(base.discoveredBreedIds);
-  const notes = new Set(base.discoveredNoteIds);
+  const breeds = new Set(base.breedDiscoveryRecords
+    .filter((record) => record.stage === 'stabilized')
+    .map((record) => record.id));
+  const notes = new Set(base.noteDiscoveryRecords
+    .filter((record) => stageRank(record.stage) >= stageRank('understood'))
+    .map((record) => record.id));
 
   for (const breed of breeds) lifeformSet.add(breed);
 
@@ -411,16 +449,24 @@ function discoveryRecordsForIds<Id extends string>(
   discoveredAt: string,
   freshForMissing: boolean,
   allowed: Set<string>,
+  stageForMissing: ResearchStage,
+  promoteStage?: ResearchStage,
+  idsToPromote: readonly Id[] = [],
 ): DiscoveryRecord<Id>[] {
   const wantedIds = new Set<string>(ids);
+  const promoteIds = new Set<string>(idsToPromote);
   const records = new Map<string, DiscoveryRecord<Id>>();
 
   for (const record of existingRecords ?? []) {
     if (!allowed.has(record.id) || !wantedIds.has(record.id)) continue;
+    const stage = promoteStage && promoteIds.has(record.id)
+      ? higherResearchStage(record.stage, promoteStage)
+      : record.stage;
     records.set(record.id, {
       id: record.id,
       discoveredAt: record.discoveredAt || discoveredAt,
-      fresh: record.fresh === true,
+      fresh: record.fresh === true || stage !== record.stage,
+      stage,
     });
   }
 
@@ -430,10 +476,21 @@ function discoveryRecordsForIds<Id extends string>(
       id,
       discoveredAt,
       fresh: freshForMissing,
+      stage: stageForMissing,
     });
   }
 
   return ids.map((id) => records.get(id)!);
+}
+
+function stageRank(stage: ResearchStage | undefined): number {
+  if (stage === 'stabilized') return 2;
+  if (stage === 'understood') return 1;
+  return 0;
+}
+
+function higherResearchStage(current: ResearchStage, requested: ResearchStage): ResearchStage {
+  return stageRank(requested) > stageRank(current) ? requested : current;
 }
 
 function grantAddsVisibleUnlock(state: DiscoveryProgressionState, grant: ResearchGrant): boolean {

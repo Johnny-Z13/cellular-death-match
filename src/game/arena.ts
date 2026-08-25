@@ -28,6 +28,7 @@ import {
   type BreedId,
   type CatalysisEffectType,
   type DiscoveryNoteId,
+  type ReactionRecipeId,
   type ReactionContext,
 } from '../content/catalysis';
 import { type ObjectiveDef, objectiveForEpoch } from '../content/objectives';
@@ -124,6 +125,7 @@ export interface EcologyInfo {
   discoveries: {
     breedIds: BreedId[];
     noteIds: DiscoveryNoteId[];
+    recipeIds: ReactionRecipeId[];
     latest: string[];
   };
 }
@@ -347,6 +349,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
   const discoveredBreedIds = new Set<BreedId>();
   const discoveredBreedTicks = new Map<BreedId, number>();
   const discoveredNoteIds = new Set<DiscoveryNoteId>();
+  const triggeredRecipeIds = new Set<ReactionRecipeId>();
   const discoveryMessages: string[] = [];
   const homeostasisTracker = createHomeostasisTracker();
   const objectiveRuntime = createObjectiveRuntime();
@@ -363,6 +366,10 @@ export function createArena(opts: CreateArenaOpts): Arena {
     discoveryMessages.unshift(message);
     pushSignal(message);
     while (discoveryMessages.length > 8) discoveryMessages.pop();
+  }
+
+  function recordRecipe(id: ReactionRecipeId): void {
+    triggeredRecipeIds.add(id);
   }
 
   function discoverBreed(arena: Arena, id: BreedId, sourceCell?: Cell): void {
@@ -420,6 +427,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       epochTicks,
       reactions: reactionCount,
       discoveredBreedTicks,
+      triggeredRecipeIds,
       runtime: objectiveRuntime,
       forceShowcase,
     });
@@ -537,6 +545,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         discoveries: {
           breedIds: [...discoveredBreedIds],
           noteIds: [...discoveredNoteIds],
+          recipeIds: [...triggeredRecipeIds],
           latest: [...discoveryMessages],
         },
       };
@@ -632,6 +641,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           reactionCount += 1;
           pulseToolEffect(state, catalyticReaction.effect, archetypes);
           toolEffects.push(catalyticReaction.effect);
+          recordRecipe(catalyticReaction.recipeId);
           discoverNote(catalyticReaction.noteId, catalyticReaction.message);
           addDishEventForCatalysis(catalyticReaction, addDishEvent);
         }
@@ -758,6 +768,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         reactionCount += 1;
         pulseToolEffect(state, catalyticReaction.effect, archetypes);
         toolEffects.push(catalyticReaction.effect);
+        recordRecipe(catalyticReaction.recipeId);
         discoverNote(catalyticReaction.noteId, catalyticReaction.message);
         addDishEventForCatalysis(catalyticReaction, addDishEvent);
       }
@@ -789,6 +800,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           seed: state.rng.randInt(1_000_000),
         };
         toolEffects.push(fault);
+        recordRecipe('folding_fault');
         discoverNote('recipe_folding_fault', 'FOLDING FAULT: local rule escaped containment.');
         addDishEvent('fold', 'FOLDING FAULT', fault.pos, fault.radius, 'violet');
         while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
@@ -1148,6 +1160,7 @@ function catalyticReactionFor(
   effect: ToolEffect;
   inputs: readonly ToolEffectType[];
   noteId: DiscoveryNoteId;
+  recipeId: ReactionRecipeId;
   message: string;
   caution: 'stable' | 'volatile' | 'critical';
 } | null {
@@ -1157,6 +1170,7 @@ function catalyticReactionFor(
     effect: ToolEffect;
     inputs: readonly ToolEffectType[];
     noteId: DiscoveryNoteId;
+    recipeId: ReactionRecipeId;
     message: string;
     caution: 'stable' | 'volatile' | 'critical';
   } | null = null;
@@ -1192,6 +1206,7 @@ function catalyticReactionFor(
       ),
       inputs: recipe.inputs,
       noteId: recipe.discoveryNoteId,
+      recipeId: recipe.id,
       message: reactionMessageFor(recipe.effect.type, recipe.name),
       caution: recipe.caution,
     };
@@ -1882,6 +1897,7 @@ function objectiveMetrics(state: SimState, archetypes: Map<CellId, EnemySpawn>):
   let nearbyDifferentBreedPair = false;
   const archetypeCounts = new Map<EnemyArchetype, number>();
   const breedVolumes = new Map<string, number>();
+  const livingBreedIds = new Set<BreedId>();
   const livingBreedCells: Array<{ cell: Cell; breedKey: string }> = [];
   for (const [id, cell] of state.cells) {
     if (cell.vol <= 0) continue;
@@ -1906,6 +1922,7 @@ function objectiveMetrics(state: SimState, archetypes: Map<CellId, EnemySpawn>):
       }
     }
     const breedKey = spawn?.breedId ?? spawn?.archetype ?? `cell-${id}`;
+    if (spawn?.breedId) livingBreedIds.add(spawn.breedId);
     breedVolumes.set(breedKey, (breedVolumes.get(breedKey) ?? 0) + cell.vol);
     livingBreedCells.push({ cell, breedKey });
   }
@@ -1940,6 +1957,7 @@ function objectiveMetrics(state: SimState, archetypes: Map<CellId, EnemySpawn>):
     maxLifeformVolume,
     maxBreedDominance: lifeformVol === 0 ? 0 : maxBreedVolume / lifeformVol,
     nearbyDifferentBreedPair,
+    livingBreedIds,
   };
 }
 

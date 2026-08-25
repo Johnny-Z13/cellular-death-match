@@ -36,11 +36,13 @@ describe('discovery progression', () => {
       id: 'bloom_mass',
       discoveredAt: '2026-06-07T13:20:00.000Z',
       fresh: true,
+      stage: 'stabilized',
     }]);
     expect(progression.noteDiscoveryRecords.find((record) => record.id === 'recipe_pressure_bloom')).toEqual({
       id: 'recipe_pressure_bloom',
       discoveredAt: '2026-06-07T13:20:00.000Z',
       fresh: true,
+      stage: 'understood',
     });
 
     const acknowledged = acknowledgeNotebookDiscoveries(progression);
@@ -349,13 +351,33 @@ describe('discovery progression', () => {
     const previous = createDiscoveryProgression();
     const next = updateDiscoveryProgression(previous, {
       noteIds: ['recipe_pressure_bloom'],
-    });
+    }, '2026-06-07T13:20:00.000Z', { note: 'observed' });
 
     expect(discoveryAnnouncementsForProgressionChange(previous, next)).toEqual([
       {
-        message: 'New catalyst discovered: Pressure Bloom.',
+        message: 'Reaction observed: Pressure Bloom. Reproduce it to understand the protocol.',
         tone: 'critical',
       },
     ]);
+  });
+
+  it('does not unlock an observed organism or recipe until research promotes it', () => {
+    const observed = updateDiscoveryProgression(createDiscoveryProgression(), {
+      breedIds: ['bloom_mass'],
+      noteIds: ['recipe_bitter_bloom'],
+    }, '2026-06-07T13:20:00.000Z', { breed: 'observed', note: 'observed' });
+
+    expect(observed.unlockedLifeforms).not.toContain('bloom_mass');
+    expect(observed.unlockedTools).toEqual(['egg', 'nutrient']);
+
+    const understood = updateDiscoveryProgression(observed, {
+      noteIds: ['recipe_bitter_bloom'],
+    }, '2026-06-07T13:21:00.000Z', { note: 'understood' });
+    const stabilized = updateDiscoveryProgression(understood, {
+      breedIds: ['bloom_mass'],
+    }, '2026-06-07T13:22:00.000Z', { breed: 'stabilized' });
+
+    expect(understood.noteDiscoveryRecords.find((record) => record.id === 'recipe_bitter_bloom')?.stage).toBe('understood');
+    expect(stabilized.unlockedLifeforms).toContain('bloom_mass');
   });
 });

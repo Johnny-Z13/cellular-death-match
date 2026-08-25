@@ -9,7 +9,7 @@ import { getUpgradeDef } from './content/upgrades';
 import { COMMON_COLD_CASE, trialForIndex } from './content/researchCases';
 import { loadCaseRecord, recordCompletedTrial } from './game/caseRecord';
 import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/enemies';
-import { BREED_DEFS, DISCOVERY_NOTES, type BreedId } from './content/catalysis';
+import { BREED_DEFS, DISCOVERY_NOTES, type BreedId, type DiscoveryNoteId } from './content/catalysis';
 import { notebookViewForProgression, atlasViewForProgression } from './content/notebook';
 import { lifeformIdentityForSpawn } from './content/lifeformIdentity';
 import { createEcologyAudio } from './audio/ecologyAudio';
@@ -42,6 +42,7 @@ import {
   revealAllDiscoveryProgression,
   updateDiscoveryProgression,
   type DiscoveryDelta,
+  type DiscoveryStageDelta,
   type DiscoveryProgressionState,
   type ProgressionLifeformId,
 } from './game/discoveryProgression';
@@ -181,6 +182,8 @@ let pendingResearchBrief: ResearchBriefLine[] = [];
 let lastOpeningBloomCreated = false;
 let didPlaceEggThisEpoch = false;
 let discoveredBreedsThisRun = new Set<string>();
+let stabilizedBreedsThisRun = new Set<string>();
+let lastArenaEvidenceSignature = '';
 let peakBiodiversity = 0;
 let longestStabilityStreak = 0;
 let runTelemetry: RunTelemetry = createRunTelemetry({
@@ -495,7 +498,7 @@ screens.onEndEpoch(() => {
   uiAudio.play('ui_tap');
   const equilibriumCanEndRun = !isOnboardingEpoch(run.getState().fightIndex);
   if (equilibriumCanEndRun && arena.getEquilibrium().achieved) {
-    persistArenaDiscoveries(arena);
+    persistArenaDiscoveries(arena, true);
     awardCompletionResearchGrant();
     sampleRunTelemetryFromArena(arena);
     bankRunStrains();
@@ -650,6 +653,7 @@ function setEggLifeformSelection(id: ProgressionLifeformId): void {
 
 function resetRunTelemetry(): void {
   discoveredBreedsThisRun = new Set();
+  stabilizedBreedsThisRun = new Set();
   peakBiodiversity = 0;
   longestStabilityStreak = 0;
   didBankRunStrains = false;
@@ -725,6 +729,7 @@ function startNewFight() {
   tickerState = createTickerState();
   cellFxTracker = createCellFxTracker();
   heardDishEventIds = new Set<number>();
+  lastArenaEvidenceSignature = '';
   didAnnounceCompletion = false;
   didAnnounceEquilibrium = false;
   lastOpeningBloomCreated = false;
@@ -751,7 +756,7 @@ function startNewFight() {
     coach.onOnboardingComplete = () => {
       // Auto-end Epoch 1 when bloom is discovered.
       if (arena) {
-        persistArenaDiscoveries(arena);
+        persistArenaDiscoveries(arena, true);
         awardCompletionResearchGrant();
         sampleRunTelemetryFromArena(arena);
       }
@@ -848,7 +853,7 @@ function loop() {
   if (currentOpeningBloomCreated !== lastOpeningBloomCreated) {
     lastOpeningBloomCreated = currentOpeningBloomCreated;
     if (currentOpeningBloomCreated) {
-      advanceDiscoveryProgression(arena.getEcology().discoveries);
+      advanceDiscoveryProgression(arena.getEcology().discoveries, { breed: 'observed', note: 'observed' });
       coach.report('bloom-discovered');
     }
     applyDiscoveryProgressionUi();
@@ -941,7 +946,7 @@ function bankRunStrains(): string[] {
 
   const alreadyAvailable = new Set(strainLibrary.getAvailableStrains());
   const newlyBanked: string[] = [];
-  for (const breedId of discoveredBreedsThisRun) {
+  for (const breedId of stabilizedBreedsThisRun) {
     if (!alreadyAvailable.has(breedId)) newlyBanked.push(breedId);
     strainLibrary.bankStrain(breedId);
   }
@@ -954,7 +959,7 @@ function bankRunStrains(): string[] {
 function resolveArenaStatus(status: ArenaStatus): boolean {
   if (status === 'won') {
     if (arena) {
-      persistArenaDiscoveries(arena);
+      persistArenaDiscoveries(arena, true);
       awardCompletionResearchGrant();
       sampleRunTelemetryFromArena(arena);
     }
@@ -1016,12 +1021,36 @@ function saveSimTicksPerSecond(storage: Storage, ticksPerSecond: number): void {
   storage.setItem(SIM_SPEED_TUNING.storageKey, String(ticksPerSecond));
 }
 
-function persistArenaDiscoveries(ar: Arena): void {
+function persistArenaDiscoveries(ar: Arena, completed = false): void {
   const discoveries = ar.getEcology().discoveries;
-  advanceDiscoveryProgression(discoveries);
+  const evidenceSignature = `${discoveries.breedIds.join('|')}::${discoveries.noteIds.join('|')}`;
+  if (!completed && evidenceSignature === lastArenaEvidenceSignature) return;
+  lastArenaEvidenceSignature = evidenceSignature;
+  advanceDiscoveryProgression(discoveries, { breed: 'observed', note: 'observed' });
+  if (!completed) return;
+
+  const objective = ar.getObjectiveProgress().def;
+  if (objective.recipeId) {
+    const noteId = `recipe_${objective.recipeId}` as DiscoveryNoteId;
+    if (discoveries.noteIds.includes(noteId)) {
+      advanceDiscoveryProgression({ noteIds: [noteId] }, { note: 'understood' });
+    }
+  }
+
+  const livingBreedIds = livingDiscoveredBreedIds(ar, discoveries.breedIds);
+  if (livingBreedIds.length > 0) {
+    advanceDiscoveryProgression({ breedIds: livingBreedIds }, { breed: 'stabilized' });
+  }
 }
 
 function awardCompletionResearchGrant(): void {
+  // The five authored trials teach their own protocols. Random grant rewards
+  // resume only after the case, so an unperformed recipe never appears solved.
+  if (run.getState().fightIndex < COMMON_COLD_CASE.trials.length) {
+    pendingResearchBrief = [];
+    screens.setPickResearchBrief([]);
+    return;
+  }
   const previousProgression = discoveryProgression;
   const previousTools = previousProgression.unlockedTools;
   const previousLifeforms = previousProgression.unlockedLifeforms;
@@ -1034,6 +1063,7 @@ function awardCompletionResearchGrant(): void {
 
   discoveryProgression = result.progression;
   recordNewlyDiscoveredBreeds(previousProgression, discoveryProgression);
+  recordNewlyStabilizedBreeds(previousProgression, discoveryProgression);
   applyDiscoveryProgressionUi();
   announceUnlocks(previousTools, previousLifeforms, discoveryProgression);
   pendingResearchBrief = researchBriefForGrant(result.grant);
@@ -1050,25 +1080,61 @@ function replayPendingResearchBrief(): void {
   pendingResearchBrief = [];
 }
 
-function advanceDiscoveryProgression(delta: DiscoveryDelta): boolean {
+function advanceDiscoveryProgression(
+  delta: DiscoveryDelta,
+  stages: DiscoveryStageDelta = {},
+): boolean {
   const previousProgression = discoveryProgression;
   const previousTools = previousProgression.unlockedTools;
   const previousLifeforms = previousProgression.unlockedLifeforms;
-  const nextProgression = updateDiscoveryProgression(previousProgression, delta);
+  const nextProgression = updateDiscoveryProgression(previousProgression, delta, new Date().toISOString(), stages);
   const changed = previousTools.join('|') !== nextProgression.unlockedTools.join('|')
     || previousLifeforms.join('|') !== nextProgression.unlockedLifeforms.join('|')
     || previousProgression.discoveredBreedIds.join('|') !== nextProgression.discoveredBreedIds.join('|')
-    || previousProgression.discoveredNoteIds.join('|') !== nextProgression.discoveredNoteIds.join('|');
+    || previousProgression.discoveredNoteIds.join('|') !== nextProgression.discoveredNoteIds.join('|')
+    || progressionStageSignature(previousProgression) !== progressionStageSignature(nextProgression);
   if (!changed) return false;
 
   discoveryProgression = nextProgression;
   recordNewlyDiscoveredBreeds(previousProgression, nextProgression);
+  recordNewlyStabilizedBreeds(previousProgression, nextProgression);
   applyDiscoveryProgressionUi();
   announceDiscoveryProgressionChange(previousProgression, nextProgression);
   announceUnlocks(previousTools, previousLifeforms, discoveryProgression);
   saveRuntimeDiscoveryState();
   debug.updateDiscoveries(discoveryDebugInfo());
   return true;
+}
+
+function progressionStageSignature(
+  progression: Pick<DiscoveryProgressionState, 'breedDiscoveryRecords' | 'noteDiscoveryRecords'>,
+): string {
+  return [
+    ...progression.breedDiscoveryRecords.map((record) => `${record.id}:${record.stage}`),
+    ...progression.noteDiscoveryRecords.map((record) => `${record.id}:${record.stage}`),
+  ].join('|');
+}
+
+function recordNewlyStabilizedBreeds(
+  previous: Pick<DiscoveryProgressionState, 'breedDiscoveryRecords'>,
+  next: Pick<DiscoveryProgressionState, 'breedDiscoveryRecords'>,
+): void {
+  const previousStages = new Map(previous.breedDiscoveryRecords.map((record) => [record.id, record.stage]));
+  for (const record of next.breedDiscoveryRecords) {
+    if (record.stage !== 'stabilized' || previousStages.get(record.id) === 'stabilized') continue;
+    stabilizedBreedsThisRun.add(record.id);
+  }
+}
+
+function livingDiscoveredBreedIds(ar: Arena, discovered: readonly BreedId[]): BreedId[] {
+  const discoveredSet = new Set<BreedId>(discovered);
+  const living = new Set<BreedId>();
+  for (const [cellId, cell] of ar.state.cells) {
+    if (cell.vol <= 0) continue;
+    const breedId = ar.archetypes.get(cellId)?.breedId;
+    if (breedId && discoveredSet.has(breedId)) living.add(breedId);
+  }
+  return [...living];
 }
 
 function recordNewlyDiscoveredBreeds(
@@ -1181,7 +1247,7 @@ function currentLifeformUnlocks(): readonly ProgressionLifeformId[] {
   return lifeformUnlocksForCurrentRun(
     stagedLifeforms,
     currentRunLoadout,
-    discoveredBreedsThisRun,
+    stabilizedBreedsThisRun,
   );
 }
 

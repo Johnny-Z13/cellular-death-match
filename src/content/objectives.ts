@@ -1,9 +1,12 @@
 import type { EnemyArchetype } from './enemies';
-import type { BreedId } from './catalysis';
+import type { BreedId, ReactionRecipeId } from './catalysis';
 import { OBJECTIVE_TUNING } from './ecologyTuning';
 
 export type ObjectiveKind =
   | 'discover_breed'
+  | 'stabilize_breed'
+  | 'understand_recipe'
+  | 'apply_recipe'
   | 'preserve_grazers'
   | 'breed_archetype'
   | 'controlled_reaction'
@@ -28,6 +31,7 @@ export interface ObjectiveDef {
   hint?: string;
   archetype?: EnemyArchetype;
   breedId?: BreedId;
+  recipeId?: ReactionRecipeId;
   targetCount?: number;
   minCount?: number;
   minCoverage?: number;
@@ -38,48 +42,47 @@ export interface ObjectiveDef {
 
 export const OBJECTIVES: ReadonlyArray<ObjectiveDef> = [
   {
-    kind: 'discover_breed',
+    kind: 'stabilize_breed',
     name: 'Culture Shock',
-    description: 'Feed a Swarmlet culture and observe the new mass that emerges.',
-    target: 'Bloom Mass created',
+    description: 'Feed one Swarmlet culture. Keep the Bloom Mass alive long enough to bank it.',
+    target: 'Bloom Mass stabilized',
     hint: 'Seed one extra Swarmlet, then feed the living cultures with Nutrient until Bloom appears.',
     breedId: 'bloom_mass',
   },
   {
-    kind: 'preserve_grazers',
-    name: 'Too Much of a Good Thing',
-    description: 'Keep at least 3 useful cultures alive while the dish crowds in.',
-    target: '3 cultures protected through observation',
-    hint: 'Use Nutrient to keep small cultures moving and Toxin to push heavy feeders away.',
-    minCount: OBJECTIVE_TUNING.preserveGrazerMin,
-    sustainTicks: 60 * 12,
+    kind: 'understand_recipe',
+    name: 'Bitter Medicine',
+    description: 'Reproduce Bitter Bloom by feeding a budding culture, then adding Toxin.',
+    target: 'Bitter Bloom protocol understood',
+    hint: 'Select Bloom Mass. Place Nutrient on it, then overlap the field with Toxin.',
+    recipeId: 'bitter_bloom',
   },
   {
-    kind: 'breed_archetype',
-    name: 'Dilution Solution',
-    description: 'Use careful feeding and dilution to raise 4 living Swarmlet cultures.',
-    target: '4 living Swarmlets',
-    hint: 'Seed Swarmlet eggs in open pockets and feed them before the dish gets crowded.',
-    archetype: 'swarmlet',
-    targetCount: OBJECTIVE_TUNING.breedTargetCount,
+    kind: 'understand_recipe',
+    name: 'Carrier Medium',
+    description: 'Reproduce Nutrient Conduit by carrying food through a budding culture with Water.',
+    target: 'Nutrient Conduit protocol understood',
+    hint: 'Place Nutrient on Bloom Mass, then add Water to the same field.',
+    recipeId: 'nutrient_conduit',
   },
   {
-    kind: 'controlled_reaction',
-    name: 'Fever Dream',
-    description: 'Create a reagent reaction while keeping enough living matter in the dish.',
-    target: '1 reaction, 4% living coverage',
-    hint: 'Overlap unlocked reagents near living tissue, then keep enough culture alive to score it.',
-    targetCount: OBJECTIVE_TUNING.controlledReactionMinCount,
-    minCoverage: OBJECTIVE_TUNING.controlledReactionMinCoverage,
+    kind: 'understand_recipe',
+    name: 'Storm in a Dish',
+    description: 'Create unstable Foam, then strike it with Water near a quick culture.',
+    target: 'Foam Lightning protocol understood',
+    hint: 'Overlap Toxin and Water near Swarmlet, then add Water to the Foam before it fades.',
+    recipeId: 'foam_lightning',
   },
   {
-    kind: 'balanced_ecology',
+    kind: 'apply_recipe',
     name: 'The Cure-ish',
-    description: 'Reach the deadline with no single lifeform family above 56% of living matter.',
-    target: 'dominance <= 56% at deadline',
-    hint: 'Seed more than one strain and use pressure tools to stop one culture taking the dish.',
-    maxDominance: OBJECTIVE_TUNING.balanceMaxDominance,
-    minCount: OBJECTIVE_TUNING.balanceMinLifeforms,
+    description: 'Apply Brine Channel while maintaining a diverse, living dish.',
+    target: 'Brine Channel + 3 cultures + dominance <= 60%',
+    hint: 'Place Salt and Nutrient near Bloom Mass, then add Water. Keep three cultures alive.',
+    recipeId: 'brine_channel',
+    maxDominance: 0.6,
+    minCount: 3,
+    minCoverage: 0.04,
   },
   {
     kind: 'dominant_archetype',
