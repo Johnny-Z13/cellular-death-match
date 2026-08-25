@@ -799,7 +799,7 @@ export function createScreens(): Screens {
       titleCaseProgress.textContent = `${completed} / ${info.caseDef.trials.length} sealed`;
       titleTrialLabel.textContent = `Trial ${String(info.activeTrial.number).padStart(2, '0')} · ${info.activeTrial.name}`;
       titleTrialHypothesis.textContent = info.activeTrial.hypothesis;
-      titleStartLabel.textContent = `Run Trial ${String(info.activeTrial.number).padStart(2, '0')}`;
+      titleStartLabel.textContent = 'Run Trial';
       pickCaseProgress.textContent = `Trial logged · ${completed} / ${info.caseDef.trials.length} sealed`;
 
       document.querySelectorAll<HTMLElement>('[data-case-trial]').forEach((node) => {
