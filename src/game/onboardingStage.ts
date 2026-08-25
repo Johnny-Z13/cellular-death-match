@@ -34,14 +34,14 @@ export const ONBOARDING_BEATS: readonly OnboardingBeat[] = [
   },
   {
     id: 'feed-colony',
-    title: 'Now tempt it into growth',
-    body: 'Drop Nutrient beside the culture, then watch what the cells decide to do.',
+    title: 'Now I need you to feed it.',
+    body: 'Select Nutrient and drop it beside the culture. Let’s see what the cells decide to become.',
     trigger: 'nutrient-used',
     buttonHint: 'nutrient',
   },
   {
     id: 'watch-bloom',
-    title: 'Stand back. It is becoming interesting.',
+    title: 'Now I need you to stand back.',
     body: 'The fed cultures are approaching a new form.',
     trigger: 'bloom-discovered',
     autoSpawn: true,

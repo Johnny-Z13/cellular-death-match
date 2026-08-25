@@ -108,7 +108,7 @@ describe('onboarding coach', () => {
   });
 
   it('shows on the first epoch of a first run only, persisted via localStorage', () => {
-    expect(coachSource).toContain("const SEEN_KEY = 'cdm.coach.seen.v4'");
+    expect(coachSource).toContain("const SEEN_KEY = 'cdm.coach.seen.v5'");
     expect(coachSource).toContain('hasSeenTutorial(): boolean;');
     expect(coachSource).toContain('if (seen()) { active = false; hide(); return; }');
     expect(mainSource).toContain('coach.beginRun()');
@@ -127,8 +127,23 @@ describe('onboarding coach', () => {
     coach.report('egg-placed');
 
     expect(elements.get('coach')?.classList.contains('coach-intro')).toBe(false);
-    expect(elements.get('coach-title')?.textContent).toBe('Now tempt it into growth');
-    expect(elements.get('coach-action')?.textContent).toBe('');
+    expect(elements.get('coach-title')?.textContent).toBe('Now I need you to feed it.');
+    expect(elements.get('coach-action')?.textContent).toBe('Nutrient ready · Feed the culture');
+    expect(elements.get('coach')?.classList.contains('coach-prompt')).toBe(true);
+  });
+
+  it('uses a large timed character entrance for each follow-up instruction', () => {
+    vi.useFakeTimers();
+    const elements = installCoachDom();
+    const coach = createCoach();
+
+    coach.beginRun();
+    coach.report('egg-placed');
+
+    expect(elements.get('coach')?.classList.contains('coach-prompt')).toBe(true);
+    vi.advanceTimersByTime(2600);
+    expect(elements.get('coach')?.classList.contains('coach-prompt')).toBe(false);
+    expect(elements.get('coach')?.classList.contains('coach-show')).toBe(true);
   });
 
   it('holds simulation time during the opening reading beat', () => {

@@ -4434,6 +4434,187 @@ canvas {
   }
 }
 
+/* Recurring host entrance: each new instruction gets a brief, large Doctor
+   beat, then the class drops away and the established compact coach remains. */
+.coach.coach-prompt {
+  left: clamp(18px, 3vw, 42px);
+  right: auto;
+  bottom: 18px;
+  width: min(720px, calc(100vw - 36px));
+  transform: none;
+  grid-template-columns: clamp(180px, 22vw, 260px) minmax(0, 1fr);
+  padding: 0 20px 0 0;
+  border-color: rgba(91, 233, 214, 0.34);
+  border-left-width: 3px;
+  background:
+    linear-gradient(112deg, rgba(91, 233, 214, 0.08), transparent 46%),
+    rgba(3, 9, 11, 0.94);
+  box-shadow: 0 24px 76px rgba(0, 0, 0, 0.58), 0 0 38px rgba(91, 233, 214, 0.12);
+  overflow: visible;
+  pointer-events: none;
+}
+
+.coach.coach-prompt.coach-show {
+  animation: coach-prompt-frame 280ms ease-out both;
+}
+
+.coach-prompt .coach-portrait {
+  min-height: clamp(230px, 34svh, 310px);
+  border-radius: 12px 0 0 12px;
+  background: #020607;
+  animation: coach-prompt-doctor 460ms cubic-bezier(0.16, 0.82, 0.2, 1) both;
+}
+
+.coach-prompt .coach-portrait img {
+  object-position: 52% 18%;
+  opacity: 0.92;
+  filter: grayscale(0.46) saturate(0.68) brightness(0.76) contrast(1.28);
+  -webkit-mask-image: linear-gradient(90deg, #000 68%, rgba(0, 0, 0, 0.72) 84%, transparent 100%);
+  mask-image: linear-gradient(90deg, #000 68%, rgba(0, 0, 0, 0.72) 84%, transparent 100%);
+}
+
+.coach-prompt .coach-copy {
+  gap: 9px;
+  padding: 22px 4px 22px 16px;
+}
+
+.coach-prompt .coach-kicker {
+  color: var(--bio-bright);
+  letter-spacing: 0.24em;
+}
+
+.coach-prompt .coach-title {
+  font-family: var(--font-serif);
+  font-size: clamp(23px, 3vw, 36px);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+
+.coach-prompt .coach-body {
+  max-width: 42ch;
+  font-size: 12px;
+}
+
+.coach-prompt .coach-action {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  padding: 7px 10px;
+  border: 1px solid rgba(126, 230, 255, 0.38);
+  border-radius: 999px;
+  color: var(--bio-bright);
+  background: rgba(55, 168, 194, 0.1);
+  font-family: var(--font-display);
+  font-size: 8px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.coach-prompt .coach-skip {
+  justify-self: start;
+  pointer-events: auto;
+}
+
+@keyframes coach-prompt-frame {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes coach-prompt-doctor {
+  from { opacity: 0; transform: translateX(-58px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (max-width: 899px) {
+  .coach.coach-prompt {
+    left: 10px;
+    right: 10px;
+    top: auto;
+    bottom: calc(140px + env(safe-area-inset-bottom));
+    width: auto;
+    transform: none;
+    grid-template-columns: 112px minmax(0, 1fr);
+    grid-template-areas: none;
+    padding: 0 10px 0 0;
+  }
+
+  .coach.coach-prompt.coach-show {
+    animation: coach-prompt-frame 240ms ease-out both;
+  }
+
+  .coach-prompt .coach-portrait {
+    min-height: 184px;
+    border-radius: 10px 0 0 10px;
+  }
+
+  .coach-prompt .coach-copy {
+    min-height: 0;
+    padding: 13px 0 12px 8px;
+    gap: 5px;
+  }
+
+  .coach-prompt .coach-head,
+  .coach-prompt .coach-title,
+  .coach-prompt .coach-body,
+  .coach-prompt .coach-skip {
+    grid-area: auto;
+  }
+
+  .coach-prompt .coach-title {
+    font-size: clamp(18px, 5.6vw, 24px);
+  }
+
+  .coach-prompt .coach-body {
+    display: block;
+    margin: 0;
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
+  .coach-prompt .coach-action {
+    padding: 5px 7px;
+    font-size: 7px;
+  }
+
+  .coach-prompt .coach-skip {
+    position: static;
+    justify-self: start;
+    margin: 0;
+    padding: 4px 6px;
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 899px) and (max-height: 700px) {
+  .coach.coach-prompt {
+    bottom: calc(126px + env(safe-area-inset-bottom));
+    grid-template-columns: 92px minmax(0, 1fr);
+  }
+
+  .coach-prompt .coach-portrait {
+    min-height: 148px;
+  }
+
+  .coach-prompt .coach-copy {
+    padding-block: 9px;
+  }
+
+  .coach-prompt .coach-body {
+    display: block;
+  }
+
+  .coach-prompt .coach-action {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coach.coach-prompt.coach-show,
+  .coach-prompt .coach-portrait {
+    animation: none;
+  }
+}
+
 @media (min-width: 1181px) and (max-height: 780px) {
   .hud {
     top: 8px;
@@ -4736,5 +4917,70 @@ canvas {
   @keyframes professor-slide-left {
     from { opacity: 0; transform: translateX(-52px); }
     to { opacity: 1; transform: translateX(0); }
+  }
+}
+
+/* The Doctor remains the mobile front-door brand. This lives after the
+   campaign responsive layer so the portrait cannot be hidden downstream. */
+@media (max-width: 899px) and (orientation: portrait) {
+  #screen-title.screen-title-screen.visible {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: clamp(190px, 32svh, 260px) auto;
+    align-content: start;
+    justify-items: center;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .screen-title-screen .title-professor {
+    display: block;
+    grid-row: 1;
+    align-self: end;
+    width: min(82vw, 330px);
+    height: clamp(210px, 34svh, 280px);
+    z-index: 0;
+  }
+
+  .screen-title-screen .title-professor img {
+    object-fit: cover;
+    object-position: 50% 15%;
+    opacity: 0.88;
+    filter: grayscale(0.44) saturate(0.7) brightness(0.72) contrast(1.28);
+    -webkit-mask-image: linear-gradient(180deg, #000 0 66%, rgba(0, 0, 0, 0.72) 82%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 0 66%, rgba(0, 0, 0, 0.72) 82%, transparent 100%);
+  }
+
+  .screen-title-screen .title-professor figcaption {
+    left: 6px;
+    right: 6px;
+    bottom: 12px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .screen-title-screen .title-card {
+    grid-row: 2;
+    z-index: 1;
+    margin-top: -24px;
+  }
+}
+
+@media (max-width: 899px) and (orientation: portrait) and (max-height: 700px) {
+  #screen-title.screen-title-screen.visible {
+    grid-template-rows: 168px auto;
+  }
+
+  .screen-title-screen .title-professor {
+    width: min(74vw, 280px);
+    height: 188px;
+  }
+
+  .screen-title-screen .title-professor figcaption {
+    display: none;
+  }
+
+  .screen-title-screen .title-card {
+    margin-top: -18px;
   }
 }

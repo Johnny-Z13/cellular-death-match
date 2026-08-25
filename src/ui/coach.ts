@@ -28,7 +28,8 @@ export interface Coach {
   hideNudge(): void;
 }
 
-const SEEN_KEY = 'cdm.coach.seen.v4';
+const SEEN_KEY = 'cdm.coach.seen.v5';
+const PROMPT_HOLD_MS = 2600;
 
 export function createCoach(): Coach {
   const root = document.getElementById('coach');
@@ -47,6 +48,7 @@ export function createCoach(): Coach {
   // 'tutorial' = the first-run lesson; 'nudge' = a transient idle hint.
   let mode: 'tutorial' | 'nudge' = 'tutorial';
   let nudgeTimer = 0;
+  let promptTimer = 0;
   let autoSpawnTriggered = false;
 
   function seen(): boolean {
@@ -57,17 +59,27 @@ export function createCoach(): Coach {
     try { window.localStorage.setItem(SEEN_KEY, '1'); } catch { /* ignore */ }
   }
 
+  function clearPromptPresentation(): void {
+    window.clearTimeout(promptTimer);
+    root?.classList.remove('coach-prompt');
+    layout?.classList.remove('coach-prompt-active');
+  }
+
   function render(): void {
     if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
     const beat = ONBOARDING_BEATS[beatIndex];
     if (!beat) { hide(); return; }
     mode = 'tutorial';
     const isIntroduction = beat.id === 'place-egg';
+    clearPromptPresentation();
     root.classList.remove('coach-intro');
     layout?.classList.remove('coach-intro-active');
     if (isIntroduction) {
       root.classList.add('coach-intro');
       layout?.classList.add('coach-intro-active');
+    } else {
+      root.classList.add('coach-prompt');
+      layout?.classList.add('coach-prompt-active');
     }
     kickerEl.textContent = isIntroduction
       ? 'Trial director · Dr. E. Mergent'
@@ -75,9 +87,21 @@ export function createCoach(): Coach {
     titleEl.textContent = beat.title;
     bodyEl.textContent = beat.body;
     stepEl.textContent = `${beatIndex + 1} / ${ONBOARDING_BEATS.length}`;
-    if (actionEl) actionEl.textContent = isIntroduction ? 'Egg armed · Tap the dish' : '';
+    if (actionEl) {
+      actionEl.textContent = isIntroduction
+        ? 'Egg armed · Tap the dish'
+        : beat.id === 'feed-colony'
+          ? 'Nutrient ready · Feed the culture'
+          : 'Observe · New form approaching';
+    }
     if (skipBtn) skipBtn.textContent = 'Let me experiment';
     show();
+    if (!isIntroduction) {
+      promptTimer = window.setTimeout(() => {
+        clearPromptPresentation();
+        publishCoachBottom();
+      }, PROMPT_HOLD_MS);
+    }
   }
 
   function publishCoachBottom(): void {
@@ -98,6 +122,7 @@ export function createCoach(): Coach {
 
   function hide(): void {
     if (!root) return;
+    clearPromptPresentation();
     root.classList.remove('coach-show');
     root.classList.remove('coach-intro');
     root.setAttribute('aria-hidden', 'true');
@@ -172,6 +197,7 @@ export function createCoach(): Coach {
       if (beatIndex >= ONBOARDING_BEATS.length) {
         // Final beat done: celebrate briefly, then retire the coach.
         if (titleEl && bodyEl && kickerEl && stepEl && root) {
+          clearPromptPresentation();
           kickerEl.textContent = 'Professor’s result';
           titleEl.textContent = 'Extraordinary. Or deeply concerning.';
           bodyEl.textContent = 'Bloom Mass logged. The first hypothesis is sealed in the Lab.';
@@ -194,6 +220,7 @@ export function createCoach(): Coach {
       if (active && !opts.interruptTutorial) return;
       if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
       mode = 'nudge';
+      clearPromptPresentation();
       root.classList.remove('coach-intro');
       layout?.classList.remove('coach-intro-active');
       kickerEl.textContent = 'Professor’s note';
