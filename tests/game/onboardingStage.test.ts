@@ -26,7 +26,7 @@ describe('onboarding stage gates', () => {
     expect(shouldUseOnboardingDishForCurrentStage(0, false)).toBe(true);
   });
 
-  it('releases the normal unlock set after Bloom or after the opening dish', () => {
+  it('reveals one authored tool layer per early Case Trial', () => {
     const bloomed = updateDiscoveryProgression(createDiscoveryProgression(), {
       breedIds: ['bloom_mass'],
       noteIds: ['breed_bloom_mass'],
@@ -36,10 +36,13 @@ describe('onboarding stage gates', () => {
     expect(toolUnlocksForCurrentStage(bloomed, 0, false)).toEqual(['egg', 'nutrient']);
     expect(lifeformUnlocksForCurrentStage(bloomed, 0, false)).toEqual(['swarmlet']);
     expect(shouldUseOnboardingDishForCurrentStage(0, false)).toBe(true);
-    expect(toolUnlocksForCurrentStage(bloomed, 0, true)).toEqual(['egg', 'nutrient', 'toxin', 'water', 'paste']);
+    expect(toolUnlocksForCurrentStage(bloomed, 0, true)).toEqual(['egg', 'nutrient']);
     expect(lifeformUnlocksForCurrentStage(bloomed, 0, true)).toEqual(['swarmlet', 'bruiser', 'splitter', 'bloom_mass']);
     expect(shouldUseOnboardingDishForCurrentStage(0, true)).toBe(false);
-    expect(toolUnlocksForCurrentStage(starter, 1)).toEqual(starter.unlockedTools);
+    expect(toolUnlocksForCurrentStage(starter, 1)).toEqual(['egg', 'nutrient', 'toxin']);
+    expect(toolUnlocksForCurrentStage(starter, 2)).toEqual(['egg', 'nutrient', 'toxin', 'water']);
+    expect(toolUnlocksForCurrentStage(starter, 3)).toEqual(['egg', 'nutrient', 'toxin', 'water', 'paste']);
+    expect(toolUnlocksForCurrentStage(starter, 4)).toEqual(['egg', 'nutrient', 'toxin', 'water', 'paste', 'salt']);
     expect(lifeformUnlocksForCurrentStage(starter, 1)).toEqual(starter.unlockedLifeforms);
     expect(shouldUseOnboardingDishForCurrentStage(1, false)).toBe(false);
   });
@@ -63,9 +66,10 @@ describe('onboarding beats', () => {
     expect(ONBOARDING_BEATS[2]!.autoSpawn).toBe(true);
   });
 
-  it('each beat has a message and trigger event', () => {
+  it('each beat has Professor copy and a trigger event', () => {
     for (const beat of ONBOARDING_BEATS) {
-      expect(beat.message.length).toBeGreaterThan(0);
+      expect(beat.title.length).toBeGreaterThan(0);
+      expect(beat.body.length).toBeGreaterThan(0);
       expect(beat.trigger.length).toBeGreaterThan(0);
     }
   });
@@ -77,15 +81,16 @@ describe('epoch classification helpers', () => {
     expect(isOnboardingEpoch(1)).toBe(false);
   });
 
-  it('epochs 0-2 are fixed', () => {
+  it('Trials 0-4 are fixed for Case 01', () => {
     expect(isFixedEpoch(0)).toBe(true);
     expect(isFixedEpoch(2)).toBe(true);
-    expect(isFixedEpoch(3)).toBe(false);
+    expect(isFixedEpoch(4)).toBe(true);
+    expect(isFixedEpoch(5)).toBe(false);
   });
 
-  it('epochs 3+ are mid-game', () => {
-    expect(isMidGameEpoch(2)).toBe(false);
-    expect(isMidGameEpoch(3)).toBe(true);
+  it('Trial 5+ is the open-ended mid-game', () => {
+    expect(isMidGameEpoch(4)).toBe(false);
+    expect(isMidGameEpoch(5)).toBe(true);
     expect(isMidGameEpoch(10)).toBe(true);
   });
 });

@@ -1016,7 +1016,12 @@ export function createArena(opts: CreateArenaOpts): Arena {
       );
       const target: [number, number] = field ? [field.pos[0], field.pos[1]] : [state.grid.LX / 2, state.grid.LY / 2];
       const seedPos = findEggSeedPos(state, target) ?? target;
-      this.spawnEnemy({ spawn: { ...ARCHETYPE_DEFAULTS.swarmlet }, pos: seedPos });
+      const id = this.spawnEnemy({ spawn: { ...ARCHETYPE_DEFAULTS.swarmlet }, pos: seedPos });
+      // This path exists only after the player has demonstrated Egg → Nutrient.
+      // Log the tutorial specimen immediately instead of depending on the next
+      // animation-frame tick, which embedded/headless browsers may throttle.
+      const seededCell = state.cells.get(id);
+      if (field && seededCell) discoverBreed(this, 'bloom_mass', seededCell);
     },
     getHomeostasisProgress(): number {
       return homeostasisTracker.progress();

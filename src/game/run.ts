@@ -11,12 +11,20 @@ import { drawObjectives, type DrawContext } from './objectivePool';
 import { isMidGameEpoch } from './onboardingStage';
 import type { BreedId } from '../content/catalysis';
 
-// Fixed epochs use the OBJECTIVES array; mid-game epochs are open-ended.
-export const FIXED_EPOCH_COUNT = 3;
+// Case 01 is a five-Trial authored arc; later epochs are open-ended.
+export const FIXED_EPOCH_COUNT = 5;
 export const UPGRADES_PER_PICK = 3;
 // Backward compat: research grants are tested over OBJECTIVES.length iterations.
 export const EPOCHS_PER_RUN = OBJECTIVES.length;
 export const FIGHTS_PER_RUN = OBJECTIVES.length;
+
+const CASE_METHOD_POOLS: readonly (readonly string[])[] = [
+  ['egg_1', 'food_1', 'food_radius_1'],
+  ['egg_1', 'food_1', 'food_radius_1', 'toxin_1', 'toxin_radius_1'],
+  ['egg_1', 'food_1', 'food_radius_1', 'toxin_1', 'toxin_radius_1', 'water_1'],
+  ['egg_1', 'food_1', 'toxin_1', 'toxin_radius_1', 'water_1', 'centrifuge_1'],
+  ['egg_1', 'food_1', 'toxin_1', 'water_1', 'centrifuge_1', 'salt_1'],
+];
 
 export type RunPhase = 'title' | 'arena' | 'upgrade_pick' | 'objective_pick' | 'run_end';
 
@@ -34,7 +42,6 @@ export interface RunState {
 export interface Run {
   getState(): RunState;
   start(): void;
-  startAfterOnboarding(upgradeId: string): void;
   completeEpoch(): void;
   skipEpoch(): void;
   failEpoch(): void;
@@ -75,10 +82,17 @@ export function createRun(seed: number): Run {
   const rng: Rng = createRng(seed);
 
   function pickThreeChoices(): string[] {
-    if (UPGRADES.length <= UPGRADES_PER_PICK) {
-      return UPGRADES.map((u) => u.id);
+    // A Method is offered only when it can affect the next authored Trial.
+    // This prevents early Lab breaks promising Acid or Agitate before those
+    // controls exist on the bench.
+    const authoredPool = CASE_METHOD_POOLS[Math.min(fightIndex + 1, CASE_METHOD_POOLS.length - 1)]!;
+    const availableIds = fightIndex < FIXED_EPOCH_COUNT - 1
+      ? authoredPool.filter((id) => UPGRADES.some((upgrade) => upgrade.id === id))
+      : UPGRADES.map((upgrade) => upgrade.id);
+    if (availableIds.length <= UPGRADES_PER_PICK) {
+      return [...availableIds];
     }
-    const ids = UPGRADES.map((u) => u.id);
+    const ids = [...availableIds];
     for (let i = 0; i < UPGRADES_PER_PICK; i++) {
       const j = i + rng.randInt(ids.length - i);
       const tmp = ids[i];
@@ -108,19 +122,6 @@ export function createRun(seed: number): Run {
       outcome = null;
       pendingPickChoices = [];
       epochResults = [];
-      chosenObjective = undefined;
-    },
-    startAfterOnboarding(upgradeId) {
-      if (!UPGRADES.some((upgrade) => upgrade.id === upgradeId)) {
-        throw new Error(`unknown onboarding upgrade "${upgradeId}"`);
-      }
-      phase = 'arena';
-      fightIndex = 1;
-      upgrades.length = 0;
-      upgrades.push({ id: upgradeId, stacks: 1 });
-      outcome = null;
-      pendingPickChoices = [];
-      epochResults = ['completed'];
       chosenObjective = undefined;
     },
     completeEpoch() {

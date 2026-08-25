@@ -8,7 +8,7 @@ const screensSource = readFileSync('src/ui/screens.ts', 'utf8');
 describe('open-ended run copy', () => {
   it('does not describe the game as ending when a dish clock expires', () => {
     expect(html).not.toContain('before the dish clock expires');
-    expect(html).toContain('nurture the dish toward equilibrium');
+    expect(html).toContain('Cultivate a stable response without breeding something worse.');
   });
 
   it('does not format open-ended end summaries as x / 0 objectives', () => {

@@ -11,6 +11,7 @@ import {
 } from '../content/lifeformIdentity';
 import { createIconCells } from './iconCells';
 import { renderLabReport } from './labReportScreen';
+import type { ResearchCaseDef, ResearchTrialDef } from '../content/researchCases';
 
 type ScreenName = 'title' | 'pick' | 'end' | 'hud' | 'notebook';
 type AppScreenName = ScreenName | 'loadout' | 'objective';
@@ -63,6 +64,13 @@ export interface EggOption {
   color: [number, number, number];
 }
 
+export interface CaseProgressInfo {
+  caseDef: ResearchCaseDef;
+  activeTrial: ResearchTrialDef;
+  activeTrialIndex: number;
+  completedResults: readonly ('completed' | 'lapsed' | undefined)[];
+}
+
 export interface Screens {
   show(name: AppScreenName): void;
   hide(name: AppScreenName): void;
@@ -95,6 +103,7 @@ export interface Screens {
   setObjectiveChoices(choices: ObjectiveDef[], onPick: (objective: ObjectiveDef) => void): void;
   updateEnd(info: EndInfo): void;
   updateLabReport(report: LabReport | null): void;
+  updateCaseProgress(info: CaseProgressInfo): void;
   onTitleStart(handler: () => void): void;
   onEndRestart(handler: () => void): void;
   onNotebookOpen(handler: () => void): void;
@@ -133,6 +142,11 @@ export function createScreens(): Screens {
   const screenNotebook = get('screen-notebook');
   const hud          = get('hud');
   const titleStart   = get('title-start');
+  const titleStartLabel = get('title-start-label');
+  const titleCaseProgress = get('title-case-progress');
+  const titleTrialLabel = get('title-trial-label');
+  const titleTrialHypothesis = get('title-trial-hypothesis');
+  const pickCaseProgress = get('pick-case-progress');
   const notebookButton = get('notebook-button') as HTMLButtonElement;
   const fullscreenButton = get('fullscreen-button') as HTMLButtonElement;
   const optionsButton = get('options-button') as HTMLButtonElement;
@@ -568,7 +582,9 @@ export function createScreens(): Screens {
       setSelectedLifeform(id);
     },
     updateHud(info) {
-      hudFight.textContent = `${info.fightIndex + 1} / ${info.totalFights}`;
+      hudFight.textContent = info.totalFights > 0
+        ? `${info.fightIndex + 1} / ${info.totalFights}`
+        : `${info.fightIndex + 1} / ∞`;
       hudVol.textContent = `${info.vol} / ${Math.round(info.targetVol)}`;
       hudProgress.textContent = `${info.secondsRemaining}s`;
       const urgent = !info.objectiveComplete;
@@ -759,8 +775,8 @@ export function createScreens(): Screens {
       let fightStr: string;
       if (info.totalFights === 0) {
         fightStr = info.outcome === 'won'
-          ? `Homeostasis reached after epoch ${info.fightReached}; ${info.objectivesCompleted} ${objectiveLabel} banked.`
-          : `Colony collapsed during epoch ${info.fightReached}; ${info.objectivesCompleted} ${objectiveLabel} banked.`;
+          ? `Homeostasis reached after trial ${info.fightReached}; ${info.objectivesCompleted} ${objectiveLabel} banked.`
+          : `Colony collapsed during trial ${info.fightReached}; ${info.objectivesCompleted} ${objectiveLabel} banked.`;
       } else if (info.outcome === 'won') {
         fightStr = info.objectivesCompleted >= info.totalFights
           ? `All ${info.totalFights} objectives achieved — a flawless trial.`
@@ -777,6 +793,27 @@ export function createScreens(): Screens {
     updateLabReport(report) {
       labReportMount.replaceChildren();
       if (report) labReportMount.append(renderLabReport(report));
+    },
+    updateCaseProgress(info) {
+      const completed = info.completedResults.filter((result) => result === 'completed').length;
+      titleCaseProgress.textContent = `${completed} / ${info.caseDef.trials.length} sealed`;
+      titleTrialLabel.textContent = `Trial ${String(info.activeTrial.number).padStart(2, '0')} · ${info.activeTrial.name}`;
+      titleTrialHypothesis.textContent = info.activeTrial.hypothesis;
+      titleStartLabel.textContent = `Run Trial ${String(info.activeTrial.number).padStart(2, '0')}`;
+      pickCaseProgress.textContent = `Trial logged · ${completed} / ${info.caseDef.trials.length} sealed`;
+
+      document.querySelectorAll<HTMLElement>('[data-case-trial]').forEach((node) => {
+        const index = Number(node.dataset.caseTrial);
+        node.classList.toggle('is-complete', info.completedResults[index] === 'completed');
+        node.classList.toggle('is-lapsed', info.completedResults[index] === 'lapsed');
+        node.classList.toggle('is-active', index === info.activeTrialIndex);
+      });
+      document.querySelectorAll<HTMLElement>('[data-case-dot]').forEach((node) => {
+        const index = Number(node.dataset.caseDot);
+        node.classList.toggle('is-complete', info.completedResults[index] === 'completed');
+        node.classList.toggle('is-lapsed', info.completedResults[index] === 'lapsed');
+        node.classList.toggle('is-active', index === info.activeTrialIndex);
+      });
     },
     onTitleStart(handler) {
       titleStart.addEventListener('click', handler);

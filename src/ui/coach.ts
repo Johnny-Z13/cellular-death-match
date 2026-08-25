@@ -61,11 +61,11 @@ export function createCoach(): Coach {
     const beat = ONBOARDING_BEATS[beatIndex];
     if (!beat) { hide(); return; }
     mode = 'tutorial';
-    kickerEl.textContent = `Lab Induction · Step ${beatIndex + 1}`;
-    titleEl.textContent = beat.message;
-    bodyEl.textContent = '';
+    kickerEl.textContent = `Professor’s hypothesis · ${beatIndex + 1}`;
+    titleEl.textContent = beat.title;
+    bodyEl.textContent = beat.body;
     stepEl.textContent = `${beatIndex + 1} / ${ONBOARDING_BEATS.length}`;
-    if (skipBtn) skipBtn.textContent = 'Skip tutorial';
+    if (skipBtn) skipBtn.textContent = 'Let me experiment';
     show();
   }
 
@@ -159,9 +159,9 @@ export function createCoach(): Coach {
       if (beatIndex >= ONBOARDING_BEATS.length) {
         // Final beat done: celebrate briefly, then retire the coach.
         if (titleEl && bodyEl && kickerEl && stepEl && root) {
-          kickerEl.textContent = 'Discovery!';
-          titleEl.textContent = 'You created a new lifeform!';
-          bodyEl.textContent = 'Your Notebook logs every breed you find. Seed, feed, and discover.';
+          kickerEl.textContent = 'Professor’s result';
+          titleEl.textContent = 'Extraordinary. Or deeply concerning.';
+          bodyEl.textContent = 'Bloom Mass logged. The first hypothesis is sealed in the Lab.';
           stepEl.textContent = `${ONBOARDING_BEATS.length} / ${ONBOARDING_BEATS.length}`;
           show();
         }
@@ -181,7 +181,7 @@ export function createCoach(): Coach {
       if (active && !opts.interruptTutorial) return;
       if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
       mode = 'nudge';
-      kickerEl.textContent = 'Lab Assistant';
+      kickerEl.textContent = 'Professor’s note';
       titleEl.textContent = title;
       bodyEl.textContent = body;
       stepEl.textContent = '';

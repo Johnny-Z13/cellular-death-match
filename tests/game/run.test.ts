@@ -18,8 +18,8 @@ describe('createRun — initial', () => {
     expect(run.getState().outcome).toBeNull();
   });
 
-  it('has 3 fixed epochs', () => {
-    expect(FIXED_EPOCH_COUNT).toBe(3);
+  it('has 5 fixed Case Trials', () => {
+    expect(FIXED_EPOCH_COUNT).toBe(5);
   });
 });
 
@@ -29,27 +29,6 @@ describe('start', () => {
     run.start();
     expect(run.getState().phase).toBe('arena');
     expect(run.getState().fightIndex).toBe(0);
-  });
-
-  it('can enter the first live ecosystem after an external onboarding handoff', () => {
-    const run = createRun(42);
-    run.startAfterOnboarding('egg_1');
-
-    expect(run.getState()).toMatchObject({
-      phase: 'arena',
-      fightIndex: 1,
-      upgrades: [{ id: 'egg_1', stacks: 1 }],
-      epochResults: ['completed'],
-    });
-    expect(run.getObjective().kind).toBe('preserve_grazers');
-    expect(run.getPlayerConfig().eggCharges).toBe(10);
-  });
-
-  it('rejects an unknown external onboarding upgrade before starting', () => {
-    const run = createRun(42);
-
-    expect(() => run.startAfterOnboarding('not_an_upgrade')).toThrow(/unknown onboarding upgrade/);
-    expect(run.getState().phase).toBe('title');
   });
 });
 
@@ -69,6 +48,17 @@ describe('winFight — non-final fight', () => {
     run.start();
     run.winFight();
     expect(run.getState().fightIndex).toBe(0);
+  });
+
+  it('offers only Methods that affect the next authored Trial', () => {
+    const run = createRun(42);
+    run.start();
+    run.completeEpoch();
+    expect(run.getState().pendingPickChoices.every((id) => (
+      ['egg_1', 'food_1', 'food_radius_1', 'toxin_1', 'toxin_radius_1'].includes(id)
+    ))).toBe(true);
+    expect(run.getState().pendingPickChoices).not.toContain('acid_1');
+    expect(run.getState().pendingPickChoices).not.toContain('centrifuge_1');
   });
 });
 
@@ -232,13 +222,13 @@ describe('objectives', () => {
   it('mid-game uses chosen objective when set', () => {
     const run = createRun(42);
     run.start();
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < FIXED_EPOCH_COUNT - 1; i++) {
       run.completeEpoch();
       run.pickUpgrade(run.getState().pendingPickChoices[0]!);
     }
     run.completeEpoch();
     run.pickUpgrade(run.getState().pendingPickChoices[0]!);
-    expect(run.getState().fightIndex).toBe(3);
+    expect(run.getState().fightIndex).toBe(FIXED_EPOCH_COUNT);
     expect(run.getState().phase).toBe('objective_pick');
     const obj: ObjectiveDef = { kind: 'mega_culture', name: 'Test', description: 'Test', target: 'Test' };
     run.setChosenObjective(obj);
@@ -266,7 +256,7 @@ describe('objectives', () => {
   it('getObjectiveChoices returns 2 choices for mid-game', () => {
     const run = createRun(42);
     run.start();
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < FIXED_EPOCH_COUNT - 1; i++) {
       run.completeEpoch();
       run.pickUpgrade(run.getState().pendingPickChoices[0]!);
     }
