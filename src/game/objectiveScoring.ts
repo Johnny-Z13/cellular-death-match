@@ -121,7 +121,13 @@ export function evaluateObjective(
     case 'preserve_grazers': {
       const minCount = objective.minCount ?? OBJECTIVE_TUNING.preserveGrazerMin;
       const ok = metrics.protectedCultureCount >= minCount;
-      return progress(objective, ok, false, deadline && !ok, urgency, `${metrics.protectedCultureCount} / ${minCount} protected cultures`);
+      const observationTicks = objective.sustainTicks ?? 0;
+      const observed = context.tickNo >= observationTicks;
+      const secondsRemaining = Math.max(0, Math.ceil((observationTicks - context.tickNo) / 60));
+      const summary = observationTicks > 0 && !observed
+        ? `${metrics.protectedCultureCount} / ${minCount} protected · hold ${secondsRemaining}s`
+        : `${metrics.protectedCultureCount} / ${minCount} protected cultures`;
+      return progress(objective, ok && observed, false, deadline && !ok, urgency, summary);
     }
     case 'breed_archetype': {
       const archetype = objective.archetype ?? 'swarmlet';

@@ -1,11 +1,16 @@
 # Cellular Death Match: CrazyGames Merge Design
 
 Date: 2026-08-18
-Status: Pre-code sign-off candidate, refined after second adversarial review
+Status: Superseded on 2026-08-25; do not implement
 Target platform: CrazyGames web, mobile web, CrazyGames iOS/Android app webviews
 Internal project identity: Cellular Death Match
 Recommended CrazyGames listing candidate: Merge Lab: Cellular Death Match
 Short cover lockup to test: Merge Lab
+
+> This historical proposal was rejected after implementation testing. The Merge
+> Lab route and handoff were removed. The current product direction preserves the
+> original CDM core and is defined in
+> `docs/crazygames/2026-08-25-professor-trials-progression-design.md`.
 
 ## 1. Executive Decision
 

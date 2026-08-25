@@ -116,7 +116,7 @@ describe('onboarding coach', () => {
   it('nudges idle players with the objective hint, capped and dismissible', () => {
     expect(coachSource).toContain('showNudge(title: string, body: string, opts?: { interruptTutorial?: boolean }): void;');
     expect(coachSource).toContain("if (mode === 'nudge') hideNudgeNow();");
-    expect(coachSource).toContain("kickerEl.textContent = 'Lab Assistant';");
+    expect(coachSource).toContain("kickerEl.textContent = 'Professor’s note';");
     expect(mainSource).toContain('const NUDGE_IDLE_TICKS = 60 * 22;');
     expect(mainSource).toContain('const MAX_NUDGES_PER_EPOCH = 2;');
     expect(mainSource).toContain('function maybeNudgeIdlePlayer(');
@@ -170,8 +170,8 @@ describe('onboarding coach', () => {
     elements.get('coach-skip')?.click();
 
     expect(coach.isActive()).toBe(true);
-    expect(elements.get('coach-title')?.textContent).toBe('Place a Swarmlet egg in the dish');
-    expect(elements.get('coach-skip')?.textContent).toBe('Skip tutorial');
+    expect(elements.get('coach-title')?.textContent).toBe('Begin with one living variable');
+    expect(elements.get('coach-skip')?.textContent).toBe('Let me experiment');
   });
 
   it('chooses onboarding idle nudges for the next concrete action', () => {

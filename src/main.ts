@@ -6,6 +6,8 @@ import { createScreens, type ToolId } from './ui/screens';
 import { SIM_SPEED_TUNING } from './content/ecologyTuning';
 import { renderLoadoutScreen } from './ui/loadoutScreen';
 import { getUpgradeDef } from './content/upgrades';
+import { COMMON_COLD_CASE, trialForIndex } from './content/researchCases';
+import { loadCaseRecord, recordCompletedTrial } from './game/caseRecord';
 import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/enemies';
 import { BREED_DEFS, DISCOVERY_NOTES, type BreedId } from './content/catalysis';
 import { notebookViewForProgression, atlasViewForProgression } from './content/notebook';
@@ -47,12 +49,6 @@ import {
 import { researchBriefForGrant, type ResearchBriefLine } from './game/researchBrief';
 import { applyOnboardingStateReset } from './game/onboardingReset';
 import {
-  deleteAllGameSaveData,
-  resetOnboardingSaveData,
-  shouldResetOnboardingFromLocation,
-  stripOnboardingResetParamsFromUrl,
-} from './game/saveDataReset';
-import {
   isOnboardingEpoch,
   lifeformUnlocksForCurrentStage,
   shouldUseOnboardingDishForCurrentStage,
@@ -67,12 +63,6 @@ import {
   performanceProfileFor,
   shouldRenderFrame,
 } from './ui/mobilePerformance';
-import { createAnalytics } from './platform/analytics';
-import { createCrazyGamesPlatform } from './platform/crazyGames';
-import { shouldLaunchMergeLab } from './platform/launchMode';
-import { createStorageAdapter } from './platform/storage';
-import { startMergeLabExperience } from './ui/mergeLabExperience';
-import type { MergeLabUpgradeChoice } from './game/mergeLab';
 
 declare const __COMMIT_MESSAGE__: string;
 
@@ -105,85 +95,6 @@ if (commitDebug) {
   commitDebug.textContent = `build · ${gist}`;
 }
 
-function safeRuntimeStorage(): Storage {
-  try {
-    return window.localStorage;
-  } catch {
-    return createFallbackStorage();
-  }
-}
-
-function createFallbackStorage(): Storage {
-  const values = new Map<string, string>();
-  return {
-    get length() {
-      return values.size;
-    },
-    clear() {
-      values.clear();
-    },
-    getItem(key: string) {
-      return values.get(String(key)) ?? null;
-    },
-    key(index: number) {
-      return Array.from(values.keys())[index] ?? null;
-    },
-    removeItem(key: string) {
-      values.delete(String(key));
-    },
-    setItem(key: string, value: string) {
-      values.set(String(key), String(value));
-    },
-  };
-}
-
-const runtimeStorage = safeRuntimeStorage();
-
-if (shouldResetOnboardingFromLocation(window.location)) {
-  resetOnboardingSaveData(runtimeStorage);
-  const nextUrl = stripOnboardingResetParamsFromUrl(new URL(window.location.href));
-  window.history.replaceState(null, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
-}
-
-if (shouldLaunchMergeLab(window.location, runtimeStorage)) {
-  startMergeLabRoute();
-} else {
-  startClassicGame();
-}
-
-function startMergeLabRoute(): void {
-  const platform = createCrazyGamesPlatform({ win: window });
-  void platform.init();
-  const storage = createStorageAdapter({
-    namespace: 'cellular-death-match.cg.v1',
-    localStorage: runtimeStorage,
-  });
-  const analytics = createAnalytics({
-    nowMs: () => performance.now(),
-    sink: (event) => {
-      if (import.meta.env.DEV) console.debug('[merge-lab]', event.name, event.data ?? {});
-    },
-  });
-  let experience: ReturnType<typeof startMergeLabExperience> | null = null;
-  experience = startMergeLabExperience({
-    canvas,
-    layout,
-    storage,
-    analytics,
-    platform,
-    nowMs: () => performance.now(),
-    eventNowMs: () => Date.now(),
-    onEnterEcosystem: (choice) => {
-      experience?.destroy();
-      experience = null;
-      delete document.documentElement.dataset.launch;
-      document.title = 'Cellular Death Match';
-      startClassicGame({ handoffChoice: choice });
-    },
-  });
-}
-
-function startClassicGame(options: { handoffChoice?: MergeLabUpgradeChoice } = {}): void {
 const run = createRun(Date.now() & 0xffffffff);
 const screens = createScreens();
 const debug = createDebugPanel();
@@ -211,6 +122,8 @@ if (hudEl && typeof ResizeObserver === 'function') {
   publishHudBottom();
 }
 
+const runtimeStorage = window.localStorage;
+let caseRecord = loadCaseRecord(runtimeStorage);
 const simClock = createFixedStepClock({
   ticksPerSecond: loadSimTicksPerSecond(runtimeStorage),
   nowMs: performance.now(),
@@ -241,23 +154,6 @@ applyOnboardingStateReset(discoveryStorage);
 let discoverySave: DiscoverySaveState = loadDiscoverySave(discoveryStorage);
 let discoveryProgression = createDiscoveryProgression(discoverySave);
 const strainLibrary: StrainLibrary = createStrainLibrary(discoveryStorage);
-let pendingHandoffChoice = options.handoffChoice ?? null;
-if (pendingHandoffChoice) {
-  // The Merge Lab replaces the old first dish: carry its guaranteed Bloom
-  // discovery and completion grant forward before entering the live ecosystem.
-  // Gate on Bloom so re-entering a completed Merge Lab cannot farm grants.
-  if (!discoveryProgression.discoveredBreedIds.includes('bloom_mass')) {
-    discoveryProgression = updateDiscoveryProgression(discoveryProgression, {
-      breedIds: ['bloom_mass'],
-      noteIds: ['breed_bloom_mass'],
-    });
-    const onboardingGrant = applyCompletionResearchGrant(discoveryProgression);
-    if (onboardingGrant) discoveryProgression = onboardingGrant.progression;
-    saveRuntimeDiscoveryState();
-  }
-  strainLibrary.bankStrain('bloom_mass');
-  strainLibrary.save();
-}
 // Allow up to PALETTE_SIZE total cell colors for evolving ecosystem spawns.
 const PALETTE_SIZE = 32;
 
@@ -388,31 +284,6 @@ screens.onOptionsOpen(() => {
 screens.onOptionsClose(() => {
   uiAudio.play('ui_tap');
   setOptionsMenuOpen(false);
-});
-
-const saveDataStatus = document.getElementById('save-data-status');
-const resetOnboardingButton = document.getElementById('reset-onboarding-button');
-const deleteSaveDataButton = document.getElementById('delete-save-data-button');
-
-resetOnboardingButton?.addEventListener('click', () => {
-  uiAudio.unlock();
-  uiAudio.play('ui_select');
-  const removed = resetOnboardingSaveData(runtimeStorage);
-  if (saveDataStatus) saveDataStatus.textContent = `onboarding reset: ${removed} key${removed === 1 ? '' : 's'}`;
-  window.setTimeout(() => window.location.reload(), 220);
-});
-
-deleteSaveDataButton?.addEventListener('click', () => {
-  uiAudio.unlock();
-  uiAudio.play('ui_tap');
-  const confirmed = window.confirm('Delete all Cellular Death Match save data on this device? This cannot be undone.');
-  if (!confirmed) {
-    if (saveDataStatus) saveDataStatus.textContent = 'delete cancelled';
-    return;
-  }
-  const removed = deleteAllGameSaveData(runtimeStorage);
-  if (saveDataStatus) saveDataStatus.textContent = `save data deleted: ${removed} key${removed === 1 ? '' : 's'}`;
-  window.setTimeout(() => window.location.reload(), 220);
 });
 
 screens.onAudioToggle(() => {
@@ -576,18 +447,16 @@ function endPasteStroke(event?: PointerEvent): void {
 canvas.addEventListener('pointerup', endPasteStroke);
 canvas.addEventListener('pointercancel', endPasteStroke);
 
-function enterClassicEcosystem(): void {
+screens.onTitleStart(() => {
   ecologyAudio.unlock();
   uiAudio.unlock();
   uiAudio.play('ui_select');
-  if (!pendingHandoffChoice && strainLibrary.getAvailableStrains().length > 1) {
+  if (strainLibrary.getAvailableStrains().length > 1) {
     showLoadoutPicker();
     return;
   }
   beginRunWithCurrentLoadout();
-}
-
-screens.onTitleStart(enterClassicEcosystem);
+});
 screens.onEndRestart(() => {
   uiAudio.play('ui_select');
   fx.playWipe();
@@ -658,19 +527,13 @@ screens.setTool(selectedTool);
 screens.setEggArchetype(selectedEggArchetype);
 screens.setSelectedLifeform(selectedEggArchetype);
 
-if (pendingHandoffChoice) {
-  // startClassicGame is intentionally one large closure; defer until its later
-  // state initializers have run before startNewFight touches them.
-  queueMicrotask(enterClassicEcosystem);
-} else {
-  showPhase();
-  if (shouldOpenLifeformsForNewPlayer({
-    hasSeenTutorial: coach.hasSeenTutorial(),
-    isMobileViewport: isMobileViewport(),
-    viewportHeight: window.innerHeight,
-  })) {
-    screens.openMobileLifeformsDrawer();
-  }
+showPhase();
+if (shouldOpenLifeformsForNewPlayer({
+  hasSeenTutorial: coach.hasSeenTutorial(),
+  isMobileViewport: isMobileViewport(),
+  viewportHeight: window.innerHeight,
+})) {
+  screens.openMobileLifeformsDrawer();
 }
 
 function showPhase() {
@@ -684,6 +547,19 @@ function showPhase() {
   screens.hide('hud');
   overlayState.notebookOpen = false;
   const state = run.getState();
+  const activeTrialIndex = Math.min(state.fightIndex, COMMON_COLD_CASE.trials.length - 1);
+  const recordedResults = COMMON_COLD_CASE.trials.map((trial) => (
+    caseRecord.completedTrialIds.includes(trial.id) ? 'completed' as const : undefined
+  ));
+  const currentResults = state.epochResults.map((result, index) => (
+    result === 'completed' || recordedResults[index] !== 'completed' ? result : 'completed'
+  ));
+  screens.updateCaseProgress({
+    caseDef: COMMON_COLD_CASE,
+    activeTrial: trialForIndex(activeTrialIndex),
+    activeTrialIndex,
+    completedResults: state.phase === 'title' ? recordedResults : currentResults,
+  });
   if (overlayState.presentationMode && state.phase !== 'arena') {
     setPresentationMode(false);
   }
@@ -725,7 +601,7 @@ function showPhase() {
     screens.updateEnd({
       outcome: state.outcome ?? 'lost',
       fightReached: state.fightIndex + 1,
-      totalFights: 0,  // open-ended run
+      totalFights: COMMON_COLD_CASE.trials.length,
       objectivesCompleted: state.epochResults.filter((result) => result === 'completed').length,
       upgrades: state.upgrades.map((u) => {
         const def = getUpgradeDef(u.id);
@@ -755,10 +631,7 @@ function beginRunWithCurrentLoadout(loadout = strainLibrary.getPlayableLoadout()
   const playableLoadout = playableLifeformIds(loadout);
   currentRunLoadout = new Set(playableLoadout);
   setEggLifeformSelection(playableLoadout[0] ?? 'swarmlet');
-  const handoffChoice = pendingHandoffChoice;
-  pendingHandoffChoice = null;
-  if (handoffChoice) run.startAfterOnboarding(handoffChoice);
-  else run.start();
+  run.start();
   resetRunTelemetry();
   startNewFight();
 }
@@ -873,7 +746,7 @@ function startNewFight() {
   uiAudio.play('epoch_begin');
   haptics.play('impact');
   fx.showEpochBanner(
-    `Epoch ${runState.fightIndex + 1}`,
+    `Case 01 · Trial ${runState.fightIndex + 1}`,
     objective.name,
     objective.description,
   );
@@ -889,6 +762,10 @@ function startNewFight() {
       uiAudio.play('epoch_win');
       fx.playWipe();
       runTelemetry.recordEpochCompleted();
+      const completedTrial = COMMON_COLD_CASE.trials[run.getState().fightIndex];
+      if (completedTrial) {
+        caseRecord = recordCompletedTrial(runtimeStorage, caseRecord, completedTrial.id);
+      }
       run.completeEpoch();
       showPhase();
     };
@@ -989,7 +866,9 @@ function loop() {
   const objective = arena.getObjectiveProgress();
   screens.updateHud({
     fightIndex: runState.fightIndex,
-    totalFights: 0,  // open-ended run
+    totalFights: runState.fightIndex < COMMON_COLD_CASE.trials.length
+      ? COMMON_COLD_CASE.trials.length
+      : 0,
     vol: player?.vol ?? 0,
     targetVol: player?.targetVol ?? 0,
     progress: ecology.progress,
@@ -1082,6 +961,18 @@ function resolveArenaStatus(status: ArenaStatus): boolean {
     uiAudio.play('epoch_win');
     haptics.play('success');
     fx.playWipe();
+    const completedTrial = COMMON_COLD_CASE.trials[run.getState().fightIndex];
+    if (completedTrial) {
+      caseRecord = recordCompletedTrial(runtimeStorage, caseRecord, completedTrial.id);
+    }
+    if (run.getState().fightIndex === COMMON_COLD_CASE.trials.length - 1) {
+      bankRunStrains();
+      run.completeEpoch();
+      run.achieveHomeostasis();
+      uiAudio.stopAmbience();
+      showPhase();
+      return true;
+    }
     run.completeEpoch();
     if (run.getState().phase === 'run_end') uiAudio.stopAmbience();
     showPhase();
@@ -1248,10 +1139,8 @@ function applyDiscoveryProgressionUi(): void {
   const unlockedTools = currentToolUnlocks();
   const unlockedLifeforms = currentLifeformUnlocks();
   screens.setToolUnlocks(unlockedTools);
-  screens.setAgitateUnlocked(!shouldUseOnboardingDishForCurrentStage(
-    run.getState().fightIndex,
-    openingBloomCreatedInCurrentDish(),
-  ));
+  // The first Case introduces Agitate only when the reaction Trial needs it.
+  screens.setAgitateUnlocked(run.getState().fightIndex >= 3);
   screens.setLifeformUnlocks(unlockedLifeforms);
   refreshNotebook();
 
@@ -1975,5 +1864,4 @@ function swatchForCellId(cellId: number, _paletteSize: number): string {
 function swatchForArchetype(archetype: EnemyArchetype): string {
   const [r, g, b] = ARCHETYPE_INFO[archetype].color;
   return `rgb(${r}, ${g}, ${b})`;
-}
 }

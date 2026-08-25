@@ -23,7 +23,7 @@ describe('button hint pulse', () => {
     expect(mainSource).toContain('let didPlaceEggThisEpoch = false;');
     expect(mainSource).toContain("screens.setButtonHint('egg', 'hint');");
     expect(mainSource).toContain("screens.setButtonHint('nutrient', 'hint');");
-    expect(mainSource).toContain('screens.setAgitateUnlocked(!shouldUseOnboardingDishForCurrentStage');
+    expect(mainSource).toContain('screens.setAgitateUnlocked(run.getState().fightIndex >= 3);');
     expect(mainSource).toContain('updateButtonHint();');
     expect(mainSource).toContain("if (selectedTool === 'egg') {");
     expect(mainSource).toContain('didPlaceEggThisEpoch = true;');
