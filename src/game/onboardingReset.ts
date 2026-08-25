@@ -16,6 +16,8 @@ const KNOWN_COACH_KEYS = [
   'cdm.coach.seen.v3',
   'cdm.coach.seen.v4',
   'cdm.coach.seen.v5',
+  'cdm.coach.seen.v6',
+  'cdm.coach.seen.v7',
 ] as const;
 
 export function applyOnboardingStateReset(storage: DiscoveryStorage): boolean {

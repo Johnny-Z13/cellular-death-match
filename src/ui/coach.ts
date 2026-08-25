@@ -1,6 +1,6 @@
-// First-run onboarding coach. A small, skippable, event-driven guide that
-// advances through 3 beats as it observes the player's real actions.
-// First run only, persisted via localStorage; a Skip control dismisses it for good.
+// First-run onboarding coach. Dr. E. Mergent arrives as a large, transient
+// character beat, gives one instruction, then clears the dish before the
+// player acts. Trial 1 is intentionally only: place one egg, feed it, succeed.
 
 import { ONBOARDING_BEATS } from '../game/onboardingStage';
 
@@ -22,14 +22,14 @@ export interface Coach {
   getCurrentButtonHint(): string | undefined;
   shouldAutoSpawn(): boolean;
   onOnboardingComplete: (() => void) | null;
-  // Idle nudge: a one-off contextual hint reusing the same card. Auto-hides;
-  // "Got it" dismisses just this nudge (never marks the tutorial seen).
   showNudge(title: string, body: string, opts?: { interruptTutorial?: boolean }): void;
   hideNudge(): void;
 }
 
-const SEEN_KEY = 'cdm.coach.seen.v5';
-const PROMPT_HOLD_MS = 2600;
+const SEEN_KEY = 'cdm.coach.seen.v7';
+const PROMPT_HOLD_MS = 3000;
+const SUCCESS_HOLD_MS = 4800;
+const SLIDE_OUT_MS = 520;
 
 export function createCoach(): Coach {
   const root = document.getElementById('coach');
@@ -44,11 +44,12 @@ export function createCoach(): Coach {
   const skipBtn = document.getElementById('coach-skip');
 
   let active = false;
+  let awaitingBloom = false;
   let beatIndex = 0;
-  // 'tutorial' = the first-run lesson; 'nudge' = a transient idle hint.
-  let mode: 'tutorial' | 'nudge' = 'tutorial';
+  let mode: 'tutorial' | 'nudge' | 'success' = 'tutorial';
   let nudgeTimer = 0;
-  let promptTimer = 0;
+  let presentationTimer = 0;
+  let exitTimer = 0;
   let autoSpawnTriggered = false;
 
   function seen(): boolean {
@@ -59,49 +60,19 @@ export function createCoach(): Coach {
     try { window.localStorage.setItem(SEEN_KEY, '1'); } catch { /* ignore */ }
   }
 
-  function clearPromptPresentation(): void {
-    window.clearTimeout(promptTimer);
-    root?.classList.remove('coach-prompt');
-    layout?.classList.remove('coach-prompt-active');
+  function clearPresentationTimers(): void {
+    window.clearTimeout(presentationTimer);
+    window.clearTimeout(exitTimer);
   }
 
-  function render(): void {
-    if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
-    const beat = ONBOARDING_BEATS[beatIndex];
-    if (!beat) { hide(); return; }
-    mode = 'tutorial';
-    const isIntroduction = beat.id === 'place-egg';
-    clearPromptPresentation();
-    root.classList.remove('coach-intro');
+  function clearPresentationClasses(): void {
+    root?.classList.remove('coach-intro');
+    root?.classList.remove('coach-prompt');
+    root?.classList.remove('coach-success');
+    root?.classList.remove('coach-exit');
     layout?.classList.remove('coach-intro-active');
-    if (isIntroduction) {
-      root.classList.add('coach-intro');
-      layout?.classList.add('coach-intro-active');
-    } else {
-      root.classList.add('coach-prompt');
-      layout?.classList.add('coach-prompt-active');
-    }
-    kickerEl.textContent = isIntroduction
-      ? 'Trial director · Dr. E. Mergent'
-      : `Dr. E. Mergent’s hypothesis · ${beatIndex + 1}`;
-    titleEl.textContent = beat.title;
-    bodyEl.textContent = beat.body;
-    stepEl.textContent = `${beatIndex + 1} / ${ONBOARDING_BEATS.length}`;
-    if (actionEl) {
-      actionEl.textContent = isIntroduction
-        ? 'Egg armed · Tap the dish'
-        : beat.id === 'feed-colony'
-          ? 'Nutrient ready · Feed the culture'
-          : 'Observe · New form approaching';
-    }
-    if (skipBtn) skipBtn.textContent = 'Let me experiment';
-    show();
-    if (!isIntroduction) {
-      promptTimer = window.setTimeout(() => {
-        clearPromptPresentation();
-        publishCoachBottom();
-      }, PROMPT_HOLD_MS);
-    }
+    layout?.classList.remove('coach-prompt-active');
+    layout?.classList.remove('coach-success-active');
   }
 
   function publishCoachBottom(): void {
@@ -114,21 +85,43 @@ export function createCoach(): Coach {
 
   function show(): void {
     if (!root) return;
+    root.classList.remove('coach-exit');
     root.classList.add('coach-show');
     root.setAttribute('aria-hidden', 'false');
     layout?.classList.add('coach-active');
     publishCoachBottom();
   }
 
-  function hide(): void {
+  function hidePresentation(): void {
     if (!root) return;
-    clearPromptPresentation();
+    clearPresentationTimers();
     root.classList.remove('coach-show');
-    root.classList.remove('coach-intro');
     root.setAttribute('aria-hidden', 'true');
+    clearPresentationClasses();
     layout?.classList.remove('coach-active');
-    layout?.classList.remove('coach-intro-active');
     publishCoachBottom();
+  }
+
+  function slideOut(after?: () => void): void {
+    if (!root?.classList.contains('coach-show')) {
+      hidePresentation();
+      after?.();
+      return;
+    }
+    root.classList.add('coach-exit');
+    exitTimer = window.setTimeout(() => {
+      hidePresentation();
+      after?.();
+    }, SLIDE_OUT_MS);
+  }
+
+  function scheduleSlideOut(holdMs: number, after?: () => void): void {
+    clearPresentationTimers();
+    presentationTimer = window.setTimeout(() => slideOut(after), holdMs);
+  }
+
+  function hide(): void {
+    hidePresentation();
   }
 
   if (root && typeof ResizeObserver === 'function') {
@@ -138,22 +131,66 @@ export function createCoach(): Coach {
 
   function finish(): void {
     active = false;
+    awaitingBloom = false;
     markSeen();
     hide();
+  }
+
+  function render(): void {
+    if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
+    const beat = ONBOARDING_BEATS[beatIndex];
+    if (!beat) { hidePresentation(); return; }
+    mode = 'tutorial';
+    clearPresentationTimers();
+    clearPresentationClasses();
+    const isIntroduction = beat.id === 'place-egg';
+    root.classList.add(isIntroduction ? 'coach-intro' : 'coach-prompt');
+    layout?.classList.add(isIntroduction ? 'coach-intro-active' : 'coach-prompt-active');
+    kickerEl.textContent = isIntroduction
+      ? 'Trial director · Dr. E. Mergent'
+      : 'Dr. E. Mergent · Next action';
+    titleEl.textContent = beat.title;
+    bodyEl.textContent = beat.body;
+    stepEl.textContent = `${beatIndex + 1} / ${ONBOARDING_BEATS.length}`;
+    if (actionEl) {
+      actionEl.textContent = isIntroduction
+        ? 'Egg armed · Tap the dish'
+        : 'Nutrient ready · Feed the egg';
+    }
+    if (skipBtn) skipBtn.textContent = 'Let me experiment';
+    show();
+    scheduleSlideOut(PROMPT_HOLD_MS);
+  }
+
+  function celebrateSuccess(coach: Coach): void {
+    if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
+    active = false;
+    awaitingBloom = false;
+    mode = 'success';
+    clearPresentationTimers();
+    clearPresentationClasses();
+    root.classList.add('coach-prompt');
+    root.classList.add('coach-success');
+    layout?.classList.add('coach-prompt-active');
+    layout?.classList.add('coach-success-active');
+    kickerEl.textContent = 'Trial 01 · Success';
+    titleEl.textContent = 'Excellent work. It changed.';
+    bodyEl.textContent = 'One egg. One feed. One new form. That was the easy part — ahead are competing strains, unstable reagents, and a much larger experiment.';
+    stepEl.textContent = 'Complete';
+    if (actionEl) actionEl.textContent = 'Culture logged · The real work begins';
+    if (skipBtn) skipBtn.textContent = 'Continue';
+    show();
+    scheduleSlideOut(SUCCESS_HOLD_MS, () => {
+      finish();
+      coach.onOnboardingComplete?.();
+    });
   }
 
   function hideNudgeNow(): void {
     window.clearTimeout(nudgeTimer);
     if (mode !== 'nudge') return;
-    if (active) render();
-    else hide();
-  }
-
-  if (skipBtn) {
-    skipBtn.addEventListener('click', () => {
-      if (mode === 'nudge') hideNudgeNow();
-      else finish();
-    });
+    if (active && !awaitingBloom) render();
+    else hidePresentation();
   }
 
   const coach: Coach = {
@@ -169,46 +206,35 @@ export function createCoach(): Coach {
       return beatIndex;
     },
     getCurrentButtonHint() {
-      if (!active) return undefined;
-      const beat = ONBOARDING_BEATS[beatIndex];
-      return beat?.buttonHint;
+      if (!active || awaitingBloom) return undefined;
+      return ONBOARDING_BEATS[beatIndex]?.buttonHint;
     },
     shouldAutoSpawn() {
-      if (autoSpawnTriggered) return false;
-      const beat = ONBOARDING_BEATS[beatIndex];
-      if (beat?.autoSpawn) {
-        autoSpawnTriggered = true;
-        return true;
-      }
-      return false;
+      if (!awaitingBloom || autoSpawnTriggered) return false;
+      autoSpawnTriggered = true;
+      return true;
     },
     beginRun() {
       if (seen()) { active = false; hide(); return; }
       active = true;
+      awaitingBloom = false;
       beatIndex = 0;
       autoSpawnTriggered = false;
       render();
     },
     report(event) {
       if (!active) return;
+      if (awaitingBloom) {
+        if (event === 'bloom-discovered') celebrateSuccess(coach);
+        return;
+      }
       const beat = ONBOARDING_BEATS[beatIndex];
       if (!beat || beat.trigger !== event) return;
       beatIndex += 1;
       if (beatIndex >= ONBOARDING_BEATS.length) {
-        // Final beat done: celebrate briefly, then retire the coach.
-        if (titleEl && bodyEl && kickerEl && stepEl && root) {
-          clearPromptPresentation();
-          kickerEl.textContent = 'Professor’s result';
-          titleEl.textContent = 'Extraordinary. Or deeply concerning.';
-          bodyEl.textContent = 'Bloom Mass logged. The first hypothesis is sealed in the Lab.';
-          stepEl.textContent = `${ONBOARDING_BEATS.length} / ${ONBOARDING_BEATS.length}`;
-          show();
-        }
-        active = false;
-        window.setTimeout(() => {
-          finish();
-          if (coach.onOnboardingComplete) coach.onOnboardingComplete();
-        }, 4200);
+        awaitingBloom = true;
+        autoSpawnTriggered = false;
+        slideOut();
         return;
       }
       render();
@@ -220,9 +246,8 @@ export function createCoach(): Coach {
       if (active && !opts.interruptTutorial) return;
       if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
       mode = 'nudge';
-      clearPromptPresentation();
-      root.classList.remove('coach-intro');
-      layout?.classList.remove('coach-intro-active');
+      clearPresentationTimers();
+      clearPresentationClasses();
       kickerEl.textContent = 'Professor’s note';
       titleEl.textContent = title;
       bodyEl.textContent = body;
@@ -237,6 +262,13 @@ export function createCoach(): Coach {
       hideNudgeNow();
     },
   };
+
+  if (skipBtn) {
+    skipBtn.addEventListener('click', () => {
+      if (mode === 'nudge') hideNudgeNow();
+      else finish();
+    });
+  }
 
   return coach;
 }

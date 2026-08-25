@@ -810,9 +810,9 @@ function loop() {
     scheduleLoop();
     return;
   }
-  // The opening silhouette is a reading beat, not free simulation time. Keep
-  // the live dish clickable so the real Egg action can dismiss it, but do not
-  // let the ecosystem or deadline advance before the player has acted.
+  // The opening Doctor entrance is a reading beat, not free simulation time.
+  // It slides away on its own, leaving the live dish ready for the first egg,
+  // but the ecosystem does not advance until the player has acted.
   const holdingForFirstEgg = coach.isActive() && coach.getBeatIndex() === 0;
   if (holdingForFirstEgg) simClock.reset(now);
   const ticksToRun = holdingForFirstEgg ? 0 : simClock.consumeTicks(now);
@@ -842,8 +842,8 @@ function loop() {
     lastFpsTick = now;
   }
 
-  // Tutorial beat 3 failsafe: seed a helper swarmlet so bloom is guaranteed to
-  // fire even if the player's first colony died before they fed it.
+  // After the one required feed, seed a helper swarmlet so the promised Bloom
+  // success is guaranteed even if the player's first colony died early.
   if (coach.shouldAutoSpawn()) {
     arena.spawnOnboardingSeed();
   }

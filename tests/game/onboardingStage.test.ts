@@ -49,8 +49,8 @@ describe('onboarding stage gates', () => {
 });
 
 describe('onboarding beats', () => {
-  it('defines exactly 3 beats', () => {
-    expect(ONBOARDING_BEATS).toHaveLength(3);
+  it('defines exactly 2 player-action beats', () => {
+    expect(ONBOARDING_BEATS).toHaveLength(2);
   });
 
   it('beat 1 is place-egg', () => {
@@ -59,11 +59,6 @@ describe('onboarding beats', () => {
 
   it('beat 2 is feed-colony', () => {
     expect(ONBOARDING_BEATS[1]!.id).toBe('feed-colony');
-  });
-
-  it('beat 3 is watch-bloom with autoSpawn', () => {
-    expect(ONBOARDING_BEATS[2]!.id).toBe('watch-bloom');
-    expect(ONBOARDING_BEATS[2]!.autoSpawn).toBe(true);
   });
 
   it('each beat has Professor copy and a trigger event', () => {

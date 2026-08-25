@@ -21,30 +21,22 @@ export interface OnboardingBeat {
   readonly body: string;
   readonly trigger: string;
   readonly buttonHint?: string;
-  readonly autoSpawn?: boolean;
 }
 
 export const ONBOARDING_BEATS: readonly OnboardingBeat[] = [
   {
     id: 'place-egg',
     title: 'Hi. I’m Dr. E. Mergent.',
-    body: 'That dish is far too clean. Drop a Swarmlet egg anywhere inside it.',
+    body: 'We’ll begin with one living sample. Drop a single Swarmlet egg anywhere inside the dish.',
     trigger: 'egg-placed',
     buttonHint: 'egg',
   },
   {
     id: 'feed-colony',
-    title: 'Now I need you to feed it.',
-    body: 'Select Nutrient and drop it beside the culture. Let’s see what the cells decide to become.',
+    title: 'Good. Now feed it.',
+    body: 'Select Nutrient, then tap beside the egg. One feed is enough.',
     trigger: 'nutrient-used',
     buttonHint: 'nutrient',
-  },
-  {
-    id: 'watch-bloom',
-    title: 'Now I need you to stand back.',
-    body: 'The fed cultures are approaching a new form.',
-    trigger: 'bloom-discovered',
-    autoSpawn: true,
   },
 ];
 

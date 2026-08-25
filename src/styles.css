@@ -5216,3 +5216,148 @@ canvas {
     animation: none;
   }
 }
+
+/* ---- Surgical Trial 1 onboarding ---------------------------------------
+   Every Doctor beat is deliberately large and transient: enter, speak, exit,
+   then give the uncovered dish back to the player. */
+.coach.coach-intro.coach-exit {
+  animation: coach-cinematic-slide-out 520ms cubic-bezier(0.55, 0.04, 0.85, 0.42) both;
+}
+
+.coach.coach-prompt.coach-exit {
+  animation: coach-prompt-slide-out 520ms cubic-bezier(0.55, 0.04, 0.85, 0.42) both;
+}
+
+@keyframes coach-cinematic-slide-out {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(-100%); }
+}
+
+@keyframes coach-prompt-slide-out {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(-110%); }
+}
+
+.coach.coach-success {
+  width: min(840px, calc(100vw - 36px));
+  grid-template-columns: clamp(240px, 27vw, 320px) minmax(0, 1fr);
+  border-color: rgba(91, 233, 214, 0.6);
+  background:
+    linear-gradient(112deg, rgba(91, 233, 214, 0.14), transparent 52%),
+    rgba(2, 9, 11, 0.96);
+  box-shadow: 0 28px 92px rgba(0, 0, 0, 0.64), 0 0 56px rgba(91, 233, 214, 0.22);
+}
+
+.coach-success .coach-portrait {
+  min-height: clamp(300px, 42svh, 380px);
+}
+
+.coach-success .coach-title {
+  color: #efffff;
+  font-size: clamp(27px, 3.4vw, 42px);
+  text-shadow: 0 0 24px rgba(91, 233, 214, 0.28);
+}
+
+.coach-success .coach-body {
+  max-width: 48ch;
+  color: rgba(231, 246, 244, 0.84);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.coach-success .coach-action {
+  border-color: rgba(91, 233, 214, 0.56);
+  color: #dffff9;
+  background: rgba(91, 233, 214, 0.13);
+}
+
+.coach-success .coach-skip {
+  display: none;
+}
+
+.coach-intro-active .fx-banner,
+.coach-intro-active .fx-toasts,
+.coach-prompt-active .fx-banner,
+.coach-prompt-active .fx-toasts,
+.coach-success-active .fx-banner,
+.coach-success-active .fx-toasts {
+  opacity: 0 !important;
+  visibility: hidden;
+}
+
+@media (max-width: 899px) {
+  .coach.coach-prompt {
+    left: 8px;
+    right: 8px;
+    bottom: calc(120px + env(safe-area-inset-bottom));
+    grid-template-columns: min(40vw, 164px) minmax(0, 1fr);
+  }
+
+  .coach-prompt .coach-portrait {
+    min-height: clamp(220px, 31svh, 280px);
+  }
+
+  .coach-intro .coach-portrait img {
+    filter:
+      grayscale(0.55)
+      saturate(0.65)
+      brightness(0.78)
+      contrast(1.32)
+      drop-shadow(0 0 22px rgba(91, 233, 214, 0.28));
+  }
+
+  .coach-prompt .coach-portrait img {
+    filter: grayscale(0.28) saturate(0.82) brightness(0.86) contrast(1.22);
+  }
+
+  .coach-prompt .coach-title {
+    font-size: clamp(20px, 5.8vw, 27px);
+  }
+
+  .coach.coach-success {
+    grid-template-columns: min(43vw, 176px) minmax(0, 1fr);
+  }
+
+  .coach-success .coach-portrait {
+    min-height: clamp(250px, 36svh, 320px);
+  }
+
+  .coach-success .coach-body {
+    font-size: 10.5px;
+    line-height: 1.42;
+  }
+}
+
+@media (max-width: 899px) and (max-height: 700px) {
+  .coach.coach-prompt {
+    bottom: calc(104px + env(safe-area-inset-bottom));
+    grid-template-columns: 138px minmax(0, 1fr);
+  }
+
+  .coach-prompt .coach-portrait {
+    min-height: 196px;
+  }
+
+  .coach.coach-success {
+    grid-template-columns: 146px minmax(0, 1fr);
+  }
+
+  .coach-success .coach-portrait {
+    min-height: 220px;
+  }
+
+  .coach-success .coach-title {
+    font-size: 21px;
+  }
+
+  .coach-success .coach-body {
+    font-size: 9.5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coach.coach-intro.coach-exit,
+  .coach.coach-prompt.coach-exit {
+    animation: none;
+  }
+}

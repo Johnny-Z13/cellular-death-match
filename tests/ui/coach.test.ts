@@ -96,7 +96,7 @@ describe('onboarding coach', () => {
     expect(mainSource).toContain("coach.report('bloom-discovered')");
   });
 
-  it('wires the beat-3 auto-spawn failsafe so bloom is always reachable', () => {
+  it('wires the post-feed auto-spawn failsafe so success is always reachable', () => {
     // shouldAutoSpawn was dead code; it must actually seed a helper swarmlet.
     expect(mainSource).toContain('coach.shouldAutoSpawn()');
     expect(mainSource).toContain('arena.spawnOnboardingSeed()');
@@ -108,13 +108,14 @@ describe('onboarding coach', () => {
   });
 
   it('shows on the first epoch of a first run only, persisted via localStorage', () => {
-    expect(coachSource).toContain("const SEEN_KEY = 'cdm.coach.seen.v5'");
+    expect(coachSource).toContain("const SEEN_KEY = 'cdm.coach.seen.v7'");
     expect(coachSource).toContain('hasSeenTutorial(): boolean;');
     expect(coachSource).toContain('if (seen()) { active = false; hide(); return; }');
     expect(mainSource).toContain('coach.beginRun()');
   });
 
-  it('opens as a full-screen introduction and collapses after the egg lands', () => {
+  it('opens large, slides away, then returns large with the feed instruction', () => {
+    vi.useFakeTimers();
     const elements = installCoachDom();
     const coach = createCoach();
 
@@ -124,15 +125,22 @@ describe('onboarding coach', () => {
     expect(elements.get('coach-title')?.textContent).toBe('Hi. I’m Dr. E. Mergent.');
     expect(elements.get('coach-action')?.textContent).toBe('Egg armed · Tap the dish');
 
+    vi.advanceTimersByTime(3000);
+    expect(elements.get('coach')?.classList.contains('coach-exit')).toBe(true);
+    vi.advanceTimersByTime(520);
+    expect(elements.get('coach')?.classList.contains('coach-show')).toBe(false);
+    expect(coach.isActive()).toBe(true);
+
     coach.report('egg-placed');
 
     expect(elements.get('coach')?.classList.contains('coach-intro')).toBe(false);
-    expect(elements.get('coach-title')?.textContent).toBe('Now I need you to feed it.');
-    expect(elements.get('coach-action')?.textContent).toBe('Nutrient ready · Feed the culture');
+    expect(elements.get('coach-title')?.textContent).toBe('Good. Now feed it.');
+    expect(elements.get('coach-action')?.textContent).toBe('Nutrient ready · Feed the egg');
     expect(elements.get('coach')?.classList.contains('coach-prompt')).toBe(true);
+    expect(elements.get('coach')?.classList.contains('coach-show')).toBe(true);
   });
 
-  it('uses a large timed character entrance for each follow-up instruction', () => {
+  it('clears the dish after each follow-up instruction instead of leaving a compact card', () => {
     vi.useFakeTimers();
     const elements = installCoachDom();
     const coach = createCoach();
@@ -141,9 +149,12 @@ describe('onboarding coach', () => {
     coach.report('egg-placed');
 
     expect(elements.get('coach')?.classList.contains('coach-prompt')).toBe(true);
-    vi.advanceTimersByTime(2600);
+    vi.advanceTimersByTime(3000);
+    expect(elements.get('coach')?.classList.contains('coach-exit')).toBe(true);
+    vi.advanceTimersByTime(520);
     expect(elements.get('coach')?.classList.contains('coach-prompt')).toBe(false);
-    expect(elements.get('coach')?.classList.contains('coach-show')).toBe(true);
+    expect(elements.get('coach')?.classList.contains('coach-show')).toBe(false);
+    expect(coach.isActive()).toBe(true);
   });
 
   it('holds simulation time during the opening reading beat', () => {
@@ -171,25 +182,39 @@ describe('onboarding coach', () => {
     // On phones the coach tracks the HUD's live bottom edge (published as
     // --hud-bottom by main.ts) so a two-line objective can't overlap it.
     expect(css.indexOf('top: calc(var(--hud-bottom, 100px) + 8px)')).toBeGreaterThan(mobileBlockStart);
+    expect(css).toContain('.coach.coach-intro.coach-exit');
+    expect(css).toContain('.coach.coach-prompt.coach-exit');
+    expect(css).toContain('.coach-success-active .fx-banner');
   });
 
-  it('retires itself after the final tutorial beat without requiring Skip', () => {
+  it('shows a large success beat after one egg and one feed, then advances', () => {
     vi.useFakeTimers();
     const elements = installCoachDom();
     const coach = createCoach();
+    const onComplete = vi.fn();
+    coach.onOnboardingComplete = onComplete;
 
     coach.beginRun();
     coach.report('egg-placed');
     coach.report('nutrient-used');
+
+    expect(coach.shouldAutoSpawn()).toBe(true);
+    expect(coach.shouldAutoSpawn()).toBe(false);
     coach.report('bloom-discovered');
 
     expect(coach.isActive()).toBe(false);
     expect(elements.get('coach')?.classList.contains('coach-show')).toBe(true);
+    expect(elements.get('coach')?.classList.contains('coach-success')).toBe(true);
+    expect(elements.get('coach-title')?.textContent).toBe('Excellent work. It changed.');
+    expect(elements.get('coach-body')?.textContent).toContain('much larger experiment');
 
-    vi.advanceTimersByTime(4200);
+    vi.advanceTimersByTime(4800);
+    expect(elements.get('coach')?.classList.contains('coach-exit')).toBe(true);
+    vi.advanceTimersByTime(520);
 
     expect(elements.get('coach')?.classList.contains('coach-show')).toBe(false);
     expect(elements.get('coach')?.getAttribute('aria-hidden')).toBe('true');
+    expect(onComplete).toHaveBeenCalledOnce();
   });
 
   it('can show an idle onboarding nudge over the active tutorial and then restore the tutorial card', () => {
