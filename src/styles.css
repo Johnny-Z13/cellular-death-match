@@ -5361,3 +5361,308 @@ canvas {
     animation: none;
   }
 }
+
+/* ---- Dish-first mobile arena -------------------------------------------
+   The culture is the interface. Status compresses into a two-tier mission
+   strip, the specimen fills (and slightly bleeds past) the phone width, and
+   the only persistent lower chrome is a clear, thumb-reachable tool dock. */
+@media (max-width: 899px) and (orientation: portrait) {
+  .layout[data-screen="arena"] {
+    --mobile-dish-size: min(104vw, calc(100svh - 248px), 800px);
+    --mobile-dish-size: min(104vw, calc(100dvh - 248px), 800px);
+    padding:
+      calc(76px + env(safe-area-inset-top))
+      0
+      calc(140px + env(safe-area-inset-bottom));
+  }
+
+  .layout[data-screen="arena"] .dish-stage {
+    width: var(--mobile-dish-size);
+    height: var(--mobile-dish-size);
+    max-width: none;
+    max-height: none;
+  }
+
+  .layout[data-screen="arena"] canvas {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    border-radius: 4px;
+    box-shadow:
+      0 0 0 1px #050708,
+      0 0 52px rgba(91, 233, 214, 0.18),
+      0 28px 74px rgba(0, 0, 0, 0.58);
+  }
+
+  .layout[data-screen="arena"] .dish-frame {
+    inset: -8px;
+    box-shadow:
+      0 0 0 1px rgba(120, 196, 200, 0.18),
+      0 0 110px rgba(91, 233, 214, 0.16),
+      0 34px 90px rgba(0, 0, 0, 0.64);
+  }
+
+  .layout[data-screen="arena"] .hud {
+    left: max(5px, env(safe-area-inset-left));
+    right: max(5px, env(safe-area-inset-right));
+    top: max(5px, env(safe-area-inset-top));
+    display: none;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px 12px;
+    min-height: 66px;
+    padding: 7px 56px 7px 10px;
+    border-color: rgba(120, 196, 200, 0.22);
+    border-radius: 10px;
+    background:
+      linear-gradient(90deg, rgba(91, 233, 214, 0.055), transparent 62%),
+      rgba(3, 10, 12, 0.9);
+  }
+
+  .layout[data-screen="arena"] .hud.visible {
+    display: grid;
+  }
+
+  .layout[data-screen="arena"] .hud-row {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-content: start;
+    align-items: baseline;
+    gap: 5px;
+    margin: 0;
+  }
+
+  .layout[data-screen="arena"] .hud-key {
+    font-size: 7px;
+    letter-spacing: 0.1em;
+  }
+
+  .layout[data-screen="arena"] .hud-val {
+    max-width: none;
+    overflow: hidden;
+    color: #eaffff;
+    font-size: 9px;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .layout[data-screen="arena"] .hud-objective-row {
+    grid-column: 1 / -1;
+    display: block;
+    padding-top: 4px;
+    border-top: 1px solid rgba(120, 196, 200, 0.12);
+  }
+
+  .layout[data-screen="arena"] .hud-objective-row .hud-key {
+    display: none;
+  }
+
+  .layout[data-screen="arena"] .hud-objective-row .hud-val {
+    display: block;
+    width: 100%;
+    max-width: none;
+    overflow: hidden;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .layout[data-screen="arena"] .hud-hint-row,
+  .layout[data-screen="arena"] .hud-volume-row,
+  .layout[data-screen="arena"] .hud-ecology-row,
+  .layout[data-screen="arena"] #hud-upgrades-row {
+    display: none;
+  }
+
+  .layout[data-screen="arena"] .fullscreen-button {
+    display: none;
+  }
+
+  .layout[data-screen="arena"] .options-button {
+    top: max(10px, calc(env(safe-area-inset-top) + 10px));
+    right: max(10px, calc(env(safe-area-inset-right) + 10px));
+    width: 38px;
+    min-width: 38px;
+    min-height: 34px;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 9px;
+    color: transparent;
+    font-size: 0;
+  }
+
+  .layout[data-screen="arena"] .options-button::after {
+    content: "•••";
+    color: var(--bio-bright);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+  }
+
+  .layout[data-screen="arena"] .notebook-button.notebook-tab {
+    top: 10px;
+    right: 10px;
+    writing-mode: horizontal-tb;
+    padding: 7px 9px;
+    border-radius: 999px;
+    font-size: 7px;
+    letter-spacing: 0.12em;
+    transform: none;
+  }
+
+  .layout[data-screen="arena"] .notebook-button.notebook-tab:hover,
+  .layout[data-screen="arena"] .notebook-button.notebook-tab:focus-visible {
+    transform: translateY(-1px);
+  }
+
+  .layout[data-screen="arena"] .mobile-shell {
+    left: max(6px, env(safe-area-inset-left));
+    right: max(6px, env(safe-area-inset-right));
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    grid-template-columns: 74px minmax(0, 1fr) 58px;
+    gap: 5px;
+  }
+
+  .layout[data-screen="arena"] .mobile-shell-button,
+  .layout[data-screen="arena"] .mobile-tool-readout {
+    min-height: 44px;
+    border-radius: 10px;
+    border-color: rgba(120, 196, 200, 0.24);
+    background: rgba(5, 14, 17, 0.91);
+    box-shadow: inset 0 0 18px rgba(91, 233, 214, 0.05);
+  }
+
+  .layout[data-screen="arena"] .mobile-shell-button {
+    padding: 7px;
+    font-family: var(--font-display);
+    font-size: 8px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .layout[data-screen="arena"] .mobile-tool-readout {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    align-content: stretch;
+    justify-content: center;
+    gap: 7px;
+    padding: 6px 10px;
+  }
+
+  .layout[data-screen="arena"] .mobile-tool-readout strong,
+  .layout[data-screen="arena"] .mobile-tool-readout span {
+    font-size: 9px;
+    line-height: 1;
+  }
+
+  .layout[data-screen="arena"] .mobile-tool-readout strong {
+    color: #f1ffff;
+  }
+
+  .layout[data-screen="arena"] .mobile-tool-readout span {
+    color: rgba(182, 214, 214, 0.62);
+    text-align: left;
+  }
+
+  .layout[data-screen="arena"] .toolbox {
+    display: flex;
+    grid-auto-columns: calc((100vw - 27px) / 4);
+    gap: 5px;
+    padding:
+      7px
+      max(6px, env(safe-area-inset-right))
+      calc(7px + env(safe-area-inset-bottom))
+      max(6px, env(safe-area-inset-left));
+    scroll-padding-inline: 6px;
+    scroll-snap-type: x proximity;
+    border-top-color: rgba(120, 196, 200, 0.25);
+    background:
+      linear-gradient(180deg, rgba(2, 8, 10, 0.82), rgba(2, 7, 9, 0.98));
+    box-shadow: 0 -22px 58px rgba(0, 0, 0, 0.66);
+  }
+
+  .layout[data-screen="arena"] .tool-button {
+    position: relative;
+    flex: 1 0 calc((100vw - 27px) / 4);
+    grid-template-rows: 27px auto auto;
+    gap: 2px;
+    min-width: 0;
+    min-height: 70px;
+    padding: 6px 4px 5px;
+    scroll-snap-align: start;
+    border-color: rgba(120, 196, 200, 0.18);
+    border-radius: 11px;
+    background: rgba(12, 23, 27, 0.82);
+  }
+
+  .layout[data-screen="arena"] .tool-button .tool-icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  .layout[data-screen="arena"] .tool-button strong {
+    font-size: 8px;
+    line-height: 1.05;
+  }
+
+  .layout[data-screen="arena"] .tool-button b {
+    color: rgba(226, 246, 245, 0.84);
+    font-size: 9px;
+    line-height: 1;
+  }
+
+  .layout[data-screen="arena"] .tool-button.selected,
+  .layout[data-screen="arena"] .tool-button[aria-selected="true"] {
+    transform: translateY(-2px);
+    border-color: rgba(132, 255, 238, 0.88);
+    background:
+      linear-gradient(180deg, rgba(91, 233, 214, 0.16), rgba(12, 28, 31, 0.94));
+    box-shadow:
+      inset 0 0 22px rgba(91, 233, 214, 0.1),
+      0 0 0 1px rgba(91, 233, 214, 0.16),
+      0 -7px 28px rgba(91, 233, 214, 0.2);
+  }
+
+  .layout[data-screen="arena"] .end-action {
+    border-color: rgba(255, 128, 105, 0.32);
+  }
+
+  .layout[data-screen="arena"] .end-action .tool-icon {
+    box-shadow: 0 0 14px rgba(255, 107, 74, 0.46);
+  }
+
+  /* Closed drawers have no layout or paint footprint. This removes the two
+     prose cards that previously peeked up beneath the tool selection row. */
+  .layout[data-screen="arena"]:not(.mobile-lifeforms-open) .life-panel,
+  .layout[data-screen="arena"]:not(.mobile-log-open) .ticker {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .layout[data-screen="arena"] .life-panel,
+  .layout[data-screen="arena"] .ticker {
+    left: max(6px, env(safe-area-inset-left));
+    right: max(6px, env(safe-area-inset-right));
+    bottom: calc(136px + env(safe-area-inset-bottom));
+    transition: transform 180ms ease, opacity 140ms ease;
+  }
+
+  .layout[data-screen="arena"] .life-panel-head {
+    display: none;
+  }
+
+  .layout[data-screen="arena"].mobile-lifeforms-open .life-panel,
+  .layout[data-screen="arena"].mobile-log-open .ticker {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  .layout[data-screen="arena"] .coach.coach-prompt {
+    bottom: calc(138px + env(safe-area-inset-bottom));
+  }
+}

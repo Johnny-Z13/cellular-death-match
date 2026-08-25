@@ -34,13 +34,12 @@ describe('mobile shell DOM', () => {
     expect(html).toContain('id="mobile-log-toggle" class="mobile-shell-button" type="button" aria-expanded="false" aria-controls="ticker"');
   });
 
-  it('opens the mobile Lifeforms drawer by default for first-run players', () => {
+  it('keeps the mobile Strains drawer closed until the player asks for it', () => {
+    expect(html).toContain('aria-controls="life-panel">Strains</button>');
     expect(screensSource).toContain('openMobileLifeformsDrawer(): void;');
     expect(screensSource).toContain("setMobileDrawer('lifeforms');");
-    expect(mainSource).toContain('shouldOpenLifeformsForNewPlayer({');
-    expect(mainSource).toContain('hasSeenTutorial: coach.hasSeenTutorial()');
-    expect(mainSource).toContain('viewportHeight: window.innerHeight');
-    expect(mainSource).toContain('screens.openMobileLifeformsDrawer();');
+    expect(mainSource).not.toContain('shouldOpenLifeformsForNewPlayer({');
+    expect(mainSource).not.toContain('screens.openMobileLifeformsDrawer();');
   });
 
   it('returns the dish to full focus after a mobile selection or successful action', () => {
