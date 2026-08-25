@@ -10,6 +10,7 @@ describe('onboarding state reset', () => {
     storage.setItem('cdm.coach.seen', '1');
     storage.setItem('cdm.coach.seen.v2', '1');
     storage.setItem('cdm.coach.seen.v3', '1');
+    storage.setItem('cdm.coach.seen.v4', '1');
     storage.setItem('cdm.audio.muted', '1');
 
     expect(applyOnboardingStateReset(storage)).toBe(true);
@@ -19,6 +20,7 @@ describe('onboarding state reset', () => {
     expect(storage.getItem('cdm.coach.seen')).toBeNull();
     expect(storage.getItem('cdm.coach.seen.v2')).toBeNull();
     expect(storage.getItem('cdm.coach.seen.v3')).toBeNull();
+    expect(storage.getItem('cdm.coach.seen.v4')).toBeNull();
     expect(storage.getItem('cdm.audio.muted')).toBe('1');
     expect(storage.getItem(ONBOARDING_RESET_KEY)).toBe('1');
 
@@ -31,11 +33,11 @@ describe('onboarding state reset', () => {
   it('reruns when an older reset marker predates the current tutorial key', () => {
     const storage = createMemoryStorage();
     storage.setItem('cdm.onboarding-reset.v1', '1');
-    storage.setItem('cdm.coach.seen.v3', '1');
+    storage.setItem('cdm.coach.seen.v4', '1');
 
     expect(applyOnboardingStateReset(storage)).toBe(true);
 
-    expect(storage.getItem('cdm.coach.seen.v3')).toBeNull();
+    expect(storage.getItem('cdm.coach.seen.v4')).toBeNull();
     expect(storage.getItem(ONBOARDING_RESET_KEY)).toBe('1');
   });
 });

@@ -49,7 +49,7 @@ class FakeElement {
 }
 
 function installCoachDom(): Map<string, FakeElement> {
-  const ids = ['coach', 'coach-kicker', 'coach-title', 'coach-body', 'coach-step', 'coach-skip'];
+  const ids = ['coach', 'coach-kicker', 'coach-title', 'coach-body', 'coach-step', 'coach-action', 'coach-skip'];
   const elements = new Map(ids.map((id) => [id, new FakeElement()]));
   const storage = new Map<string, string>();
   vi.stubGlobal('document', {
@@ -84,6 +84,7 @@ describe('onboarding coach', () => {
     expect(html).toContain('id="coach-title"');
     expect(html).toContain('id="coach-body"');
     expect(html).toContain('id="coach-step"');
+    expect(html).toContain('id="coach-action"');
     expect(html).toContain('id="coach-skip"');
   });
 
@@ -107,10 +108,32 @@ describe('onboarding coach', () => {
   });
 
   it('shows on the first epoch of a first run only, persisted via localStorage', () => {
-    expect(coachSource).toContain("const SEEN_KEY = 'cdm.coach.seen.v3'");
+    expect(coachSource).toContain("const SEEN_KEY = 'cdm.coach.seen.v4'");
     expect(coachSource).toContain('hasSeenTutorial(): boolean;');
     expect(coachSource).toContain('if (seen()) { active = false; hide(); return; }');
     expect(mainSource).toContain('coach.beginRun()');
+  });
+
+  it('opens as a full-screen introduction and collapses after the egg lands', () => {
+    const elements = installCoachDom();
+    const coach = createCoach();
+
+    coach.beginRun();
+
+    expect(elements.get('coach')?.classList.contains('coach-intro')).toBe(true);
+    expect(elements.get('coach-title')?.textContent).toBe('Hi. I’m Dr. E. Mergent.');
+    expect(elements.get('coach-action')?.textContent).toBe('Egg armed · Tap the dish');
+
+    coach.report('egg-placed');
+
+    expect(elements.get('coach')?.classList.contains('coach-intro')).toBe(false);
+    expect(elements.get('coach-title')?.textContent).toBe('Now tempt it into growth');
+    expect(elements.get('coach-action')?.textContent).toBe('');
+  });
+
+  it('holds simulation time during the opening reading beat', () => {
+    expect(mainSource).toContain('coach.isActive() && coach.getBeatIndex() === 0');
+    expect(mainSource).toContain('const ticksToRun = holdingForFirstEgg ? 0 : simClock.consumeTicks(now)');
   });
 
   it('nudges idle players with the objective hint, capped and dismissible', () => {
@@ -170,7 +193,7 @@ describe('onboarding coach', () => {
     elements.get('coach-skip')?.click();
 
     expect(coach.isActive()).toBe(true);
-    expect(elements.get('coach-title')?.textContent).toBe('Begin with one living variable');
+    expect(elements.get('coach-title')?.textContent).toBe('Hi. I’m Dr. E. Mergent.');
     expect(elements.get('coach-skip')?.textContent).toBe('Let me experiment');
   });
 

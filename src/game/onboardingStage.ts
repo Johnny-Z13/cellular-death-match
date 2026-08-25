@@ -27,8 +27,8 @@ export interface OnboardingBeat {
 export const ONBOARDING_BEATS: readonly OnboardingBeat[] = [
   {
     id: 'place-egg',
-    title: 'Begin with one living variable',
-    body: 'Place a Swarmlet egg anywhere with room to grow.',
+    title: 'Hi. I’m Dr. E. Mergent.',
+    body: 'That dish is far too clean. Drop a Swarmlet egg anywhere inside it.',
     trigger: 'egg-placed',
     buttonHint: 'egg',
   },

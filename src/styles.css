@@ -4143,6 +4143,297 @@ canvas {
   }
 }
 
+/* First contact: the opening coach beat briefly becomes a cinematic layer.
+   It remains pointer-transparent so the highlighted Egg action still lands on
+   the real dish; the moment that happens, the standard compact coach returns. */
+.coach-action {
+  display: none;
+}
+
+.coach.coach-intro {
+  inset: 0;
+  z-index: 10;
+  width: 100%;
+  height: 100svh;
+  height: 100dvh;
+  transform: none;
+  grid-template-columns: minmax(260px, 46vw) minmax(320px, 1fr);
+  padding: 0 clamp(28px, 7vw, 112px) 0 0;
+  border: 0;
+  border-radius: 0;
+  background:
+    radial-gradient(circle at 52% 48%, transparent 0 18%, rgba(2, 7, 9, 0.2) 40%, rgba(1, 4, 6, 0.82) 100%),
+    linear-gradient(90deg, rgba(1, 4, 6, 0.25), rgba(1, 4, 6, 0.08) 52%, rgba(1, 4, 6, 0.7));
+  box-shadow: none;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(1.5px) saturate(0.72);
+  backdrop-filter: blur(1.5px) saturate(0.72);
+}
+
+.coach.coach-intro.coach-show {
+  animation: coach-intro-veil 560ms ease-out both;
+}
+
+.coach-intro .coach-portrait {
+  align-self: end;
+  width: min(46vw, 620px);
+  height: min(96svh, 860px);
+  min-height: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+  animation: coach-intro-silhouette 780ms cubic-bezier(0.16, 0.82, 0.2, 1) both;
+}
+
+.coach-intro .coach-portrait::after {
+  content: "";
+  position: absolute;
+  inset: 7% 8% 4% 4%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(91, 233, 214, 0.2), transparent 68%);
+  filter: blur(22px);
+}
+
+.coach-intro .coach-portrait img {
+  object-fit: contain;
+  object-position: left bottom;
+  opacity: 0.88;
+  filter:
+    grayscale(0.78)
+    saturate(0.42)
+    brightness(0.76)
+    contrast(1.38)
+    drop-shadow(0 0 20px rgba(91, 233, 214, 0.24));
+  -webkit-mask-image: linear-gradient(90deg, #000 56%, rgba(0, 0, 0, 0.94) 78%, transparent 100%);
+  mask-image: linear-gradient(90deg, #000 56%, rgba(0, 0, 0, 0.94) 78%, transparent 100%);
+}
+
+.coach-intro .coach-copy {
+  align-self: center;
+  justify-self: end;
+  width: min(100%, 470px);
+  padding: clamp(22px, 4vw, 42px);
+  border: 1px solid rgba(91, 233, 214, 0.34);
+  border-left: 3px solid var(--bio);
+  border-radius: 2px 18px 18px 2px;
+  background:
+    linear-gradient(130deg, rgba(91, 233, 214, 0.07), transparent 44%),
+    rgba(3, 10, 12, 0.86);
+  box-shadow: 0 26px 84px rgba(0, 0, 0, 0.54), 0 0 42px rgba(91, 233, 214, 0.1);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  animation: coach-intro-copy 520ms 180ms cubic-bezier(0.16, 0.82, 0.2, 1) both;
+}
+
+.coach-intro .coach-head {
+  margin-bottom: 8px;
+}
+
+.coach-intro .coach-kicker {
+  color: var(--bio-bright);
+  font-size: 10px;
+  letter-spacing: 0.27em;
+}
+
+.coach-intro .coach-step {
+  color: rgba(216, 246, 242, 0.48);
+}
+
+.coach-intro .coach-title {
+  font-family: var(--font-serif);
+  font-size: clamp(28px, 4vw, 46px);
+  font-weight: 400;
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.coach-intro .coach-body {
+  display: block;
+  max-width: 38ch;
+  margin: 6px 0 12px;
+  color: rgba(216, 246, 242, 0.78);
+  font-size: clamp(12px, 1.25vw, 15px);
+  line-height: 1.55;
+}
+
+.coach-intro .coach-action {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 9px;
+  margin-top: 4px;
+  padding: 9px 12px;
+  border: 1px solid rgba(126, 230, 255, 0.52);
+  border-radius: 999px;
+  color: #eafcff;
+  background: rgba(55, 168, 194, 0.14);
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  box-shadow: 0 0 22px rgba(126, 230, 255, 0.1);
+}
+
+.coach-intro .coach-action::before {
+  content: "";
+  width: 11px;
+  height: 14px;
+  border-radius: 52% 52% 48% 48% / 62% 62% 38% 38%;
+  background: radial-gradient(circle at 35% 28%, #fff, #a9efff 44%, #4f9db4 100%);
+  box-shadow: 0 0 13px rgba(126, 230, 255, 0.72);
+  animation: coach-egg-pulse 1.3s ease-in-out infinite;
+}
+
+.coach-intro .coach-skip {
+  justify-self: start;
+  margin-top: 8px;
+  color: rgba(216, 246, 242, 0.58);
+  pointer-events: auto;
+}
+
+.coach-intro-active .hud,
+.coach-intro-active .toolbox,
+.coach-intro-active .life-panel,
+.coach-intro-active .ticker,
+.coach-intro-active .mobile-shell,
+.coach-intro-active .notebook-button {
+  opacity: 0.16;
+  transition: opacity 220ms ease;
+}
+
+@keyframes coach-intro-veil {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes coach-intro-silhouette {
+  from { opacity: 0; transform: translateX(-12%) scale(1.025); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes coach-intro-copy {
+  from { opacity: 0; transform: translateX(38px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes coach-egg-pulse {
+  0%, 100% { transform: scale(0.92); filter: brightness(0.9); }
+  50% { transform: scale(1.08); filter: brightness(1.18); }
+}
+
+@media (max-width: 899px) {
+  .coach.coach-intro {
+    display: none;
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+    padding: 0;
+  }
+
+  .coach.coach-intro.coach-show {
+    display: grid;
+    animation: coach-intro-veil 440ms ease-out both;
+  }
+
+  .coach-intro .coach-portrait {
+    position: absolute;
+    inset: 0 auto 0 -14vw;
+    width: 82vw;
+    height: 100%;
+    min-height: 100%;
+    opacity: 0.62;
+  }
+
+  .coach-intro .coach-portrait img {
+    object-fit: cover;
+    object-position: 54% center;
+    filter:
+      grayscale(0.82)
+      saturate(0.36)
+      brightness(0.62)
+      contrast(1.46)
+      drop-shadow(0 0 18px rgba(91, 233, 214, 0.22));
+    -webkit-mask-image: linear-gradient(90deg, #000 0 48%, rgba(0, 0, 0, 0.68) 72%, transparent 100%);
+    mask-image: linear-gradient(90deg, #000 0 48%, rgba(0, 0, 0, 0.68) 72%, transparent 100%);
+  }
+
+  .coach-intro .coach-copy {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: calc(140px + env(safe-area-inset-bottom));
+    width: auto;
+    justify-self: stretch;
+    min-height: 0;
+    padding: 18px 19px;
+    border-radius: 2px 14px 14px 2px;
+  }
+
+  .coach-intro .coach-head,
+  .coach-intro .coach-title,
+  .coach-intro .coach-body,
+  .coach-intro .coach-skip {
+    grid-area: auto;
+  }
+
+  .coach-intro .coach-title {
+    font-size: clamp(25px, 8.4vw, 38px);
+  }
+
+  .coach-intro .coach-body {
+    margin: 4px 0 9px;
+    font-size: 12px;
+  }
+
+  .coach-intro .coach-skip {
+    position: static;
+    justify-self: start;
+    margin-top: 5px;
+    padding: 5px 8px;
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 899px) and (max-height: 700px) {
+  .coach-intro .coach-copy {
+    bottom: calc(126px + env(safe-area-inset-bottom));
+    padding: 13px 16px;
+  }
+
+  .coach-intro .coach-head {
+    margin-bottom: 3px;
+  }
+
+  .coach-intro .coach-kicker {
+    font-size: 8px;
+  }
+
+  .coach-intro .coach-title {
+    font-size: clamp(23px, 7vw, 31px);
+  }
+
+  .coach-intro .coach-body {
+    margin-bottom: 7px;
+    line-height: 1.4;
+  }
+
+  .coach-intro .coach-action {
+    padding: 7px 10px;
+    font-size: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coach.coach-intro.coach-show,
+  .coach-intro .coach-portrait,
+  .coach-intro .coach-copy,
+  .coach-intro .coach-action::before {
+    animation: none;
+  }
+}
+
 @media (min-width: 1181px) and (max-height: 780px) {
   .hud {
     top: 8px;

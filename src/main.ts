@@ -810,7 +810,12 @@ function loop() {
     scheduleLoop();
     return;
   }
-  const ticksToRun = simClock.consumeTicks(now);
+  // The opening silhouette is a reading beat, not free simulation time. Keep
+  // the live dish clickable so the real Egg action can dismiss it, but do not
+  // let the ecosystem or deadline advance before the player has acted.
+  const holdingForFirstEgg = coach.isActive() && coach.getBeatIndex() === 0;
+  if (holdingForFirstEgg) simClock.reset(now);
+  const ticksToRun = holdingForFirstEgg ? 0 : simClock.consumeTicks(now);
   const player = arena.state.cells.get(PLAYER_ID);
 
   for (let i = 0; i < ticksToRun; i++) {

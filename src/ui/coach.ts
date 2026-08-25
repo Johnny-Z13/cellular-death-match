@@ -28,7 +28,7 @@ export interface Coach {
   hideNudge(): void;
 }
 
-const SEEN_KEY = 'cdm.coach.seen.v3';
+const SEEN_KEY = 'cdm.coach.seen.v4';
 
 export function createCoach(): Coach {
   const root = document.getElementById('coach');
@@ -39,6 +39,7 @@ export function createCoach(): Coach {
   const titleEl = document.getElementById('coach-title');
   const bodyEl = document.getElementById('coach-body');
   const stepEl = document.getElementById('coach-step');
+  const actionEl = document.getElementById('coach-action');
   const skipBtn = document.getElementById('coach-skip');
 
   let active = false;
@@ -61,10 +62,20 @@ export function createCoach(): Coach {
     const beat = ONBOARDING_BEATS[beatIndex];
     if (!beat) { hide(); return; }
     mode = 'tutorial';
-    kickerEl.textContent = `Professor’s hypothesis · ${beatIndex + 1}`;
+    const isIntroduction = beat.id === 'place-egg';
+    root.classList.remove('coach-intro');
+    layout?.classList.remove('coach-intro-active');
+    if (isIntroduction) {
+      root.classList.add('coach-intro');
+      layout?.classList.add('coach-intro-active');
+    }
+    kickerEl.textContent = isIntroduction
+      ? 'Trial director · Dr. E. Mergent'
+      : `Dr. E. Mergent’s hypothesis · ${beatIndex + 1}`;
     titleEl.textContent = beat.title;
     bodyEl.textContent = beat.body;
     stepEl.textContent = `${beatIndex + 1} / ${ONBOARDING_BEATS.length}`;
+    if (actionEl) actionEl.textContent = isIntroduction ? 'Egg armed · Tap the dish' : '';
     if (skipBtn) skipBtn.textContent = 'Let me experiment';
     show();
   }
@@ -88,8 +99,10 @@ export function createCoach(): Coach {
   function hide(): void {
     if (!root) return;
     root.classList.remove('coach-show');
+    root.classList.remove('coach-intro');
     root.setAttribute('aria-hidden', 'true');
     layout?.classList.remove('coach-active');
+    layout?.classList.remove('coach-intro-active');
     publishCoachBottom();
   }
 
@@ -181,10 +194,13 @@ export function createCoach(): Coach {
       if (active && !opts.interruptTutorial) return;
       if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
       mode = 'nudge';
+      root.classList.remove('coach-intro');
+      layout?.classList.remove('coach-intro-active');
       kickerEl.textContent = 'Professor’s note';
       titleEl.textContent = title;
       bodyEl.textContent = body;
       stepEl.textContent = '';
+      if (actionEl) actionEl.textContent = '';
       if (skipBtn) skipBtn.textContent = 'Got it';
       show();
       window.clearTimeout(nudgeTimer);
