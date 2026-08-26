@@ -75,6 +75,8 @@ touch-first, with controls under the thumb on portrait screens.
 The Professor may enter at the title, hypothesis, discovery, and result beats.
 On small screens the portrait compresses to a partial bust inside the guidance
 strip. It never covers the dish input area, reagent rack, or required HUD.
+At the title, his portrait uses a near-imperceptible camera drift over the dim
+cellular-automata plate; reduced-motion mode holds this composition still.
 
 ## Elevation & Depth
 

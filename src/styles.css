@@ -5537,6 +5537,9 @@ canvas {
   object-position: 50% 50%;
   opacity: 1;
   filter: saturate(1.04) contrast(1.08) brightness(0.86);
+  transform-origin: 50% 38%;
+  animation: title-professor-camera-drift 72s ease-in-out 720ms infinite alternate both;
+  will-change: transform;
   -webkit-mask-image: none;
   mask-image: none;
 }
@@ -5549,18 +5552,29 @@ canvas {
 }
 
 .screen-title-screen .title-art {
-  display: none;
+  display: block;
+  inset: -8%;
+  z-index: 1;
+  opacity: 0.13;
+  background-size: min(112vmax, 1400px) min(112vmax, 1400px);
+  background-repeat: no-repeat;
+  background-position: 50% 36%;
+  filter: saturate(125%) contrast(128%) brightness(0.72);
+  mix-blend-mode: screen;
+  -webkit-mask-image: radial-gradient(ellipse at 50% 40%, #000 0 38%, rgba(0, 0, 0, 0.76) 60%, transparent 84%);
+  mask-image: radial-gradient(ellipse at 50% 40%, #000 0 38%, rgba(0, 0, 0, 0.76) 60%, transparent 84%);
+  animation: title-ca-wallpaper-drift 108s ease-in-out infinite alternate;
 }
 
 .screen-title-screen .title-automata {
-  z-index: 1;
-  opacity: 0.12;
+  z-index: 2;
+  opacity: 0.08;
   pointer-events: none;
   mix-blend-mode: screen;
 }
 
 .screen-title-screen .title-vignette {
-  z-index: 2;
+  z-index: 3;
   background:
     linear-gradient(180deg, rgba(0, 5, 7, 0.03) 0%, rgba(0, 5, 7, 0.04) 42%, rgba(0, 4, 6, 0.5) 62%, rgba(0, 3, 5, 0.9) 100%),
     radial-gradient(ellipse at 50% 31%, transparent 20%, rgba(0, 3, 5, 0.12) 54%, rgba(0, 3, 5, 0.72) 110%);
@@ -5571,7 +5585,7 @@ canvas {
   left: 50%;
   right: auto;
   bottom: max(28px, calc(env(safe-area-inset-bottom) + 18px));
-  z-index: 3;
+  z-index: 4;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -5684,6 +5698,17 @@ canvas {
   to { opacity: 1; transform: translate(-50%, 0); }
 }
 
+@keyframes title-professor-camera-drift {
+  0% { transform: scale(1.025) translate3d(-0.25%, 0.2%, 0); }
+  48% { transform: scale(1.045) translate3d(0.35%, -0.35%, 0); }
+  100% { transform: scale(1.065) translate3d(-0.15%, -0.8%, 0); }
+}
+
+@keyframes title-ca-wallpaper-drift {
+  from { transform: scale(1.01) translate3d(-0.4%, 0.25%, 0); }
+  to { transform: scale(1.055) translate3d(0.55%, -0.45%, 0); }
+}
+
 @media (orientation: portrait) {
   .screen-title-screen .title-card {
     top: 61.5svh;
@@ -5729,6 +5754,13 @@ canvas {
   .screen-title-screen .title-professor,
   .screen-title-screen .title-card {
     animation: none;
+  }
+
+  .screen-title-screen .title-professor img,
+  .screen-title-screen .title-art {
+    animation: none;
+    transform: none;
+    will-change: auto;
   }
 }
 
