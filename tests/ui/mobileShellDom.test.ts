@@ -34,12 +34,12 @@ describe('mobile shell DOM', () => {
     expect(html).toContain('id="mobile-log-toggle" class="mobile-shell-button" type="button" aria-expanded="false" aria-controls="ticker"');
   });
 
-  it('keeps the mobile Strains drawer closed until the player asks for it', () => {
-    expect(html).toContain('aria-controls="life-panel">Strains</button>');
+  it('anchors the mobile specimen popover to Egg and keeps it closed until asked', () => {
+    expect(html).toContain('aria-controls="life-panel">Eggs</button>');
     expect(screensSource).toContain('openMobileLifeformsDrawer(): void;');
-    expect(screensSource).toContain("setMobileDrawer('lifeforms');");
+    expect(screensSource).toContain("setMobileDrawer(unlockedLifeformIds.size > 1 ? 'lifeforms' : 'none');");
     expect(mainSource).not.toContain('shouldOpenLifeformsForNewPlayer({');
-    expect(mainSource).not.toContain('screens.openMobileLifeformsDrawer();');
+    expect(mainSource).toContain("if (tool === 'egg') screens.openMobileLifeformsDrawer();");
   });
 
   it('returns the dish to full focus after a mobile selection or successful action', () => {

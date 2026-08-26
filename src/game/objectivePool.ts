@@ -71,6 +71,7 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
     target: '3+ cultures alive through crisis',
     hint: 'Spread cultures far apart before applying pressure, and keep water ready to dilute toxin spikes.',
     minCount: 3,
+    timed: true,
     available: (ctx) => crisisSurvivorResolvableForEpoch(ctx.epochIndex),
   },
   {

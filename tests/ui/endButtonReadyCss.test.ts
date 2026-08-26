@@ -8,7 +8,7 @@ const screensSource = readFileSync('src/ui/screens.ts', 'utf8');
 describe('end button ready affordance', () => {
   it('flashes the End button when the dish can be banked', () => {
     expect(screensSource).toContain("endEpochButton.classList.toggle('end-action-ready', complete);");
-    expect(screensSource).toContain("endLabel.textContent = complete ? 'ready' : 'score dish'");
+    expect(screensSource).toContain("endLabel.textContent = complete ? 'bank result' : 'bank or leave'");
     expect(screensSource).toContain("endState.textContent = complete ? 'ready' : 'now'");
     expect(css).toContain('.end-action.end-action-ready::after');
     expect(css).toContain('animation: end-ready-flash');

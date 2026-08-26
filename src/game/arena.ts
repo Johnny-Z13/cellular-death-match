@@ -499,9 +499,12 @@ export function createArena(opts: CreateArenaOpts): Arena {
         // Equilibrium is visible and stable until the player banks it; it
         // pauses pressure without letting the normal objective deadline fire.
         if (homeostasisTracker.isAchieved()) return 'running';
-        // The deadline is a soft backstop — complete at the deadline wins,
-        // otherwise an unmet objective fails as before.
-        if (tickNo >= epochTicks) return complete || progress.status === 'satisfied' ? 'won' : 'lost';
+        // Most studies are open dishes: they continue until the player banks
+        // the evidence, reaches equilibrium, or the ecology collapses. Only a
+        // specifically authored pressure experiment expires at its window.
+        if (objective.timed && tickNo >= epochTicks) {
+          return complete || progress.status === 'satisfied' ? 'won' : 'lost';
+        }
         return 'running';
       }
       for (const [id, cell] of state.cells) {

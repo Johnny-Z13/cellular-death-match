@@ -175,6 +175,7 @@ describe('arena ecosystem mode', () => {
         description: 'Preserve cultures.',
         target: '2 protected cultures at deadline',
         minCount: 2,
+        timed: true,
       },
     });
     arena.applyTool('egg', [10, 10]);
@@ -204,12 +205,36 @@ describe('arena ecosystem mode', () => {
         target: '3 living Snipers',
         archetype: 'sniper',
         targetCount: 3,
+        timed: true,
       },
     });
     arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     expect(arena.getStatus()).toBe('running');
     arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     expect(arena.getStatus()).toBe('lost');
+  });
+
+  it('keeps an ordinary study open after its nominal epoch window', () => {
+    const arena = createArena({
+      LX: 50,
+      LY: 50,
+      seed: 9,
+      player: { targetVol: 300, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 80, speed: 8, engulfMultiplier: 4 }],
+      wrap: true,
+      mode: 'ecosystem',
+      epochTicks: 1,
+      objective: {
+        kind: 'cross_breed',
+        name: 'Open Study',
+        description: 'Observe without a clock.',
+        target: '1 hybrid',
+      },
+    });
+
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    expect(arena.getStatus()).toBe('running');
+    expect(arena.getEcology().secondsRemaining).toBe(0);
   });
 
   it('periodically resupplies depleted tools in ecosystem mode', () => {
@@ -912,6 +937,7 @@ describe('arena ecosystem mode', () => {
         target: '1 reaction',
         targetCount: 1,
         minCoverage: 0.01,
+        timed: true,
       },
     });
     const target = arena.state.cells.get(2)!;
@@ -2556,6 +2582,7 @@ describe('arena ecosystem mode', () => {
         target: '1 reaction',
         targetCount: 1,
         minCoverage: 0.01,
+        timed: true,
       },
     });
     expect(arena.getStatus()).toBe('running');

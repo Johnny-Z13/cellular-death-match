@@ -74,6 +74,7 @@ export const TRIAL_ONBOARDING_BEATS: readonly (readonly OnboardingBeat[])[] = [
     beat('place-bloom', 'Place the culture.', 'Tap the marked spot in the dish.', 'egg-used', 'Tap the dish', 'dish'),
     beat('select-nutrient', 'Start with food.', 'Press Nutrient.', 'nutrient-selected', 'Press Nutrient', 'tool:nutrient'),
     beat('feed-bloom', 'Feed the culture.', 'Tap beside the Bloom Mass.', 'nutrient-used', 'Tap the dish', 'dish'),
+    beat('reveal-water', 'My reagent rack continues.', 'Drag the rack sideways — or press the arrow — to reveal Water.', 'toolbox-scrolled', 'Reveal more reagents', 'rack:more'),
     beat('select-water', 'Now press Water.', 'I want to carry the Nutrient through the budding tissue.', 'water-selected', 'Press Water', 'tool:water'),
     beat('apply-water', 'Wash the same field.', 'Tap the fed culture to form a Nutrient Conduit.', 'water-used', 'Tap the same spot', 'dish'),
   ],

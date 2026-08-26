@@ -87,6 +87,13 @@ describe('onboarding beats', () => {
       }
     }
   });
+
+  it('teaches reagent-rack drag with a tappable reveal alternative', () => {
+    const revealBeat = TRIAL_ONBOARDING_BEATS[2]!.find((beat) => beat.id === 'reveal-water');
+    expect(revealBeat?.trigger).toBe('toolbox-scrolled');
+    expect(revealBeat?.pointerTarget).toBe('rack:more');
+    expect(revealBeat?.body).toContain('press the arrow');
+  });
 });
 
 describe('epoch classification helpers', () => {

@@ -55,11 +55,12 @@ describe('discoverer notebook UI wiring', () => {
   });
 
   it('adds a tabbed atlas page that maps discovered + locked progression', () => {
+    expect(html).toContain('id="notebook-tab-study"');
     expect(html).toContain('id="notebook-tab-log"');
     expect(html).toContain('id="notebook-tab-atlas"');
     expect(html).toContain('id="notebook-atlas"');
     expect(screensSource).toContain('updateAtlas(view: AtlasView): void;');
-    expect(screensSource).toContain("function setNotebookTab(tab: 'log' | 'atlas')");
+    expect(screensSource).toContain("type NotebookTab = 'study' | 'log' | 'atlas';");
     expect(screensSource).toContain('atlas-node-${node.state}');
     expect(mainSource).toContain('atlasViewForProgression');
     expect(css).toContain('.atlas-node-locked');
@@ -71,8 +72,19 @@ describe('discoverer notebook UI wiring', () => {
     expect(mainSource).toContain('screens.onNotebookOpen(() => {');
     expect(mainSource).toContain('screens.onNotebookClose(() => {');
     expect(mainSource).toContain('refreshNotebook();');
-    expect(mainSource).toContain('screens.updateNotebook(notebookViewForProgression(discoveryProgression));');
+    expect(mainSource).toContain('screens.updateNotebook(notebook);');
+    expect(mainSource).toContain('screens.updateResearchNotebook(researchNotebookView(notebook, activeStudySnapshot()));');
     expect(mainSource).toContain('acknowledgeNotebookDiscoveries(discoveryProgression)');
+  });
+
+  it('makes hypotheses and optional field studies the default notebook page', () => {
+    expect(html).toContain('id="notebook-study" class="notebook-study notebook-page is-active"');
+    expect(html).toContain('>Study</button>');
+    expect(screensSource).toContain('updateResearchNotebook(view: ResearchNotebookView): void;');
+    expect(screensSource).toContain("label.textContent = 'Active hypothesis'");
+    expect(screensSource).toContain("'Open field studies'");
+    expect(css).toContain('.research-hypothesis');
+    expect(css).toContain('.field-study-list');
   });
 
   it('styles the notebook as an overlay and hides it in presentation mode', () => {

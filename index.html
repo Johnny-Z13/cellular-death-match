@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/src/styles.css?v=20260825-professor-guide-1" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260826-research-notebook-1" />
   </head>
   <body>
     <main class="layout" data-screen="title">
@@ -46,7 +46,7 @@
       </button>
       <button id="fullscreen-button" class="chrome-button fullscreen-button" type="button" aria-label="Enter full screen">Full screen</button>
       <div id="mobile-shell" class="mobile-shell" role="group" aria-label="Mobile dish controls">
-        <button id="mobile-lifeforms-toggle" class="mobile-shell-button" type="button" aria-expanded="false" aria-controls="life-panel">Strains</button>
+        <button id="mobile-lifeforms-toggle" class="mobile-shell-button" type="button" aria-expanded="false" aria-controls="life-panel">Eggs</button>
         <div id="mobile-tool-readout" class="mobile-tool-readout" aria-live="polite">
           <strong id="mobile-tool-name">Egg</strong>
           <span id="mobile-tool-summary">plants the selected lifeform strain</span>
@@ -58,7 +58,7 @@
           <h2 class="toolbox-title">Reagents</h2>
           <p id="tool-summary" class="tool-summary">Egg - plants the selected lifeform strain in open dish space.</p>
         </div>
-        <button class="tool-button selected" type="button" data-tool="egg">
+        <button class="tool-button selected" type="button" data-tool="egg" aria-haspopup="true" aria-expanded="false" aria-controls="life-panel">
           <span class="tool-icon egg-icon"></span>
           <span>
             <strong>Egg</strong>
@@ -102,7 +102,7 @@
           <span class="tool-icon end-icon"></span>
           <span>
             <strong>End</strong>
-            <small>score dish</small>
+            <small>bank or leave</small>
           </span>
           <b>now</b>
         </button>
@@ -131,6 +131,9 @@
           <b data-tool-count>3/3</b>
         </button>
       </aside>
+      <button id="toolbox-more" class="toolbox-more" type="button" aria-label="Show more reagents" hidden>
+        <span aria-hidden="true">›</span>
+      </button>
       <button id="options-scrim" class="options-scrim" type="button" aria-label="Close options"></button>
       <aside id="debug" class="debug options-panel" role="dialog" aria-modal="true" aria-labelledby="options-title" aria-hidden="true">
         <header class="options-header">
@@ -288,30 +291,32 @@
         </div>
       </div>
 
-      <div id="screen-notebook" class="screen notebook-screen" aria-modal="true">
+      <div id="screen-notebook" class="screen notebook-screen" role="dialog" aria-modal="true" aria-labelledby="notebook-title">
         <section class="notebook-card" aria-labelledby="notebook-title">
           <div class="tablet-sensor-strip" aria-hidden="true"><span class="tablet-camera"></span></div>
           <div class="tablet-screen">
             <header class="notebook-head">
               <div>
-                <h2 id="notebook-title" class="screen-title notebook-title">Discoverer's Notebook</h2>
+                <h2 id="notebook-title" class="screen-title notebook-title">Research Notebook</h2>
                 <p id="notebook-progress" class="notebook-progress">0 / 0 entries logged</p>
               </div>
               <button id="notebook-close" class="notebook-close" type="button" aria-label="Close notebook">Close</button>
             </header>
-            <div class="notebook-tabs" role="tablist">
-              <button id="notebook-tab-log" class="notebook-tab-button is-active" type="button" role="tab" aria-selected="true">Log</button>
-              <button id="notebook-tab-atlas" class="notebook-tab-button" type="button" role="tab" aria-selected="false">Atlas</button>
+            <div class="notebook-tabs" role="tablist" aria-label="Research notebook sections">
+              <button id="notebook-tab-study" class="notebook-tab-button is-active" type="button" role="tab" aria-selected="true" aria-controls="notebook-study">Study</button>
+              <button id="notebook-tab-log" class="notebook-tab-button" type="button" role="tab" aria-selected="false" aria-controls="notebook-list">Findings</button>
+              <button id="notebook-tab-atlas" class="notebook-tab-button" type="button" role="tab" aria-selected="false" aria-controls="notebook-atlas">Atlas</button>
             </div>
-            <div id="notebook-list" class="notebook-list notebook-page is-active"></div>
-            <div id="notebook-atlas" class="notebook-atlas notebook-page"></div>
+            <div id="notebook-study" class="notebook-study notebook-page is-active" role="tabpanel" aria-labelledby="notebook-tab-study"></div>
+            <div id="notebook-list" class="notebook-list notebook-page" role="tabpanel" aria-labelledby="notebook-tab-log"></div>
+            <div id="notebook-atlas" class="notebook-atlas notebook-page" role="tabpanel" aria-labelledby="notebook-tab-atlas"></div>
           </div>
         </section>
       </div>
 
       <div id="hud" class="hud">
         <div class="hud-row"><span class="hud-key">Trial</span><span id="hud-fight" class="hud-val">1 / 5</span></div>
-        <div class="hud-row"><span class="hud-key">Deadline</span><span id="hud-progress" class="hud-val">55s</span></div>
+        <div class="hud-row"><span id="hud-time-key" class="hud-key">Window</span><span id="hud-progress" class="hud-val">Open</span></div>
         <div class="hud-row hud-equilibrium-row"><span class="hud-key">Equilibrium</span><span id="hud-equilibrium" class="hud-val">Equilibrium 0%</span></div>
         <div class="hud-row hud-eco-row hud-objective-row"><span class="hud-key">Objective</span><span id="hud-objective" class="hud-val">—</span></div>
         <div class="hud-row hud-hint-row"><span class="hud-key">Hint</span><span id="hud-hint" class="hud-val">—</span></div>
@@ -364,6 +369,6 @@
         </div>
       </aside>
     </main>
-    <script type="module" src="/src/main.ts?v=20260825-professor-guide-1"></script>
+    <script type="module" src="/src/main.ts?v=20260826-research-notebook-1"></script>
   </body>
 </html>

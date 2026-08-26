@@ -29,6 +29,8 @@ components:
   caseDocket: {}
   professorBeat: {}
   petriDish: {}
+  researchNotebook: {}
+  specimenPopover: {}
 ---
 
 # Cellular Death Match Design
@@ -95,10 +97,24 @@ Professor beats are event-driven and skippable; they disappear when the player
 demonstrates the requested action.
 
 The Specimen Freezer is the canonical home for selectable lifeforms. On phones
-it is a bounded bottom sheet with a two-column, vertically scrolling rack, a
-ready/total count, and an explicit close control; on desktop it remains the
-right-side specimen rack. The freezer may cover peripheral chrome while open,
-but closing it must immediately return the whole dish to the player.
+it is a bounded, two-column popover physically anchored to the Egg tool by a
+visible specimen lead. Pressing Egg opens it only when more than one specimen
+is available; the compact Eggs shortcut opens the same canonical surface. On
+desktop it remains the right-side specimen rack. Closing it must immediately
+return the whole dish to the player.
+
+The Research Notebook is the game's goal spine. Its default Study page holds
+one active hypothesis, live evidence, and optional long-form Field Studies.
+Findings record what the player has actually observed; Atlas silhouettes tease
+what remains unknown. Hypotheses are questions rather than exact recipes, and
+ordinary dishes stay open until the player banks evidence, reaches equilibrium,
+or suffers ecological collapse. Only explicitly labelled pressure experiments
+use an expiring observation window. After the Atlas is complete, Field Studies
+become repeatable prompts for expressive play rather than a score economy.
+
+The mobile reagent rack is horizontally scrollable and keeps a visible arrow
+control as the non-drag alternative. The first authored Trial that needs an
+off-screen reagent has a Professor beat that teaches both gestures.
 
 Options uses the laboratory cog as a persistent secondary action, including on
 the title screen. “Reveal all” is a reversible testing route into a fully

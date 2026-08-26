@@ -43,6 +43,17 @@
 
   --glass-blur: blur(16px) saturate(135%);
   --shadow-panel: 0 18px 48px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+
+  /* Global overlay layers. */
+  --z-sticky: 100;
+  --z-dropdown: 200;
+  --z-popover: 300;
+  --z-chrome: 400;
+  --z-backdrop: 500;
+  --z-dialog: 600;
+  --z-sheet: 700;
+  --z-command: 800;
+  --z-toast: 900;
 }
 
 html, body {
@@ -388,6 +399,10 @@ canvas {
   border-top: 1px solid var(--hairline);
   box-shadow: 0 -20px 48px rgba(0, 0, 0, 0.42);
   box-sizing: border-box;
+}
+
+.toolbox-more {
+  display: none;
 }
 
 .tool-button {
@@ -2795,7 +2810,7 @@ canvas {
 .tablet-screen {
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   gap: 12px;
   background:
     repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 4px),
@@ -3066,6 +3081,8 @@ canvas {
   display: flex;
   gap: 8px;
   margin-bottom: 2px;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 .notebook-tab-button {
@@ -3101,6 +3118,266 @@ canvas {
 
 .notebook-page.is-active {
   display: grid;
+}
+
+/* The Study page is a connected research ledger, not a dashboard. One large
+   question owns the page; field studies sit beneath it like ruled evidence. */
+.notebook-study {
+  min-height: 0;
+  overflow: auto;
+  align-content: start;
+  gap: 14px;
+  padding: 2px 4px 4px 0;
+}
+
+.research-observation-prompt {
+  margin: 0;
+  padding: 2px 4px 10px;
+  border-bottom: 1px solid var(--hairline);
+  color: #d6ece8;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.research-hypothesis {
+  position: relative;
+  display: grid;
+  gap: 9px;
+  padding: 16px 18px 17px 22px;
+  border-left: 3px solid var(--amber);
+  background:
+    linear-gradient(90deg, rgba(240, 195, 90, 0.08), transparent 72%),
+    repeating-linear-gradient(0deg, transparent 0 29px, rgba(120, 196, 200, 0.06) 29px 30px);
+}
+
+.research-hypothesis-confirmed {
+  border-left-color: var(--bio);
+  background:
+    linear-gradient(90deg, rgba(91, 233, 214, 0.1), transparent 72%),
+    repeating-linear-gradient(0deg, transparent 0 29px, rgba(120, 196, 200, 0.06) 29px 30px);
+}
+
+.research-kicker,
+.research-time {
+  color: var(--amber);
+  font-family: var(--font-display);
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.research-hypothesis-confirmed .research-kicker,
+.research-hypothesis-confirmed .research-time {
+  color: var(--bio);
+}
+
+.research-hypothesis-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.research-hypothesis h3,
+.field-studies h3 {
+  margin: 0;
+  color: #f3efe8;
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.research-state {
+  flex: none;
+  border: 1px solid rgba(240, 195, 90, 0.5);
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: #fff0b2;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.research-hypothesis-confirmed .research-state {
+  border-color: rgba(91, 233, 214, 0.58);
+  color: #dffff9;
+}
+
+.research-question {
+  max-width: 58ch;
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 18px;
+  line-height: 1.42;
+}
+
+.research-evidence,
+.research-professor-note {
+  margin: 0;
+  color: var(--ink-dim);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.research-professor-note {
+  max-width: 66ch;
+  color: #c9d8d5;
+  font-family: var(--font-serif);
+  font-size: 13px;
+  font-style: italic;
+}
+
+.field-studies {
+  display: grid;
+  gap: 10px;
+}
+
+.field-studies-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 4px 8px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.field-studies h3 {
+  font-size: 18px;
+}
+
+.field-studies-head p {
+  max-width: 38ch;
+  margin: 0;
+  color: var(--ink-faint);
+  font-size: 10px;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.field-study-list {
+  display: grid;
+}
+
+.field-study {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 24%);
+  gap: 18px;
+  align-items: center;
+  min-height: 68px;
+  padding: 10px 6px 10px 14px;
+  border-bottom: 1px solid var(--hairline);
+  box-sizing: border-box;
+}
+
+.field-study::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  position: absolute;
+  left: 0;
+  top: 50%;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+.field-study strong {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.field-study p {
+  margin: 4px 0 0;
+  color: var(--ink-faint);
+  font-family: var(--font-serif);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.field-study-progress {
+  display: grid;
+  gap: 6px;
+  color: var(--bio);
+  font-size: 10px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.field-study-track {
+  height: 3px;
+  overflow: hidden;
+  background: rgba(111, 139, 141, 0.22);
+}
+
+.field-study-track > span {
+  display: block;
+  height: 100%;
+  background: var(--bio);
+  box-shadow: 0 0 8px rgba(91, 233, 214, 0.52);
+}
+
+.field-study-complete strong::after {
+  content: " · logged";
+  color: var(--bio);
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+@media (max-width: 620px) {
+  .notebook-card {
+    padding-inline: 8px;
+    border-radius: 18px;
+  }
+
+  .tablet-screen {
+    padding: 11px 10px 12px;
+  }
+
+  .notebook-title {
+    font-size: 21px;
+  }
+
+  .notebook-tab-button {
+    flex: 1 0 auto;
+    min-height: 40px;
+    padding-inline: 10px;
+    letter-spacing: 0.11em;
+  }
+
+  .research-hypothesis {
+    padding: 13px 11px 14px 15px;
+  }
+
+  .research-hypothesis-head,
+  .field-studies-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .research-hypothesis h3 {
+    font-size: 20px;
+  }
+
+  .research-question {
+    font-size: 16px;
+  }
+
+  .field-studies-head p {
+    text-align: left;
+  }
+
+  .field-study {
+    grid-template-columns: minmax(0, 1fr) 82px;
+    gap: 10px;
+    padding-left: 4px;
+  }
 }
 
 .notebook-atlas {
@@ -3305,6 +3582,21 @@ canvas {
   font-size: 11px;
   line-height: 1.35;
   overflow-wrap: anywhere;
+}
+
+.objective-card-mode {
+  width: fit-content;
+  margin-top: 8px;
+  border-bottom: 1px solid rgba(91, 233, 214, 0.38);
+  color: var(--bio);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.objective-card-mode-timed {
+  border-bottom-color: rgba(255, 123, 92, 0.55);
+  color: var(--danger);
 }
 
 .objective-card-target {
@@ -5803,6 +6095,37 @@ canvas {
     box-shadow: 0 -22px 58px rgba(0, 0, 0, 0.66);
   }
 
+  .layout[data-screen="arena"] .toolbox-more {
+    position: fixed;
+    right: max(2px, env(safe-area-inset-right));
+    bottom: calc(17px + env(safe-area-inset-bottom));
+    z-index: var(--z-chrome);
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 52px;
+    border: 1px solid rgba(107, 207, 232, 0.58);
+    border-right: 0;
+    border-radius: 12px 0 0 12px;
+    background:
+      linear-gradient(90deg, rgba(5, 14, 17, 0.72), rgba(9, 25, 29, 0.98));
+    color: #eaffff;
+    box-shadow: -9px 0 22px rgba(4, 8, 10, 0.88), 0 0 14px rgba(91, 233, 214, 0.14);
+    cursor: pointer;
+  }
+
+  .layout[data-screen="arena"] .toolbox-more span {
+    font-family: var(--font-display);
+    font-size: 23px;
+    line-height: 1;
+    transform: translateY(-1px);
+  }
+
+  .layout[data-screen="arena"] .toolbox-more:focus-visible {
+    outline: 2px solid var(--bio-bright);
+    outline-offset: 2px;
+  }
+
   .layout[data-screen="arena"] .tool-button {
     position: relative;
     flex: 1 0 calc((100vw - 27px) / 4);
@@ -5880,6 +6203,37 @@ canvas {
     padding: 12px;
     border-color: rgba(120, 196, 200, 0.34);
     background: rgba(3, 10, 12, 0.97);
+    z-index: var(--z-popover);
+    transform: translateY(12px) scale(0.985);
+    transform-origin: 52px calc(100% + 54px);
+    box-shadow: 0 -18px 48px rgba(0, 0, 0, 0.62), 0 0 26px rgba(91, 233, 214, 0.1);
+  }
+
+  /* A glowing specimen lead physically joins the popover to the Egg slot. */
+  .layout[data-screen="arena"] .life-panel::before {
+    content: "";
+    position: absolute;
+    left: 45px;
+    bottom: -54px;
+    width: 2px;
+    height: 54px;
+    background: linear-gradient(var(--bio), rgba(91, 233, 214, 0.22));
+    box-shadow: 0 0 9px rgba(91, 233, 214, 0.55);
+    pointer-events: none;
+  }
+
+  .layout[data-screen="arena"] .life-panel::after {
+    content: "EGG";
+    position: absolute;
+    left: 25px;
+    bottom: -69px;
+    width: 42px;
+    color: var(--bio);
+    font-family: var(--font-display);
+    font-size: 7px;
+    letter-spacing: 0.12em;
+    text-align: center;
+    pointer-events: none;
   }
 
   .layout[data-screen="arena"] .life-list {
@@ -5899,6 +6253,10 @@ canvas {
   .layout[data-screen="arena"].mobile-log-open .ticker {
     visibility: visible;
     opacity: 1;
+  }
+
+  .layout[data-screen="arena"].mobile-lifeforms-open .life-panel {
+    transform: translateY(0) scale(1);
   }
 
   .layout[data-screen="arena"] .coach.coach-prompt {

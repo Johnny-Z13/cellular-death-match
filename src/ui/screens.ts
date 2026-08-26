@@ -12,6 +12,7 @@ import {
 import { createIconCells } from './iconCells';
 import { renderLabReport } from './labReportScreen';
 import type { ResearchCaseDef, ResearchTrialDef } from '../content/researchCases';
+import type { ResearchNotebookView } from '../game/researchNotebook';
 
 type ScreenName = 'title' | 'pick' | 'end' | 'hud' | 'notebook';
 type AppScreenName = ScreenName | 'loadout' | 'objective';
@@ -41,6 +42,7 @@ export interface HudInfo {
   objectiveSummary: string;
   objectiveHint: string;
   objectiveComplete: boolean;
+  objectiveTimed: boolean;
   upgrades: string[];          // upgrade names, e.g. ["Bigger Cell", "Faster Engulf x2"]
 }
 
@@ -97,6 +99,7 @@ export interface Screens {
   setEquilibrium(info: EquilibriumInfo): void;
   setPickResearchBrief(lines: readonly ResearchBriefLine[]): void;
   updateNotebook(view: NotebookView): void;
+  updateResearchNotebook(view: ResearchNotebookView): void;
   updateAtlas(view: AtlasView): void;
   setLoadoutScreen(el: HTMLElement): void;
   setPickChoices(choices: PickChoice[], onPick: (id: string) => void): void;
@@ -120,6 +123,7 @@ export interface Screens {
   setEpochComplete(complete: boolean): void;
   openMobileLifeformsDrawer(): void;
   closeMobileDrawers(): void;
+  onToolboxReveal(handler: () => void): void;
 }
 
 export type TickerTone = 'normal' | 'discovery' | 'caution' | 'critical';
@@ -156,8 +160,10 @@ export function createScreens(): Screens {
   const hapticsButton = get('haptics-button') as HTMLButtonElement;
   const notebookClose = get('notebook-close') as HTMLButtonElement;
   const notebookProgress = get('notebook-progress');
+  const notebookStudy = get('notebook-study');
   const notebookList = get('notebook-list');
   const notebookAtlas = get('notebook-atlas');
+  const notebookTabStudy = get('notebook-tab-study') as HTMLButtonElement;
   const notebookTabLog = get('notebook-tab-log') as HTMLButtonElement;
   const notebookTabAtlas = get('notebook-tab-atlas') as HTMLButtonElement;
   const pickResearchBrief = get('pick-research-brief');
@@ -171,6 +177,7 @@ export function createScreens(): Screens {
   const hudFight     = get('hud-fight');
   const hudVol       = get('hud-vol');
   const hudProgress  = get('hud-progress');
+  const hudTimeKey = get('hud-time-key');
   let lastDeadlineSeconds = -1;
   const hudEquilibrium = get('hud-equilibrium');
   const hudEco       = get('hud-eco');
@@ -185,6 +192,7 @@ export function createScreens(): Screens {
   const eggOptions   = get('egg-options');
   const lifeSummary  = get('life-summary');
   const lifeCount    = get('life-count');
+  const lifePanel = get('life-panel');
   const lifePanelClose = get('life-panel-close') as HTMLButtonElement;
   const lifeList     = get('life-list');
   const tickerLines  = get('ticker-lines');
@@ -192,6 +200,8 @@ export function createScreens(): Screens {
   const agitateCount = get('agitate-count');
   const endEpochButton = get('end-epoch-button') as HTMLButtonElement;
   const toolButtons  = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-tool]'));
+  const toolbox = get('toolbox');
+  const toolboxMore = get('toolbox-more') as HTMLButtonElement;
   const eggTool      = toolButtons.find((btn) => btn.dataset.tool === 'egg');
   const lifeButtons = new Map<string, HTMLButtonElement>();
   type MobileDrawer = 'none' | 'lifeforms' | 'log';
@@ -213,6 +223,7 @@ export function createScreens(): Screens {
   let lifeformSelectHandler: ((id: string) => void) | null = null;
   const optionByArchetype = new Map<EnemyArchetype, EggOption>();
   const iconCells = createIconCells();
+  let toolboxRevealHandler: (() => void) | null = null;
 
   // A lifeform swatch is the colour bloom (halo + locked-gray fallback) with a
   // tiny live cellular-automata canvas on top, so the icon reads as a living
@@ -253,12 +264,22 @@ export function createScreens(): Screens {
   }
 
   function setMobileDrawer(next: MobileDrawer): void {
+    const previous = mobileDrawer;
     mobileDrawer = next;
     layout.dataset.mobileDrawer = mobileDrawer;
     layout.classList.toggle('mobile-lifeforms-open', mobileDrawer === 'lifeforms');
     layout.classList.toggle('mobile-log-open', mobileDrawer === 'log');
     mobileLifeformsToggle.setAttribute('aria-expanded', String(mobileDrawer === 'lifeforms'));
+    eggTool?.setAttribute('aria-expanded', String(mobileDrawer === 'lifeforms'));
     mobileLogToggle.setAttribute('aria-expanded', String(mobileDrawer === 'log'));
+    if (
+      previous === 'lifeforms'
+      && next !== 'lifeforms'
+      && document.activeElement instanceof HTMLElement
+      && lifePanel.contains(document.activeElement)
+    ) {
+      eggTool?.focus({ preventScroll: true });
+    }
   }
 
   function closeMobileDrawers(): void {
@@ -323,17 +344,61 @@ export function createScreens(): Screens {
   setMobileDrawer('none');
   syncLayoutScreen();
 
-  function setNotebookTab(tab: 'log' | 'atlas'): void {
-    const atlas = tab === 'atlas';
-    notebookTabLog.classList.toggle('is-active', !atlas);
-    notebookTabAtlas.classList.toggle('is-active', atlas);
-    notebookTabLog.setAttribute('aria-selected', String(!atlas));
-    notebookTabAtlas.setAttribute('aria-selected', String(atlas));
-    notebookList.classList.toggle('is-active', !atlas);
-    notebookAtlas.classList.toggle('is-active', atlas);
+  type NotebookTab = 'study' | 'log' | 'atlas';
+  const notebookTabs: Array<{ id: NotebookTab; button: HTMLButtonElement; page: HTMLElement }> = [
+    { id: 'study', button: notebookTabStudy, page: notebookStudy },
+    { id: 'log', button: notebookTabLog, page: notebookList },
+    { id: 'atlas', button: notebookTabAtlas, page: notebookAtlas },
+  ];
+
+  function setNotebookTab(tab: NotebookTab, focus = false): void {
+    for (const item of notebookTabs) {
+      const selected = item.id === tab;
+      item.button.classList.toggle('is-active', selected);
+      item.button.setAttribute('aria-selected', String(selected));
+      item.button.tabIndex = selected ? 0 : -1;
+      item.page.classList.toggle('is-active', selected);
+      item.page.hidden = !selected;
+      if (selected && focus) item.button.focus();
+    }
   }
+  notebookTabStudy.addEventListener('click', () => setNotebookTab('study'));
   notebookTabLog.addEventListener('click', () => setNotebookTab('log'));
   notebookTabAtlas.addEventListener('click', () => setNotebookTab('atlas'));
+  for (const [index, item] of notebookTabs.entries()) {
+    item.button.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight' && event.key !== 'Home' && event.key !== 'End') return;
+      event.preventDefault();
+      const nextIndex = event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? notebookTabs.length - 1
+          : (index + (event.key === 'ArrowRight' ? 1 : -1) + notebookTabs.length) % notebookTabs.length;
+      setNotebookTab(notebookTabs[nextIndex]!.id, true);
+    });
+  }
+  setNotebookTab('study');
+
+  function syncToolboxOverflow(): void {
+    const overflow = toolbox.scrollWidth > toolbox.clientWidth + 4;
+    const atEnd = toolbox.scrollLeft + toolbox.clientWidth >= toolbox.scrollWidth - 6;
+    toolboxMore.hidden = !overflow;
+    toolboxMore.dataset.direction = atEnd ? 'back' : 'more';
+    toolboxMore.setAttribute('aria-label', atEnd ? 'Show earlier reagents' : 'Show more reagents');
+    const glyph = toolboxMore.querySelector('span');
+    if (glyph) glyph.textContent = atEnd ? '‹' : '›';
+  }
+
+  toolboxMore.addEventListener('click', () => {
+    const back = toolboxMore.dataset.direction === 'back';
+    toolbox.scrollBy({ left: (back ? -1 : 1) * toolbox.clientWidth * 0.72, behavior: 'smooth' });
+    toolboxRevealHandler?.();
+  });
+  toolbox.addEventListener('scroll', () => {
+    syncToolboxOverflow();
+    if (Math.abs(toolbox.scrollLeft) > 8) toolboxRevealHandler?.();
+  }, { passive: true });
+  window.addEventListener('resize', syncToolboxOverflow);
 
   function buttonForHintTarget(target: ButtonHintTarget): HTMLButtonElement | null {
     if (target === 'notebook') return notebookButton;
@@ -443,6 +508,7 @@ export function createScreens(): Screens {
         setUnknownState(btn, locked, 'Unknown reagent');
         if (locked) btn.classList.remove('button-hint-pulse', 'button-ready-pulse');
       }
+      window.requestAnimationFrame(syncToolboxOverflow);
     },
     showcaseToolUnlock(tool) {
       const button = toolButtons.find((btn) => btn.dataset.tool === tool);
@@ -592,8 +658,9 @@ export function createScreens(): Screens {
         ? `${info.fightIndex + 1} / ${info.totalFights}`
         : `${info.fightIndex + 1} / ∞`;
       hudVol.textContent = `${info.vol} / ${Math.round(info.targetVol)}`;
-      hudProgress.textContent = `${info.secondsRemaining}s`;
-      const urgent = !info.objectiveComplete;
+      hudTimeKey.textContent = info.objectiveTimed ? 'Window' : 'Study';
+      hudProgress.textContent = info.objectiveTimed ? `${info.secondsRemaining}s` : 'Open';
+      const urgent = info.objectiveTimed && !info.objectiveComplete;
       hudProgress.classList.toggle(
         'hud-deadline-warning',
         urgent && info.secondsRemaining <= 20 && info.secondsRemaining > 10,
@@ -699,6 +766,84 @@ export function createScreens(): Screens {
         notebookList.append(card);
       }
     },
+    updateResearchNotebook(view) {
+      notebookStudy.replaceChildren();
+
+      const intro = document.createElement('p');
+      intro.className = 'research-observation-prompt';
+      intro.textContent = `Dr. E: “${view.observationPrompt}”`;
+      notebookStudy.append(intro);
+
+      if (view.hypothesis) {
+        const hypothesis = document.createElement('section');
+        hypothesis.className = `research-hypothesis research-hypothesis-${view.hypothesis.state}`;
+        const label = document.createElement('span');
+        label.className = 'research-kicker';
+        label.textContent = 'Active hypothesis';
+        const head = document.createElement('div');
+        head.className = 'research-hypothesis-head';
+        const title = document.createElement('h3');
+        title.textContent = view.hypothesis.name;
+        const state = document.createElement('span');
+        state.className = 'research-state';
+        state.textContent = view.hypothesis.state === 'confirmed' ? 'Evidence found' : 'Unresolved';
+        head.append(title, state);
+        const question = document.createElement('p');
+        question.className = 'research-question';
+        question.textContent = view.hypothesis.question;
+        const evidence = document.createElement('p');
+        evidence.className = 'research-evidence';
+        evidence.textContent = `Observed: ${view.hypothesis.evidence}`;
+        const note = document.createElement('p');
+        note.className = 'research-professor-note';
+        note.textContent = `Professor’s margin note — ${view.hypothesis.professorNote}`;
+        const time = document.createElement('span');
+        time.className = 'research-time';
+        time.textContent = view.hypothesis.timeLabel;
+        hypothesis.append(label, head, question, evidence, note, time);
+        notebookStudy.append(hypothesis);
+      }
+
+      const fieldSection = document.createElement('section');
+      fieldSection.className = 'field-studies';
+      const fieldHead = document.createElement('div');
+      fieldHead.className = 'field-studies-head';
+      const fieldTitle = document.createElement('h3');
+      fieldTitle.textContent = view.allDiscoveriesRevealed ? 'Open field studies' : 'Long-form field studies';
+      const fieldCopy = document.createElement('p');
+      fieldCopy.textContent = view.allDiscoveriesRevealed
+        ? 'No score. No deadline. These are reasons to look again.'
+        : 'Optional lines of inquiry that persist between dishes.';
+      fieldHead.append(fieldTitle, fieldCopy);
+      fieldSection.append(fieldHead);
+
+      const list = document.createElement('div');
+      list.className = 'field-study-list';
+      for (const study of view.fieldStudies) {
+        const row = document.createElement('article');
+        row.className = `field-study${study.complete ? ' field-study-complete' : ''}`;
+        const copy = document.createElement('div');
+        const title = document.createElement('strong');
+        title.textContent = study.title;
+        const prompt = document.createElement('p');
+        prompt.textContent = study.prompt;
+        copy.append(title, prompt);
+        const progress = document.createElement('div');
+        progress.className = 'field-study-progress';
+        const value = document.createElement('span');
+        value.textContent = study.progressLabel;
+        const track = document.createElement('span');
+        track.className = 'field-study-track';
+        const fill = document.createElement('span');
+        fill.style.width = `${Math.round((study.progress / Math.max(1, study.target)) * 100)}%`;
+        track.append(fill);
+        progress.append(value, track);
+        row.append(copy, progress);
+        list.append(row);
+      }
+      fieldSection.append(list);
+      notebookStudy.append(fieldSection);
+    },
     updateAtlas(view) {
       notebookAtlas.replaceChildren();
       for (const group of view.groups) {
@@ -767,13 +912,16 @@ export function createScreens(): Screens {
         const desc = document.createElement('div');
         desc.className = 'pick-card-desc';
         desc.textContent = objective.description;
+        const mode = document.createElement('div');
+        mode.className = `objective-card-mode${objective.timed ? ' objective-card-mode-timed' : ''}`;
+        mode.textContent = objective.timed ? 'Timed observation window' : 'Open dish · end when ready';
         const target = document.createElement('div');
         target.className = 'objective-card-target';
         target.textContent = objective.target;
         const hint = document.createElement('div');
         hint.className = 'objective-card-hint';
         hint.textContent = objective.hint ?? '';
-        btn.append(name, desc, target, hint);
+        btn.append(name, mode, desc, target, hint);
         btn.addEventListener('click', () => onPick(objective));
         objectiveChoices.append(btn);
       }
@@ -874,16 +1022,19 @@ export function createScreens(): Screens {
       // ready to bank, without forcing them out of a flourishing dish.
       endEpochButton.classList.toggle('end-action-ready', complete);
       const endLabel = endEpochButton.querySelector<HTMLElement>('small');
-      if (endLabel) endLabel.textContent = complete ? 'ready' : 'score dish';
+      if (endLabel) endLabel.textContent = complete ? 'bank result' : 'bank or leave';
       const endState = endEpochButton.querySelector<HTMLElement>('b');
       if (endState) endState.textContent = complete ? 'ready' : 'now';
       hud.classList.toggle('hud-complete', complete);
     },
     openMobileLifeformsDrawer() {
-      setMobileDrawer('lifeforms');
+      setMobileDrawer(unlockedLifeformIds.size > 1 ? 'lifeforms' : 'none');
     },
     closeMobileDrawers() {
       closeMobileDrawers();
+    },
+    onToolboxReveal(handler) {
+      toolboxRevealHandler = handler;
     },
   };
 }

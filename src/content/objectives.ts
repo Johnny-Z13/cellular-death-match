@@ -38,6 +38,8 @@ export interface ObjectiveDef {
   maxDominance?: number;
   sustainTicks?: number;
   volumeTarget?: number;
+  /** Only selected pressure experiments expire. Ordinary dishes stay open. */
+  timed?: boolean;
 }
 
 export const OBJECTIVES: ReadonlyArray<ObjectiveDef> = [

@@ -11,6 +11,7 @@ import { loadCaseRecord, recordCompletedTrial } from './game/caseRecord';
 import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/enemies';
 import { BREED_DEFS, DISCOVERY_NOTES, type BreedId, type DiscoveryNoteId } from './content/catalysis';
 import { notebookViewForProgression, atlasViewForProgression } from './content/notebook';
+import { researchNotebookView, type ActiveStudySnapshot } from './game/researchNotebook';
 import { lifeformIdentityForSpawn } from './content/lifeformIdentity';
 import { createEcologyAudio } from './audio/ecologyAudio';
 import { createUiAudio, DROP_SOUND_FOR_TOOL } from './audio/uiAudio';
@@ -346,6 +347,10 @@ window.addEventListener('keydown', (event) => {
     trapOptionsFocus(event);
     return;
   }
+  if (event.key === 'Tab' && overlayState.notebookOpen) {
+    trapNotebookFocus(event);
+    return;
+  }
   if (event.key !== 'Escape') return;
   if (overlayState.presentationMode) {
     event.preventDefault();
@@ -360,7 +365,9 @@ window.addEventListener('keydown', (event) => {
   if (overlayState.menuOpen) {
     event.preventDefault();
     setOptionsMenuOpen(false);
+    return;
   }
+  screens.closeMobileDrawers();
 });
 
 document.addEventListener('fullscreenchange', () => {
@@ -494,8 +501,13 @@ screens.onToolSelect((tool) => {
   uiAudio.play('ui_select');
   selectedTool = tool;
   screens.setTool(tool);
-  screens.closeMobileDrawers();
+  if (tool === 'egg') screens.openMobileLifeformsDrawer();
+  else screens.closeMobileDrawers();
   updateButtonHint();
+});
+screens.onToolboxReveal(() => {
+  coach.report('toolbox-scrolled');
+  window.requestAnimationFrame(syncOnboardingPointer);
 });
 screens.onAgitate(() => {
   if (!arena || run.getState().phase !== 'arena') return;
@@ -900,6 +912,7 @@ function loop() {
     objectiveSummary: objective.summary,
     objectiveHint: objective.def.hint ?? '',
     objectiveComplete: objective.complete,
+    objectiveTimed: objective.def.timed === true,
     upgrades: runState.upgrades.map((u) => {
       const def = getUpgradeDef(u.id);
       if (!def) return u.id;
@@ -1297,7 +1310,9 @@ function syncOnboardingPointer(): void {
       && window.matchMedia('(max-width: 899px)').matches
       && layout.dataset.mobileDrawer !== 'lifeforms';
     const selector = needsMobileDrawer
-      ? '#mobile-lifeforms-toggle'
+      ? '[data-tool="egg"]'
+      : target === 'rack:more'
+        ? '#toolbox-more'
       : target.startsWith('tool:')
       ? `[data-tool="${target.slice('tool:'.length)}"]`
       : target.startsWith('lifeform:')
@@ -1343,6 +1358,9 @@ document.getElementById('coach-skip')?.addEventListener('click', () => {
   window.requestAnimationFrame(syncOnboardingPointer);
 });
 document.getElementById('mobile-lifeforms-toggle')?.addEventListener('click', () => {
+  window.requestAnimationFrame(syncOnboardingPointer);
+});
+document.querySelector('[data-tool="egg"]')?.addEventListener('click', () => {
   window.requestAnimationFrame(syncOnboardingPointer);
 });
 
@@ -1553,9 +1571,45 @@ function trapOptionsFocus(event: KeyboardEvent): void {
   }
 }
 
+function trapNotebookFocus(event: KeyboardEvent): void {
+  const notebook = document.getElementById('screen-notebook');
+  if (!notebook) return;
+  const focusable = Array.from(notebook.querySelectorAll<HTMLElement>(
+    'button:not([disabled]):not([hidden]), [tabindex]:not([tabindex="-1"])',
+  )).filter((element) => element.getClientRects().length > 0);
+  if (focusable.length === 0) return;
+  const first = focusable[0]!;
+  const last = focusable[focusable.length - 1]!;
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
 function refreshNotebook(): void {
-  screens.updateNotebook(notebookViewForProgression(discoveryProgression));
+  const notebook = notebookViewForProgression(discoveryProgression);
+  screens.updateNotebook(notebook);
   screens.updateAtlas(atlasViewForProgression(discoveryProgression));
+  screens.updateResearchNotebook(researchNotebookView(notebook, activeStudySnapshot()));
+}
+
+function activeStudySnapshot(): ActiveStudySnapshot | null {
+  if (!arena || run.getState().phase !== 'arena') return null;
+  const objective = arena.getObjectiveProgress();
+  const ecology = arena.getEcology();
+  const equilibrium = arena.getEquilibrium();
+  return {
+    objective: objective.def,
+    summary: objective.summary,
+    complete: objective.complete,
+    secondsRemaining: ecology.secondsRemaining,
+    livingCultures: ecology.livingEnemies,
+    reactions: ecology.reactions,
+    equilibriumProgress: equilibrium.progress,
+  };
 }
 
 function openNotebook(): void {
@@ -1576,6 +1630,7 @@ function openNotebook(): void {
 }
 
 function closeNotebook(): void {
+  const wasOpen = overlayState.notebookOpen;
   overlayState.notebookOpen = false;
   // Let the tablet slide out before hiding; reduced-motion closes instantly.
   const notebookScreen = document.getElementById('screen-notebook');
@@ -1585,9 +1640,11 @@ function closeNotebook(): void {
     window.setTimeout(() => {
       notebookScreen.classList.remove('notebook-screen-closing');
       screens.hide('notebook');
+      if (wasOpen) document.getElementById('notebook-button')?.focus({ preventScroll: true });
     }, 210);
   } else {
     screens.hide('notebook');
+    if (wasOpen) document.getElementById('notebook-button')?.focus({ preventScroll: true });
   }
   applyOverlayState();
 }
@@ -1814,10 +1871,10 @@ function updateTicker(ar: Arena): void {
     screens.addTicker(`Objective update: ${objective.summary}.`);
   }
 
-  if (!tickerState.didWarnDeadline && objective.urgency === 'warning') {
+  if (objective.def.timed && !tickerState.didWarnDeadline && objective.urgency === 'warning') {
     tickerState.didWarnDeadline = true;
     screens.addTicker('Deadline pressure is rising.', 'caution');
-  } else if (!tickerState.didWarnCritical && objective.urgency === 'critical') {
+  } else if (objective.def.timed && !tickerState.didWarnCritical && objective.urgency === 'critical') {
     tickerState.didWarnCritical = true;
     screens.addTicker('Final seconds: finish the objective now.', 'critical');
     haptics.play('warning');
