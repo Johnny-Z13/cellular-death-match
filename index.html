@@ -38,7 +38,12 @@
         <img src="/art/professor/professor-emergent-v1.png" width="633" height="760" alt="" />
         <span aria-hidden="true"></span>
       </div>
-      <button id="options-button" class="chrome-button options-button" type="button" aria-label="Open options" aria-haspopup="dialog" aria-expanded="false">Options</button>
+      <button id="options-button" class="chrome-button options-button" type="button" aria-label="Open options" title="Options" aria-haspopup="dialog" aria-expanded="false">
+        <svg class="options-button__cog" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.73v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.73l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      </button>
       <button id="fullscreen-button" class="chrome-button fullscreen-button" type="button" aria-label="Enter full screen">Full screen</button>
       <div id="mobile-shell" class="mobile-shell" role="group" aria-label="Mobile dish controls">
         <button id="mobile-lifeforms-toggle" class="mobile-shell-button" type="button" aria-expanded="false" aria-controls="life-panel">Strains</button>
@@ -173,14 +178,34 @@
             <input id="dbg-sim-speed" type="range" min="30" max="90" step="1" value="72" />
             <b id="dbg-sim-speed-value">72 tick/s</b>
           </label>
-          <button id="dbg-clear-discoveries" class="debug-mini-button" type="button">clear discoveries</button>
-          <button id="dbg-reveal-discoveries" class="debug-mini-button" type="button">reveal all</button>
+          <div class="options-data-actions" aria-label="Experience controls">
+            <button id="dbg-reveal-discoveries" class="debug-mini-button options-preview-button" type="button">
+              <strong>Reveal all</strong>
+              <span>Open a fully stocked late-game trial</span>
+            </button>
+            <button id="dbg-clear-discoveries" class="debug-mini-button options-delete-button" type="button">
+              <strong>Delete data</strong>
+              <span>Return to the first-time Professor tutorial</span>
+            </button>
+          </div>
           <button id="dbg-fullscreen-mode" class="debug-mini-button" type="button">full screen</button>
           <div class="debug-help" id="dbg-discovery-status">discoveries: run-local</div>
           <div class="debug-help" id="dbg-discovery-catalysts">catalysts: none</div>
           <div class="debug-help" id="dbg-discovery-lifeforms">lifeforms: none</div>
         </section>
       </aside>
+
+      <dialog id="delete-data-dialog" class="delete-data-dialog" aria-labelledby="delete-data-title" aria-describedby="delete-data-copy">
+        <form method="dialog" class="delete-data-card">
+          <p class="delete-data-kicker">Dr. E. Mergent · Archive control</p>
+          <h2 id="delete-data-title">Delete all laboratory data?</h2>
+          <p id="delete-data-copy">This erases specimens, case progress, settings, and every tutorial marker stored on this device. The laboratory will restart as a first-time visit.</p>
+          <div class="delete-data-actions">
+            <button id="delete-data-cancel" class="delete-data-cancel" type="submit" value="cancel">Keep my data</button>
+            <button id="delete-data-confirm" class="delete-data-confirm" type="button">Delete all data</button>
+          </div>
+        </form>
+      </dialog>
 
       <!-- Overlay screens. Hidden by default; shown by .visible. -->
       <div id="screen-title" class="screen screen-title-screen visible">
@@ -297,7 +322,11 @@
 
       <aside id="life-panel" class="life-panel" aria-label="Lifeform guide">
         <div class="life-panel-head">
-          <h2 class="life-panel-title">Lifeforms</h2>
+          <div class="life-panel-title-row">
+            <h2 class="life-panel-title">Specimen freezer</h2>
+            <span id="life-count" class="life-count">1 / 14 ready</span>
+            <button id="life-panel-close" class="life-panel-close" type="button" aria-label="Close specimen freezer">Close</button>
+          </div>
           <p id="life-summary" class="life-summary">Pick an egg strain to seed the dish.</p>
         </div>
         <div id="egg-options" class="egg-options" aria-label="Egg strains"></div>

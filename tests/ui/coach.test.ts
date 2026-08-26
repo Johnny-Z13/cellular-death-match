@@ -216,13 +216,14 @@ describe('onboarding coach', () => {
     expect(elements.get('coach-title')?.textContent).toBe('Excellent work. It changed.');
     expect(elements.get('coach-body')?.textContent).toContain('much larger experiment');
 
-    vi.advanceTimersByTime(4800);
+    vi.advanceTimersByTime(3600);
     expect(elements.get('coach')?.classList.contains('coach-exit')).toBe(true);
     vi.advanceTimersByTime(520);
 
     expect(elements.get('coach')?.classList.contains('coach-show')).toBe(false);
     expect(elements.get('coach')?.getAttribute('aria-hidden')).toBe('true');
     expect(onComplete).toHaveBeenCalledOnce();
+    expect(onComplete).toHaveBeenCalledWith(0);
   });
 
   it('advances Trial 1 immediately when Continue is pressed on success', () => {
@@ -240,6 +241,25 @@ describe('onboarding coach', () => {
 
     expect(onComplete).toHaveBeenCalledOnce();
     expect(elements.get('coach')?.classList.contains('coach-show')).toBe(false);
+  });
+
+  it('advances later guided trials after the Professor records success', () => {
+    vi.useFakeTimers();
+    installCoachDom();
+    const coach = createCoach();
+    const onComplete = vi.fn();
+    coach.onOnboardingComplete = onComplete;
+
+    coach.beginTrial(1);
+    for (const event of [
+      'lifeform:bloom_mass', 'egg-used', 'nutrient-selected', 'nutrient-used',
+      'toxin-selected', 'toxin-used', 'objective-complete',
+    ]) coach.report(event);
+
+    expect(coach.isPresentingSuccess()).toBe(true);
+    vi.advanceTimersByTime(3600 + 520);
+    expect(onComplete).toHaveBeenCalledWith(1);
+    expect(coach.isPresentingSuccess()).toBe(false);
   });
 
   it('latches an early Bloom and celebrates after the final required action', () => {

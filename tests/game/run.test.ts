@@ -32,6 +32,19 @@ describe('start', () => {
   });
 });
 
+describe('late-game preview', () => {
+  it('opens directly on the first procedural objective with the Case sealed', () => {
+    const run = createRun(42);
+    run.startLateGamePreview();
+    const state = run.getState();
+
+    expect(state.phase).toBe('objective_pick');
+    expect(state.fightIndex).toBe(FIXED_EPOCH_COUNT);
+    expect(state.epochResults).toEqual(Array(FIXED_EPOCH_COUNT).fill('completed'));
+    expect(state.outcome).toBeNull();
+  });
+});
+
 describe('winFight — non-final fight', () => {
   it('transitions arena → upgrade_pick with 3 unique choices', () => {
     const run = createRun(42);

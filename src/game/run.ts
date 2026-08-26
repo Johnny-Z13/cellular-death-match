@@ -42,6 +42,7 @@ export interface RunState {
 export interface Run {
   getState(): RunState;
   start(): void;
+  startLateGamePreview(): void;
   completeEpoch(): void;
   skipEpoch(): void;
   failEpoch(): void;
@@ -122,6 +123,15 @@ export function createRun(seed: number): Run {
       outcome = null;
       pendingPickChoices = [];
       epochResults = [];
+      chosenObjective = undefined;
+    },
+    startLateGamePreview() {
+      phase = 'objective_pick';
+      fightIndex = FIXED_EPOCH_COUNT;
+      upgrades.length = 0;
+      outcome = null;
+      pendingPickChoices = [];
+      epochResults = Array.from({ length: FIXED_EPOCH_COUNT }, () => 'completed' as const);
       chosenObjective = undefined;
     },
     completeEpoch() {

@@ -27,7 +27,6 @@ import { createFixedStepClock, normalizeSimTicksPerSecond } from './game/simCloc
 import { hash2 } from './game/hash';
 import { lifeformUnlocksForCurrentRun } from './game/lifeformLoadout';
 import {
-  clearDiscoverySave,
   loadDiscoverySave,
   saveDiscoveryState,
   setDiscoveryPersistence,
@@ -35,11 +34,12 @@ import {
 } from './game/discoverySave';
 import {
   acknowledgeNotebookDiscoveries,
-  clearDiscoveryProgression,
   createDiscoveryProgression,
   discoveryAnnouncementsForProgressionChange,
   applyCompletionResearchGrant,
   revealAllDiscoveryProgression,
+  ALL_PROGRESSION_LIFEFORMS,
+  ALL_PROGRESSION_TOOLS,
   updateDiscoveryProgression,
   type DiscoveryDelta,
   type DiscoveryStageDelta,
@@ -243,18 +243,34 @@ debug.onDiscoveryPersistenceChange((enabled) => {
   debug.updateDiscoveries(discoveryDebugInfo());
 });
 debug.onClearDiscoveries(() => {
-  discoverySave = clearDiscoverySave(discoveryStorage);
-  discoveryProgression = clearDiscoveryProgression(discoveryProgression);
-  applyDiscoveryProgressionUi();
-  refreshArenaToolUi();
-  debug.updateDiscoveries(discoveryDebugInfo());
+  openDeleteDataDialog();
+});
+document.getElementById('delete-data-confirm')?.addEventListener('click', () => {
+  try {
+    runtimeStorage.clear();
+  } finally {
+    window.location.reload();
+  }
 });
 debug.onRevealDiscoveries(() => {
+  discoverySave = setDiscoveryPersistence(discoveryStorage, true);
   discoveryProgression = revealAllDiscoveryProgression(discoveryProgression);
+  for (const lifeform of ALL_PROGRESSION_LIFEFORMS) strainLibrary.bankStrain(lifeform);
+  while (strainLibrary.getLoadoutSlots() < 6) strainLibrary.addLoadoutSlot();
+  strainLibrary.setLoadout(ALL_PROGRESSION_LIFEFORMS.slice(0, 6));
+  strainLibrary.save();
+  for (const trial of COMMON_COLD_CASE.trials) {
+    caseRecord = recordCompletedTrial(runtimeStorage, caseRecord, trial.id);
+  }
+  currentRunLoadout = new Set(ALL_PROGRESSION_LIFEFORMS);
+  run.startLateGamePreview();
   saveRuntimeDiscoveryState();
   applyDiscoveryProgressionUi();
   refreshArenaToolUi();
   debug.updateDiscoveries(discoveryDebugInfo());
+  setOptionsMenuOpen(false);
+  fx.playWipe();
+  showPhase();
 });
 debug.onPresentationToggle(() => {
   setPresentationMode(!overlayState.presentationMode);
@@ -753,30 +769,15 @@ function startNewFight() {
     objective.name,
     objective.description,
   );
-  // First epoch of a run: bring up the onboarding coach (first run only).
-  if (runState.fightIndex === 0) {
-    coach.onOnboardingComplete = () => {
-      // Auto-end Epoch 1 when bloom is discovered.
-      if (arena) {
-        persistArenaDiscoveries(arena, true);
-        // Trial 1 explicitly awards the specimen Dr. E just taught. Bank it
-        // even if the live culture expires during his success presentation,
-        // otherwise Trial 2 can ask for a Bloom Mass the player cannot select.
-        advanceDiscoveryProgression({ breedIds: ['bloom_mass'] }, { breed: 'stabilized' });
-        awardCompletionResearchGrant();
-        sampleRunTelemetryFromArena(arena);
-      }
-      uiAudio.play('epoch_win');
-      fx.playWipe();
-      runTelemetry.recordEpochCompleted();
-      const completedTrial = COMMON_COLD_CASE.trials[run.getState().fightIndex];
-      if (completedTrial) {
-        caseRecord = recordCompletedTrial(runtimeStorage, caseRecord, completedTrial.id);
-      }
-      run.completeEpoch();
-      showPhase();
-    };
-  }
+  // Every authored Professor lesson advances after his success beat. Trial 1
+  // additionally grants the Bloom Mass he just taught, even if the live cells
+  // expire while he is speaking.
+  coach.onOnboardingComplete = (trialIndex) => {
+    if (trialIndex === 0) {
+      advanceDiscoveryProgression({ breedIds: ['bloom_mass'] }, { breed: 'stabilized' });
+    }
+    resolveArenaStatus('won');
+  };
   coach.beginTrial(runState.fightIndex);
   screens.updateToolCharges(arena.getToolStates());
   screens.updateAgitation(arena.getAgitationState());
@@ -941,7 +942,12 @@ function loop() {
   }
 
   // Status check: did this tick end the fight?
-  if (resolveArenaStatus(arena.getStatus())) return;
+  const arenaStatus = arena.getStatus();
+  if (arenaStatus === 'won' && coach.isPresentingSuccess()) {
+    scheduleLoop();
+    return;
+  }
+  if (resolveArenaStatus(arenaStatus)) return;
 
   scheduleLoop();
 }
@@ -1234,6 +1240,7 @@ function applyDiscoveryProgressionUi(): void {
 }
 
 function currentToolUnlocks(): readonly ToolId[] {
+  if (discoveryProgression.revealAll) return ALL_PROGRESSION_TOOLS;
   return toolUnlocksForCurrentStage(
     discoveryProgression,
     run.getState().fightIndex,
@@ -1242,6 +1249,7 @@ function currentToolUnlocks(): readonly ToolId[] {
 }
 
 function currentLifeformUnlocks(): readonly ProgressionLifeformId[] {
+  if (discoveryProgression.revealAll) return ALL_PROGRESSION_LIFEFORMS;
   const stagedLifeforms = lifeformUnlocksForCurrentStage(
     discoveryProgression,
     run.getState().fightIndex,
@@ -1494,6 +1502,14 @@ function applyOverlayState(): void {
 }
 
 let optionsReturnFocus: HTMLElement | null = null;
+
+function openDeleteDataDialog(): void {
+  const dialog = document.getElementById('delete-data-dialog');
+  if (!(dialog instanceof HTMLDialogElement) || dialog.open) return;
+  setOptionsMenuOpen(false);
+  dialog.showModal();
+  document.getElementById('delete-data-cancel')?.focus();
+}
 
 function setOptionsMenuOpen(open: boolean): void {
   const optionsPanel = document.getElementById('debug');

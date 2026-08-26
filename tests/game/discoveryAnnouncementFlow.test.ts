@@ -61,7 +61,7 @@ describe('organic discovery announcement flow', () => {
     expect(startFightBody).toContain('screens.setPickResearchBrief([]);');
   });
 
-  it('refreshes tool charges immediately after debug discovery actions change unlocks', () => {
+  it('refreshes tool charges immediately after reveal-all changes unlocks', () => {
     const revealStart = mainSource.indexOf('debug.onRevealDiscoveries(() => {');
     expect(revealStart).toBeGreaterThan(-1);
     const revealEnd = mainSource.indexOf('\n});', revealStart);
@@ -73,12 +73,7 @@ describe('organic discovery announcement flow', () => {
       revealBody.indexOf('refreshArenaToolUi();'),
     );
 
-    const clearStart = mainSource.indexOf('debug.onClearDiscoveries(() => {');
-    expect(clearStart).toBeGreaterThan(-1);
-    const clearEnd = mainSource.indexOf('\n});', clearStart);
-    const clearBody = mainSource.slice(clearStart, clearEnd);
-
-    expect(clearBody).toContain('applyDiscoveryProgressionUi();');
-    expect(clearBody).toContain('refreshArenaToolUi();');
+    expect(mainSource).toContain('debug.onClearDiscoveries(() => {\n  openDeleteDataDialog();');
+    expect(mainSource).toContain('runtimeStorage.clear();');
   });
 });

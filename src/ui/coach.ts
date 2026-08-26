@@ -8,6 +8,7 @@ export type CoachEvent = string;
 
 export interface Coach {
   isActive(): boolean;
+  isPresentingSuccess(): boolean;
   hasSeenTutorial(): boolean;
   beginRun(): void;
   beginTrial(trialIndex: number): void;
@@ -17,7 +18,7 @@ export interface Coach {
   getCurrentButtonHint(): string | undefined;
   getCurrentPointerTarget(): string | undefined;
   shouldAutoSpawn(): boolean;
-  onOnboardingComplete: (() => void) | null;
+  onOnboardingComplete: ((trialIndex: number) => void) | null;
   showNudge(title: string, body: string, opts?: { interruptTutorial?: boolean }): void;
   hideNudge(): void;
 }
@@ -25,7 +26,7 @@ export interface Coach {
 const SEEN_KEY = 'cdm.coach.seen.v8';
 const SEEN_TRIALS_KEY = 'cdm.coach.trials.v1';
 const PROMPT_HOLD_MS = 3000;
-const SUCCESS_HOLD_MS = 4800;
+const SUCCESS_HOLD_MS = 3600;
 const SLIDE_OUT_MS = 520;
 
 export function createCoach(): Coach {
@@ -51,6 +52,7 @@ export function createCoach(): Coach {
   let presentationTimer = 0;
   let exitTimer = 0;
   let autoSpawnTriggered = false;
+  let presentingSuccess = false;
 
   function seen(): boolean {
     return seenTrials().has(0) || (() => {
@@ -147,6 +149,7 @@ export function createCoach(): Coach {
 
   function finish(): void {
     active = false;
+    presentingSuccess = false;
     awaitingObjective = false;
     objectiveObserved = false;
     markSeen(currentTrialIndex);
@@ -178,6 +181,7 @@ export function createCoach(): Coach {
   function celebrateSuccess(coach: Coach): void {
     if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
     active = false;
+    presentingSuccess = true;
     awaitingObjective = false;
     mode = 'success';
     clearPresentationTimers();
@@ -198,9 +202,9 @@ export function createCoach(): Coach {
   }
 
   function finishSuccess(coach: Coach): void {
-    const shouldAdvanceFirstTrial = currentTrialIndex === 0;
+    const completedTrialIndex = currentTrialIndex;
     finish();
-    if (shouldAdvanceFirstTrial) coach.onOnboardingComplete?.();
+    coach.onOnboardingComplete?.(completedTrialIndex);
   }
 
   function hideNudgeNow(): void {
@@ -215,6 +219,9 @@ export function createCoach(): Coach {
 
     isActive() {
       return active;
+    },
+    isPresentingSuccess() {
+      return presentingSuccess;
     },
     hasSeenTutorial() {
       return seen();

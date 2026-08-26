@@ -184,6 +184,8 @@ export function createScreens(): Screens {
   const mobileToolSummary = get('mobile-tool-summary');
   const eggOptions   = get('egg-options');
   const lifeSummary  = get('life-summary');
+  const lifeCount    = get('life-count');
+  const lifePanelClose = get('life-panel-close') as HTMLButtonElement;
   const lifeList     = get('life-list');
   const tickerLines  = get('ticker-lines');
   const agitateButton = get('agitate-button') as HTMLButtonElement;
@@ -264,13 +266,16 @@ export function createScreens(): Screens {
   }
 
   function applyLifeformVisibility(): void {
+    let readyCount = 0;
     for (const [id, button] of lifeButtons) {
       const locked = !unlockedLifeformIds.has(id);
+      if (!locked) readyCount += 1;
       button.hidden = locked;
       setUnknownState(button, locked, 'Unknown lifeform');
       const selected = !locked && id === selectedLifeformId;
       setSelectedButtonState(button, selected);
     }
+    lifeCount.textContent = `${readyCount} / ${lifeButtons.size} ready`;
     sortLifeList();
   }
 
@@ -311,6 +316,7 @@ export function createScreens(): Screens {
   mobileLifeformsToggle.addEventListener('click', () => {
     setMobileDrawer(mobileDrawer === 'lifeforms' ? 'none' : 'lifeforms');
   });
+  lifePanelClose.addEventListener('click', closeMobileDrawers);
   mobileLogToggle.addEventListener('click', () => {
     setMobileDrawer(mobileDrawer === 'log' ? 'none' : 'log');
   });

@@ -94,6 +94,18 @@ Trials and clearly labels temporary Methods versus permanent Atlas discoveries.
 Professor beats are event-driven and skippable; they disappear when the player
 demonstrates the requested action.
 
+The Specimen Freezer is the canonical home for selectable lifeforms. On phones
+it is a bounded bottom sheet with a two-column, vertically scrolling rack, a
+ready/total count, and an explicit close control; on desktop it remains the
+right-side specimen rack. The freezer may cover peripheral chrome while open,
+but closing it must immediately return the whole dish to the player.
+
+Options uses the laboratory cog as a persistent secondary action, including on
+the title screen. “Reveal all” is a reversible testing route into a fully
+stocked procedural Trial. “Delete data” is destructive and always requires an
+in-product confirmation that names the progress, specimens, settings, and
+tutorial state it will erase.
+
 ## Do's and Don'ts
 
 - Do let the real simulation teach through immediate response.

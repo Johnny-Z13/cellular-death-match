@@ -31,7 +31,7 @@ describe('mobile layout CSS', () => {
     expect(css).toContain('pointer-events: none');
   });
 
-  it('switches phones to compact horizontal trays instead of desktop-length fixed lists', () => {
+  it('switches phones to a bounded two-column specimen freezer', () => {
     const mobile = mediaBlock('(max-width: 899px)');
 
     expect(mobile).toContain('padding: calc(80px + env(safe-area-inset-top)) 10px calc(146px + env(safe-area-inset-bottom))');
@@ -72,11 +72,11 @@ describe('mobile layout CSS', () => {
     expect(mobile).toContain('transform: translateY(0)');
 
     expect(mobile).toContain('.life-list {');
-    expect(mobile).toContain('grid-template-columns: none');
-    expect(mobile).toContain('grid-auto-flow: column');
-    expect(mobile).toContain('grid-auto-columns: minmax(154px, 74vw)');
-    expect(mobile).toContain('overflow-x: auto');
-    expect(mobile).toContain('overflow-y: hidden');
+    expect(mobile).toContain('grid-template-columns: repeat(2, minmax(0, 1fr))');
+    expect(mobile).toContain('grid-auto-flow: row');
+    expect(mobile).toContain('overflow-x: hidden');
+    expect(mobile).toContain('overflow-y: auto');
+    expect(mobile).toContain('.life-panel-close { display: block; }');
 
     expect(mobile).toContain('.ticker {');
     expect(mobile).toContain('transform: translateY(calc(100% + 160px))');

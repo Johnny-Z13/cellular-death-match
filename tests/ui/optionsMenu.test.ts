@@ -16,6 +16,32 @@ describe('options menu', () => {
     expect(html).toContain('hidden>Haptics — On</button>');
   });
 
+  it('uses the Brick Breaker cog and keeps experience controls available', () => {
+    expect(html).toContain('class="options-button__cog"');
+    expect(html).toContain('M12.22 2h-.44');
+    expect(html).toContain('id="dbg-reveal-discoveries"');
+    expect(html).toContain('Open a fully stocked late-game trial');
+    expect(html).toContain('id="dbg-clear-discoveries"');
+    expect(html).toContain('Return to the first-time Professor tutorial');
+  });
+
+  it('confirms destructive data deletion in-product and reloads first-time state', () => {
+    expect(html).toContain('id="delete-data-dialog"');
+    expect(html).toContain('id="delete-data-cancel"');
+    expect(html).toContain('id="delete-data-confirm"');
+    expect(mainSource).toContain('dialog.showModal();');
+    expect(mainSource).toContain('runtimeStorage.clear();');
+    expect(mainSource).toContain('window.location.reload();');
+  });
+
+  it('turns reveal-all into a persistent, fully stocked procedural preview', () => {
+    expect(mainSource).toContain('discoverySave = setDiscoveryPersistence(discoveryStorage, true);');
+    expect(mainSource).toContain('for (const lifeform of ALL_PROGRESSION_LIFEFORMS) strainLibrary.bankStrain(lifeform);');
+    expect(mainSource).toContain('run.startLateGamePreview();');
+    expect(mainSource).toContain('if (discoveryProgression.revealAll) return ALL_PROGRESSION_TOOLS;');
+    expect(mainSource).toContain('if (discoveryProgression.revealAll) return ALL_PROGRESSION_LIFEFORMS;');
+  });
+
   it('exposes haptics only when the browser supports the mobile feature', () => {
     expect(screensSource).toContain('setHapticsAvailable(available: boolean): void;');
     expect(screensSource).toContain('hapticsButton.hidden = !available;');

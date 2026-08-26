@@ -191,6 +191,7 @@ canvas {
 .layout[data-screen="title"] .ticker,
 .layout[data-screen="title"] .mobile-shell,
 .layout[data-screen="title"] .hud {
+  visibility: hidden;
   opacity: 0;
   pointer-events: none;
 }
@@ -200,7 +201,20 @@ canvas {
 .layout[data-screen="loadout"] .ticker,
 .layout[data-screen="loadout"] .mobile-shell,
 .layout[data-screen="loadout"] .hud {
+  visibility: hidden;
   opacity: 0;
+  pointer-events: none;
+}
+
+/* Overlay screens own the interaction tree. Keep the dormant laboratory
+   apparatus out of keyboard and screen-reader navigation until play resumes. */
+.layout:not([data-screen="arena"]) .dish-stage,
+.layout:not([data-screen="arena"]) .toolbox,
+.layout:not([data-screen="arena"]) .life-panel,
+.layout:not([data-screen="arena"]) .ticker,
+.layout:not([data-screen="arena"]) .mobile-shell,
+.layout:not([data-screen="arena"]) .hud {
+  visibility: hidden !important;
   pointer-events: none;
 }
 
@@ -234,6 +248,27 @@ canvas {
 
 .options-button {
   right: calc(106px + env(safe-area-inset-right));
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+}
+
+.options-button__cog {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  stroke-width: 1.85;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 180ms ease, filter 180ms ease;
+}
+
+.options-button:hover .options-button__cog,
+.options-button:focus-visible .options-button__cog {
+  transform: rotate(22.5deg);
+  filter: drop-shadow(0 0 7px rgba(91, 233, 214, 0.72));
 }
 
 .chrome-button:hover,
@@ -975,6 +1010,120 @@ canvas {
   color: #e0ffe7;
 }
 
+.options-data-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.options-data-actions .debug-mini-button {
+  display: grid;
+  gap: 4px;
+  min-height: 66px;
+  margin: 0;
+  padding: 10px 11px;
+  text-align: left;
+}
+
+.options-data-actions .debug-mini-button strong {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+}
+
+.options-data-actions .debug-mini-button span {
+  color: var(--ink-faint);
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.options-delete-button {
+  border-color: rgba(255, 123, 92, 0.34);
+  background: rgba(54, 19, 16, 0.48);
+}
+
+.options-delete-button:hover,
+.options-delete-button:focus-visible {
+  border-color: var(--danger);
+}
+
+.delete-data-dialog {
+  width: min(430px, calc(100vw - 32px));
+  max-width: none;
+  padding: 0;
+  border: 1px solid rgba(255, 123, 92, 0.48);
+  border-radius: 14px;
+  background: rgba(5, 10, 12, 0.98);
+  color: var(--ink);
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.76), 0 0 32px rgba(255, 123, 92, 0.1);
+}
+
+.delete-data-dialog::backdrop {
+  background: rgba(1, 4, 5, 0.82);
+  -webkit-backdrop-filter: blur(7px);
+  backdrop-filter: blur(7px);
+}
+
+.delete-data-card {
+  display: grid;
+  gap: 12px;
+  padding: 22px;
+}
+
+.delete-data-kicker,
+.delete-data-card h2,
+.delete-data-card p {
+  margin: 0;
+}
+
+.delete-data-kicker {
+  color: var(--danger);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.delete-data-card h2 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.delete-data-card > p:not(.delete-data-kicker) {
+  color: var(--ink-dim);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.delete-data-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.delete-data-actions button {
+  min-height: 44px;
+  border: 1px solid var(--hairline);
+  border-radius: 9px;
+  background: rgba(18, 32, 36, 0.84);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.delete-data-confirm {
+  border-color: rgba(255, 123, 92, 0.58) !important;
+  background: rgba(88, 28, 21, 0.72) !important;
+  color: #ffd8ce !important;
+}
+
 /* ---- Dish log ticker --------------------------------------------------- */
 .ticker {
   display: none;
@@ -1118,6 +1267,13 @@ canvas {
   gap: 2px;
 }
 
+.life-panel-title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+}
+
 .life-panel-title,
 .life-summary {
   margin: 0;
@@ -1129,6 +1285,27 @@ canvas {
   font-size: 9px;
   font-weight: 400;
   letter-spacing: 0.22em;
+}
+
+.life-count {
+  color: var(--bio);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.life-panel-close {
+  display: none;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--hairline);
+  border-radius: 9px;
+  background: rgba(14, 26, 29, 0.92);
+  color: var(--ink-dim);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  cursor: pointer;
 }
 
 .life-summary {
@@ -3628,9 +3805,9 @@ canvas {
     pointer-events: auto;
   }
 
-  .life-panel-title {
-    display: none;
-  }
+  .life-panel-title { display: block; }
+
+  .life-panel-close { display: block; }
 
   .life-summary {
     overflow: hidden;
@@ -3639,18 +3816,18 @@ canvas {
   }
 
   .life-list {
-    grid-template-columns: none;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(154px, 74vw);
-    overflow-x: auto;
-    overflow-y: hidden;
-    overscroll-behavior-x: contain;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
     scrollbar-width: none;
   }
 
   .life-panel .life-item.tool-button {
     grid-template-columns: 24px minmax(0, 1fr) auto;
-    min-width: 154px;
+    min-width: 0;
     min-height: 48px;
     padding: 7px 9px;
   }
@@ -3911,7 +4088,7 @@ canvas {
   }
 
   .life-list {
-    grid-auto-columns: minmax(154px, 1fr);
+    grid-template-columns: 1fr;
   }
 
   .coach,
@@ -5027,15 +5204,22 @@ canvas {
 /* ---- Minimal cinematic front door --------------------------------------
    The Doctor is the brand. Keep the title screen to the portrait, wordmark,
    and one unambiguous action; progression detail belongs after the tap. */
-.layout[data-screen="title"] .options-button,
 .layout[data-screen="title"] .fullscreen-button {
   opacity: 0;
   pointer-events: none;
 }
 
+.layout[data-screen="title"] .options-button {
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 11 !important;
+  border-color: rgba(140, 238, 240, 0.34);
+  background: rgba(2, 10, 13, 0.54);
+}
+
 #screen-title.screen-title-screen {
   padding: 0;
   background: #010405;
+  z-index: 9 !important;
 }
 
 #screen-title.screen-title-screen.visible {
@@ -5311,7 +5495,10 @@ canvas {
 }
 
 .coach-success .coach-skip {
-  display: none;
+  display: block;
+  min-height: 44px;
+  border-color: rgba(91, 233, 214, 0.46);
+  color: #eaffff;
 }
 
 .coach-intro-active .fx-banner,
@@ -5525,21 +5712,13 @@ canvas {
   .layout[data-screen="arena"] .options-button {
     top: max(10px, calc(env(safe-area-inset-top) + 10px));
     right: max(10px, calc(env(safe-area-inset-right) + 10px));
-    width: 38px;
-    min-width: 38px;
-    min-height: 34px;
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
     padding: 0;
     overflow: hidden;
     border-radius: 9px;
-    color: transparent;
-    font-size: 0;
-  }
-
-  .layout[data-screen="arena"] .options-button::after {
-    content: "•••";
     color: var(--bio-bright);
-    font-size: 12px;
-    letter-spacing: 0.12em;
   }
 
   .layout[data-screen="arena"] .notebook-button.notebook-tab {
@@ -5692,7 +5871,28 @@ canvas {
   }
 
   .layout[data-screen="arena"] .life-panel-head {
-    display: none;
+    display: grid;
+  }
+
+  .layout[data-screen="arena"] .life-panel {
+    max-height: min(56svh, 468px);
+    max-height: min(56dvh, 468px);
+    padding: 12px;
+    border-color: rgba(120, 196, 200, 0.34);
+    background: rgba(3, 10, 12, 0.97);
+  }
+
+  .layout[data-screen="arena"] .life-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: row;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-top: 8px;
+    border-top: 1px solid rgba(120, 196, 200, 0.14);
+  }
+
+  .layout[data-screen="arena"] .life-panel .life-item.tool-button {
+    min-width: 0;
   }
 
   .layout[data-screen="arena"].mobile-lifeforms-open .life-panel,
