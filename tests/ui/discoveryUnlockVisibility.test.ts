@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const screensSource = readFileSync('src/ui/screens.ts', 'utf8');
+const mainSource = readFileSync('src/main.ts', 'utf8');
 const css = readFileSync('src/styles.css', 'utf8');
 
 describe('discovery unlock visibility', () => {
@@ -10,5 +11,11 @@ describe('discovery unlock visibility', () => {
     expect(screensSource).toContain('btn.hidden = locked;');
     expect(screensSource).toContain('button.hidden = locked;');
     expect(css).toContain('[hidden] {\n  display: none !important;\n}');
+  });
+
+  it('announces effective staged availability instead of legacy research bundles', () => {
+    expect(mainSource).toContain('const previousAvailability = currentUnlockAvailability();');
+    expect(mainSource).toContain('announceUnlocks(previousAvailability, currentUnlockAvailability());');
+    expect(mainSource).not.toContain('announceUnlocks(previousTools, previousLifeforms, discoveryProgression);');
   });
 });

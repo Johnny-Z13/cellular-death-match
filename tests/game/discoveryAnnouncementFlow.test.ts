@@ -14,7 +14,7 @@ describe('organic discovery announcement flow', () => {
     expect(body).toContain('const previousProgression = discoveryProgression;');
     expect(body).toContain('announceDiscoveryProgressionChange(previousProgression, nextProgression);');
     expect(body.indexOf('announceDiscoveryProgressionChange(previousProgression, nextProgression);')).toBeLessThan(
-      body.indexOf('announceUnlocks(previousTools, previousLifeforms, discoveryProgression);'),
+      body.indexOf('announceUnlocks(previousAvailability, currentUnlockAvailability());'),
     );
   });
 
@@ -26,7 +26,7 @@ describe('organic discovery announcement flow', () => {
 
     expect(body).toContain('screens.showcaseLifeformUnlock(lifeform);');
     expect(body.indexOf('screens.showcaseLifeformUnlock(lifeform);')).toBeGreaterThan(
-      body.indexOf('if (previousLifeforms.includes(lifeform)) continue;'),
+      body.indexOf('if (previous.lifeforms.includes(lifeform)) continue;'),
     );
   });
 
@@ -38,7 +38,7 @@ describe('organic discovery announcement flow', () => {
 
     expect(body).toContain('screens.showcaseToolUnlock(tool);');
     expect(body.indexOf('screens.showcaseToolUnlock(tool);')).toBeGreaterThan(
-      body.indexOf('if (previousTools.includes(tool)) continue;'),
+      body.indexOf('if (previous.tools.includes(tool)) continue;'),
     );
   });
 

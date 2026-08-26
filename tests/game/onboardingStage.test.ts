@@ -8,6 +8,7 @@ import {
   lifeformUnlocksForCurrentStage,
   toolUnlocksForCurrentStage,
   shouldUseOnboardingDishForCurrentStage,
+  FIRST_CASE_STAGE_LIFEFORMS,
   ONBOARDING_BEATS,
   TRIAL_ONBOARDING_BEATS,
   isOnboardingEpoch,
@@ -38,14 +39,27 @@ describe('onboarding stage gates', () => {
     expect(lifeformUnlocksForCurrentStage(bloomed, 0, false)).toEqual(['swarmlet']);
     expect(shouldUseOnboardingDishForCurrentStage(0, false)).toBe(true);
     expect(toolUnlocksForCurrentStage(bloomed, 0, true)).toEqual(['egg', 'nutrient']);
-    expect(lifeformUnlocksForCurrentStage(bloomed, 0, true)).toEqual(['swarmlet', 'bruiser', 'splitter', 'bloom_mass']);
+    expect(lifeformUnlocksForCurrentStage(bloomed, 0, true)).toEqual(['swarmlet']);
     expect(shouldUseOnboardingDishForCurrentStage(0, true)).toBe(false);
     expect(toolUnlocksForCurrentStage(starter, 1)).toEqual(['egg', 'nutrient', 'toxin']);
     expect(toolUnlocksForCurrentStage(starter, 2)).toEqual(['egg', 'nutrient', 'toxin', 'water']);
     expect(toolUnlocksForCurrentStage(starter, 3)).toEqual(['egg', 'nutrient', 'toxin', 'water', 'paste']);
     expect(toolUnlocksForCurrentStage(starter, 4)).toEqual(['egg', 'nutrient', 'toxin', 'water', 'paste', 'salt']);
-    expect(lifeformUnlocksForCurrentStage(starter, 1)).toEqual(starter.unlockedLifeforms);
+    expect(lifeformUnlocksForCurrentStage(bloomed, 1)).toEqual(['swarmlet', 'bloom_mass']);
     expect(shouldUseOnboardingDishForCurrentStage(1, false)).toBe(false);
+  });
+
+  it('does not leak the legacy Bloom bundle into the authored specimen freezer', () => {
+    const bloomed = updateDiscoveryProgression(createDiscoveryProgression(), {
+      breedIds: ['bloom_mass'],
+      noteIds: ['breed_bloom_mass'],
+    });
+
+    expect(bloomed.unlockedTools).toContain('water');
+    expect(bloomed.unlockedLifeforms).toContain('bruiser');
+    FIRST_CASE_STAGE_LIFEFORMS.forEach((expected, trialIndex) => {
+      expect(lifeformUnlocksForCurrentStage(bloomed, trialIndex, true)).toEqual(expected);
+    });
   });
 });
 

@@ -346,7 +346,7 @@ export function discoveryAnnouncementsForProgressionChange(
     if (previousBreeds.has(breedId) && stageRank(previousStage) >= stageRank(stage)) continue;
     announcements.push({
       message: stage === 'stabilized'
-        ? `Specimen stabilized: ${BREED_DEFS[breedId].name}. Egg now available.`
+        ? `Specimen stabilized: ${BREED_DEFS[breedId].name}. Added to the Atlas.`
         : `New lifeform observed: ${BREED_DEFS[breedId].name}. Stabilize it alive to bank the egg.`,
       tone: toneForCaution(DISCOVERY_NOTES[`breed_${breedId}`].caution),
     });

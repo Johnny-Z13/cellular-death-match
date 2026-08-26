@@ -1077,8 +1077,7 @@ function awardCompletionResearchGrant(): void {
     return;
   }
   const previousProgression = discoveryProgression;
-  const previousTools = previousProgression.unlockedTools;
-  const previousLifeforms = previousProgression.unlockedLifeforms;
+  const previousAvailability = currentUnlockAvailability();
   const result = applyCompletionResearchGrant(previousProgression);
   if (!result) {
     pendingResearchBrief = [];
@@ -1090,7 +1089,7 @@ function awardCompletionResearchGrant(): void {
   recordNewlyDiscoveredBreeds(previousProgression, discoveryProgression);
   recordNewlyStabilizedBreeds(previousProgression, discoveryProgression);
   applyDiscoveryProgressionUi();
-  announceUnlocks(previousTools, previousLifeforms, discoveryProgression);
+  announceUnlocks(previousAvailability, currentUnlockAvailability());
   pendingResearchBrief = researchBriefForGrant(result.grant);
   screens.setPickResearchBrief(pendingResearchBrief);
   saveRuntimeDiscoveryState();
@@ -1112,6 +1111,7 @@ function advanceDiscoveryProgression(
   const previousProgression = discoveryProgression;
   const previousTools = previousProgression.unlockedTools;
   const previousLifeforms = previousProgression.unlockedLifeforms;
+  const previousAvailability = currentUnlockAvailability();
   const nextProgression = updateDiscoveryProgression(previousProgression, delta, new Date().toISOString(), stages);
   const changed = previousTools.join('|') !== nextProgression.unlockedTools.join('|')
     || previousLifeforms.join('|') !== nextProgression.unlockedLifeforms.join('|')
@@ -1125,7 +1125,7 @@ function advanceDiscoveryProgression(
   recordNewlyStabilizedBreeds(previousProgression, nextProgression);
   applyDiscoveryProgressionUi();
   announceDiscoveryProgressionChange(previousProgression, nextProgression);
-  announceUnlocks(previousTools, previousLifeforms, discoveryProgression);
+  announceUnlocks(previousAvailability, currentUnlockAvailability());
   saveRuntimeDiscoveryState();
   debug.updateDiscoveries(discoveryDebugInfo());
   return true;
@@ -1278,6 +1278,18 @@ function currentLifeformUnlocks(): readonly ProgressionLifeformId[] {
   );
 }
 
+interface UnlockAvailability {
+  readonly tools: readonly ToolId[];
+  readonly lifeforms: readonly ProgressionLifeformId[];
+}
+
+function currentUnlockAvailability(): UnlockAvailability {
+  return {
+    tools: currentToolUnlocks(),
+    lifeforms: currentLifeformUnlocks(),
+  };
+}
+
 function openingBloomCreatedInCurrentDish(): boolean {
   return arena?.getEcology().discoveries.breedIds.includes('bloom_mass') === true;
 }
@@ -1388,13 +1400,12 @@ function announceDiscoveryProgressionChange(
 }
 
 function announceUnlocks(
-  previousTools: readonly ToolId[],
-  previousLifeforms: readonly ProgressionLifeformId[],
-  next: { unlockedTools: readonly ToolId[]; unlockedLifeforms: readonly ProgressionLifeformId[] },
+  previous: UnlockAvailability,
+  next: UnlockAvailability,
 ): void {
   let didUnlock = false;
-  for (const tool of next.unlockedTools) {
-    if (previousTools.includes(tool)) continue;
+  for (const tool of next.tools) {
+    if (previous.tools.includes(tool)) continue;
     didUnlock = true;
     screens.showcaseToolUnlock(tool);
     screens.addTicker(`Research unlocked: ${capitalize(tool)} reagent available.`, 'discovery');
@@ -1404,8 +1415,8 @@ function announceUnlocks(
   // the breed banner wins the center screen over a plain strain banner.
   let bannerBreed: string | null = null;
   let bannerStrain: string | null = null;
-  for (const lifeform of next.unlockedLifeforms) {
-    if (previousLifeforms.includes(lifeform)) continue;
+  for (const lifeform of next.lifeforms) {
+    if (previous.lifeforms.includes(lifeform)) continue;
     didUnlock = true;
     screens.showcaseLifeformUnlock(lifeform);
     if (isBaseArchetype(lifeform)) {

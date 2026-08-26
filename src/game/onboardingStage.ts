@@ -15,6 +15,17 @@ export const FIRST_CASE_STAGE_TOOLS: readonly (readonly ProgressionToolId[])[] =
   ['egg', 'nutrient', 'toxin', 'water', 'paste', 'salt'],
 ];
 
+// The authored Case is the runtime authority for specimens as well as tools.
+// Persistent research may know about a larger legacy bundle, but those strains
+// stay in the freezer until the Professor has introduced the relevant Trial.
+export const FIRST_CASE_STAGE_LIFEFORMS: readonly (readonly ProgressionLifeformId[])[] = [
+  ONBOARDING_STAGE_LIFEFORMS,
+  ['swarmlet', 'bloom_mass'],
+  ['swarmlet', 'bloom_mass'],
+  ['swarmlet', 'bloom_mass'],
+  ['swarmlet', 'bloom_mass'],
+];
+
 export interface OnboardingBeat {
   readonly id: string;
   readonly title: string;
@@ -135,11 +146,10 @@ export function toolUnlocksForCurrentStage(
 export function lifeformUnlocksForCurrentStage(
   progression: DiscoveryProgressionState,
   fightIndex: number,
-  bloomCreatedInCurrentDish = progression.discoveredBreedIds.includes('bloom_mass'),
+  _bloomCreatedInCurrentDish = progression.discoveredBreedIds.includes('bloom_mass'),
 ): readonly ProgressionLifeformId[] {
-  if (shouldUseOnboardingDishForCurrentStage(fightIndex, bloomCreatedInCurrentDish)) {
-    return ONBOARDING_STAGE_LIFEFORMS;
-  }
+  const authoredLifeforms = FIRST_CASE_STAGE_LIFEFORMS[fightIndex];
+  if (authoredLifeforms) return authoredLifeforms;
   return progression.unlockedLifeforms;
 }
 
