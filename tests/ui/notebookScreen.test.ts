@@ -73,7 +73,7 @@ describe('discoverer notebook UI wiring', () => {
     expect(mainSource).toContain('screens.onNotebookClose(() => {');
     expect(mainSource).toContain('refreshNotebook();');
     expect(mainSource).toContain('screens.updateNotebook(notebook);');
-    expect(mainSource).toContain('screens.updateResearchNotebook(researchNotebookView(notebook, activeStudySnapshot()));');
+    expect(mainSource).toContain('screens.updateResearchNotebook(researchNotebookView(notebook, activeStudySnapshot(), researchArchive));');
     expect(mainSource).toContain('acknowledgeNotebookDiscoveries(discoveryProgression)');
   });
 

@@ -14,5 +14,8 @@ describe('open-ended run copy', () => {
   it('does not format open-ended end summaries as x / 0 objectives', () => {
     expect(screensSource).toContain('info.totalFights === 0');
     expect(screensSource).not.toContain('ecosystem ${info.fightReached} / ${info.totalFights}');
+    expect(screensSource).toContain("hudFightKey.textContent = info.totalFights > 0 ? 'Trial' : 'Study';");
+    expect(screensSource).toContain('info.fightIndex - info.caseTrialCount + 1');
+    expect(screensSource).toContain("hudTimeKey.textContent = info.objectiveTimed ? 'Window' : 'Dish';");
   });
 });

@@ -35,11 +35,18 @@ describe('options menu', () => {
   });
 
   it('turns reveal-all into a persistent, fully stocked procedural preview', () => {
-    expect(mainSource).toContain('discoverySave = setDiscoveryPersistence(discoveryStorage, true);');
+    expect(mainSource).not.toContain('setDiscoveryPersistence');
     expect(mainSource).toContain('for (const lifeform of ALL_PROGRESSION_LIFEFORMS) strainLibrary.bankStrain(lifeform);');
     expect(mainSource).toContain('run.startLateGamePreview();');
+    expect(mainSource).toContain('revealAllResearchArchive(researchArchive)');
     expect(mainSource).toContain('if (discoveryProgression.revealAll) return ALL_PROGRESSION_TOOLS;');
     expect(mainSource).toContain('if (discoveryProgression.revealAll) return ALL_PROGRESSION_LIFEFORMS;');
+  });
+
+  it('keeps diagnostics out of the ordinary player options menu', () => {
+    expect(html).toContain('class="debug-block debug-only"');
+    expect(html).not.toContain('id="dbg-persist-discoveries"');
+    expect(mainSource).toContain("layout.dataset.diagnostics = String(new URLSearchParams(window.location.search).has('physdebug'));");
   });
 
   it('exposes haptics only when the browser supports the mobile feature', () => {

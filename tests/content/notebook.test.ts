@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DISCOVERY_NOTES } from '../../src/content/catalysis';
+import { EGG_ARCHETYPES } from '../../src/content/enemies';
 import {
   NOTEBOOK_ENTRIES,
   notebookViewForProgression,
@@ -26,6 +27,7 @@ describe('notebook catalogue content', () => {
       expect(['stable', 'volatile', 'critical']).toContain(entry.caution);
       expect(
         entry.unlock.starter === true
+          || Boolean(entry.unlock.lifeformId)
           || Boolean(entry.unlock.breedId)
           || Boolean(entry.unlock.noteId),
       ).toBe(true);
@@ -40,9 +42,9 @@ describe('notebook catalogue content', () => {
       '2026-06-07T10:00:00.000Z',
     );
 
-    expect(view.discoveredCount).toBe(3);
+    expect(view.discoveredCount).toBe(1);
     expect(view.totalCount).toBe(NOTEBOOK_ENTRIES.length);
-    expect(view.entries.map((entry) => entry.title).sort()).toEqual(['Bruiser', 'Splitter', 'Swarmlet']);
+    expect(view.entries.map((entry) => entry.title)).toEqual(['Swarmlet']);
     expect(view.entries.every((entry) => entry.discovered)).toBe(true);
     expect(view.entries.every((entry) => entry.displayTitle.startsWith('Unknown') === false)).toBe(true);
     expect(view.entries[0]?.discoveredAtLabel).toBe('Discovered on Jun 7, 2026');
@@ -100,12 +102,8 @@ describe('notebook catalogue content', () => {
     expect(revealed.entries.every((entry) => entry.discovered)).toBe(true);
 
     const cleared = notebookViewForProgression(clearDiscoveryProgression());
-    expect(cleared.discoveredCount).toBe(3);
-    expect(cleared.entries.map((entry) => entry.title).sort()).toEqual([
-      'Bruiser',
-      'Splitter',
-      'Swarmlet',
-    ]);
+    expect(cleared.discoveredCount).toBe(1);
+    expect(cleared.entries.map((entry) => entry.title)).toEqual(['Swarmlet']);
   });
 
   it('uses authored discovery notes for catalyst and lab-note catalogue entries', () => {
@@ -125,6 +123,14 @@ describe('notebook catalogue content', () => {
     expect(entryIds).toContain('catalyst_recipe_lattice_bloom');
     expect(entryIds).toContain('event_recipe_spore_comet');
     expect(entryIds).toContain('catalyst_recipe_velvet_prison');
+  });
+
+  it('keeps every base egg and derived breed in one canonical specimen catalogue', () => {
+    const lifeformEntries = NOTEBOOK_ENTRIES.filter((entry) => entry.category === 'lifeform');
+    const baseIds = lifeformEntries.flatMap((entry) => entry.unlock.lifeformId ?? []);
+
+    expect(baseIds).toEqual(EGG_ARCHETYPES);
+    expect(lifeformEntries).toHaveLength(14);
   });
 });
 
@@ -150,8 +156,8 @@ describe('notebook atlas (progression map)', () => {
     const atlas = atlasViewForProgression(createDiscoveryProgression());
 
     expect(atlas.totalCount).toBe(NOTEBOOK_ENTRIES.length);
-    // Starters are discovered; the rest are locked but still visible (teasers).
-    expect(atlas.discoveredCount).toBe(3);
+    // The onboarding specimen is discovered; the rest are locked but visible.
+    expect(atlas.discoveredCount).toBe(1);
     const allNodes = atlas.groups.flatMap((g) => g.nodes);
     expect(allNodes).toHaveLength(NOTEBOOK_ENTRIES.length);
     expect(allNodes.some((n) => n.state === 'locked')).toBe(true);

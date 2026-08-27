@@ -140,20 +140,20 @@
           <h2 id="options-title" class="debug-title">OPTIONS</h2>
           <button id="options-close" class="options-close" type="button" aria-label="Close options">Close</button>
         </header>
-        <section class="debug-block">
+        <section class="debug-block debug-only">
           <div class="debug-row"><span class="debug-key">FPS</span><span id="dbg-fps" class="debug-val">—</span></div>
           <div class="debug-row"><span class="debug-key">tick</span><span id="dbg-tick" class="debug-val">0</span></div>
           <div class="debug-row"><span class="debug-key">status</span><span id="dbg-status" class="debug-val">running</span></div>
           <div class="debug-row"><span class="debug-key">boundary</span><span id="dbg-boundary" class="debug-val">0</span></div>
         </section>
-        <section class="debug-block">
+        <section class="debug-block debug-only">
           <h3 class="debug-subtitle"><span class="debug-swatch" id="dbg-p-swatch"></span> control sample</h3>
           <div class="debug-row"><span class="debug-key">role</span><span class="debug-val">reference culture</span></div>
           <div class="debug-row"><span class="debug-key">vol</span><span id="dbg-p-vol" class="debug-val">—</span></div>
           <div class="debug-row"><span class="debug-key">targetVol</span><span id="dbg-p-tvol" class="debug-val">—</span></div>
           <div class="debug-row"><span class="debug-key">center</span><span id="dbg-p-center" class="debug-val">—</span></div>
         </section>
-        <section class="debug-block">
+        <section class="debug-block debug-only">
           <h3 class="debug-subtitle"><span class="debug-swatch" id="dbg-e-swatch"></span> lifeform sample</h3>
           <div class="debug-row"><span class="debug-key">role</span><span class="debug-val">cultivate / observe</span></div>
           <div class="debug-row"><span class="debug-key">vol</span><span id="dbg-e-vol" class="debug-val">—</span></div>
@@ -161,22 +161,18 @@
           <div class="debug-row"><span class="debug-key">center</span><span id="dbg-e-center" class="debug-val">—</span></div>
         </section>
         <section class="debug-block">
-          <h3 class="debug-subtitle">controls</h3>
+          <h3 class="debug-subtitle">laboratory</h3>
           <button id="audio-button" class="debug-option-button" type="button" aria-label="Mute audio" aria-pressed="false">Sound — On</button>
           <button id="haptics-button" class="debug-option-button" type="button" aria-label="Disable haptics" aria-pressed="false" hidden>Haptics — On</button>
-          <div class="debug-help">select a lab tool</div>
-          <div class="debug-help">click dish: apply tool</div>
-          <div class="debug-help">complete objective: unlock research</div>
-          <div class="debug-help">R: restart (after end)</div>
-          <label class="debug-toggle">
-            <input id="dbg-persist-discoveries" type="checkbox" />
-            persist discoveries
-          </label>
-          <label class="debug-toggle">
+          <div class="debug-help debug-only">select a lab tool</div>
+          <div class="debug-help debug-only">click dish: apply tool</div>
+          <div class="debug-help debug-only">repeat evidence: understand protocol</div>
+          <div class="debug-help debug-only">R: restart (after end)</div>
+          <label class="debug-toggle debug-only">
             <input id="dbg-reverb" type="checkbox" checked />
             reverb glue
           </label>
-          <label class="debug-speed">
+          <label class="debug-speed debug-only">
             <span>sim speed</span>
             <input id="dbg-sim-speed" type="range" min="30" max="90" step="1" value="72" />
             <b id="dbg-sim-speed-value">72 tick/s</b>
@@ -192,9 +188,9 @@
             </button>
           </div>
           <button id="dbg-fullscreen-mode" class="debug-mini-button" type="button">full screen</button>
-          <div class="debug-help" id="dbg-discovery-status">discoveries: run-local</div>
-          <div class="debug-help" id="dbg-discovery-catalysts">catalysts: none</div>
-          <div class="debug-help" id="dbg-discovery-lifeforms">lifeforms: none</div>
+          <div class="debug-help debug-only" id="dbg-discovery-status">discoveries: persistent</div>
+          <div class="debug-help debug-only" id="dbg-discovery-catalysts">catalysts: none</div>
+          <div class="debug-help debug-only" id="dbg-discovery-lifeforms">lifeforms: none</div>
         </section>
       </aside>
 
@@ -264,7 +260,6 @@
           </div>
           <h2 id="pick-title" class="screen-title">Choose the next Method</h2>
           <p class="method-sub">Methods last for this Case. Permanent discoveries are already in your Atlas.</p>
-          <div id="pick-research-brief" class="pick-research-brief" hidden></div>
           <div id="pick-choices" class="pick-choices">
             <!-- 3 buttons inserted at runtime -->
           </div>
@@ -273,7 +268,7 @@
 
       <div id="screen-objective" class="screen" role="dialog" aria-modal="true" aria-labelledby="objective-title">
         <div class="screen-card">
-          <h2 id="objective-title" class="screen-title">Choose the next trial</h2>
+          <h2 id="objective-title" class="screen-title">Choose the next study</h2>
           <div id="objective-choices" class="pick-choices"></div>
         </div>
       </div>
@@ -315,7 +310,7 @@
       </div>
 
       <div id="hud" class="hud">
-        <div class="hud-row"><span class="hud-key">Trial</span><span id="hud-fight" class="hud-val">1 / 5</span></div>
+        <div class="hud-row"><span id="hud-fight-key" class="hud-key">Trial</span><span id="hud-fight" class="hud-val">1 / 5</span></div>
         <div class="hud-row"><span id="hud-time-key" class="hud-key">Window</span><span id="hud-progress" class="hud-val">Open</span></div>
         <div class="hud-row hud-equilibrium-row"><span class="hud-key">Equilibrium</span><span id="hud-equilibrium" class="hud-val">Equilibrium 0%</span></div>
         <div class="hud-row hud-eco-row hud-objective-row"><span class="hud-key">Objective</span><span id="hud-objective" class="hud-val">—</span></div>

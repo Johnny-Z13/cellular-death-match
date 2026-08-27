@@ -8,6 +8,7 @@ import {
 } from './catalysis';
 import { LIFEFORM_IDENTITIES, type LifeformIdentityId } from './lifeformIdentity';
 import { CHIMERA_LORE } from './chimeras';
+import { EGG_ARCHETYPES, type EnemyArchetype } from './enemies';
 import type { DiscoveryProgressionState } from '../game/discoveryProgression';
 import type { ResearchStage } from '../game/discoverySave';
 
@@ -22,6 +23,7 @@ export interface NotebookEntry {
   caution: CautionLevel;
   unlock: {
     starter?: boolean;
+    lifeformId?: EnemyArchetype;
     breedId?: BreedId;
     noteId?: DiscoveryNoteId;
   };
@@ -49,18 +51,8 @@ export interface NotebookView {
   entries: NotebookViewEntry[];
 }
 
-const STARTER_LIFEFORMS: readonly LifeformIdentityId[] = ['swarmlet', 'bruiser', 'splitter'];
-
-const RARE_LIFEFORMS: readonly BreedId[] = [
-  'bloom_mass',
-  'glass_antibody',
-  'needle_swarm',
-  'static_lattice',
-  'folded_anchor',
-  'quill_bloom',
-  'vitric_anchor',
-  'mire_lattice',
-];
+const BASE_LIFEFORMS: readonly EnemyArchetype[] = EGG_ARCHETYPES;
+const RARE_LIFEFORMS = Object.keys(BREED_DEFS) as BreedId[];
 
 const CATALYST_NOTES: readonly DiscoveryNoteId[] = [
   'recipe_nutrient_conduit',
@@ -91,7 +83,7 @@ const EVENT_NOTES: readonly DiscoveryNoteId[] = [
 const LAB_NOTES: readonly DiscoveryNoteId[] = ['water_carries', 'water_dilutes', 'paste_catalysed'];
 
 export const NOTEBOOK_ENTRIES: readonly NotebookEntry[] = [
-  ...STARTER_LIFEFORMS.map(lifeformEntry),
+  ...BASE_LIFEFORMS.map(lifeformEntry),
   ...RARE_LIFEFORMS.map(rareLifeformEntry),
   ...CATALYST_NOTES.map((noteId) => noteEntry('catalyst', noteId)),
   ...LAB_NOTES.map((noteId) => noteEntry('lab_note', noteId)),
@@ -109,6 +101,7 @@ export function notebookViewForProgression(
   const entries = NOTEBOOK_ENTRIES.flatMap((entry): NotebookViewEntry[] => {
     const discovered = progression.revealAll
       || entry.unlock.starter === true
+      || Boolean(entry.unlock.lifeformId && progression.unlockedLifeforms.includes(entry.unlock.lifeformId))
       || Boolean(entry.unlock.breedId && discoveredBreeds.has(entry.unlock.breedId))
       || Boolean(entry.unlock.noteId && discoveredNotes.has(entry.unlock.noteId));
     if (!discovered) return [];
@@ -122,6 +115,8 @@ export function notebookViewForProgression(
       ? entry.category === 'lifeform' ? 'stabilized' : 'understood'
       : entry.unlock.starter === true
         ? 'stabilized'
+        : entry.unlock.lifeformId
+          ? 'stabilized'
         : record?.stage ?? 'observed';
 
     const chimera = entry.unlock.breedId ? CHIMERA_LORE[entry.unlock.breedId] : null;
@@ -215,6 +210,7 @@ export function atlasViewForProgression(progression: DiscoveryProgressionState):
   for (const entry of NOTEBOOK_ENTRIES) {
     const discovered = progression.revealAll
       || entry.unlock.starter === true
+      || Boolean(entry.unlock.lifeformId && progression.unlockedLifeforms.includes(entry.unlock.lifeformId))
       || Boolean(entry.unlock.breedId && discoveredBreeds.has(entry.unlock.breedId))
       || Boolean(entry.unlock.noteId && discoveredNotes.has(entry.unlock.noteId));
     const group = groupByKey.get(entry.category);
@@ -230,6 +226,8 @@ export function atlasViewForProgression(progression: DiscoveryProgressionState):
         ? entry.category === 'lifeform' ? 'stabilized' : 'understood'
         : entry.unlock.starter
           ? 'stabilized'
+          : entry.unlock.lifeformId
+            ? 'stabilized'
           : entry.unlock.breedId
             ? breedStages.get(entry.unlock.breedId) ?? 'observed'
             : entry.unlock.noteId
@@ -248,7 +246,7 @@ export function atlasViewForProgression(progression: DiscoveryProgressionState):
   return { discoveredCount, totalCount: NOTEBOOK_ENTRIES.length, groups };
 }
 
-function lifeformEntry(id: LifeformIdentityId): NotebookEntry {
+function lifeformEntry(id: EnemyArchetype): NotebookEntry {
   const identity = LIFEFORM_IDENTITIES[id];
   return {
     id: `lifeform_${id}`,
@@ -257,7 +255,7 @@ function lifeformEntry(id: LifeformIdentityId): NotebookEntry {
     body: `${identity.role}. ${identity.behavior}`,
     clue: identity.origin,
     caution: 'stable',
-    unlock: { starter: true },
+    unlock: id === 'swarmlet' ? { starter: true, lifeformId: id } : { lifeformId: id },
   };
 }
 

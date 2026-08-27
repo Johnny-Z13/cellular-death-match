@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { notebookViewForProgression } from '../../src/content/notebook';
 import { createDiscoveryProgression, revealAllDiscoveryProgression } from '../../src/game/discoveryProgression';
 import { researchNotebookView } from '../../src/game/researchNotebook';
+import { recordResearchEvidence, emptyResearchArchive } from '../../src/game/researchArchive';
 
 describe('research notebook goal structure', () => {
   it('turns the active objective into a question and live evidence, not a recipe checklist', () => {
@@ -27,6 +28,26 @@ describe('research notebook goal structure', () => {
     expect(view.hypothesis?.professorNote).not.toContain('Exact recipe');
     expect(view.hypothesis?.timeLabel).toContain('Open dish');
     expect(view.fieldStudies).toHaveLength(3);
+    expect(view.seals).toHaveLength(8);
+  });
+
+  it('renders persistent research seals and field records beside the live studies', () => {
+    const archive = recordResearchEvidence(emptyResearchArchive(), {
+      stabilizedBreedCount: 1,
+      reactions: 3,
+      biomeName: 'Coral Basin',
+      peakBiodiversity: 6,
+    }).state;
+    const view = researchNotebookView(
+      notebookViewForProgression(createDiscoveryProgression()),
+      null,
+      archive,
+    );
+
+    expect(view.seals.find((seal) => seal.id === 'first_specimen')?.earned).toBe(true);
+    expect(view.seals.find((seal) => seal.id === 'chain_reaction')?.earned).toBe(true);
+    expect(view.records.biomeNames).toEqual(['Coral Basin']);
+    expect(view.records.peakBiodiversity).toBe(6);
   });
 
   it('replaces finite catalogue goals with repeatable toy-like studies after reveal all', () => {

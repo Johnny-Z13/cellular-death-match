@@ -22,7 +22,7 @@ describe('button hint pulse', () => {
   it('drives each Professor-directed tool hint from the current precise beat', () => {
     expect(mainSource).toContain('const coachButtonHint = coach.getCurrentButtonHint();');
     expect(mainSource).toContain("screens.setButtonHint(coachButtonHint as ToolId, 'hint');");
-    expect(mainSource).toContain('screens.setAgitateUnlocked(run.getState().fightIndex >= 3);');
+    expect(mainSource).toContain("screens.setAgitateUnlocked(unlockedCapabilities.includes('agitate'));");
     expect(mainSource).toContain('updateButtonHint();');
     expect(mainSource).toContain('coach.report(`${tool}-selected`)');
     expect(mainSource).toContain('coach.report(`${selectedTool}-used`)');

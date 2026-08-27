@@ -6,7 +6,7 @@ export interface EscalationParams {
   readonly accidentIntervalMul: number;
 }
 
-const MID_GAME_START = 3;
+const MID_GAME_START = 5;
 const MIN_EPOCH_TICKS = 60 * 40;   // 40 seconds minimum
 const BASE_EPOCH_TICKS = 60 * 70;  // 70 seconds starting
 const TICKS_REDUCTION_PER_EPOCH = 60 * 5;

@@ -1,5 +1,11 @@
 import { NOTEBOOK_ENTRIES, type NotebookCategory, type NotebookView } from '../content/notebook';
 import type { ObjectiveDef, ObjectiveKind } from '../content/objectives';
+import {
+  RESEARCH_SEALS,
+  emptyResearchArchive,
+  type ResearchArchiveState,
+  type ResearchSealId,
+} from './researchArchive';
 
 export interface ActiveStudySnapshot {
   objective: ObjectiveDef;
@@ -33,8 +39,27 @@ export interface FieldStudyView {
 export interface ResearchNotebookView {
   hypothesis: ResearchHypothesisView | null;
   fieldStudies: FieldStudyView[];
+  seals: ResearchSealView[];
+  records: ResearchRecordsView;
   observationPrompt: string;
   allDiscoveriesRevealed: boolean;
+}
+
+export interface ResearchSealView {
+  id: ResearchSealId;
+  title: string;
+  description: string;
+  professorNote: string;
+  color: [number, number, number];
+  earned: boolean;
+}
+
+export interface ResearchRecordsView {
+  biomeCount: number;
+  biomeNames: string[];
+  peakBiodiversity: number;
+  maxReactions: number;
+  longestStabilitySeconds: number;
 }
 
 const QUESTIONS: Record<ObjectiveKind, string> = {
@@ -84,6 +109,7 @@ const OBSERVATION_NOTES: Record<ObjectiveKind, string> = {
 export function researchNotebookView(
   notebook: NotebookView,
   active: ActiveStudySnapshot | null,
+  archive: ResearchArchiveState = emptyResearchArchive(),
 ): ResearchNotebookView {
   const byCategory = countsByCategory(notebook);
   const completeAtlas = notebook.discoveredCount >= notebook.totalCount;
@@ -103,6 +129,17 @@ export function researchNotebookView(
         : 'Open dish · end when you have enough evidence',
     } : null,
     fieldStudies,
+    seals: RESEARCH_SEALS.map((seal) => ({
+      ...seal,
+      earned: archive.earnedSealIds.includes(seal.id),
+    })),
+    records: {
+      biomeCount: archive.biomeRecords.length,
+      biomeNames: archive.biomeRecords.map((record) => record.name),
+      peakBiodiversity: archive.records.peakBiodiversity,
+      maxReactions: archive.records.maxReactions,
+      longestStabilitySeconds: archive.records.longestStabilitySeconds,
+    },
     observationPrompt: completeAtlas
       ? 'The catalogue is complete. The dish is not. Make something the notebook has never seen before.'
       : 'Notice a boundary, change one thing, then wait long enough to see what answered.',

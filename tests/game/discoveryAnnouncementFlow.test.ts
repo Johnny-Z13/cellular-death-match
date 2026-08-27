@@ -42,23 +42,12 @@ describe('organic discovery announcement flow', () => {
     );
   });
 
-  it('surfaces completed-dish research on the upgrade pick screen before replaying it in the next dish', () => {
-    const awardStart = mainSource.indexOf('function awardCompletionResearchGrant(): void {');
-    expect(awardStart).toBeGreaterThan(-1);
-    const awardEnd = mainSource.indexOf('\n}\n\nfunction replayPendingResearchBrief', awardStart);
-    const awardBody = mainSource.slice(awardStart, awardEnd);
-
-    expect(awardBody).toContain('pendingResearchBrief = researchBriefForGrant(result.grant);');
-    expect(awardBody).toContain('screens.setPickResearchBrief(pendingResearchBrief);');
-    expect(awardBody.indexOf('pendingResearchBrief = researchBriefForGrant(result.grant);')).toBeLessThan(
-      awardBody.indexOf('screens.setPickResearchBrief(pendingResearchBrief);'),
-    );
-
-    const startFightStart = mainSource.indexOf('function startNewFight() {');
-    expect(startFightStart).toBeGreaterThan(-1);
-    const startFightEnd = mainSource.indexOf('\nfunction loop()', startFightStart);
-    const startFightBody = mainSource.slice(startFightStart, startFightEnd);
-    expect(startFightBody).toContain('screens.setPickResearchBrief([]);');
+  it('promotes a recipe through repeated player evidence without automatic dish grants', () => {
+    expect(mainSource).toContain('observedNotesAtDishStart = new Set(');
+    expect(mainSource).toContain("noteId.startsWith('recipe_') && observedNotesAtDishStart.has(noteId)");
+    expect(mainSource).toContain("advanceDiscoveryProgression({ noteIds: repeatedRecipeNotes }, { note: 'understood' });");
+    expect(mainSource).not.toContain('applyCompletionResearchGrant');
+    expect(mainSource).not.toContain('awardCompletionResearchGrant');
   });
 
   it('refreshes tool charges immediately after reveal-all changes unlocks', () => {

@@ -1,6 +1,5 @@
 import type { AgitationState, EquilibriumInfo, ToolState } from '../game/arena';
 import type { LabReport } from '../game/labReport';
-import type { ResearchBriefLine } from '../game/researchBrief';
 import type { UpgradeDef } from '../content/upgrades';
 import type { EnemyArchetype } from '../content/enemies';
 import type { ObjectiveDef } from '../content/objectives';
@@ -24,6 +23,7 @@ export type ButtonHintTarget = ToolId | 'notebook';
 export interface HudInfo {
   fightIndex: number;          // 0-based; HUD shows fightIndex+1
   totalFights: number;
+  caseTrialCount: number;
   vol: number;
   targetVol: number;
   progress: number;
@@ -71,6 +71,7 @@ export interface CaseProgressInfo {
   activeTrial: ResearchTrialDef;
   activeTrialIndex: number;
   completedResults: readonly ('completed' | 'lapsed' | undefined)[];
+  openLabUnlocked: boolean;
 }
 
 export interface Screens {
@@ -97,7 +98,6 @@ export interface Screens {
   setSelectedLifeform(id: string | null): void;
   updateHud(info: HudInfo): void;
   setEquilibrium(info: EquilibriumInfo): void;
-  setPickResearchBrief(lines: readonly ResearchBriefLine[]): void;
   updateNotebook(view: NotebookView): void;
   updateResearchNotebook(view: ResearchNotebookView): void;
   updateAtlas(view: AtlasView): void;
@@ -166,7 +166,6 @@ export function createScreens(): Screens {
   const notebookTabStudy = get('notebook-tab-study') as HTMLButtonElement;
   const notebookTabLog = get('notebook-tab-log') as HTMLButtonElement;
   const notebookTabAtlas = get('notebook-tab-atlas') as HTMLButtonElement;
-  const pickResearchBrief = get('pick-research-brief');
   const loadoutMount = get('loadout-mount');
   const pickChoices  = get('pick-choices');
   const objectiveChoices = get('objective-choices');
@@ -174,6 +173,7 @@ export function createScreens(): Screens {
   const endSummary   = get('end-summary');
   const labReportMount = get('lab-report-mount');
   const endRestart   = get('end-restart');
+  const hudFightKey  = get('hud-fight-key');
   const hudFight     = get('hud-fight');
   const hudVol       = get('hud-vol');
   const hudProgress  = get('hud-progress');
@@ -654,11 +654,12 @@ export function createScreens(): Screens {
       setSelectedLifeform(id);
     },
     updateHud(info) {
+      hudFightKey.textContent = info.totalFights > 0 ? 'Trial' : 'Study';
       hudFight.textContent = info.totalFights > 0
         ? `${info.fightIndex + 1} / ${info.totalFights}`
-        : `${info.fightIndex + 1} / ∞`;
+        : `${Math.max(1, info.fightIndex - info.caseTrialCount + 1)} / ∞`;
       hudVol.textContent = `${info.vol} / ${Math.round(info.targetVol)}`;
-      hudTimeKey.textContent = info.objectiveTimed ? 'Window' : 'Study';
+      hudTimeKey.textContent = info.objectiveTimed ? 'Window' : 'Dish';
       hudProgress.textContent = info.objectiveTimed ? `${info.secondsRemaining}s` : 'Open';
       const urgent = info.objectiveTimed && !info.objectiveComplete;
       hudProgress.classList.toggle(
@@ -690,16 +691,6 @@ export function createScreens(): Screens {
         ? info.biomeName ? `Equilibrium: ${info.biomeName}` : 'Equilibrium reached'
         : `Equilibrium ${Math.round(Math.max(0, Math.min(1, info.progress)) * 100)}%`;
       hud.classList.toggle('hud-equilibrium-achieved', info.achieved);
-    },
-    setPickResearchBrief(lines) {
-      pickResearchBrief.replaceChildren();
-      pickResearchBrief.hidden = lines.length === 0;
-      for (const brief of lines) {
-        const line = document.createElement('div');
-        line.className = `pick-research-line pick-research-line-${brief.tone}`;
-        line.textContent = brief.message;
-        pickResearchBrief.append(line);
-      }
     },
     updateNotebook(view) {
       notebookProgress.textContent = `${view.observedCount} observed · ${view.understoodCount} understood · ${view.stabilizedCount} stabilized`;
@@ -843,6 +834,55 @@ export function createScreens(): Screens {
       }
       fieldSection.append(list);
       notebookStudy.append(fieldSection);
+
+      const sealSection = document.createElement('section');
+      sealSection.className = 'research-seals';
+      const sealHead = document.createElement('div');
+      sealHead.className = 'research-seals-head';
+      const sealTitle = document.createElement('h3');
+      sealTitle.textContent = 'Research seals';
+      const sealCount = document.createElement('span');
+      sealCount.textContent = `${view.seals.filter((seal) => seal.earned).length} / ${view.seals.length} stamped`;
+      sealHead.append(sealTitle, sealCount);
+      const sealIntro = document.createElement('p');
+      sealIntro.className = 'research-seals-intro';
+      sealIntro.textContent = 'Permanent marks of technique, discovery and ecological control.';
+      sealSection.append(sealHead, sealIntro);
+
+      const sealGrid = document.createElement('div');
+      sealGrid.className = 'research-seal-grid';
+      for (const [index, seal] of view.seals.entries()) {
+        const card = document.createElement('article');
+        card.className = `research-seal${seal.earned ? ' research-seal-earned' : ' research-seal-locked'}`;
+        const marker = makeSwatch('research-seal-marker', seal.earned ? seal.color : [72, 82, 86], 700 + index * 37);
+        marker.setAttribute('aria-hidden', 'true');
+        const copy = document.createElement('div');
+        const name = document.createElement('strong');
+        name.textContent = seal.earned ? seal.title : 'Unstamped seal';
+        const description = document.createElement('p');
+        description.textContent = seal.description;
+        const note = document.createElement('small');
+        note.textContent = seal.earned ? `Dr. E: “${seal.professorNote}”` : 'Complete the field condition to stamp this seal.';
+        copy.append(name, description, note);
+        card.append(marker, copy);
+        sealGrid.append(card);
+      }
+      sealSection.append(sealGrid);
+
+      const records = document.createElement('div');
+      records.className = 'research-records';
+      const recordsTitle = document.createElement('strong');
+      recordsTitle.textContent = 'Field records';
+      const recordsCopy = document.createElement('p');
+      recordsCopy.textContent = `${view.records.biomeCount} biomes · ${view.records.peakBiodiversity} peak families · ${view.records.maxReactions} reaction chain · ${view.records.longestStabilitySeconds}s stability`;
+      records.append(recordsTitle, recordsCopy);
+      if (view.records.biomeNames.length > 0) {
+        const biomeList = document.createElement('small');
+        biomeList.textContent = view.records.biomeNames.join(' · ');
+        records.append(biomeList);
+      }
+      sealSection.append(records);
+      notebookStudy.append(sealSection);
     },
     updateAtlas(view) {
       notebookAtlas.replaceChildren();
@@ -953,17 +993,25 @@ export function createScreens(): Screens {
     },
     updateCaseProgress(info) {
       const completed = info.completedResults.filter((result) => result === 'completed').length;
-      titleCaseProgress.textContent = `${completed} / ${info.caseDef.trials.length} sealed`;
-      titleTrialLabel.textContent = `Trial ${String(info.activeTrial.number).padStart(2, '0')} · ${info.activeTrial.name}`;
-      titleTrialHypothesis.textContent = info.activeTrial.hypothesis;
-      titleStartLabel.textContent = 'Run Trial';
-      pickCaseProgress.textContent = `Trial logged · ${completed} / ${info.caseDef.trials.length} sealed`;
+      titleCaseProgress.textContent = info.openLabUnlocked
+        ? 'Case 01 sealed · Open Lab ready'
+        : `${completed} / ${info.caseDef.trials.length} sealed`;
+      titleTrialLabel.textContent = info.openLabUnlocked
+        ? 'Open Lab · Continuing research'
+        : `Trial ${String(info.activeTrial.number).padStart(2, '0')} · ${info.activeTrial.name}`;
+      titleTrialHypothesis.textContent = info.openLabUnlocked
+        ? 'Choose a field study, cultivate freely, and bank whatever the dish teaches you.'
+        : info.activeTrial.hypothesis;
+      titleStartLabel.textContent = info.openLabUnlocked ? 'Enter Open Lab' : 'Run Trial';
+      pickCaseProgress.textContent = info.openLabUnlocked
+        ? 'Case 01 sealed · Open Lab unlocked'
+        : `Trial logged · ${completed} / ${info.caseDef.trials.length} sealed`;
 
       document.querySelectorAll<HTMLElement>('[data-case-trial]').forEach((node) => {
         const index = Number(node.dataset.caseTrial);
         node.classList.toggle('is-complete', info.completedResults[index] === 'completed');
         node.classList.toggle('is-lapsed', info.completedResults[index] === 'lapsed');
-        node.classList.toggle('is-active', index === info.activeTrialIndex);
+        node.classList.toggle('is-active', !info.openLabUnlocked && index === info.activeTrialIndex);
       });
       document.querySelectorAll<HTMLElement>('[data-case-dot]').forEach((node) => {
         const index = Number(node.dataset.caseDot);

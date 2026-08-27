@@ -55,14 +55,13 @@ describe('run telemetry', () => {
     expect(input.notebookCompletion).toBe(0.21);
   });
 
-  it('wires grant-awarded breed discoveries through the same run-local recorder as arena discoveries', () => {
+  it('wires organic breed discoveries through the run-local recorder', () => {
     expect(mainSource).toContain('function recordNewlyDiscoveredBreeds(');
-    expect(mainSource).toContain('recordNewlyDiscoveredBreeds(previousProgression, discoveryProgression);');
     expect(mainSource).toContain('recordNewlyDiscoveredBreeds(previousProgression, nextProgression);');
     expect(mainSource).toContain('runTelemetry.recordDiscovery(breedId, Boolean(def?.parents));');
   });
 
-  it('names won lab reports from equilibrium biome or classified final breed volumes without banking biomes', () => {
+  it('names won lab reports from equilibrium and records newly banked biomes', () => {
     expect(mainSource).toContain("import { createRunEndReportInput } from './game/runFlow';");
     expect(mainSource).toContain("import { finalBreedCountsFor, finalBreedVolumesFor } from './game/runSnapshot';");
     expect(mainSource).toContain('const finalBreedCounts = finalBreedCountsFor(arena);');
@@ -72,7 +71,8 @@ describe('run telemetry', () => {
     expect(mainSource).toContain('notebookDiscoveredCount: notebookView.discoveredCount');
     expect(mainSource).toContain('equilibriumBiomeName: arena?.getEquilibrium().biomeName');
     expect(mainSource).not.toContain('classifyBiome(finalBreedCounts).name');
-    expect(mainSource).toContain('newBiome: false');
+    expect(mainSource).toContain('newBiome: newBiomeThisRun');
+    expect(mainSource).toContain('syncResearchArchive(arena.getEquilibrium().biomeName);');
   });
 
   it('samples the current arena before every run phase transition that can replace it', () => {

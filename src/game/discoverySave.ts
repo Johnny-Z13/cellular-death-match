@@ -68,29 +68,8 @@ export function saveDiscoveryState(
   state: DiscoverySaveInput,
 ): DiscoverySaveState {
   const sanitized = sanitizeState(state);
-  const stateToStore = sanitized.persistenceEnabled
-    ? sanitized
-    : {
-      ...sanitized,
-      discoveredBreedIds: [],
-      discoveredNoteIds: [],
-      breedDiscoveryRecords: [],
-      noteDiscoveryRecords: [],
-      revealAll: false,
-    };
-  storage.setItem(DISCOVERY_SAVE_KEY, JSON.stringify(stateToStore));
-  return stateToStore;
-}
-
-export function setDiscoveryPersistence(
-  storage: DiscoveryStorage,
-  persistenceEnabled: boolean,
-): DiscoverySaveState {
-  const current = loadDiscoverySave(storage);
-  return saveDiscoveryState(storage, {
-    ...current,
-    persistenceEnabled,
-  });
+  storage.setItem(DISCOVERY_SAVE_KEY, JSON.stringify(sanitized));
+  return sanitized;
 }
 
 export function clearDiscoverySave(storage: DiscoveryStorage): DiscoverySaveState {
@@ -133,8 +112,10 @@ export function revealAllDiscoveries(storage: DiscoveryStorage): DiscoverySaveSt
 function sanitizeState(value: unknown): DiscoverySaveState {
   if (!isObject(value)) return emptySave();
 
-  const persistenceEnabled = value.persistenceEnabled === true;
-  if (!persistenceEnabled) return emptySave();
+  // Research is a collection game, so discoveries persist by default. Older
+  // saves that explicitly disabled the prototype-only toggle are upgraded to
+  // the durable model instead of silently discarding future findings.
+  const persistenceEnabled = true;
 
   const discoveredBreedIds = uniqueValidIds(value.discoveredBreedIds, BREED_IDS) as BreedId[];
   const discoveredNoteIds = uniqueValidIds(value.discoveredNoteIds, NOTE_IDS) as DiscoveryNoteId[];
@@ -163,7 +144,7 @@ function sanitizeState(value: unknown): DiscoverySaveState {
 
 function emptySave(): DiscoverySaveState {
   return {
-    persistenceEnabled: false,
+    persistenceEnabled: true,
     discoveredBreedIds: [],
     discoveredNoteIds: [],
     breedDiscoveryRecords: [],

@@ -43,8 +43,8 @@ describe('onboarding stage gates', () => {
     expect(shouldUseOnboardingDishForCurrentStage(0, true)).toBe(false);
     expect(toolUnlocksForCurrentStage(starter, 1)).toEqual(['egg', 'nutrient', 'toxin']);
     expect(toolUnlocksForCurrentStage(starter, 2)).toEqual(['egg', 'nutrient', 'toxin', 'water']);
-    expect(toolUnlocksForCurrentStage(starter, 3)).toEqual(['egg', 'nutrient', 'toxin', 'water', 'paste']);
-    expect(toolUnlocksForCurrentStage(starter, 4)).toEqual(['egg', 'nutrient', 'toxin', 'water', 'paste', 'salt']);
+    expect(toolUnlocksForCurrentStage(starter, 3)).toEqual(['egg', 'nutrient', 'toxin', 'water', 'paste', 'agitate']);
+    expect(toolUnlocksForCurrentStage(starter, 4)).toEqual(['egg', 'nutrient', 'toxin', 'water', 'paste', 'salt', 'agitate']);
     expect(lifeformUnlocksForCurrentStage(bloomed, 1)).toEqual(['swarmlet', 'bloom_mass']);
     expect(shouldUseOnboardingDishForCurrentStage(1, false)).toBe(false);
   });

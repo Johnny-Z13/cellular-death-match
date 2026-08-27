@@ -11,8 +11,8 @@ export const FIRST_CASE_STAGE_TOOLS: readonly (readonly ProgressionToolId[])[] =
   ['egg', 'nutrient'],
   ['egg', 'nutrient', 'toxin'],
   ['egg', 'nutrient', 'toxin', 'water'],
-  ['egg', 'nutrient', 'toxin', 'water', 'paste'],
-  ['egg', 'nutrient', 'toxin', 'water', 'paste', 'salt'],
+  ['egg', 'nutrient', 'toxin', 'water', 'paste', 'agitate'],
+  ['egg', 'nutrient', 'toxin', 'water', 'paste', 'salt', 'agitate'],
 ];
 
 // The authored Case is the runtime authority for specimens as well as tools.

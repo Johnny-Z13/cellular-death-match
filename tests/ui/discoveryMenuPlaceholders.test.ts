@@ -127,15 +127,12 @@ describe('discovery menu placeholders', () => {
     expect(css).toContain('.ticker-line:nth-child(n + 7)');
   });
 
-  it('shows completed-dish research immediately on the upgrade pick screen', () => {
-    expect(html).toContain('id="pick-research-brief"');
-    expect(screensSource).toContain('setPickResearchBrief(lines: readonly ResearchBriefLine[]): void;');
-    expect(screensSource).toContain("const pickResearchBrief = get('pick-research-brief');");
-    expect(screensSource).toContain('setPickResearchBrief(lines) {');
-    expect(screensSource).toContain('pickResearchBrief.hidden = lines.length === 0;');
-    expect(screensSource).toContain("line.className = `pick-research-line pick-research-line-${brief.tone}`;");
-    expect(css).toContain('.pick-research-brief');
-    expect(css).toContain('.pick-research-line-critical');
+  it('keeps research achievement feedback in the notebook instead of a second reward panel', () => {
+    expect(html).not.toContain('id="pick-research-brief"');
+    expect(screensSource).toContain("sealTitle.textContent = 'Research seals';");
+    expect(screensSource).toContain("card.className = `research-seal${seal.earned ? ' research-seal-earned' : ' research-seal-locked'}`;");
+    expect(css).toContain('.research-seal-grid');
+    expect(css).toContain('.research-seal-earned');
   });
 
   it('gives catalyst discoveries a distinct pulsing dish log treatment', () => {

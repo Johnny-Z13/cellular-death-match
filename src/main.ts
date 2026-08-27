@@ -30,14 +30,12 @@ import { lifeformUnlocksForCurrentRun } from './game/lifeformLoadout';
 import {
   loadDiscoverySave,
   saveDiscoveryState,
-  setDiscoveryPersistence,
   type DiscoverySaveState,
 } from './game/discoverySave';
 import {
   acknowledgeNotebookDiscoveries,
   createDiscoveryProgression,
   discoveryAnnouncementsForProgressionChange,
-  applyCompletionResearchGrant,
   revealAllDiscoveryProgression,
   ALL_PROGRESSION_LIFEFORMS,
   ALL_PROGRESSION_TOOLS,
@@ -47,7 +45,6 @@ import {
   type DiscoveryProgressionState,
   type ProgressionLifeformId,
 } from './game/discoveryProgression';
-import { researchBriefForGrant, type ResearchBriefLine } from './game/researchBrief';
 import { applyOnboardingStateReset } from './game/onboardingReset';
 import {
   isOnboardingEpoch,
@@ -56,6 +53,14 @@ import {
   toolUnlocksForCurrentStage,
 } from './game/onboardingStage';
 import { createStrainLibrary, type StrainLibrary } from './game/strainLibrary';
+import {
+  loadResearchArchive,
+  recordResearchEvidence,
+  researchSealById,
+  revealAllResearchArchive,
+  saveResearchArchive,
+  type ResearchArchiveState,
+} from './game/researchArchive';
 import { createTitleAutomata } from './ui/titleAutomata';
 import { createHaptics } from './ui/haptics';
 import {
@@ -87,6 +92,7 @@ const layout: HTMLElement = layoutMaybe;
 let visualProfile = performanceProfileFor(browserPerformanceSignals());
 applyCanvasProfile(canvas, visualProfile);
 layout.dataset.visualQuality = visualProfile.id;
+layout.dataset.diagnostics = String(new URLSearchParams(window.location.search).has('physdebug'));
 const commitDebug = document.getElementById('commit-debug');
 // Build identity readout — lets us confirm a deploy is the latest at a glance.
 // Cap to a gist; the full subject can be long.
@@ -156,6 +162,7 @@ applyOnboardingStateReset(discoveryStorage);
 let discoverySave: DiscoverySaveState = loadDiscoverySave(discoveryStorage);
 let discoveryProgression = createDiscoveryProgression(discoverySave);
 const strainLibrary: StrainLibrary = createStrainLibrary(discoveryStorage);
+let researchArchive: ResearchArchiveState = loadResearchArchive(discoveryStorage);
 // Allow up to PALETTE_SIZE total cell colors for evolving ecosystem spawns.
 const PALETTE_SIZE = 32;
 
@@ -179,7 +186,6 @@ let didAnnounceEquilibrium = false;
 let lastActionTick = 0;
 let nudgeCountThisEpoch = 0;
 let heardDishEventIds = new Set<number>();
-let pendingResearchBrief: ResearchBriefLine[] = [];
 let lastOpeningBloomCreated = false;
 let onboardingDishGuidePos: [number, number] = [LX * 0.58, LY * 0.52];
 let discoveredBreedsThisRun = new Set<string>();
@@ -195,6 +201,8 @@ let didBankRunStrains = false;
 let newStrainsBankedThisRun: string[] = [];
 let notebookEntryCountAtRunStart = notebookViewForProgression(discoveryProgression).discoveredCount;
 let finalLabReport: LabReport | null = null;
+let newBiomeThisRun = false;
+let observedNotesAtDishStart = new Set<DiscoveryNoteId>();
 
 let performanceResizeFrame = 0;
 function refreshVisualPerformanceProfile(): void {
@@ -238,11 +246,6 @@ const overlayState: RuntimeOverlayState = {
   selectedLifeformId: null,
 };
 
-debug.onDiscoveryPersistenceChange((enabled) => {
-  discoverySave = setDiscoveryPersistence(discoveryStorage, enabled);
-  if (enabled) saveRuntimeDiscoveryState();
-  debug.updateDiscoveries(discoveryDebugInfo());
-});
 debug.onClearDiscoveries(() => {
   openDeleteDataDialog();
 });
@@ -254,12 +257,15 @@ document.getElementById('delete-data-confirm')?.addEventListener('click', () => 
   }
 });
 debug.onRevealDiscoveries(() => {
-  discoverySave = setDiscoveryPersistence(discoveryStorage, true);
   discoveryProgression = revealAllDiscoveryProgression(discoveryProgression);
   for (const lifeform of ALL_PROGRESSION_LIFEFORMS) strainLibrary.bankStrain(lifeform);
   while (strainLibrary.getLoadoutSlots() < 6) strainLibrary.addLoadoutSlot();
   strainLibrary.setLoadout(ALL_PROGRESSION_LIFEFORMS.slice(0, 6));
   strainLibrary.save();
+  researchArchive = saveResearchArchive(
+    discoveryStorage,
+    revealAllResearchArchive(researchArchive),
+  );
   for (const trial of COMMON_COLD_CASE.trials) {
     caseRecord = recordCompletedTrial(runtimeStorage, caseRecord, trial.id);
   }
@@ -530,8 +536,8 @@ screens.onEndEpoch(() => {
   const equilibriumCanEndRun = !isOnboardingEpoch(run.getState().fightIndex);
   if (equilibriumCanEndRun && arena.getEquilibrium().achieved) {
     persistArenaDiscoveries(arena, true);
-    awardCompletionResearchGrant();
     sampleRunTelemetryFromArena(arena);
+    syncResearchArchive(arena.getEquilibrium().biomeName);
     bankRunStrains();
     uiAudio.play('epoch_win');
     haptics.play('success');
@@ -589,6 +595,7 @@ function showPhase() {
     activeTrial: trialForIndex(activeTrialIndex),
     activeTrialIndex,
     completedResults: state.phase === 'title' ? recordedResults : currentResults,
+    openLabUnlocked: caseIsSealed(),
   });
   if (overlayState.presentationMode && state.phase !== 'arena') {
     setPresentationMode(false);
@@ -661,9 +668,18 @@ function beginRunWithCurrentLoadout(loadout = strainLibrary.getPlayableLoadout()
   const playableLoadout = playableLifeformIds(loadout);
   currentRunLoadout = new Set(playableLoadout);
   setEggLifeformSelection(playableLoadout[0] ?? 'swarmlet');
-  run.start();
   resetRunTelemetry();
-  startNewFight();
+  if (caseIsSealed()) {
+    run.startLateGamePreview();
+    showPhase();
+  } else {
+    run.start();
+    startNewFight();
+  }
+}
+
+function caseIsSealed(): boolean {
+  return COMMON_COLD_CASE.trials.every((trial) => caseRecord.completedTrialIds.includes(trial.id));
 }
 
 function playableLifeformIds(loadout: readonly string[]): ProgressionLifeformId[] {
@@ -690,6 +706,7 @@ function resetRunTelemetry(): void {
   didBankRunStrains = false;
   newStrainsBankedThisRun = [];
   finalLabReport = null;
+  newBiomeThisRun = false;
   notebookEntryCountAtRunStart = notebookViewForProgression(discoveryProgression).discoveredCount;
   runTelemetry = createRunTelemetry({
     startedAtMs: performance.now(),
@@ -711,7 +728,7 @@ function labReportForRunEnd(): LabReport {
     outcome: state.outcome ?? 'lost',
     fightIndex: state.fightIndex,
     epochResults: state.epochResults,
-    newBiome: false,
+    newBiome: newBiomeThisRun,
     finalBreedCounts,
     finalBreedVolumes,
     peakBiodiversity,
@@ -761,6 +778,11 @@ function startNewFight() {
   cellFxTracker = createCellFxTracker();
   heardDishEventIds = new Set<number>();
   lastArenaEvidenceSignature = '';
+  observedNotesAtDishStart = new Set(
+    discoveryProgression.noteDiscoveryRecords
+      .filter((record) => record.stage === 'observed')
+      .map((record) => record.id),
+  );
   didAnnounceCompletion = false;
   didAnnounceEquilibrium = false;
   lastOpeningBloomCreated = false;
@@ -769,15 +791,15 @@ function startNewFight() {
   applyDiscoveryProgressionUi();
   screens.setEpochComplete(false);
   screens.clearTicker();
-  screens.setPickResearchBrief([]);
   const objective = run.getObjective();
   screens.addTicker(`Dr. E: ${objective.name}. ${objective.hint ?? objective.description}`);
-  replayPendingResearchBrief();
   if (!uiAudio.isMuted()) uiAudio.startAmbience();
   uiAudio.play('epoch_begin');
   haptics.play('impact');
   fx.showEpochBanner(
-    `Case 01 · Trial ${runState.fightIndex + 1}`,
+    runState.fightIndex < COMMON_COLD_CASE.trials.length
+      ? `Case 01 · Trial ${runState.fightIndex + 1}`
+      : `Open Lab · Study ${runState.fightIndex - COMMON_COLD_CASE.trials.length + 1}`,
     objective.name,
     objective.description,
   );
@@ -894,6 +916,7 @@ function loop() {
     totalFights: runState.fightIndex < COMMON_COLD_CASE.trials.length
       ? COMMON_COLD_CASE.trials.length
       : 0,
+    caseTrialCount: COMMON_COLD_CASE.trials.length,
     vol: player?.vol ?? 0,
     targetVol: player?.targetVol ?? 0,
     progress: ecology.progress,
@@ -944,6 +967,7 @@ function loop() {
   // Ecosystem collapse check: if all cells dead past onboarding, end run.
   if (!isOnboardingEpoch(run.getState().fightIndex) && arena.isEcosystemCollapsed() && tickCount > 120) {
     sampleRunTelemetryFromArena(arena);
+    syncResearchArchive();
     bankRunStrains();
     uiAudio.play('epoch_fail');
     haptics.play('failure');
@@ -985,8 +1009,8 @@ function resolveArenaStatus(status: ArenaStatus): boolean {
   if (status === 'won') {
     if (arena) {
       persistArenaDiscoveries(arena, true);
-      awardCompletionResearchGrant();
       sampleRunTelemetryFromArena(arena);
+      syncResearchArchive();
     }
     runTelemetry.recordEpochCompleted();
     uiAudio.play('epoch_win');
@@ -995,14 +1019,7 @@ function resolveArenaStatus(status: ArenaStatus): boolean {
     const completedTrial = COMMON_COLD_CASE.trials[run.getState().fightIndex];
     if (completedTrial) {
       caseRecord = recordCompletedTrial(runtimeStorage, caseRecord, completedTrial.id);
-    }
-    if (run.getState().fightIndex === COMMON_COLD_CASE.trials.length - 1) {
-      bankRunStrains();
-      run.completeEpoch();
-      run.achieveHomeostasis();
-      uiAudio.stopAmbience();
-      showPhase();
-      return true;
+      syncResearchArchive();
     }
     run.completeEpoch();
     if (run.getState().phase === 'run_end') uiAudio.stopAmbience();
@@ -1016,6 +1033,7 @@ function resolveArenaStatus(status: ArenaStatus): boolean {
     if (arena) {
       persistArenaDiscoveries(arena);
       sampleRunTelemetryFromArena(arena);
+      syncResearchArchive();
     }
     uiAudio.play('epoch_fail');
     haptics.play('warning');
@@ -1062,46 +1080,21 @@ function persistArenaDiscoveries(ar: Arena, completed = false): void {
     }
   }
 
+  // A reaction first appears as evidence. Reproducing that same signature in
+  // a later dish turns it into a protocol, even when it was not the assigned
+  // Study. This replaces the old automatic post-Case grant conveyor with
+  // discovery the player actually performed.
+  const repeatedRecipeNotes = discoveries.noteIds.filter((noteId) => (
+    noteId.startsWith('recipe_') && observedNotesAtDishStart.has(noteId)
+  ));
+  if (repeatedRecipeNotes.length > 0) {
+    advanceDiscoveryProgression({ noteIds: repeatedRecipeNotes }, { note: 'understood' });
+  }
+
   const livingBreedIds = livingDiscoveredBreedIds(ar, discoveries.breedIds);
   if (livingBreedIds.length > 0) {
     advanceDiscoveryProgression({ breedIds: livingBreedIds }, { breed: 'stabilized' });
   }
-}
-
-function awardCompletionResearchGrant(): void {
-  // The five authored trials teach their own protocols. Random grant rewards
-  // resume only after the case, so an unperformed recipe never appears solved.
-  if (run.getState().fightIndex < COMMON_COLD_CASE.trials.length) {
-    pendingResearchBrief = [];
-    screens.setPickResearchBrief([]);
-    return;
-  }
-  const previousProgression = discoveryProgression;
-  const previousAvailability = currentUnlockAvailability();
-  const result = applyCompletionResearchGrant(previousProgression);
-  if (!result) {
-    pendingResearchBrief = [];
-    screens.setPickResearchBrief([]);
-    return;
-  }
-
-  discoveryProgression = result.progression;
-  recordNewlyDiscoveredBreeds(previousProgression, discoveryProgression);
-  recordNewlyStabilizedBreeds(previousProgression, discoveryProgression);
-  applyDiscoveryProgressionUi();
-  announceUnlocks(previousAvailability, currentUnlockAvailability());
-  pendingResearchBrief = researchBriefForGrant(result.grant);
-  screens.setPickResearchBrief(pendingResearchBrief);
-  saveRuntimeDiscoveryState();
-  debug.updateDiscoveries(discoveryDebugInfo());
-}
-
-function replayPendingResearchBrief(): void {
-  if (pendingResearchBrief.length === 0) return;
-  for (const line of pendingResearchBrief) {
-    screens.addTicker(line.message, line.tone);
-  }
-  pendingResearchBrief = [];
 }
 
 function advanceDiscoveryProgression(
@@ -1127,8 +1120,40 @@ function advanceDiscoveryProgression(
   announceDiscoveryProgressionChange(previousProgression, nextProgression);
   announceUnlocks(previousAvailability, currentUnlockAvailability());
   saveRuntimeDiscoveryState();
+  syncResearchArchive();
   debug.updateDiscoveries(discoveryDebugInfo());
   return true;
+}
+
+function syncResearchArchive(biomeName?: string | null): void {
+  const stabilizedBreedRecords = discoveryProgression.breedDiscoveryRecords.filter(
+    (record) => record.stage === 'stabilized',
+  );
+  const understoodRecipes = discoveryProgression.noteDiscoveryRecords.filter((record) => (
+    record.id.startsWith('recipe_') && record.stage !== 'observed'
+  ));
+  const result = recordResearchEvidence(researchArchive, {
+    caseComplete: caseIsSealed(),
+    stabilizedBreedCount: stabilizedBreedRecords.length,
+    understoodRecipeCount: understoodRecipes.length,
+    stabilizedHybridCount: stabilizedBreedRecords.filter((record) => Boolean(BREED_DEFS[record.id].parents)).length,
+    reactions: arena?.getEcology().reactions ?? 0,
+    peakBiodiversity,
+    stabilitySeconds: Math.round(longestStabilityStreak / 60),
+    biomeName,
+  });
+  researchArchive = saveResearchArchive(discoveryStorage, result.state);
+  if (result.newBiome) {
+    newBiomeThisRun = true;
+    strainLibrary.incrementBiomeCount();
+    strainLibrary.save();
+  }
+  for (const sealId of result.newSealIds) {
+    const seal = researchSealById(sealId);
+    fx.showToast('discovery', 'Research Seal', seal.title);
+    screens.addTicker(`Dr. E: Research seal stamped — ${seal.title}.`, 'discovery');
+  }
+  if (result.newSealIds.length > 0 || result.newBiome) refreshNotebook();
 }
 
 function progressionStageSignature(
@@ -1194,14 +1219,12 @@ function sampleRunTelemetryFromArena(ar: Arena): void {
 }
 
 function discoveryDebugInfo(): {
-  persistenceEnabled: boolean;
   discoveredCount: number;
   discoveredCatalysts: string[];
   discoveredLifeforms: string[];
   revealAll: boolean;
 } {
   return {
-    persistenceEnabled: discoverySave.persistenceEnabled,
     discoveredCount: unique([
       ...discoveryProgression.discoveredBreedIds,
       ...discoveryProgression.discoveredNoteIds,
@@ -1216,7 +1239,6 @@ function discoveryDebugInfo(): {
 }
 
 function saveRuntimeDiscoveryState(): void {
-  if (!discoverySave.persistenceEnabled) return;
   discoverySave = saveDiscoveryState(discoveryStorage, {
     ...discoverySave,
     discoveredBreedIds: discoveryProgression.discoveredBreedIds,
@@ -1228,11 +1250,12 @@ function saveRuntimeDiscoveryState(): void {
 }
 
 function applyDiscoveryProgressionUi(): void {
-  const unlockedTools = currentToolUnlocks();
+  const unlockedCapabilities = currentCapabilityUnlocks();
+  const unlockedTools = unlockedCapabilities.filter((tool): tool is ToolId => tool !== 'agitate');
   const unlockedLifeforms = currentLifeformUnlocks();
   screens.setToolUnlocks(unlockedTools);
   // The first Case introduces Agitate only when the reaction Trial needs it.
-  screens.setAgitateUnlocked(run.getState().fightIndex >= 3);
+  screens.setAgitateUnlocked(unlockedCapabilities.includes('agitate'));
   screens.setLifeformUnlocks(unlockedLifeforms);
   refreshNotebook();
 
@@ -1253,6 +1276,10 @@ function applyDiscoveryProgressionUi(): void {
 }
 
 function currentToolUnlocks(): readonly ToolId[] {
+  return currentCapabilityUnlocks().filter((tool): tool is ToolId => tool !== 'agitate');
+}
+
+function currentCapabilityUnlocks(): readonly DiscoveryProgressionState['unlockedTools'][number][] {
   if (discoveryProgression.revealAll) return ALL_PROGRESSION_TOOLS;
   return toolUnlocksForCurrentStage(
     discoveryProgression,
@@ -1604,7 +1631,7 @@ function refreshNotebook(): void {
   const notebook = notebookViewForProgression(discoveryProgression);
   screens.updateNotebook(notebook);
   screens.updateAtlas(atlasViewForProgression(discoveryProgression));
-  screens.updateResearchNotebook(researchNotebookView(notebook, activeStudySnapshot()));
+  screens.updateResearchNotebook(researchNotebookView(notebook, activeStudySnapshot(), researchArchive));
 }
 
 function activeStudySnapshot(): ActiveStudySnapshot | null {

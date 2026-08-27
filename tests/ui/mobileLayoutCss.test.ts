@@ -107,6 +107,21 @@ describe('mobile layout CSS', () => {
     expect(smallPhone).toContain('font-size: clamp(21px, 7.5vw, 28px)');
   });
 
+  it('keeps the full late-game specimen loadout scrollable with its start action visible', () => {
+    const loadout = mediaBlock('(max-width: 699px)');
+
+    expect(loadout).toContain('#screen-loadout {');
+    expect(loadout).toContain('align-items: stretch');
+    expect(loadout).toContain('#screen-loadout .screen-card {');
+    expect(loadout).toContain('overflow: hidden');
+    expect(loadout).toContain('grid-template-rows: auto auto auto minmax(0, 1fr) auto');
+    expect(loadout).toContain('#screen-loadout .loadout-grid {');
+    expect(loadout).toContain('grid-template-columns: repeat(2, minmax(0, 1fr))');
+    expect(loadout).toContain('overflow-y: auto');
+    expect(loadout).toContain('.loadout-confirm {');
+    expect(loadout).toContain('width: 100%');
+  });
+
   it('resets desktop controls back to rack flow so the desktop layout remains unchanged', () => {
     const desktop = mediaBlock('(min-width: 900px)');
 

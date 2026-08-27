@@ -9,7 +9,6 @@ describe('OBJECTIVES', () => {
       'understand_recipe',
       'understand_recipe',
       'apply_recipe',
-      'dominant_archetype',
     ]);
   });
 

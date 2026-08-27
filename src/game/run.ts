@@ -6,7 +6,7 @@ import {
 } from '../content/upgrades';
 import { createRng, type Rng } from '../sim/rng';
 import { ARCHETYPE_DEFAULTS, ECOSYSTEM_SCHEDULE, type EnemySpawn } from '../content/enemies';
-import { OBJECTIVES, objectiveForEpoch, type ObjectiveDef } from '../content/objectives';
+import { objectiveForEpoch, type ObjectiveDef } from '../content/objectives';
 import { drawObjectives, type DrawContext } from './objectivePool';
 import { isMidGameEpoch } from './onboardingStage';
 import type { BreedId } from '../content/catalysis';
@@ -14,9 +14,8 @@ import type { BreedId } from '../content/catalysis';
 // Case 01 is a five-Trial authored arc; later epochs are open-ended.
 export const FIXED_EPOCH_COUNT = 5;
 export const UPGRADES_PER_PICK = 3;
-// Backward compat: research grants are tested over OBJECTIVES.length iterations.
-export const EPOCHS_PER_RUN = OBJECTIVES.length;
-export const FIGHTS_PER_RUN = OBJECTIVES.length;
+export const EPOCHS_PER_RUN = FIXED_EPOCH_COUNT;
+export const FIGHTS_PER_RUN = FIXED_EPOCH_COUNT;
 
 const CASE_METHOD_POOLS: readonly (readonly string[])[] = [
   ['egg_1', 'food_1', 'food_radius_1'],

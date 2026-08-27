@@ -1,6 +1,5 @@
 import type { EnemyArchetype } from './enemies';
 import type { BreedId, ReactionRecipeId } from './catalysis';
-import { OBJECTIVE_TUNING } from './ecologyTuning';
 
 export type ObjectiveKind =
   | 'discover_breed'
@@ -85,15 +84,6 @@ export const OBJECTIVES: ReadonlyArray<ObjectiveDef> = [
     maxDominance: 0.6,
     minCount: 3,
     minCoverage: 0.04,
-  },
-  {
-    kind: 'dominant_archetype',
-    name: 'Cultivate Boss Anchors',
-    description: 'Make Boss organisms the dominant culture without collapsing the dish.',
-    target: 'Boss dominant, 4% living coverage',
-    hint: 'Boss cultures need room and food. Thin smaller rivals, but avoid sterilizing the dish.',
-    archetype: 'boss',
-    minCoverage: OBJECTIVE_TUNING.dominantMinCoverage,
   },
 ];
 

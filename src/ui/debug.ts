@@ -7,7 +7,6 @@ export interface DebugInfo {
 }
 
 export interface DebugDiscoveryInfo {
-  persistenceEnabled: boolean;
   discoveredCount: number;
   discoveredCatalysts: string[];
   discoveredLifeforms: string[];
@@ -21,7 +20,6 @@ export interface DebugPanel {
   setSimSpeedBounds(min: number, max: number, step: number): void;
   setSimSpeed(ticksPerSecond: number): void;
   onSimSpeedChange(handler: (ticksPerSecond: number) => void): void;
-  onDiscoveryPersistenceChange(handler: (enabled: boolean) => void): void;
   onClearDiscoveries(handler: () => void): void;
   onRevealDiscoveries(handler: () => void): void;
   onPresentationToggle(handler: () => void): void;
@@ -53,7 +51,6 @@ export function createDebugPanel(): DebugPanel {
   const eVol       = get('dbg-e-vol');
   const eTvol      = get('dbg-e-tvol');
   const eCenter    = get('dbg-e-center');
-  const persistDiscoveries = getInput('dbg-persist-discoveries');
   const reverbToggle = getInput('dbg-reverb');
   const simSpeed = getInput('dbg-sim-speed');
   const simSpeedValue = get('dbg-sim-speed-value');
@@ -94,10 +91,8 @@ export function createDebugPanel(): DebugPanel {
       }
     },
     updateDiscoveries(info) {
-      persistDiscoveries.checked = info.persistenceEnabled;
-      const mode = info.persistenceEnabled ? 'saved' : 'run-local';
       const reveal = info.revealAll ? ' / reveal-all' : '';
-      discoveryStatus.textContent = `discoveries: ${mode} / ${info.discoveredCount}${reveal}`;
+      discoveryStatus.textContent = `discoveries: saved / ${info.discoveredCount}${reveal}`;
       discoveryCatalysts.textContent = discoveryListText('catalysts', info.discoveredCatalysts);
       discoveryLifeforms.textContent = discoveryListText('lifeforms', info.discoveredLifeforms);
     },
@@ -112,9 +107,6 @@ export function createDebugPanel(): DebugPanel {
     },
     onSimSpeedChange(handler) {
       simSpeed.addEventListener('input', () => handler(Number(simSpeed.value)));
-    },
-    onDiscoveryPersistenceChange(handler) {
-      persistDiscoveries.addEventListener('change', () => handler(persistDiscoveries.checked));
     },
     onClearDiscoveries(handler) {
       clearDiscoveries.addEventListener('click', handler);

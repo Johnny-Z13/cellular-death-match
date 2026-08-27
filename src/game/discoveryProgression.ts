@@ -1,4 +1,5 @@
 import type { EnemyArchetype } from '../content/enemies';
+import { EGG_ARCHETYPES } from '../content/enemies';
 import {
   BREED_DEFS,
   DISCOVERY_NOTES,
@@ -8,7 +9,7 @@ import {
 } from '../content/catalysis';
 import type { DiscoverySaveRecord, DiscoverySaveState, ResearchStage } from './discoverySave';
 
-export type ProgressionToolId = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' | 'paste';
+export type ProgressionToolId = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' | 'paste' | 'agitate';
 export type ProgressionLifeformId = EnemyArchetype | BreedId;
 export type DiscoveryRecord<Id extends string> = DiscoverySaveRecord<Id>;
 
@@ -32,24 +33,11 @@ export interface DiscoveryStageDelta {
   note?: ResearchStage;
 }
 
-export interface ResearchGrant {
-  id: string;
-  title: string;
-  message: string;
-  rewardLabel: string;
-  hint: string;
-  requiredTools?: readonly ProgressionToolId[];
-  requiredLifeforms?: readonly ProgressionLifeformId[];
-  caution: CautionLevel;
-  tone: GrantTickerTone;
-  delta: DiscoveryDelta;
-}
-
-export type GrantTickerTone = 'discovery' | 'caution' | 'critical';
+export type DiscoveryTickerTone = 'discovery' | 'caution' | 'critical';
 
 export interface DiscoveryAnnouncement {
   message: string;
-  tone: GrantTickerTone;
+  tone: DiscoveryTickerTone;
 }
 
 export const STARTER_PROGRESSION_TOOLS: readonly ProgressionToolId[] = ['egg', 'nutrient'];
@@ -65,97 +53,16 @@ export const ALL_PROGRESSION_TOOLS: readonly ProgressionToolId[] = [
   'salt',
   'acid',
   'paste',
+  'agitate',
 ];
 
 export const ALL_PROGRESSION_LIFEFORMS: readonly ProgressionLifeformId[] = [
-  'swarmlet',
-  'bruiser',
-  'splitter',
-  'sniper',
-  'mirror',
-  'boss',
-  'bloom_mass',
-  'glass_antibody',
-  'needle_swarm',
-  'static_lattice',
-  'folded_anchor',
-  'quill_bloom',
-  'vitric_anchor',
-  'mire_lattice',
+  ...EGG_ARCHETYPES,
+  ...(Object.keys(BREED_DEFS) as BreedId[]),
 ];
 
 const VALID_BREEDS = new Set(Object.keys(BREED_DEFS));
 const VALID_NOTES = new Set(Object.keys(DISCOVERY_NOTES));
-
-export const RESEARCH_GRANT_SEQUENCE: readonly ResearchGrant[] = [
-  {
-    id: 'grant_water_carries',
-    title: DISCOVERY_NOTES.water_carries.title,
-    message: 'Research grant: water-carry behavior logged.',
-    rewardLabel: 'Salt reagent',
-    hint: 'Try Water on Nutrient fields to spread food through budding cultures.',
-    requiredTools: ['water', 'nutrient'],
-    caution: 'stable',
-    tone: 'discovery',
-    delta: { noteIds: ['water_carries'] },
-  },
-  {
-    id: 'grant_salt_water_crystal',
-    title: DISCOVERY_NOTES.recipe_salt_water_crystal.title,
-    message: 'CAUTION: salt-water crystal protocol unlocked.',
-    rewardLabel: 'Acid reagent',
-    hint: 'Try Salt with Water near gelatinous cultures to crystallize movement.',
-    requiredTools: ['salt', 'water'],
-    caution: 'volatile',
-    tone: 'caution',
-    delta: { noteIds: ['recipe_salt_water_crystal'] },
-  },
-  {
-    id: 'grant_acid_toxin_flare',
-    title: DISCOVERY_NOTES.recipe_acid_toxin_flare.title,
-    message: 'HANDLE CAREFULLY: acid-toxin flare warning declassified.',
-    rewardLabel: 'Sniper egg strain',
-    hint: 'Try Acid with Toxin near fragile cultures when you can afford a violent flare.',
-    requiredTools: ['acid', 'toxin'],
-    caution: 'critical',
-    tone: 'critical',
-    delta: { noteIds: ['recipe_acid_toxin_flare'] },
-  },
-  {
-    id: 'grant_needle_swarm',
-    title: DISCOVERY_NOTES.breed_needle_swarm.title,
-    message: 'HANDLE CAREFULLY: needle swarm culture sample released.',
-    rewardLabel: 'Mirror egg strain',
-    hint: 'Try Sniper pressure around crowded Swarmlets to coax out Needle Swarm behavior.',
-    requiredLifeforms: ['sniper', 'swarmlet'],
-    caution: 'critical',
-    tone: 'critical',
-    delta: { breedIds: ['needle_swarm'], noteIds: ['breed_needle_swarm'] },
-  },
-  {
-    id: 'grant_folding_fault',
-    title: DISCOVERY_NOTES.recipe_folding_fault.title,
-    message: 'HANDLE CAREFULLY: folding-fault containment notes unlocked.',
-    rewardLabel: 'Boss egg strain',
-    hint: 'Try Acid, Water, and Salt near gel or anchor cultures to fold the local rules.',
-    requiredTools: ['acid', 'water', 'salt'],
-    caution: 'critical',
-    tone: 'critical',
-    delta: { noteIds: ['recipe_folding_fault'] },
-  },
-  {
-    id: 'grant_glass_antibody',
-    title: DISCOVERY_NOTES.breed_glass_antibody.title,
-    message: 'CAUTION: glass antibody culture sample released.',
-    rewardLabel: 'Glass Antibody rare culture',
-    hint: 'Try Salt and Water near resistant feeders, then fracture the crystal field with Toxin.',
-    requiredTools: ['salt', 'water', 'toxin'],
-    requiredLifeforms: ['bruiser'],
-    caution: 'volatile',
-    tone: 'caution',
-    delta: { breedIds: ['glass_antibody'], noteIds: ['breed_glass_antibody'] },
-  },
-];
 
 export function createDiscoveryProgression(
   saved?: Pick<
@@ -304,30 +211,6 @@ export function acknowledgeNotebookDiscoveries(
   };
 }
 
-export function nextResearchGrant(state: DiscoveryProgressionState): ResearchGrant | null {
-  if (state.revealAll) return null;
-  const knownBreeds = new Set(state.discoveredBreedIds);
-  const knownNotes = new Set(state.discoveredNoteIds);
-  return RESEARCH_GRANT_SEQUENCE.find((grant) => {
-    const hasNewBreed = (grant.delta.breedIds ?? []).some((id) => !knownBreeds.has(id));
-    const hasNewNote = (grant.delta.noteIds ?? []).some((id) => !knownNotes.has(id));
-    return (hasNewBreed || hasNewNote)
-      && grantPrerequisitesUnlocked(state, grant)
-      && grantAddsVisibleUnlock(state, grant);
-  }) ?? null;
-}
-
-export function applyCompletionResearchGrant(
-  state: DiscoveryProgressionState,
-): { grant: ResearchGrant; progression: DiscoveryProgressionState } | null {
-  const grant = nextResearchGrant(state);
-  if (!grant) return null;
-  return {
-    grant,
-    progression: updateDiscoveryProgression(state, grant.delta),
-  };
-}
-
 export function discoveryAnnouncementsForProgressionChange(
   previous: DiscoveryProgressionState,
   next: DiscoveryProgressionState,
@@ -390,6 +273,7 @@ function buildProgression(base: {
     toolSet.add('toxin');
     toolSet.add('water');
     toolSet.add('paste');
+    toolSet.add('agitate');
     lifeformSet.add('bruiser');
     lifeformSet.add('splitter');
   }
@@ -493,22 +377,7 @@ function higherResearchStage(current: ResearchStage, requested: ResearchStage): 
   return stageRank(requested) > stageRank(current) ? requested : current;
 }
 
-function grantAddsVisibleUnlock(state: DiscoveryProgressionState, grant: ResearchGrant): boolean {
-  const next = updateDiscoveryProgression(state, grant.delta);
-  return hasChanged(state.unlockedTools, next.unlockedTools)
-    || hasChanged(state.unlockedLifeforms, next.unlockedLifeforms);
-}
-
-function grantPrerequisitesUnlocked(state: DiscoveryProgressionState, grant: ResearchGrant): boolean {
-  return (grant.requiredTools ?? []).every((tool) => state.unlockedTools.includes(tool))
-    && (grant.requiredLifeforms ?? []).every((lifeform) => state.unlockedLifeforms.includes(lifeform));
-}
-
-function hasChanged(left: readonly string[], right: readonly string[]): boolean {
-  return left.length !== right.length || left.some((value, index) => value !== right[index]);
-}
-
-function toneForCaution(caution: CautionLevel): GrantTickerTone {
+function toneForCaution(caution: CautionLevel): DiscoveryTickerTone {
   if (caution === 'critical') return 'critical';
   if (caution === 'volatile') return 'caution';
   return 'discovery';
