@@ -1394,6 +1394,9 @@ function updateButtonHint(): void {
 
 document.getElementById('coach-skip')?.addEventListener('click', () => {
   window.requestAnimationFrame(syncOnboardingPointer);
+  // The first tap dismisses the full-size welcome before the compact lesson
+  // is rendered. Reposition once that cinematic handoff has completed.
+  window.setTimeout(syncOnboardingPointer, 560);
 });
 document.getElementById('mobile-lifeforms-toggle')?.addEventListener('click', () => {
   window.requestAnimationFrame(syncOnboardingPointer);

@@ -1,6 +1,6 @@
-// First-run onboarding coach. Dr. E. Mergent speaks from a shallow transmission
-// rail above the dish, gives one instruction, then clears the playfield while
-// the exact pointer remains. Trial 1 is only: place one egg, feed it, succeed.
+// First-run onboarding coach. Dr. E. Mergent gets one large welcome, then
+// speaks from a shallow transmission rail above the dish. Each instruction
+// clears while the exact pointer remains. Trial 1 is: one egg, one feed.
 
 import { ONBOARDING_BEATS, TRIAL_ONBOARDING_BEATS, type OnboardingBeat } from '../game/onboardingStage';
 
@@ -47,7 +47,7 @@ export function createCoach(): Coach {
   let beatIndex = 0;
   let currentTrialIndex = 0;
   let currentBeats: readonly OnboardingBeat[] = ONBOARDING_BEATS;
-  let mode: 'tutorial' | 'nudge' | 'success' = 'tutorial';
+  let mode: 'welcome' | 'tutorial' | 'nudge' | 'success' = 'tutorial';
   let nudgeTimer = 0;
   let presentationTimer = 0;
   let exitTimer = 0;
@@ -84,10 +84,14 @@ export function createCoach(): Coach {
   }
 
   function clearPresentationClasses(): void {
+    root?.classList.remove('coach-welcome');
+    root?.classList.remove('coach-moment');
     root?.classList.remove('coach-intro');
     root?.classList.remove('coach-prompt');
     root?.classList.remove('coach-success');
     root?.classList.remove('coach-exit');
+    layout?.classList.remove('coach-welcome-active');
+    layout?.classList.remove('coach-moment-active');
     layout?.classList.remove('coach-intro-active');
     layout?.classList.remove('coach-prompt-active');
     layout?.classList.remove('coach-success-active');
@@ -156,6 +160,23 @@ export function createCoach(): Coach {
     hide();
   }
 
+  function renderWelcome(): void {
+    if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
+    mode = 'welcome';
+    clearPresentationTimers();
+    clearPresentationClasses();
+    root.classList.add('coach-welcome');
+    layout?.classList.add('coach-welcome-active');
+    kickerEl.textContent = 'Dr. E. Mergent · Trial director';
+    titleEl.textContent = 'Welcome to my lab.';
+    bodyEl.textContent = 'Let me show you the ropes. We’ll start with one egg and one feed.';
+    stepEl.textContent = '';
+    if (actionEl) actionEl.textContent = '';
+    if (skipBtn) skipBtn.textContent = 'Tap to continue';
+    show();
+    skipBtn?.focus({ preventScroll: true });
+  }
+
   function render(): void {
     if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
     const beat = currentBeats[beatIndex];
@@ -163,12 +184,10 @@ export function createCoach(): Coach {
     mode = 'tutorial';
     clearPresentationTimers();
     clearPresentationClasses();
-    const isIntroduction = currentTrialIndex === 0 && beatIndex === 0;
-    root.classList.add(isIntroduction ? 'coach-intro' : 'coach-prompt');
-    layout?.classList.add(isIntroduction ? 'coach-intro-active' : 'coach-prompt-active');
-    kickerEl.textContent = isIntroduction
-      ? 'Dr. E · First instruction'
-      : 'Dr. E · Next instruction';
+    const isFirstInstruction = currentTrialIndex === 0 && beatIndex === 0;
+    root.classList.add('coach-prompt');
+    layout?.classList.add('coach-prompt-active');
+    kickerEl.textContent = isFirstInstruction ? 'Dr. E · First instruction' : 'Dr. E · Next instruction';
     titleEl.textContent = beat.title;
     bodyEl.textContent = beat.body;
     stepEl.textContent = `${beatIndex + 1} / ${currentBeats.length}`;
@@ -186,9 +205,13 @@ export function createCoach(): Coach {
     mode = 'success';
     clearPresentationTimers();
     clearPresentationClasses();
-    root.classList.add('coach-prompt');
+    // Completed Trials are rare punctuation. Bring Dr. E back at full scale;
+    // routine actions and reminders stay in the compact transmission rail.
+    root.classList.add('coach-welcome');
+    root.classList.add('coach-moment');
     root.classList.add('coach-success');
-    layout?.classList.add('coach-prompt-active');
+    layout?.classList.add('coach-welcome-active');
+    layout?.classList.add('coach-moment-active');
     layout?.classList.add('coach-success-active');
     kickerEl.textContent = `Trial ${String(currentTrialIndex + 1).padStart(2, '0')} · Success`;
     const success = trialSuccessCopy(currentTrialIndex);
@@ -230,12 +253,12 @@ export function createCoach(): Coach {
       return beatIndex;
     },
     getCurrentButtonHint() {
-      if (!active || awaitingObjective) return undefined;
+      if (!active || awaitingObjective || mode === 'welcome') return undefined;
       const target = currentBeats[beatIndex]?.pointerTarget;
       return target?.startsWith('tool:') ? target.slice('tool:'.length) : undefined;
     },
     getCurrentPointerTarget() {
-      if (!active || awaitingObjective) return undefined;
+      if (!active || awaitingObjective || mode === 'welcome') return undefined;
       return currentBeats[beatIndex]?.pointerTarget;
     },
     shouldAutoSpawn() {
@@ -260,10 +283,11 @@ export function createCoach(): Coach {
       objectiveObserved = false;
       beatIndex = 0;
       autoSpawnTriggered = false;
-      render();
+      if (trialIndex === 0) renderWelcome();
+      else render();
     },
     report(event) {
-      if (!active) return;
+      if (!active || mode === 'welcome') return;
       const isCompletionEvent = currentTrialIndex === 0
         ? event === 'bloom-discovered' || event === 'objective-complete'
         : event === 'objective-complete';
@@ -310,7 +334,10 @@ export function createCoach(): Coach {
 
   if (skipBtn) {
     skipBtn.addEventListener('click', () => {
-      if (mode === 'nudge') hideNudgeNow();
+      if (mode === 'welcome') slideOut(() => {
+        if (active) render();
+      });
+      else if (mode === 'nudge') hideNudgeNow();
       else if (mode === 'success') finishSuccess(coach);
       else finish();
     });

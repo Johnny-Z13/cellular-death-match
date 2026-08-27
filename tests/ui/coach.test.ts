@@ -46,6 +46,13 @@ class FakeElement {
   click(): void {
     this.clickHandler?.();
   }
+
+  focus(): void { /* focus behavior is covered in the browser pass */ }
+}
+
+function continueFromWelcome(elements: Map<string, FakeElement>): void {
+  elements.get('coach-skip')?.click();
+  vi.advanceTimersByTime(520);
 }
 
 function installCoachDom(): Map<string, FakeElement> {
@@ -120,16 +127,43 @@ describe('onboarding coach', () => {
     expect(mainSource).toContain('coach.beginTrial(runState.fightIndex);');
   });
 
-  it('opens in the transmission rail, slides away, then returns with the exact next action', () => {
+  it('holds on a large first-run welcome until the player continues', () => {
     vi.useFakeTimers();
     const elements = installCoachDom();
     const coach = createCoach();
 
     coach.beginRun();
 
-    expect(elements.get('coach')?.classList.contains('coach-intro')).toBe(true);
+    expect(elements.get('coach')?.classList.contains('coach-welcome')).toBe(true);
+    expect(elements.get('coach-title')?.textContent).toBe('Welcome to my lab.');
+    expect(elements.get('coach-body')?.textContent).toContain('show you the ropes');
+    expect(elements.get('coach-skip')?.textContent).toBe('Tap to continue');
+    expect(coach.getCurrentPointerTarget()).toBeUndefined();
+
+    vi.advanceTimersByTime(3000);
+    expect(elements.get('coach')?.classList.contains('coach-show')).toBe(true);
+    expect(elements.get('coach')?.classList.contains('coach-exit')).toBe(false);
+    coach.report('egg-selected');
+    expect(coach.getBeatIndex()).toBe(0);
+
+    elements.get('coach-skip')?.click();
+    expect(elements.get('coach')?.classList.contains('coach-exit')).toBe(true);
+    vi.advanceTimersByTime(520);
+
+    expect(elements.get('coach')?.classList.contains('coach-welcome')).toBe(false);
+    expect(elements.get('coach')?.classList.contains('coach-prompt')).toBe(true);
     expect(elements.get('coach-title')?.textContent).toBe('I’m Dr. E. Press Egg.');
     expect(elements.get('coach-action')?.textContent).toBe('Press Egg');
+    expect(coach.getCurrentPointerTarget()).toBe('tool:egg');
+  });
+
+  it('slides the compact instruction away, then returns with the exact next action', () => {
+    vi.useFakeTimers();
+    const elements = installCoachDom();
+    const coach = createCoach();
+
+    coach.beginRun();
+    continueFromWelcome(elements);
 
     vi.advanceTimersByTime(3000);
     expect(elements.get('coach')?.classList.contains('coach-exit')).toBe(true);
@@ -139,7 +173,6 @@ describe('onboarding coach', () => {
 
     coach.report('egg-selected');
 
-    expect(elements.get('coach')?.classList.contains('coach-intro')).toBe(false);
     expect(elements.get('coach-title')?.textContent).toBe('Place it here.');
     expect(elements.get('coach-action')?.textContent).toBe('Tap the dish');
     expect(elements.get('coach')?.classList.contains('coach-prompt')).toBe(true);
@@ -152,6 +185,7 @@ describe('onboarding coach', () => {
     const coach = createCoach();
 
     coach.beginRun();
+    continueFromWelcome(elements);
     coach.report('egg-selected');
 
     expect(elements.get('coach')?.classList.contains('coach-prompt')).toBe(true);
@@ -205,6 +239,17 @@ describe('onboarding coach', () => {
     expect(canonical).toContain('.coach-prompt-active .onboarding-professor-pointer.is-visible');
   });
 
+  it('gives the first-run welcome its own full-screen Professor composition', () => {
+    const welcome = css.slice(css.indexOf('/* ---- First-run Professor welcome'));
+
+    expect(welcome).toContain('.coach.coach-welcome {');
+    expect(welcome).toContain('inset: 0');
+    expect(welcome).toContain('height: 100dvh');
+    expect(welcome).toContain('pointer-events: auto');
+    expect(welcome).toContain('.coach.coach-welcome .coach-title {');
+    expect(welcome).toContain('@media (max-width: 899px)');
+  });
+
   it('shows a concise success transmission after one egg and one feed, then advances', () => {
     vi.useFakeTimers();
     const elements = installCoachDom();
@@ -213,6 +258,7 @@ describe('onboarding coach', () => {
     coach.onOnboardingComplete = onComplete;
 
     coach.beginRun();
+    continueFromWelcome(elements);
     coach.report('egg-selected');
     coach.report('egg-used');
     coach.report('nutrient-selected');
@@ -225,6 +271,8 @@ describe('onboarding coach', () => {
     expect(coach.isActive()).toBe(false);
     expect(elements.get('coach')?.classList.contains('coach-show')).toBe(true);
     expect(elements.get('coach')?.classList.contains('coach-success')).toBe(true);
+    expect(elements.get('coach')?.classList.contains('coach-moment')).toBe(true);
+    expect(elements.get('coach')?.classList.contains('coach-welcome')).toBe(true);
     expect(elements.get('coach-title')?.textContent).toBe('Bloom Mass. Logged.');
     expect(elements.get('coach-body')?.textContent).toContain('combine strains');
 
@@ -246,6 +294,7 @@ describe('onboarding coach', () => {
     coach.onOnboardingComplete = onComplete;
 
     coach.beginRun();
+    continueFromWelcome(elements);
     for (const event of ['egg-selected', 'egg-used', 'nutrient-selected', 'nutrient-used', 'objective-complete']) {
       coach.report(event);
     }
@@ -280,6 +329,7 @@ describe('onboarding coach', () => {
     const coach = createCoach();
 
     coach.beginRun();
+    continueFromWelcome(elements);
     coach.report('egg-selected');
     coach.report('egg-used');
     coach.report('bloom-discovered');
@@ -301,6 +351,7 @@ describe('onboarding coach', () => {
     const coach = createCoach();
 
     coach.beginRun();
+    continueFromWelcome(elements);
     coach.showNudge('Make the first discovery', 'Place one Swarmlet egg, then feed the living cultures.', {
       interruptTutorial: true,
     });
