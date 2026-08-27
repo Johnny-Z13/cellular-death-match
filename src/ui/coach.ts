@@ -1,6 +1,6 @@
-// First-run onboarding coach. Dr. E. Mergent arrives as a large, transient
-// character beat, gives one instruction, then clears the dish before the
-// player acts. Trial 1 is intentionally only: place one egg, feed it, succeed.
+// First-run onboarding coach. Dr. E. Mergent speaks from a shallow transmission
+// rail above the dish, gives one instruction, then clears the playfield while
+// the exact pointer remains. Trial 1 is only: place one egg, feed it, succeed.
 
 import { ONBOARDING_BEATS, TRIAL_ONBOARDING_BEATS, type OnboardingBeat } from '../game/onboardingStage';
 
@@ -167,13 +167,13 @@ export function createCoach(): Coach {
     root.classList.add(isIntroduction ? 'coach-intro' : 'coach-prompt');
     layout?.classList.add(isIntroduction ? 'coach-intro-active' : 'coach-prompt-active');
     kickerEl.textContent = isIntroduction
-      ? 'Trial director · Dr. E. Mergent'
-      : 'Dr. E. Mergent · Next action';
+      ? 'Dr. E · First instruction'
+      : 'Dr. E · Next instruction';
     titleEl.textContent = beat.title;
     bodyEl.textContent = beat.body;
     stepEl.textContent = `${beatIndex + 1} / ${currentBeats.length}`;
     if (actionEl) actionEl.textContent = beat.action;
-    if (skipBtn) skipBtn.textContent = 'Let me experiment';
+    if (skipBtn) skipBtn.textContent = 'Skip';
     show();
     scheduleSlideOut(PROMPT_HOLD_MS);
   }
@@ -195,7 +195,7 @@ export function createCoach(): Coach {
     titleEl.textContent = success.title;
     bodyEl.textContent = success.body;
     stepEl.textContent = 'Complete';
-    if (actionEl) actionEl.textContent = 'Culture logged · The real work begins';
+    if (actionEl) actionEl.textContent = 'Culture logged';
     if (skipBtn) skipBtn.textContent = 'Continue';
     show();
     scheduleSlideOut(SUCCESS_HOLD_MS, () => finishSuccess(coach));
@@ -322,24 +322,24 @@ export function createCoach(): Coach {
 function trialSuccessCopy(trialIndex: number): { title: string; body: string } {
   const copy = [
     {
-      title: 'Excellent work. It changed.',
-      body: 'One egg. One feed. One new form. That was the easy part — ahead are competing strains, unstable reagents, and a much larger experiment.',
+      title: 'Bloom Mass. Logged.',
+      body: 'Good. Next we combine strains, reagents, and living systems.',
     },
     {
-      title: 'Bitter Bloom. Precisely.',
-      body: 'You fed budding tissue, then pressured it with Toxin. The order produced a repeatable protocol.',
+      title: 'Bitter Bloom. Logged.',
+      body: 'Feed, then pressure: a repeatable protocol.',
     },
     {
-      title: 'The Nutrient moved.',
-      body: 'Water carried food through the Bloom Mass without suppressing it. Record the conduit.',
+      title: 'Nutrient Conduit. Logged.',
+      body: 'Water carried food through living tissue.',
     },
     {
-      title: 'There’s the lightning.',
-      body: 'The first Water pulse made Foam. The second discharged it. Chained reactions are where this gets interesting.',
+      title: 'Foam Lightning. Logged.',
+      body: 'A second Water pulse discharged the Foam.',
     },
     {
-      title: 'A viable channel.',
-      body: 'Salt defined it, Nutrient supplied it, and Water opened it. Now keep the rest of the dish alive.',
+      title: 'Brine Channel. Logged.',
+      body: 'Now keep the wider ecosystem alive.',
     },
   ];
   return copy[trialIndex] ?? { title: 'Good work.', body: 'The result is logged.' };

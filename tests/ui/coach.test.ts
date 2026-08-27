@@ -120,7 +120,7 @@ describe('onboarding coach', () => {
     expect(mainSource).toContain('coach.beginTrial(runState.fightIndex);');
   });
 
-  it('opens large, slides away, then returns with the exact next action', () => {
+  it('opens in the transmission rail, slides away, then returns with the exact next action', () => {
     vi.useFakeTimers();
     const elements = installCoachDom();
     const coach = createCoach();
@@ -128,7 +128,7 @@ describe('onboarding coach', () => {
     coach.beginRun();
 
     expect(elements.get('coach')?.classList.contains('coach-intro')).toBe(true);
-    expect(elements.get('coach-title')?.textContent).toBe('Hi. I’m Dr. E. Mergent.');
+    expect(elements.get('coach-title')?.textContent).toBe('I’m Dr. E. Press Egg.');
     expect(elements.get('coach-action')?.textContent).toBe('Press Egg');
 
     vi.advanceTimersByTime(3000);
@@ -140,7 +140,7 @@ describe('onboarding coach', () => {
     coach.report('egg-selected');
 
     expect(elements.get('coach')?.classList.contains('coach-intro')).toBe(false);
-    expect(elements.get('coach-title')?.textContent).toBe('Now place my sample.');
+    expect(elements.get('coach-title')?.textContent).toBe('Place it here.');
     expect(elements.get('coach-action')?.textContent).toBe('Tap the dish');
     expect(elements.get('coach')?.classList.contains('coach-prompt')).toBe(true);
     expect(elements.get('coach')?.classList.contains('coach-show')).toBe(true);
@@ -193,7 +193,19 @@ describe('onboarding coach', () => {
     expect(css).toContain('.coach-success-active .fx-banner');
   });
 
-  it('shows a large success beat after one egg and one feed, then advances', () => {
+  it('keeps the canonical phone transmission in the measured band above the dish', () => {
+    const canonical = css.slice(css.indexOf('/* ---- Canonical Professor transmission'));
+
+    expect(canonical).toContain('top: calc(var(--hud-bottom, 72px) + 6px)');
+    expect(canonical).toContain('min-height: 84px');
+    expect(canonical).toContain('min-height: 56px');
+    expect(canonical).toContain('pointer-events: none');
+    expect(canonical).toContain('.coach .coach-skip {');
+    expect(canonical).toContain('pointer-events: auto');
+    expect(canonical).toContain('.coach-prompt-active .onboarding-professor-pointer.is-visible');
+  });
+
+  it('shows a concise success transmission after one egg and one feed, then advances', () => {
     vi.useFakeTimers();
     const elements = installCoachDom();
     const coach = createCoach();
@@ -213,8 +225,8 @@ describe('onboarding coach', () => {
     expect(coach.isActive()).toBe(false);
     expect(elements.get('coach')?.classList.contains('coach-show')).toBe(true);
     expect(elements.get('coach')?.classList.contains('coach-success')).toBe(true);
-    expect(elements.get('coach-title')?.textContent).toBe('Excellent work. It changed.');
-    expect(elements.get('coach-body')?.textContent).toContain('much larger experiment');
+    expect(elements.get('coach-title')?.textContent).toBe('Bloom Mass. Logged.');
+    expect(elements.get('coach-body')?.textContent).toContain('combine strains');
 
     vi.advanceTimersByTime(3600);
     expect(elements.get('coach')?.classList.contains('coach-exit')).toBe(true);
@@ -273,14 +285,14 @@ describe('onboarding coach', () => {
     coach.report('bloom-discovered');
 
     expect(coach.isActive()).toBe(true);
-    expect(elements.get('coach-title')?.textContent).toBe('Good. Press Nutrient.');
+    expect(elements.get('coach-title')?.textContent).toBe('Now press Nutrient.');
 
     coach.report('nutrient-selected');
     coach.report('nutrient-used');
 
     expect(coach.isActive()).toBe(false);
     expect(elements.get('coach')?.classList.contains('coach-success')).toBe(true);
-    expect(elements.get('coach-title')?.textContent).toBe('Excellent work. It changed.');
+    expect(elements.get('coach-title')?.textContent).toBe('Bloom Mass. Logged.');
   });
 
   it('can show an idle onboarding nudge over the active tutorial and then restore the tutorial card', () => {
@@ -299,8 +311,8 @@ describe('onboarding coach', () => {
     elements.get('coach-skip')?.click();
 
     expect(coach.isActive()).toBe(true);
-    expect(elements.get('coach-title')?.textContent).toBe('Hi. I’m Dr. E. Mergent.');
-    expect(elements.get('coach-skip')?.textContent).toBe('Let me experiment');
+    expect(elements.get('coach-title')?.textContent).toBe('I’m Dr. E. Press Egg.');
+    expect(elements.get('coach-skip')?.textContent).toBe('Skip');
   });
 
   it('chooses onboarding idle nudges for the next concrete action', () => {

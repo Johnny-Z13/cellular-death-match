@@ -5103,8 +5103,8 @@ canvas {
   }
 }
 
-/* Recurring host entrance: each new instruction gets a brief, large Doctor
-   beat, then the class drops away and the established compact coach remains. */
+/* Expressive host-entrance baseline. The canonical arena transmission below
+   compresses these states into the protected guidance rail. */
 .coach.coach-prompt {
   left: clamp(18px, 3vw, 42px);
   right: auto;
@@ -5925,9 +5925,9 @@ canvas {
   }
 }
 
-/* ---- Surgical Trial 1 onboarding ---------------------------------------
-   Every Doctor beat is deliberately large and transient: enter, speak, exit,
-   then give the uncovered dish back to the player. */
+/* ---- Surgical Trial 1 timing -------------------------------------------
+   Every Doctor beat is transient: enter, speak, exit, then leave the exact
+   target cue behind for the player. */
 .coach.coach-intro.coach-exit {
   animation: coach-cinematic-slide-out 520ms cubic-bezier(0.55, 0.04, 0.85, 0.42) both;
 }
@@ -6535,6 +6535,280 @@ canvas {
 
 @media (prefers-reduced-motion: reduce) {
   .onboarding-professor-pointer.is-visible {
+    animation: none;
+  }
+}
+
+/* ---- Canonical Professor transmission ---------------------------------
+   Onboarding is a brief instrument transmission, not a modal story card.
+   On phones it occupies the measured quiet band between HUD and dish; Dr. E
+   retracts while the exact target pointer stays behind for the player. */
+.layout[data-screen="arena"] .coach {
+  inset: auto;
+  left: 18px;
+  right: auto;
+  top: auto;
+  bottom: 18px;
+  z-index: var(--z-sticky);
+  width: min(460px, calc(100vw - 36px));
+  height: auto;
+  min-height: 82px;
+  transform: none;
+  grid-template-columns: 78px minmax(0, 1fr);
+  grid-template-rows: auto;
+  grid-template-areas: none;
+  gap: 0;
+  padding: 0 8px 0 0;
+  overflow: hidden;
+  border: 1px solid rgba(120, 196, 200, 0.34);
+  border-left: 2px solid var(--bio);
+  border-radius: 3px 12px 12px 3px;
+  background:
+    linear-gradient(105deg, rgba(91, 233, 214, 0.09), transparent 46%),
+    rgba(3, 10, 12, 0.94);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.54), 0 0 22px rgba(91, 233, 214, 0.1);
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  backdrop-filter: blur(10px) saturate(120%);
+}
+
+.layout[data-screen="arena"] .coach.coach-show {
+  display: grid;
+  animation: professor-transmission-in 320ms cubic-bezier(0.18, 0.9, 0.22, 1) both;
+}
+
+.layout[data-screen="arena"] .coach.coach-exit {
+  animation: professor-transmission-out 420ms cubic-bezier(0.55, 0.04, 0.85, 0.42) both;
+}
+
+.layout[data-screen="arena"] .coach .coach-portrait {
+  position: relative;
+  inset: auto;
+  align-self: stretch;
+  width: auto;
+  height: auto;
+  min-height: 82px;
+  overflow: hidden;
+  border-radius: 2px 0 0 2px;
+  background: #020607;
+  animation: none;
+}
+
+.layout[data-screen="arena"] .coach .coach-portrait::after {
+  display: none;
+}
+
+.layout[data-screen="arena"] .coach .coach-portrait img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 14%;
+  opacity: 0.92;
+  filter: grayscale(0.34) saturate(0.78) brightness(0.78) contrast(1.3);
+  -webkit-mask-image: linear-gradient(90deg, #000 72%, rgba(0, 0, 0, 0.7) 88%, transparent 100%);
+  mask-image: linear-gradient(90deg, #000 72%, rgba(0, 0, 0, 0.7) 88%, transparent 100%);
+}
+
+.layout[data-screen="arena"] .coach .coach-copy {
+  position: static;
+  inset: auto;
+  align-self: stretch;
+  justify-self: stretch;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "head skip"
+    "title skip"
+    "body body";
+  align-content: center;
+  gap: 2px 8px;
+  padding: 7px 0 7px 7px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  animation: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.layout[data-screen="arena"] .coach .coach-head {
+  grid-area: head;
+  min-width: 0;
+  margin: 0;
+  align-items: center;
+}
+
+.layout[data-screen="arena"] .coach .coach-kicker {
+  overflow: hidden;
+  color: var(--bio-bright);
+  font-size: 7.5px;
+  letter-spacing: 0.15em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layout[data-screen="arena"] .coach .coach-step {
+  flex: 0 0 auto;
+  color: rgba(216, 246, 242, 0.48);
+  font-size: 8px;
+}
+
+.layout[data-screen="arena"] .coach .coach-title {
+  grid-area: title;
+  min-width: 0;
+  color: #f2ffff;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  text-shadow: none;
+}
+
+.layout[data-screen="arena"] .coach .coach-body {
+  grid-area: body;
+  display: block;
+  max-width: none;
+  margin: 1px 0 0;
+  color: rgba(216, 246, 242, 0.7);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  line-height: 1.25;
+}
+
+.layout[data-screen="arena"] .coach .coach-action {
+  display: none;
+}
+
+.layout[data-screen="arena"] .coach .coach-skip {
+  grid-area: skip;
+  position: static;
+  align-self: center;
+  justify-self: end;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 5px 6px;
+  border-color: rgba(120, 196, 200, 0.22);
+  color: rgba(216, 246, 242, 0.58);
+  font-size: 8px;
+  pointer-events: auto;
+}
+
+.layout[data-screen="arena"] .coach.coach-success {
+  width: min(500px, calc(100vw - 36px));
+  grid-template-columns: 82px minmax(0, 1fr);
+  border-color: rgba(91, 233, 214, 0.52);
+  background:
+    linear-gradient(105deg, rgba(91, 233, 214, 0.14), transparent 52%),
+    rgba(3, 10, 12, 0.96);
+}
+
+.layout[data-screen="arena"] .coach.coach-success .coach-portrait {
+  min-height: 88px;
+}
+
+.layout[data-screen="arena"] .coach.coach-success .coach-title {
+  font-size: 19px;
+}
+
+.layout[data-screen="arena"].coach-intro-active .hud,
+.layout[data-screen="arena"].coach-intro-active .toolbox,
+.layout[data-screen="arena"].coach-intro-active .life-panel,
+.layout[data-screen="arena"].coach-intro-active .ticker,
+.layout[data-screen="arena"].coach-intro-active .mobile-shell,
+.layout[data-screen="arena"].coach-intro-active .notebook-button {
+  opacity: 1;
+}
+
+.layout[data-screen="arena"] .onboarding-professor-pointer {
+  z-index: var(--z-popover);
+}
+
+.layout[data-screen="arena"].coach-intro-active .onboarding-professor-pointer.is-visible,
+.layout[data-screen="arena"].coach-prompt-active .onboarding-professor-pointer.is-visible {
+  opacity: 1;
+}
+
+@keyframes professor-transmission-in {
+  from { opacity: 0; transform: translateX(-42px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes professor-transmission-out {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(-72px); }
+}
+
+@media (max-width: 899px) and (orientation: portrait) {
+  .layout[data-screen="arena"] .coach,
+  .layout[data-screen="arena"] .coach.coach-prompt,
+  .layout[data-screen="arena"] .coach.coach-intro,
+  .layout[data-screen="arena"] .coach.coach-success {
+    inset: auto max(7px, env(safe-area-inset-right)) auto max(7px, env(safe-area-inset-left));
+    top: calc(var(--hud-bottom, 72px) + 6px);
+    width: auto;
+    min-height: 84px;
+    grid-template-columns: 76px minmax(0, 1fr);
+    padding: 0 7px 0 0;
+  }
+
+  .layout[data-screen="arena"] .coach .coach-portrait,
+  .layout[data-screen="arena"] .coach.coach-success .coach-portrait {
+    min-height: 84px;
+  }
+
+  .layout[data-screen="arena"] .coach .coach-title {
+    font-size: clamp(16px, 4.8vw, 19px);
+  }
+}
+
+@media (max-width: 899px) and (orientation: portrait) and (max-height: 700px) {
+  .layout[data-screen="arena"] .coach,
+  .layout[data-screen="arena"] .coach.coach-prompt,
+  .layout[data-screen="arena"] .coach.coach-intro,
+  .layout[data-screen="arena"] .coach.coach-success {
+    min-height: 56px;
+    grid-template-columns: 54px minmax(0, 1fr);
+  }
+
+  .layout[data-screen="arena"] .coach .coach-portrait,
+  .layout[data-screen="arena"] .coach.coach-success .coach-portrait {
+    min-height: 56px;
+  }
+
+  .layout[data-screen="arena"] .coach .coach-copy {
+    min-height: 56px;
+    padding: 5px 0 5px 6px;
+  }
+
+  .layout[data-screen="arena"] .coach .coach-title,
+  .layout[data-screen="arena"] .coach.coach-success .coach-title {
+    font-size: 14px;
+  }
+
+  .layout[data-screen="arena"] .coach .coach-body,
+  .layout[data-screen="arena"] .coach .coach-step {
+    display: none;
+  }
+
+  .layout[data-screen="arena"] .coach .coach-skip {
+    min-width: 40px;
+    min-height: 40px;
+    padding-inline: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layout[data-screen="arena"] .coach.coach-show,
+  .layout[data-screen="arena"] .coach.coach-exit {
     animation: none;
   }
 }

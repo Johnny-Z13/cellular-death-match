@@ -113,9 +113,8 @@ const fx = createFx();
 const coach = createCoach();
 createTitleAutomata();
 
-// Publish the HUD's live bottom edge as a CSS var so the mobile coach card can
-// sit just below it regardless of how many lines the objective wraps to — no
-// magic offset that breaks when the objective text grows.
+// Publish the HUD's live bottom edge so the Professor's transmission rail can
+// use the quiet band above the dish without colliding with wrapped status copy.
 const hudEl = document.getElementById('hud');
 if (hudEl && typeof ResizeObserver === 'function') {
   const publishHudBottom = () => {
