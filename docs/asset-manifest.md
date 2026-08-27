@@ -1,5 +1,11 @@
 # Asset Manifest
 
+This is the human-readable generation index. The authoritative distribution
+register is `docs/publishing/evidence/crazygames-asset-attributions.json`; it
+pins every shipped media file to its exact SHA-256 digest, source evidence,
+provider terms and current release-review state. Run
+`npm run credits:crazygames:check` before a CrazyGames build.
+
 Generated assets and the scripts that produce them. Re-run a script to regenerate.
 
 ## Title key art (Nano Banana — `gemini-2.5-flash-image`)
@@ -17,7 +23,8 @@ Script: `scripts/generate-chimera-art.mjs` (`--force` to regenerate, or pass a b
 
 ## Audio (ElevenLabs — `eleven_text_to_sound_v2`)
 
-Script: `scripts/generate-audio-assets.mjs` (`--force` to regenerate, `--dry-run` to preview).
+Script: `scripts/generate-audio-assets.mjs` (`--force` to regenerate, `--dry-run` to preview,
+`--manifest-only` to rebuild the prompt-and-digest manifest without making a provider call).
 Output: `public/audio/generated/`. Note: ElevenLabs requires `duration_seconds >= 0.5`.
 
 | ID | File | Role |

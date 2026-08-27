@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -138,36 +139,72 @@ const ASSETS = [
 const args = new Set(process.argv.slice(2));
 const dryRun = args.has('--dry-run');
 const force = args.has('--force');
+const manifestOnly = args.has('--manifest-only');
 
 await main();
 
 async function main() {
-  const env = await loadEnv();
-  const apiKey = env.ELEVENLABS_API_KEY;
-  if (!apiKey) {
-    throw new Error('Missing ELEVENLABS_API_KEY in .env or process environment.');
+  let apiKey;
+  if (!manifestOnly) {
+    const env = await loadEnv();
+    apiKey = env.ELEVENLABS_API_KEY;
+    if (!apiKey) {
+      throw new Error('Missing ELEVENLABS_API_KEY in .env or process environment.');
+    }
   }
 
   await mkdir(OUTPUT_DIR, { recursive: true });
   const generated = [];
   for (const asset of ASSETS) {
     const outPath = join(OUTPUT_DIR, asset.file);
-    if (!force && existsSync(outPath)) {
-      generated.push({ id: asset.id, file: `/audio/generated/${asset.file}`, skipped: true });
-      continue;
+    let generatedNow = false;
+    if (!existsSync(outPath) || force) {
+      if (manifestOnly) {
+        throw new Error(`Cannot record missing audio asset: ${outPath}`);
+      }
+      if (dryRun) {
+        generated.push({
+          id: asset.id,
+          file: `/audio/generated/${asset.file}`,
+          durationSeconds: asset.duration_seconds,
+          prompt: asset.text,
+          dryRun: true,
+        });
+        continue;
+      }
+      const audio = await generateSound(apiKey, asset);
+      await writeFile(outPath, Buffer.from(audio));
+      generatedNow = true;
     }
-    if (dryRun) {
-      generated.push({ id: asset.id, file: `/audio/generated/${asset.file}`, dryRun: true });
-      continue;
-    }
-    const audio = await generateSound(apiKey, asset);
-    await writeFile(outPath, Buffer.from(audio));
-    generated.push({ id: asset.id, file: `/audio/generated/${asset.file}`, skipped: false });
+
+    const bytes = await readFile(outPath);
+    generated.push({
+      id: asset.id,
+      kind: 'sound-effect',
+      file: `/audio/generated/${asset.file}`,
+      provider: 'ElevenLabs',
+      modelId: 'eleven_text_to_sound_v2',
+      outputFormat: 'mp3_22050_32',
+      durationSeconds: asset.duration_seconds,
+      promptInfluence: 0.45,
+      prompt: asset.text,
+      sha256: createHash('sha256').update(bytes).digest('hex'),
+      generatedNow,
+    });
   }
 
   await writeFile(
     join(OUTPUT_DIR, 'manifest.json'),
-    `${JSON.stringify({ generatedAt: new Date().toISOString(), assets: generated }, null, 2)}\n`,
+    `${JSON.stringify({
+      schemaVersion: 1,
+      provenanceRecordedAt: new Date().toISOString(),
+      provider: 'ElevenLabs',
+      modelId: 'eleven_text_to_sound_v2',
+      outputFormat: 'mp3_22050_32',
+      generator: 'scripts/generate-audio-assets.mjs',
+      terms: 'https://elevenlabs.io/terms-of-use',
+      assets: generated,
+    }, null, 2)}\n`,
   );
   console.log(`Audio asset pass complete: ${generated.length} entries written to ${OUTPUT_DIR}.`);
 }

@@ -48,3 +48,17 @@ Before production use:
    `public/`;
 4. add the final asset to the repository's distribution provenance record;
 5. verify small-size legibility on desktop and mobile.
+
+## Production derivative
+
+`public/art/professor/professor-emergent-v1.png` is the production crop derived
+from this accepted concept.
+
+- Installed: 2026-08-25
+- SHA-256: `65db0f9ae845ae5066228f39469752c57200a1bfbbea0889c1fa30de9cbe5d7a`
+- Generator/provider: OpenAI built-in image generation
+- Distribution status: provider-declared; named human approval is still required
+- Distribution evidence: `docs/publishing/evidence/crazygames-asset-attributions.json`
+
+The former “concept only” status above applies to the unshipped source file,
+not to this separately recorded production derivative.

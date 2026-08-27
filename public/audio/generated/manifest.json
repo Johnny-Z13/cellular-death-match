@@ -1,110 +1,284 @@
 {
-  "generatedAt": "2026-06-10T22:48:44.217Z",
+  "schemaVersion": 1,
+  "provenanceRecordedAt": "2026-08-27T12:25:31.729Z",
+  "provider": "ElevenLabs",
+  "modelId": "eleven_text_to_sound_v2",
+  "outputFormat": "mp3_22050_32",
+  "generator": "scripts/generate-audio-assets.mjs",
+  "terms": "https://elevenlabs.io/terms-of-use",
   "assets": [
     {
       "id": "hatch",
+      "kind": "sound-effect",
       "file": "/audio/generated/hatch.mp3",
-      "skipped": true
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 0.8,
+      "promptInfluence": 0.45,
+      "prompt": "Tiny wet organic hatch pop, playful laboratory arcade sound, short and clean, no music.",
+      "sha256": "7c05f15aceb14b5754b9d38684f210d8ea1a126ca119e274b45a67c3a9db180c",
+      "generatedNow": false
     },
     {
       "id": "visible_mutation",
+      "kind": "sound-effect",
       "file": "/audio/generated/visible_mutation.mp3",
-      "skipped": true
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.45,
+      "prompt": "Retro pixel color-cycling mutation chirp, wet organic glitch, playful sci-fi lab, short one-shot.",
+      "sha256": "efb29bbe2548079f733db71626fab6895812884694fcd9010e45af377654822f",
+      "generatedNow": false
     },
     {
       "id": "catalytic_flare",
+      "kind": "sound-effect",
       "file": "/audio/generated/catalytic_flare.mp3",
-      "skipped": true
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 1.1,
+      "promptInfluence": 0.45,
+      "prompt": "Bright violent catalytic flare in a tiny lab dish, magnesium-like flash, punchy but not painful.",
+      "sha256": "7e942381d274afbe91882d4f160377dfd81ad7724fab0ea3fb6d7c280ce631b0",
+      "generatedNow": false
     },
     {
       "id": "water_stabilize",
+      "kind": "sound-effect",
       "file": "/audio/generated/water_stabilize.mp3",
-      "skipped": true
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 1,
+      "promptInfluence": 0.45,
+      "prompt": "Soft water spreading through glass, stabilizing wet shimmer, gentle sci-fi lab one-shot.",
+      "sha256": "c2d53cd683ccea90d921def28bfdd01b7e1aa718cf34a3694d4ff36c13e2616f",
+      "generatedNow": false
     },
     {
       "id": "salt_crystal",
+      "kind": "sound-effect",
       "file": "/audio/generated/salt_crystal.mp3",
-      "skipped": true
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.45,
+      "prompt": "Brittle salt crystallization ticks and tiny glassy shatter, precise arcade laboratory sound.",
+      "sha256": "20306b90c985738aab94921b90912e8b00a3424223112d157fc421c12b2cb5c6",
+      "generatedNow": false
     },
     {
       "id": "folding_fault",
+      "kind": "sound-effect",
       "file": "/audio/generated/folding_fault.mp3",
-      "skipped": true
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.45,
+      "prompt": "Stuttering cellular automata rule-machine fold, bassy glitch pulse, strange but playful sci-fi.",
+      "sha256": "c430cb5ba040354d25e6a978391a8b6cd3115e598b0532b50346a25859a76fe1",
+      "generatedNow": false
     },
     {
       "id": "hidden_breed",
+      "kind": "sound-effect",
       "file": "/audio/generated/hidden_breed.mp3",
-      "skipped": true
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 1,
+      "promptInfluence": 0.45,
+      "prompt": "Small discovery sting for a new alien microbe breed, sparkling retro lab monitor, no melody.",
+      "sha256": "0b3652435eaa62c47650ce09235019051106b24134c6c2ec261ff90ce66affdd",
+      "generatedNow": false
     },
     {
       "id": "objective_warning",
+      "kind": "sound-effect",
       "file": "/audio/generated/objective_warning.mp3",
-      "skipped": true
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 0.8,
+      "promptInfluence": 0.45,
+      "prompt": "Restrained retro lab warning blip, amber monitor alert, short and not alarming.",
+      "sha256": "10b31d3484de9f65ba5d2cd861d7f3600057e6695f5fd4bd14f3aadb4877e181",
+      "generatedNow": false
     },
     {
       "id": "ui_tap",
+      "kind": "sound-effect",
       "file": "/audio/generated/ui_tap.mp3",
-      "skipped": true
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 0.5,
+      "promptInfluence": 0.45,
+      "prompt": "Soft premium glass UI tap, a single short muted bubble click on a touchscreen lab instrument, clean and subtle, no music.",
+      "sha256": "cbf48c8c183465c4d4b7307301c5352c498dd018ee4c9a3490d7148727820b42",
+      "generatedNow": false
     },
     {
       "id": "ui_select",
+      "kind": "sound-effect",
       "file": "/audio/generated/ui_select.mp3",
-      "skipped": true
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 0.5,
+      "promptInfluence": 0.45,
+      "prompt": "Crisp confirming UI selection tone, a gentle rising glassy ping for choosing a tool on a sci-fi lab panel, premium and short.",
+      "sha256": "c6a0bbdfef94a8656d101a693a48586017fa16cafd682cf7493a0e0d14ef8d25",
+      "generatedNow": false
     },
     {
       "id": "epoch_begin",
+      "kind": "sound-effect",
       "file": "/audio/generated/epoch_begin.mp3",
-      "skipped": true
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 1.6,
+      "promptInfluence": 0.45,
+      "prompt": "Cinematic mission-start swell for a science game, a deep warm rising drone with a soft bioluminescent shimmer at the end, premium and hopeful, no melody.",
+      "sha256": "b88df335512c50d1cab3839425f9c208e482c28698b599953f91aafaa4f82f25",
+      "generatedNow": false
     },
     {
       "id": "epoch_win",
+      "kind": "sound-effect",
       "file": "/audio/generated/epoch_win.mp3",
-      "skipped": true
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.45,
+      "prompt": "Elegant success stinger, a warm resolving chord with a sparkling bioluminescent shimmer tail, premium science discovery reward, no spoken voice.",
+      "sha256": "7df3c2a4160ef7fc6c8af7423c0b510206a56de265a5cfb44651baf6b5ad26d1",
+      "generatedNow": false
     },
     {
       "id": "epoch_fail",
+      "kind": "sound-effect",
       "file": "/audio/generated/epoch_fail.mp3",
-      "skipped": true
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.45,
+      "prompt": "Somber collapse stinger, a low descending drone with a hollow dying-out resonance, restrained and cinematic, not harsh, no melody.",
+      "sha256": "9344a8af3747274867b29152373102db35dffa70be8b538bb98c625abe14cf09",
+      "generatedNow": false
     },
     {
       "id": "experiment_ready",
+      "kind": "sound-effect",
       "file": "/audio/generated/experiment_ready.mp3",
-      "skipped": true
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 1.4,
+      "promptInfluence": 0.45,
+      "prompt": "Warm two-note ready chime from a premium lab instrument, gentle rising glassy notification, pleasant and satisfying, not alarming, no music.",
+      "sha256": "fc438047177d9ef76a73f3bed5ef17ad42ab707cef09012391542a185b6d65d0",
+      "generatedNow": false
     },
     {
       "id": "ambience_loop",
+      "kind": "sound-effect",
       "file": "/audio/generated/ambience_loop.mp3",
-      "skipped": true
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 12,
+      "promptInfluence": 0.45,
+      "prompt": "Seamless looping deep laboratory ambience, low warm humming drone, faint liquid bubbling and distant glassy resonances, calm hypnotic underwater bioluminescent mood, no music, no melody, evolving texture suitable for looping.",
+      "sha256": "a5cab1f116e956ef24998fe7a386f2cee590b3e6a349196fd472e716110eec02",
+      "generatedNow": false
     },
     {
       "id": "drop_nutrient",
+      "kind": "sound-effect",
       "file": "/audio/generated/drop_nutrient.mp3",
-      "skipped": false
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 0.6,
+      "promptInfluence": 0.45,
+      "prompt": "Soft wet nutrient gel squelch dropped into a petri dish, gentle organic plop with a faint feeding shimmer, clean lab one-shot, no music.",
+      "sha256": "d8aeec059247964202ec40c0c1936ffbc65934f7a4b8815478c72af756a3bb40",
+      "generatedNow": false
     },
     {
       "id": "drop_water",
+      "kind": "sound-effect",
       "file": "/audio/generated/drop_water.mp3",
-      "skipped": false
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 0.6,
+      "promptInfluence": 0.45,
+      "prompt": "A single clean water droplet splish into a shallow glass dish, bright liquid plip with a small spreading ripple, premium and short, no music.",
+      "sha256": "ad09218b5b28b0aae2fa8beb22b9601fbbacdc5b97fe560898d5620007ce8b6f",
+      "generatedNow": false
     },
     {
       "id": "drop_toxin",
+      "kind": "sound-effect",
       "file": "/audio/generated/drop_toxin.mp3",
-      "skipped": false
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 0.6,
+      "promptInfluence": 0.45,
+      "prompt": "A venomous toxin reagent hiss as it hits living tissue, dark bubbling fizz with an uneasy edge, short sci-fi lab one-shot, no music.",
+      "sha256": "caae34ca99a93487babd4379aac7f9d9da7f10f28a540bfd227fad3c8845e5fd",
+      "generatedNow": false
     },
     {
       "id": "drop_salt",
+      "kind": "sound-effect",
       "file": "/audio/generated/drop_salt.mp3",
-      "skipped": false
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 0.6,
+      "promptInfluence": 0.45,
+      "prompt": "Dry salt crystals scattered onto a glass slide, brittle granular tick-and-rattle, crisp and short laboratory sound, no music.",
+      "sha256": "ab087aff8b5feb03720709fb0d47e9d501de7e28a5aba62697da326b0c4ecb6b",
+      "generatedNow": false
     },
     {
       "id": "drop_acid",
+      "kind": "sound-effect",
       "file": "/audio/generated/drop_acid.mp3",
-      "skipped": false
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 0.7,
+      "promptInfluence": 0.45,
+      "prompt": "A corrosive acid sizzle eating into tissue, sharp effervescent burn-fizz, punchy but not painful, short sci-fi lab one-shot, no music.",
+      "sha256": "619ab2ba155c38a6a7d43c7ef8e20bf3c9fc5ae01875cba89ac54a057437df73",
+      "generatedNow": false
     },
     {
       "id": "drop_paste",
+      "kind": "sound-effect",
       "file": "/audio/generated/drop_paste.mp3",
-      "skipped": false
+      "provider": "ElevenLabs",
+      "modelId": "eleven_text_to_sound_v2",
+      "outputFormat": "mp3_22050_32",
+      "durationSeconds": 0.6,
+      "promptInfluence": 0.45,
+      "prompt": "A thick nutrient paste smear drawn across glass, soft sticky spread with a wet trailing tail, gentle organic lab one-shot, no music.",
+      "sha256": "a1d0d9bc27e738fb3e3654b59a7b7013047a187248187a53ff5431245cccc9ae",
+      "generatedNow": false
     }
   ]
 }
