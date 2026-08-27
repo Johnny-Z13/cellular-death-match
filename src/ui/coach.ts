@@ -26,6 +26,7 @@ export interface Coach {
 const SEEN_KEY = 'cdm.coach.seen.v8';
 const SEEN_TRIALS_KEY = 'cdm.coach.trials.v1';
 const PROMPT_HOLD_MS = 3000;
+const SUCCESS_OBSERVATION_MS = 2600;
 const SUCCESS_HOLD_MS = 3600;
 const SLIDE_OUT_MS = 520;
 
@@ -47,7 +48,7 @@ export function createCoach(): Coach {
   let beatIndex = 0;
   let currentTrialIndex = 0;
   let currentBeats: readonly OnboardingBeat[] = ONBOARDING_BEATS;
-  let mode: 'welcome' | 'tutorial' | 'nudge' | 'success' = 'tutorial';
+  let mode: 'welcome' | 'tutorial' | 'observing' | 'nudge' | 'success' = 'tutorial';
   let nudgeTimer = 0;
   let presentationTimer = 0;
   let exitTimer = 0;
@@ -85,13 +86,11 @@ export function createCoach(): Coach {
 
   function clearPresentationClasses(): void {
     root?.classList.remove('coach-welcome');
-    root?.classList.remove('coach-moment');
     root?.classList.remove('coach-intro');
     root?.classList.remove('coach-prompt');
     root?.classList.remove('coach-success');
     root?.classList.remove('coach-exit');
     layout?.classList.remove('coach-welcome-active');
-    layout?.classList.remove('coach-moment-active');
     layout?.classList.remove('coach-intro-active');
     layout?.classList.remove('coach-prompt-active');
     layout?.classList.remove('coach-success-active');
@@ -197,21 +196,17 @@ export function createCoach(): Coach {
     scheduleSlideOut(PROMPT_HOLD_MS);
   }
 
-  function celebrateSuccess(coach: Coach): void {
+  function renderSuccess(coach: Coach): void {
     if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
-    active = false;
-    presentingSuccess = true;
-    awaitingObjective = false;
+    if (!presentingSuccess) return;
     mode = 'success';
     clearPresentationTimers();
     clearPresentationClasses();
-    // Completed Trials are rare punctuation. Bring Dr. E back at full scale;
-    // routine actions and reminders stay in the compact transmission rail.
-    root.classList.add('coach-welcome');
-    root.classList.add('coach-moment');
+    // The evolved culture is the reward. Dr. E acknowledges it from the
+    // compact rail only after the player has had an unobstructed look.
+    root.classList.add('coach-prompt');
     root.classList.add('coach-success');
-    layout?.classList.add('coach-welcome-active');
-    layout?.classList.add('coach-moment-active');
+    layout?.classList.add('coach-prompt-active');
     layout?.classList.add('coach-success-active');
     kickerEl.textContent = `Trial ${String(currentTrialIndex + 1).padStart(2, '0')} · Success`;
     const success = trialSuccessCopy(currentTrialIndex);
@@ -222,6 +217,22 @@ export function createCoach(): Coach {
     if (skipBtn) skipBtn.textContent = 'Continue';
     show();
     scheduleSlideOut(SUCCESS_HOLD_MS, () => finishSuccess(coach));
+  }
+
+  function celebrateSuccess(coach: Coach): void {
+    active = false;
+    presentingSuccess = true;
+    awaitingObjective = false;
+    mode = 'observing';
+    clearPresentationTimers();
+
+    // Dish-first rule: finish retracting any instruction, then let the live
+    // culture evolve on its own before Professor commentary returns.
+    slideOut(() => {
+      if (!presentingSuccess) return;
+      mode = 'observing';
+      presentationTimer = window.setTimeout(() => renderSuccess(coach), SUCCESS_OBSERVATION_MS);
+    });
   }
 
   function finishSuccess(coach: Coach): void {

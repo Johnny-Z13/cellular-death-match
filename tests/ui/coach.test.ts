@@ -250,7 +250,7 @@ describe('onboarding coach', () => {
     expect(welcome).toContain('@media (max-width: 899px)');
   });
 
-  it('shows a concise success transmission after one egg and one feed, then advances', () => {
+  it('shows the evolved dish before a concise success transmission, then advances', () => {
     vi.useFakeTimers();
     const elements = installCoachDom();
     const coach = createCoach();
@@ -269,10 +269,21 @@ describe('onboarding coach', () => {
     coach.report('bloom-discovered');
 
     expect(coach.isActive()).toBe(false);
+    expect(coach.isPresentingSuccess()).toBe(true);
+    expect(elements.get('coach')?.classList.contains('coach-exit')).toBe(true);
+
+    vi.advanceTimersByTime(520);
+    expect(elements.get('coach')?.classList.contains('coach-show')).toBe(false);
+    expect(elements.get('coach')?.classList.contains('coach-success')).toBe(false);
+
+    vi.advanceTimersByTime(2599);
+    expect(elements.get('coach')?.classList.contains('coach-show')).toBe(false);
+    vi.advanceTimersByTime(1);
+
     expect(elements.get('coach')?.classList.contains('coach-show')).toBe(true);
     expect(elements.get('coach')?.classList.contains('coach-success')).toBe(true);
-    expect(elements.get('coach')?.classList.contains('coach-moment')).toBe(true);
-    expect(elements.get('coach')?.classList.contains('coach-welcome')).toBe(true);
+    expect(elements.get('coach')?.classList.contains('coach-prompt')).toBe(true);
+    expect(elements.get('coach')?.classList.contains('coach-welcome')).toBe(false);
     expect(elements.get('coach-title')?.textContent).toBe('Bloom Mass. Logged.');
     expect(elements.get('coach-body')?.textContent).toContain('combine strains');
 
@@ -298,6 +309,7 @@ describe('onboarding coach', () => {
     for (const event of ['egg-selected', 'egg-used', 'nutrient-selected', 'nutrient-used', 'objective-complete']) {
       coach.report(event);
     }
+    vi.advanceTimersByTime(520 + 2600);
     elements.get('coach-skip')?.click();
 
     expect(onComplete).toHaveBeenCalledOnce();
@@ -318,7 +330,7 @@ describe('onboarding coach', () => {
     ]) coach.report(event);
 
     expect(coach.isPresentingSuccess()).toBe(true);
-    vi.advanceTimersByTime(3600 + 520);
+    vi.advanceTimersByTime(520 + 2600 + 3600 + 520);
     expect(onComplete).toHaveBeenCalledWith(1);
     expect(coach.isPresentingSuccess()).toBe(false);
   });
@@ -341,6 +353,7 @@ describe('onboarding coach', () => {
     coach.report('nutrient-used');
 
     expect(coach.isActive()).toBe(false);
+    vi.advanceTimersByTime(520 + 2600);
     expect(elements.get('coach')?.classList.contains('coach-success')).toBe(true);
     expect(elements.get('coach-title')?.textContent).toBe('Bloom Mass. Logged.');
   });
