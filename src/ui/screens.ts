@@ -151,6 +151,7 @@ export function createScreens(): Screens {
   const titleTrialLabel = get('title-trial-label');
   const titleTrialHypothesis = get('title-trial-hypothesis');
   const pickCaseProgress = get('pick-case-progress');
+  const methodHandoff = get('method-handoff');
   const notebookButton = get('notebook-button') as HTMLButtonElement;
   const fullscreenButton = get('fullscreen-button') as HTMLButtonElement;
   const optionsButton = get('options-button') as HTMLButtonElement;
@@ -932,10 +933,16 @@ export function createScreens(): Screens {
         const name = document.createElement('div');
         name.className = 'pick-card-name';
         name.textContent = c.def.name;
+        const kind = document.createElement('span');
+        kind.className = 'pick-card-kind';
+        kind.textContent = 'Method bonus';
         const desc = document.createElement('div');
         desc.className = 'pick-card-desc';
         desc.textContent = c.def.description;
-        btn.append(name, desc);
+        const action = document.createElement('span');
+        action.className = 'pick-card-action';
+        action.textContent = 'Choose this method';
+        btn.append(kind, name, desc, action);
         btn.addEventListener('click', () => onPick(c.id));
         pickChoices.append(btn);
       }
@@ -1006,6 +1013,7 @@ export function createScreens(): Screens {
       pickCaseProgress.textContent = info.openLabUnlocked
         ? 'Case 01 sealed · Open Lab unlocked'
         : `Trial logged · ${completed} / ${info.caseDef.trials.length} sealed`;
+      methodHandoff.hidden = info.activeTrialIndex !== 0;
 
       document.querySelectorAll<HTMLElement>('[data-case-trial]').forEach((node) => {
         const index = Number(node.dataset.caseTrial);
@@ -1038,6 +1046,7 @@ export function createScreens(): Screens {
     setFullscreenActive(active) {
       fullscreenButton.setAttribute('aria-label', active ? 'Exit full screen' : 'Enter full screen');
       fullscreenButton.title = active ? 'Exit full screen' : 'Enter full screen';
+      fullscreenButton.textContent = active ? 'Exit full screen' : 'Full screen';
     },
     onOptionsOpen(handler) {
       optionsButton.addEventListener('click', handler);

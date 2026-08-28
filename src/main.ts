@@ -531,7 +531,16 @@ screens.onAgitate(() => {
 screens.onEndEpoch(() => {
   if (!arena || run.getState().phase !== 'arena') return;
   ecologyAudio.unlock();
+  const objectiveComplete = arena.getObjectiveProgress().complete;
+  // Trial 1 is the interaction tutorial. End cannot act as an accidental
+  // escape hatch before the player has completed the taught sequence.
+  if (isOnboardingEpoch(run.getState().fightIndex) && !objectiveComplete) {
+    uiAudio.play('ui_tap');
+    haptics.play('warning');
+    return;
+  }
   uiAudio.play('ui_tap');
+  coach.report('end-experiment');
   const equilibriumCanEndRun = !isOnboardingEpoch(run.getState().fightIndex);
   if (equilibriumCanEndRun && arena.getEquilibrium().achieved) {
     persistArenaDiscoveries(arena, true);
@@ -802,14 +811,13 @@ function startNewFight() {
     objective.name,
     objective.description,
   );
-  // Every authored Professor lesson advances after his success beat. Trial 1
-  // additionally grants the Bloom Mass he just taught, even if the live cells
-  // expire while he is speaking.
+  // The lesson is marked complete only after the player uses the newly taught
+  // End control. Trial 1 also banks the Bloom Mass before normal arena
+  // resolution opens the Method choice.
   coach.onOnboardingComplete = (trialIndex) => {
     if (trialIndex === 0) {
       advanceDiscoveryProgression({ breedIds: ['bloom_mass'] }, { breed: 'stabilized' });
     }
-    resolveArenaStatus('won');
   };
   coach.beginTrial(runState.fightIndex);
   screens.updateToolCharges(arena.getToolStates());
@@ -946,12 +954,10 @@ function loop() {
   // the control sample — the onboarding dish has no player cell.
   screens.updateToolCharges(arena.getToolStates());
   screens.updateAgitation(arena.getAgitationState());
-  if (player) {
-    updateButtonHint();
-    announceEpochCompletion(objective.complete, objective.def.name);
-    announceEquilibrium(equilibrium);
-    maybeNudgeIdlePlayer(objective.complete, objective.def.hint);
-  }
+  updateButtonHint();
+  announceEpochCompletion(objective.complete, objective.def.name);
+  announceEquilibrium(equilibrium);
+  maybeNudgeIdlePlayer(objective.complete, objective.def.hint);
   updateTicker(arena);
   persistArenaDiscoveries(arena);
 
@@ -1351,6 +1357,8 @@ function syncOnboardingPointer(): void {
       ? '[data-tool="egg"]'
       : target === 'rack:more'
         ? '#toolbox-more'
+      : target === 'end'
+        ? '#end-epoch-button'
       : target.startsWith('tool:')
       ? `[data-tool="${target.slice('tool:'.length)}"]`
       : target.startsWith('lifeform:')
@@ -1474,6 +1482,9 @@ const NUDGE_IDLE_TICKS = 60 * 22;
 const MAX_NUDGES_PER_EPOCH = 2;
 
 function maybeNudgeIdlePlayer(objectiveComplete: boolean, hint: string | undefined): void {
+  // Authored onboarding remains visible until its exact action. Never replace
+  // that persistent instruction/observation rail with a generic idle nudge.
+  if (coach.isActive()) return;
   if (nudgeCountThisEpoch >= MAX_NUDGES_PER_EPOCH) return;
   if (tickCount - lastActionTick < NUDGE_IDLE_TICKS) return;
   const nudge = onboardingIdleNudge({
@@ -1500,7 +1511,7 @@ function announceEpochCompletion(complete: boolean, objectiveName: string): void
     uiAudio.play('experiment_ready');
     haptics.play('success');
     fx.showToast('discovery', 'Experiment Complete', `${objectiveName} — finish when ready`);
-    screens.addTicker('Dr. E: That is the result. Press End to finish, or keep cultivating.', 'discovery');
+    screens.addTicker('Dr. E: Goal complete. End is live when you are ready, or keep cultivating.', 'discovery');
     coach.report('objective-complete');
     updateButtonHint();
   } else if (!complete && didAnnounceCompletion) {
@@ -1693,8 +1704,7 @@ function setPresentationMode(enabled: boolean): void {
   overlayState.presentationMode = enabled;
   screens.setFullscreenActive(enabled);
   if (enabled) {
-    overlayState.menuOpen = false;
-    overlayState.debugOpen = false;
+    setOptionsMenuOpen(false);
     closeNotebook();
   }
   if (enabled && document.fullscreenEnabled && !document.fullscreenElement) {

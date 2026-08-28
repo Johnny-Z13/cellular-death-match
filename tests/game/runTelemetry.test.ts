@@ -80,7 +80,7 @@ describe('run telemetry', () => {
     expect(branchSource(
       'coach.onOnboardingComplete = (trialIndex) => {',
       'coach.beginTrial(runState.fightIndex);',
-    )).toContain("resolveArenaStatus('won');");
+    )).not.toContain("resolveArenaStatus('won');");
     expect(appearsBefore(
       branchSource("if (status === 'won')", "if (status === 'lost')"),
       'sampleRunTelemetryFromArena(arena);',

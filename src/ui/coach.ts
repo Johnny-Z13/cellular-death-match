@@ -25,9 +25,7 @@ export interface Coach {
 
 const SEEN_KEY = 'cdm.coach.seen.v8';
 const SEEN_TRIALS_KEY = 'cdm.coach.trials.v1';
-const PROMPT_HOLD_MS = 3000;
 const SUCCESS_OBSERVATION_MS = 2600;
-const SUCCESS_HOLD_MS = 3600;
 const SLIDE_OUT_MS = 520;
 
 export function createCoach(): Coach {
@@ -136,11 +134,6 @@ export function createCoach(): Coach {
     }, SLIDE_OUT_MS);
   }
 
-  function scheduleSlideOut(holdMs: number, after?: () => void): void {
-    clearPresentationTimers();
-    presentationTimer = window.setTimeout(() => slideOut(after), holdMs);
-  }
-
   function hide(): void {
     hidePresentation();
   }
@@ -150,12 +143,14 @@ export function createCoach(): Coach {
     window.addEventListener('resize', publishCoachBottom);
   }
 
-  function finish(): void {
+  function finish(completed = false): void {
     active = false;
     presentingSuccess = false;
     awaitingObjective = false;
     objectiveObserved = false;
-    markSeen(currentTrialIndex);
+    // Persist only genuine completion. A reload or dismissal midway through a
+    // trial must return to a clean, fully guided dish on the next visit.
+    if (completed) markSeen(currentTrialIndex);
     hide();
   }
 
@@ -171,7 +166,10 @@ export function createCoach(): Coach {
     bodyEl.textContent = 'Let me show you the ropes. We’ll start with one egg and one feed.';
     stepEl.textContent = '';
     if (actionEl) actionEl.textContent = '';
-    if (skipBtn) skipBtn.textContent = 'Tap to continue';
+    if (skipBtn) {
+      skipBtn.textContent = 'Tap to continue';
+      skipBtn.hidden = false;
+    }
     show();
     skipBtn?.focus({ preventScroll: true });
   }
@@ -191,12 +189,33 @@ export function createCoach(): Coach {
     bodyEl.textContent = beat.body;
     stepEl.textContent = `${beatIndex + 1} / ${currentBeats.length}`;
     if (actionEl) actionEl.textContent = beat.action;
-    if (skipBtn) skipBtn.textContent = 'Skip';
+    if (skipBtn) {
+      skipBtn.textContent = '';
+      skipBtn.hidden = true;
+    }
     show();
-    scheduleSlideOut(PROMPT_HOLD_MS);
   }
 
-  function renderSuccess(coach: Coach): void {
+  function renderObservation(): void {
+    if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
+    mode = 'observing';
+    clearPresentationTimers();
+    clearPresentationClasses();
+    root.classList.add('coach-prompt');
+    layout?.classList.add('coach-prompt-active');
+    kickerEl.textContent = 'Dr. E · Observe';
+    titleEl.textContent = 'Watch the culture.';
+    bodyEl.textContent = 'The organism is changing. Keep it alive while the result stabilizes.';
+    stepEl.textContent = 'Goal in progress';
+    if (actionEl) actionEl.textContent = 'Keep observing';
+    if (skipBtn) {
+      skipBtn.textContent = '';
+      skipBtn.hidden = true;
+    }
+    show();
+  }
+
+  function renderSuccess(): void {
     if (!root || !kickerEl || !titleEl || !bodyEl || !stepEl) return;
     if (!presentingSuccess) return;
     mode = 'success';
@@ -208,19 +227,23 @@ export function createCoach(): Coach {
     root.classList.add('coach-success');
     layout?.classList.add('coach-prompt-active');
     layout?.classList.add('coach-success-active');
-    kickerEl.textContent = `Trial ${String(currentTrialIndex + 1).padStart(2, '0')} · Success`;
+    kickerEl.textContent = `Trial ${String(currentTrialIndex + 1).padStart(2, '0')} · Goal complete`;
     const success = trialSuccessCopy(currentTrialIndex);
     titleEl.textContent = success.title;
     bodyEl.textContent = success.body;
-    stepEl.textContent = 'Complete';
-    if (actionEl) actionEl.textContent = 'Culture logged';
-    if (skipBtn) skipBtn.textContent = 'Continue';
+    stepEl.textContent = 'End when ready';
+    if (actionEl) actionEl.textContent = 'Press End when ready';
+    if (skipBtn) {
+      skipBtn.textContent = '';
+      skipBtn.hidden = true;
+    }
     show();
-    scheduleSlideOut(SUCCESS_HOLD_MS, () => finishSuccess(coach));
   }
 
-  function celebrateSuccess(coach: Coach): void {
-    active = false;
+  function celebrateSuccess(): void {
+    // The goal message and exact End pointer remain active until the player
+    // chooses to bank the dish.
+    active = true;
     presentingSuccess = true;
     awaitingObjective = false;
     mode = 'observing';
@@ -231,20 +254,21 @@ export function createCoach(): Coach {
     slideOut(() => {
       if (!presentingSuccess) return;
       mode = 'observing';
-      presentationTimer = window.setTimeout(() => renderSuccess(coach), SUCCESS_OBSERVATION_MS);
+      presentationTimer = window.setTimeout(renderSuccess, SUCCESS_OBSERVATION_MS);
     });
   }
 
   function finishSuccess(coach: Coach): void {
     const completedTrialIndex = currentTrialIndex;
-    finish();
+    finish(true);
     coach.onOnboardingComplete?.(completedTrialIndex);
   }
 
   function hideNudgeNow(): void {
     window.clearTimeout(nudgeTimer);
     if (mode !== 'nudge') return;
-    if (active && !awaitingObjective) render();
+    if (active && awaitingObjective) renderObservation();
+    else if (active) render();
     else hidePresentation();
   }
 
@@ -269,7 +293,9 @@ export function createCoach(): Coach {
       return target?.startsWith('tool:') ? target.slice('tool:'.length) : undefined;
     },
     getCurrentPointerTarget() {
-      if (!active || awaitingObjective || mode === 'welcome') return undefined;
+      if (!active || mode === 'welcome' || mode === 'observing') return undefined;
+      if (mode === 'success') return 'end';
+      if (awaitingObjective) return undefined;
       return currentBeats[beatIndex]?.pointerTarget;
     },
     shouldAutoSpawn() {
@@ -299,12 +325,14 @@ export function createCoach(): Coach {
     },
     report(event) {
       if (!active || mode === 'welcome') return;
-      const isCompletionEvent = currentTrialIndex === 0
-        ? event === 'bloom-discovered' || event === 'objective-complete'
-        : event === 'objective-complete';
+      if (mode === 'success') {
+        if (event === 'end-experiment') finishSuccess(coach);
+        return;
+      }
+      const isCompletionEvent = event === 'objective-complete';
       if (isCompletionEvent) objectiveObserved = true;
       if (awaitingObjective) {
-        if (objectiveObserved) celebrateSuccess(coach);
+        if (objectiveObserved) celebrateSuccess();
         return;
       }
       const beat = currentBeats[beatIndex];
@@ -313,14 +341,14 @@ export function createCoach(): Coach {
       if (beatIndex >= currentBeats.length) {
         awaitingObjective = true;
         autoSpawnTriggered = false;
-        if (objectiveObserved) celebrateSuccess(coach);
-        else slideOut();
+        if (objectiveObserved) celebrateSuccess();
+        else renderObservation();
         return;
       }
       render();
     },
     dismiss() {
-      finish();
+      finish(false);
     },
     showNudge(title, body, opts = {}) {
       if (active && !opts.interruptTutorial) return;
@@ -334,6 +362,7 @@ export function createCoach(): Coach {
       stepEl.textContent = '';
       if (actionEl) actionEl.textContent = '';
       if (skipBtn) skipBtn.textContent = 'Got it';
+      if (skipBtn) skipBtn.hidden = false;
       show();
       window.clearTimeout(nudgeTimer);
       nudgeTimer = window.setTimeout(() => hideNudgeNow(), 9000);
@@ -349,8 +378,6 @@ export function createCoach(): Coach {
         if (active) render();
       });
       else if (mode === 'nudge') hideNudgeNow();
-      else if (mode === 'success') finishSuccess(coach);
-      else finish();
     });
   }
 
@@ -360,24 +387,24 @@ export function createCoach(): Coach {
 function trialSuccessCopy(trialIndex: number): { title: string; body: string } {
   const copy = [
     {
-      title: 'Bloom Mass. Logged.',
-      body: 'Good. Next we combine strains, reagents, and living systems.',
+      title: 'Experiment complete.',
+      body: 'You’ve met the goal. End is live whenever you’re ready — keep playing with your organisms as long as you like.',
     },
     {
       title: 'Bitter Bloom. Logged.',
-      body: 'Feed, then pressure: a repeatable protocol.',
+      body: 'Feed, then pressure: a repeatable protocol. End whenever you’re ready, or keep observing.',
     },
     {
       title: 'Nutrient Conduit. Logged.',
-      body: 'Water carried food through living tissue.',
+      body: 'Water carried food through living tissue. End whenever you’re ready, or keep observing.',
     },
     {
       title: 'Foam Lightning. Logged.',
-      body: 'A second Water pulse discharged the Foam.',
+      body: 'A second Water pulse discharged the Foam. End whenever you’re ready, or keep observing.',
     },
     {
       title: 'Brine Channel. Logged.',
-      body: 'Now keep the wider ecosystem alive.',
+      body: 'The wider ecosystem held. End whenever you’re ready, or keep observing.',
     },
   ];
   return copy[trialIndex] ?? { title: 'Good work.', body: 'The result is logged.' };

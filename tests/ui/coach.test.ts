@@ -27,6 +27,7 @@ class FakeClassList {
 
 class FakeElement {
   textContent = '';
+  hidden = false;
   readonly classList = new FakeClassList();
   private readonly attrs = new Map<string, string>();
   private clickHandler: (() => void) | null = null;
@@ -85,7 +86,7 @@ afterEach(() => {
 });
 
 describe('onboarding coach', () => {
-  it('ships a skippable coach panel in the HTML', () => {
+  it('ships a coach panel with a continue control for the welcome', () => {
     expect(html).toContain('id="coach"');
     expect(html).toContain('id="coach-kicker"');
     expect(html).toContain('id="coach-title"');
@@ -157,7 +158,7 @@ describe('onboarding coach', () => {
     expect(coach.getCurrentPointerTarget()).toBe('tool:egg');
   });
 
-  it('slides the compact instruction away, then returns with the exact next action', () => {
+  it('keeps the compact instruction visible until the exact next action', () => {
     vi.useFakeTimers();
     const elements = installCoachDom();
     const coach = createCoach();
@@ -166,9 +167,8 @@ describe('onboarding coach', () => {
     continueFromWelcome(elements);
 
     vi.advanceTimersByTime(3000);
-    expect(elements.get('coach')?.classList.contains('coach-exit')).toBe(true);
-    vi.advanceTimersByTime(520);
-    expect(elements.get('coach')?.classList.contains('coach-show')).toBe(false);
+    expect(elements.get('coach')?.classList.contains('coach-exit')).toBe(false);
+    expect(elements.get('coach')?.classList.contains('coach-show')).toBe(true);
     expect(coach.isActive()).toBe(true);
 
     coach.report('egg-selected');
@@ -179,22 +179,22 @@ describe('onboarding coach', () => {
     expect(elements.get('coach')?.classList.contains('coach-show')).toBe(true);
   });
 
-  it('clears the dish after each follow-up instruction instead of leaving a compact card', () => {
+  it('ignores wrong actions and never persists a partial tutorial', () => {
     vi.useFakeTimers();
     const elements = installCoachDom();
     const coach = createCoach();
 
     coach.beginRun();
     continueFromWelcome(elements);
-    coach.report('egg-selected');
+    coach.report('nutrient-selected');
 
     expect(elements.get('coach')?.classList.contains('coach-prompt')).toBe(true);
     vi.advanceTimersByTime(3000);
-    expect(elements.get('coach')?.classList.contains('coach-exit')).toBe(true);
-    vi.advanceTimersByTime(520);
-    expect(elements.get('coach')?.classList.contains('coach-prompt')).toBe(false);
-    expect(elements.get('coach')?.classList.contains('coach-show')).toBe(false);
+    expect(elements.get('coach-title')?.textContent).toBe('I’m Dr. E. Press Egg.');
+    expect(elements.get('coach')?.classList.contains('coach-show')).toBe(true);
     expect(coach.isActive()).toBe(true);
+    coach.dismiss();
+    expect(coach.hasSeenTutorial()).toBe(false);
   });
 
   it('holds simulation time during the opening reading beat', () => {
@@ -250,7 +250,7 @@ describe('onboarding coach', () => {
     expect(welcome).toContain('@media (max-width: 899px)');
   });
 
-  it('shows the evolved dish before a concise success transmission, then advances', () => {
+  it('shows the evolved dish, then waits on End before recording success', () => {
     vi.useFakeTimers();
     const elements = installCoachDom();
     const coach = createCoach();
@@ -267,8 +267,11 @@ describe('onboarding coach', () => {
     expect(coach.shouldAutoSpawn()).toBe(true);
     expect(coach.shouldAutoSpawn()).toBe(false);
     coach.report('bloom-discovered');
+    expect(coach.isPresentingSuccess()).toBe(false);
+    expect(elements.get('coach-title')?.textContent).toBe('Watch the culture.');
+    coach.report('objective-complete');
 
-    expect(coach.isActive()).toBe(false);
+    expect(coach.isActive()).toBe(true);
     expect(coach.isPresentingSuccess()).toBe(true);
     expect(elements.get('coach')?.classList.contains('coach-exit')).toBe(true);
 
@@ -284,12 +287,15 @@ describe('onboarding coach', () => {
     expect(elements.get('coach')?.classList.contains('coach-success')).toBe(true);
     expect(elements.get('coach')?.classList.contains('coach-prompt')).toBe(true);
     expect(elements.get('coach')?.classList.contains('coach-welcome')).toBe(false);
-    expect(elements.get('coach-title')?.textContent).toBe('Bloom Mass. Logged.');
-    expect(elements.get('coach-body')?.textContent).toContain('combine strains');
+    expect(elements.get('coach-title')?.textContent).toBe('Experiment complete.');
+    expect(elements.get('coach-body')?.textContent).toContain('keep playing');
+    expect(coach.getCurrentPointerTarget()).toBe('end');
 
     vi.advanceTimersByTime(3600);
-    expect(elements.get('coach')?.classList.contains('coach-exit')).toBe(true);
-    vi.advanceTimersByTime(520);
+    expect(elements.get('coach')?.classList.contains('coach-show')).toBe(true);
+    expect(onComplete).not.toHaveBeenCalled();
+
+    coach.report('end-experiment');
 
     expect(elements.get('coach')?.classList.contains('coach-show')).toBe(false);
     expect(elements.get('coach')?.getAttribute('aria-hidden')).toBe('true');
@@ -297,7 +303,7 @@ describe('onboarding coach', () => {
     expect(onComplete).toHaveBeenCalledWith(0);
   });
 
-  it('advances Trial 1 immediately when Continue is pressed on success', () => {
+  it('does not let the hidden coach button bypass the End lesson', () => {
     vi.useFakeTimers();
     const elements = installCoachDom();
     const coach = createCoach();
@@ -312,8 +318,9 @@ describe('onboarding coach', () => {
     vi.advanceTimersByTime(520 + 2600);
     elements.get('coach-skip')?.click();
 
-    expect(onComplete).toHaveBeenCalledOnce();
-    expect(elements.get('coach')?.classList.contains('coach-show')).toBe(false);
+    expect(elements.get('coach-skip')?.hidden).toBe(true);
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(elements.get('coach')?.classList.contains('coach-show')).toBe(true);
   });
 
   it('advances later guided trials after the Professor records success', () => {
@@ -330,12 +337,14 @@ describe('onboarding coach', () => {
     ]) coach.report(event);
 
     expect(coach.isPresentingSuccess()).toBe(true);
-    vi.advanceTimersByTime(520 + 2600 + 3600 + 520);
+    vi.advanceTimersByTime(520 + 2600);
+    expect(onComplete).not.toHaveBeenCalled();
+    coach.report('end-experiment');
     expect(onComplete).toHaveBeenCalledWith(1);
     expect(coach.isPresentingSuccess()).toBe(false);
   });
 
-  it('latches an early Bloom and celebrates after the final required action', () => {
+  it('latches an early completed objective and celebrates after the final required action', () => {
     vi.useFakeTimers();
     const elements = installCoachDom();
     const coach = createCoach();
@@ -344,7 +353,7 @@ describe('onboarding coach', () => {
     continueFromWelcome(elements);
     coach.report('egg-selected');
     coach.report('egg-used');
-    coach.report('bloom-discovered');
+    coach.report('objective-complete');
 
     expect(coach.isActive()).toBe(true);
     expect(elements.get('coach-title')?.textContent).toBe('Now press Nutrient.');
@@ -352,10 +361,10 @@ describe('onboarding coach', () => {
     coach.report('nutrient-selected');
     coach.report('nutrient-used');
 
-    expect(coach.isActive()).toBe(false);
+    expect(coach.isActive()).toBe(true);
     vi.advanceTimersByTime(520 + 2600);
     expect(elements.get('coach')?.classList.contains('coach-success')).toBe(true);
-    expect(elements.get('coach-title')?.textContent).toBe('Bloom Mass. Logged.');
+    expect(elements.get('coach-title')?.textContent).toBe('Experiment complete.');
   });
 
   it('can show an idle onboarding nudge over the active tutorial and then restore the tutorial card', () => {
@@ -376,7 +385,7 @@ describe('onboarding coach', () => {
 
     expect(coach.isActive()).toBe(true);
     expect(elements.get('coach-title')?.textContent).toBe('I’m Dr. E. Press Egg.');
-    expect(elements.get('coach-skip')?.textContent).toBe('Skip');
+    expect(elements.get('coach-skip')?.hidden).toBe(true);
   });
 
   it('chooses onboarding idle nudges for the next concrete action', () => {

@@ -26,13 +26,15 @@ describe('full screen mode', () => {
     expect(mainSource).toContain('setPresentationMode(!overlayState.presentationMode);');
   });
 
-  it('hides every UI layer except a tiny exit button and lets the dish fill the viewport', () => {
+  it('hides every UI layer except a clearly labelled exit button and lets the dish fill the viewport', () => {
     expect(css).toContain('.presentation-mode .debug');
     expect(css).toContain('.presentation-mode .screen');
     expect(css).toContain('.presentation-mode .mobile-shell');
     expect(css).toContain('.presentation-mode .fullscreen-button {');
     expect(css).toContain('.presentation-mode .fullscreen-button::before');
-    expect(css).toContain('content: "X"');
+    expect(css).toContain('content: "←"');
+    expect(css).toContain('.layout[data-screen="arena"].presentation-mode .fullscreen-button');
+    expect(screensSource).toContain("fullscreenButton.textContent = active ? 'Exit full screen' : 'Full screen';");
     expect(css).toContain('width: min(100svw, 100svh)');
     expect(css).toContain('height: min(100svw, 100svh)');
     expect(css).not.toContain('width: min(96svw, 96svh, 900px)');

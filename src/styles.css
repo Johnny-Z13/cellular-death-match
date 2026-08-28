@@ -2124,24 +2124,27 @@ canvas {
 }
 
 .presentation-mode .fullscreen-button {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   top: calc(10px + env(safe-area-inset-top));
   right: calc(10px + env(safe-area-inset-right));
-  width: 34px;
-  height: 34px;
-  padding: 0;
+  width: auto;
+  min-width: 112px;
+  height: 44px;
+  padding: 0 12px;
   z-index: 20;
   border-color: rgba(216, 248, 255, 0.5);
   background: rgba(5, 10, 12, 0.72);
   color: #d8f8ff;
-  font-size: 0;
+  font-size: 10px;
   line-height: 1;
 }
 
 .presentation-mode .fullscreen-button::before {
-  content: "X";
-  font-size: 13px;
+  content: "←";
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -2753,7 +2756,34 @@ canvas {
 
 .method-card { width: min(calc(100vw - 36px), 760px); }
 .method-eyebrow { color: var(--amber); }
-.method-sub { margin: -4px auto 16px; color: var(--ink-dim); font-size: 11px; line-height: 1.4; }
+.method-sub { margin: -4px auto 12px; color: var(--ink-dim); font-size: 11px; line-height: 1.4; }
+.method-handoff {
+  max-width: 58ch;
+  margin: 0 auto 12px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--bio);
+  background: rgba(91, 233, 214, 0.07);
+  color: rgba(226, 246, 245, 0.8);
+  font: 11px/1.45 var(--font-mono);
+  text-align: left;
+}
+.method-handoff strong { color: var(--bio-bright); }
+.method-choice-instruction {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--ink-dim);
+  font: 9px/1.2 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.method-choice-instruction b {
+  padding: 3px 6px;
+  border: 1px solid rgba(240, 195, 90, 0.5);
+  border-radius: 999px;
+  color: var(--amber);
+}
 .case-result-strip { margin: 0 auto 15px; max-width: 430px; }
 .case-result-dots { display: flex; gap: 6px; }
 .case-result-dots i { width: 8px; height: 8px; border: 1px solid var(--hairline); border-radius: 50%; }
@@ -3731,6 +3761,24 @@ canvas {
   letter-spacing: 0.02em;
   color: #fff;
 }
+
+.pick-card-kind,
+.pick-card-action {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.pick-card-kind { color: var(--amber); }
+
+.pick-card-action {
+  margin-top: auto;
+  padding-top: 6px;
+  color: var(--bio-bright);
+}
+
+.pick-card-action::after { content: "  ›"; }
 
 .pick-card-desc {
   font-size: 12px;
@@ -7108,6 +7156,74 @@ canvas {
   .layout[data-screen="arena"] .coach.coach-welcome .coach-portrait img {
     animation: none;
   }
+}
+
+/* The between-trial Method choice is a compact lab-bench sheet on phones. It
+   keeps the completed dish legible behind it and makes the single required
+   decision explicit without turning the pause into another full-screen beat. */
+@media (max-width: 699px) {
+  #screen-pick {
+    align-items: flex-end;
+    padding:
+      72px
+      max(8px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
+    background: linear-gradient(180deg, rgba(2, 5, 6, 0.18), rgba(2, 5, 6, 0.74));
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+  }
+
+  #screen-pick .method-card {
+    width: 100%;
+    max-height: min(76dvh, 620px);
+    overflow-y: auto;
+    padding: 18px 14px 14px;
+    border-color: rgba(120, 196, 200, 0.36);
+    border-radius: 18px;
+    background: rgba(3, 10, 12, 0.97);
+    box-shadow: 0 -18px 56px rgba(0, 0, 0, 0.58), 0 0 28px rgba(91, 233, 214, 0.1);
+  }
+
+  #screen-pick .title-eyebrow { margin-bottom: 7px; }
+  #screen-pick .case-result-strip { margin-bottom: 9px; }
+  #screen-pick .screen-title { margin-bottom: 7px; font-size: 22px; }
+  #screen-pick .method-sub { margin-bottom: 9px; }
+  #screen-pick .method-handoff { margin-bottom: 9px; padding: 8px 10px; font-size: 9.5px; }
+  #screen-pick .pick-choices { gap: 7px; margin-top: 10px; }
+
+  #screen-pick .pick-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "kind action"
+      "name action"
+      "desc action";
+    gap: 3px 10px;
+    min-height: 68px;
+    padding: 10px 11px;
+    border-radius: 10px;
+  }
+
+  #screen-pick .pick-card-kind { grid-area: kind; }
+  #screen-pick .pick-card-name { grid-area: name; }
+  #screen-pick .pick-card-desc { grid-area: desc; font-size: 10.5px; }
+  #screen-pick .pick-card-action {
+    grid-area: action;
+    align-self: center;
+    max-width: 58px;
+    margin: 0;
+    padding: 7px 0 7px 9px;
+    border-left: 1px solid rgba(91, 233, 214, 0.22);
+    line-height: 1.35;
+    text-align: right;
+  }
+}
+
+/* Arena phone CSS intentionally hides the entry control. Fullscreen state is
+   the exception: its explicit, safe-area-aware exit must always win. */
+.layout[data-screen="arena"].presentation-mode .fullscreen-button {
+  display: flex;
 }
 
 /* ---- Consistent Professor portrait grade ------------------------------ */
