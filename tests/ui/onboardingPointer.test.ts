@@ -27,4 +27,15 @@ describe('Professor onboarding pointer', () => {
     expect(css).toContain('.onboarding-professor-pointer.is-visible');
     expect(css).toContain('pointer-events: none');
   });
+
+  it('clears the guide before a genome reveal owns the screen', () => {
+    const revealStart = mainSource.indexOf('function showPhaseAfterGenomeReveals(): void {');
+    const revealEnd = mainSource.indexOf('function playGenomeDecodeSounds(', revealStart);
+    const revealFlow = mainSource.slice(revealStart, revealEnd);
+
+    expect(revealFlow).toContain('syncOnboardingPointer();');
+    expect(revealFlow.indexOf('syncOnboardingPointer();')).toBeLessThan(
+      revealFlow.indexOf('fx.showGenomeDecode('),
+    );
+  });
 });

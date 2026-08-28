@@ -88,6 +88,14 @@ html, body {
   display: none !important;
 }
 
+/* One keyboard language across the laboratory. Component hover/selected
+   treatments remain intact; the outline is reserved for keyboard focus. */
+button:focus-visible,
+[role="tab"]:focus-visible {
+  outline: 2px solid var(--bio-bright);
+  outline-offset: 2px;
+}
+
 /* Faint grain/scanline atmosphere over the whole document */
 body::after {
   content: "";
@@ -884,6 +892,17 @@ canvas {
   display: block;
 }
 
+/* A modal owns the visual hierarchy as well as focus. Tutorial callouts and
+   transient discoveries resume when Options closes, but never shine through
+   its translucent scrim. */
+.menu-open .coach,
+.menu-open .onboarding-professor-pointer,
+.menu-open .fx-banner,
+.menu-open .fx-toasts {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
 .debug-open .debug {
   display: block;
   position: fixed;
@@ -910,6 +929,8 @@ canvas {
 }
 
 .options-close {
+  min-width: 44px;
+  min-height: 44px;
   border: 1px solid var(--hairline);
   border-radius: 7px;
   background: rgba(18, 32, 36, 0.84);
@@ -918,10 +939,19 @@ canvas {
   font-size: 10px;
   padding: 6px 9px;
   cursor: pointer;
+  transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+}
+
+.options-close:hover,
+.options-close:focus-visible {
+  border-color: var(--hairline-strong);
+  background: rgba(24, 42, 46, 0.94);
+  color: var(--ink);
 }
 
 .debug-option-button {
   width: 100%;
+  min-height: 44px;
   margin: 0 0 8px;
   border: 1px solid var(--bio-deep);
   border-radius: 8px;
@@ -932,6 +962,14 @@ canvas {
   text-align: left;
   padding: 8px 10px;
   cursor: pointer;
+  transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+}
+
+.debug-option-button:hover,
+.debug-option-button:focus-visible {
+  border-color: var(--hairline-strong);
+  background: rgba(16, 36, 29, 0.94);
+  color: var(--ink);
 }
 
 .debug-option-button[aria-pressed="true"] {
@@ -1029,6 +1067,7 @@ canvas {
 
 .debug-mini-button {
   width: 100%;
+  min-height: 44px;
   margin-top: 6px;
   border: 1px solid var(--bio-deep);
   border-radius: 8px;
@@ -2212,12 +2251,11 @@ canvas {
 }
 
 .fx-wipe.fx-wipe-play {
-  animation: fx-wipe-cycle 620ms ease-in-out;
+  animation: fx-wipe-cycle 240ms ease-out;
 }
 
 @keyframes fx-wipe-cycle {
-  0% { opacity: 0; }
-  45% { opacity: 1; }
+  0% { opacity: 1; }
   100% { opacity: 0; }
 }
 
@@ -2353,12 +2391,6 @@ canvas {
 
 .screen.visible {
   display: flex;
-  animation: screen-fade-in 360ms ease-out;
-}
-
-@keyframes screen-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 .screen-card {
@@ -2373,7 +2405,7 @@ canvas {
   color: var(--ink);
   box-sizing: border-box;
   box-shadow: var(--shadow-panel), 0 0 50px rgba(91, 233, 214, 0.06);
-  animation: card-rise 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: card-rise 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .screen-card::before {
@@ -2391,8 +2423,12 @@ canvas {
 }
 
 @keyframes card-rise {
-  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  from { opacity: 0; transform: translateY(6px) scale(0.995); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen-card { animation: none; }
 }
 
 .screen-title {
@@ -3119,6 +3155,8 @@ canvas {
 }
 
 .notebook-close {
+  min-width: 44px;
+  min-height: 44px;
   border: 1px solid var(--hairline);
   border-radius: 9px;
   background: var(--panel-raised);
@@ -3372,6 +3410,7 @@ canvas {
 }
 
 .notebook-tab-button {
+  min-height: 44px;
   font-family: var(--font-display);
   font-size: 10px;
   letter-spacing: 0.18em;
@@ -3770,7 +3809,7 @@ canvas {
 
   .notebook-tab-button {
     flex: 1 0 auto;
-    min-height: 40px;
+    min-height: 44px;
     padding-inline: 10px;
     letter-spacing: 0.11em;
   }
@@ -7477,14 +7516,14 @@ canvas {
   }
 }
 
-/* The between-trial Method choice is a compact lab-bench sheet on phones. It
-   keeps the completed dish legible behind it and makes the single required
-   decision explicit without turning the pause into another full-screen beat. */
+/* The between-trial Method choice is a compact, centered lab-bench dialog on
+   phones. It keeps the completed dish legible behind it and makes the single
+   required decision explicit without turning the pause into another full-screen beat. */
 @media (max-width: 699px) {
   #screen-pick {
-    align-items: flex-end;
+    align-items: center;
     padding:
-      72px
+      max(8px, env(safe-area-inset-top))
       max(8px, env(safe-area-inset-right))
       max(8px, env(safe-area-inset-bottom))
       max(8px, env(safe-area-inset-left));
@@ -7494,6 +7533,9 @@ canvas {
   }
 
   #screen-pick .method-card {
+    position: relative;
+    left: auto;
+    right: auto;
     width: 100%;
     max-height: min(76dvh, 620px);
     overflow-y: auto;

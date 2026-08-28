@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const html = readFileSync('index.html', 'utf8');
+const css = readFileSync('src/styles.css', 'utf8');
 const mainSource = readFileSync('src/main.ts', 'utf8');
 const screensSource = readFileSync('src/ui/screens.ts', 'utf8');
 
@@ -79,5 +80,28 @@ describe('options menu', () => {
     expect(mainSource).toContain('status: \'paused\'');
     expect(mainSource).toContain('simClock.reset(now);');
     expect(mainSource).toContain('simClock.reset(performance.now());');
+  });
+
+  it('owns the interaction plane without tutorial or celebration layers leaking through', () => {
+    const menuStart = mainSource.indexOf('function setOptionsMenuOpen(open: boolean): void {');
+    const menuEnd = mainSource.indexOf('function trapOptionsFocus(', menuStart);
+    const menuFlow = mainSource.slice(menuStart, menuEnd);
+
+    expect(menuFlow).toContain('applyOverlayState();');
+    expect(menuFlow).toContain('syncOnboardingPointer();');
+    expect(css).toContain('.menu-open .onboarding-professor-pointer,');
+    expect(css).toContain('.menu-open .fx-toasts {');
+    expect(css).toContain('visibility: hidden !important;');
+  });
+
+  it('gives settings controls full touch targets and visible keyboard focus', () => {
+    expect(css).toContain('button:focus-visible,');
+    expect(css).toContain('[role="tab"]:focus-visible {');
+    expect(css).toMatch(/\.options-close \{[\s\S]*?min-height: 44px;/);
+    expect(css).toMatch(/\.debug-option-button \{[\s\S]*?min-height: 44px;/);
+    expect(css).toMatch(/\.debug-mini-button \{[\s\S]*?min-height: 44px;/);
+    expect(css).toMatch(/\.notebook-close \{[\s\S]*?min-height: 44px;/);
+    expect(css).toMatch(/\.notebook-tab-button \{[\s\S]*?min-height: 44px;/);
+    expect(css).not.toMatch(/\.notebook-tab-button \{[\s\S]{0,180}?min-height: 40px;/);
   });
 });

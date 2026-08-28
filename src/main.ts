@@ -827,6 +827,9 @@ function showPhaseAfterGenomeReveals(): void {
   pendingGenomeDecodeIds = [];
   const genomes = queued.map((id) => genomeArtFor(id));
   screens.closeMobileDrawers();
+  // The reveal delays the normal phase screen, so clear any pointer left by
+  // the final onboarding instruction before the translucent overlay appears.
+  syncOnboardingPointer();
   playGenomeDecodeSounds(genomes);
   fx.showGenomeDecode(
     genomes.map(genomeRevealInfo),
@@ -2065,6 +2068,10 @@ function setOptionsMenuOpen(open: boolean): void {
   overlayState.debugOpen = open;
   simClock.reset(performance.now());
   applyOverlayState();
+  // Options becomes the sole interaction plane while open. Clear the authored
+  // guide immediately instead of leaving its portrait/pointer under the scrim;
+  // closing restores the current target without advancing the tutorial.
+  syncOnboardingPointer();
   optionsPanel?.setAttribute('aria-hidden', String(!open));
   optionsButton?.setAttribute('aria-expanded', String(open));
   if (open) {
