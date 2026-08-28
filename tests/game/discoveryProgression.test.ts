@@ -40,16 +40,32 @@ describe('discovery progression', () => {
     expect(acknowledged.noteDiscoveryRecords.every((record) => !record.fresh)).toBe(true);
   });
 
-  it('unlocks the first complete laboratory bundle when Bloom Mass is stabilized', () => {
+  it('unlocks only the organism that was actually stabilized', () => {
     const progression = updateDiscoveryProgression(createDiscoveryProgression(), {
       breedIds: ['bloom_mass'],
       noteIds: ['breed_bloom_mass'],
     });
 
-    expect(progression.unlockedLifeforms).toEqual(['swarmlet', 'bruiser', 'splitter', 'bloom_mass']);
+    expect(progression.unlockedLifeforms).toEqual(['swarmlet', 'bloom_mass']);
     expect(progression.unlockedTools).toEqual([
       'egg', 'nutrient', 'toxin', 'water', 'paste', 'agitate',
     ]);
+  });
+
+  it('paces foundational organisms behind experiments that explain their biology', () => {
+    const bloomed = updateDiscoveryProgression(createDiscoveryProgression(), {
+      breedIds: ['bloom_mass'],
+    });
+    const pressured = updateDiscoveryProgression(bloomed, {
+      noteIds: ['recipe_bitter_bloom'],
+    });
+    const carried = updateDiscoveryProgression(pressured, {
+      noteIds: ['recipe_nutrient_conduit'],
+    });
+
+    expect(bloomed.unlockedLifeforms).toEqual(['swarmlet', 'bloom_mass']);
+    expect(pressured.unlockedLifeforms).toEqual(['swarmlet', 'bruiser', 'bloom_mass']);
+    expect(carried.unlockedLifeforms).toEqual(['swarmlet', 'bruiser', 'splitter', 'bloom_mass']);
   });
 
   it('reveals canonical specimen and capability catalogues, then clears to onboarding', () => {

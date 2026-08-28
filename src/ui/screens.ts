@@ -313,6 +313,31 @@ export function createScreens(): Screens {
     }
   }
 
+  function selectedLifeformName(): string | undefined {
+    return selectedLifeformId && selectedLifeformId in LIFEFORM_IDENTITIES
+      ? LIFEFORM_IDENTITIES[selectedLifeformId as LifeformIdentityId].name
+      : undefined;
+  }
+
+  function syncToolReadouts(): void {
+    const lifeformName = selectedLifeformName();
+    updateToolSummary(
+      toolSummary,
+      selectedToolId,
+      selectedEggArchetype,
+      optionByArchetype,
+      lifeformName,
+    );
+    updateMobileToolReadout(
+      mobileToolName,
+      mobileToolSummary,
+      selectedToolId,
+      selectedEggArchetype,
+      optionByArchetype,
+      lifeformName,
+    );
+  }
+
   function setSelectedLifeform(id: string | null): void {
     if (id && !unlockedLifeformIds.has(id)) return;
     selectedLifeformId = id;
@@ -321,10 +346,13 @@ export function createScreens(): Screens {
     }
     if (!id || !(id in LIFEFORM_IDENTITIES)) {
       lifeSummary.textContent = 'Pick an egg strain to seed the dish.';
+      syncToolReadouts();
       return;
     }
     const identity = LIFEFORM_IDENTITIES[id as LifeformIdentityId];
     lifeSummary.textContent = `${identity.name} - ${identity.role}. ${identity.behavior} ${identity.origin} Sound: ${identity.soundId}.`;
+    eggTool?.style.setProperty('--egg-color', rgb(identity.colors.primary));
+    syncToolReadouts();
   }
 
   function activateLifeform(id: string): void {
@@ -493,8 +521,7 @@ export function createScreens(): Screens {
       for (const btn of toolButtons) {
         setSelectedButtonState(btn, btn.dataset.tool === tool);
       }
-      updateToolSummary(toolSummary, selectedToolId, selectedEggArchetype, optionByArchetype);
-      updateMobileToolReadout(mobileToolName, mobileToolSummary, selectedToolId, selectedEggArchetype, optionByArchetype);
+      syncToolReadouts();
     },
     setButtonHint(target, level = 'hint') {
       applyButtonHint(target, level);
@@ -626,8 +653,7 @@ export function createScreens(): Screens {
       const option = optionByArchetype.get(archetype);
       if (!option) return;
       eggTool?.style.setProperty('--egg-color', rgb(option.color));
-      updateToolSummary(toolSummary, selectedToolId, selectedEggArchetype, optionByArchetype);
-      updateMobileToolReadout(mobileToolName, mobileToolSummary, selectedToolId, selectedEggArchetype, optionByArchetype);
+      syncToolReadouts();
       if (!selectedLifeformId) setSelectedLifeform(archetype);
     },
     setLifeformUnlocks(ids) {
@@ -1160,8 +1186,9 @@ function updateToolSummary(
   tool: ToolId,
   eggArchetype: EnemyArchetype,
   eggOptions: Map<EnemyArchetype, EggOption>,
+  selectedLifeformName?: string,
 ): void {
-  const eggName = eggOptions.get(eggArchetype)?.name ?? 'selected';
+  const eggName = selectedLifeformName ?? eggOptions.get(eggArchetype)?.name ?? 'selected';
   const summaries: Record<ToolId, string> = {
     egg: `Egg - plants a ${eggName} culture in open dish space.`,
     nutrient: 'Nutrient - attracts nearby tissue and feeds growth inside the drop zone.',
@@ -1180,8 +1207,9 @@ function updateMobileToolReadout(
   tool: ToolId,
   eggArchetype: EnemyArchetype,
   eggOptions: Map<EnemyArchetype, EggOption>,
+  selectedLifeformName?: string,
 ): void {
-  const eggName = eggOptions.get(eggArchetype)?.name ?? 'selected culture';
+  const eggName = selectedLifeformName ?? eggOptions.get(eggArchetype)?.name ?? 'selected culture';
   const names: Record<ToolId, string> = {
     egg: 'Egg',
     nutrient: 'Nutrient',

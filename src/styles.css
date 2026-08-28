@@ -5779,8 +5779,6 @@ canvas {
   .coach-body,
   .coach-skip { grid-area: auto; }
   .coach-skip { justify-self: end; margin-top: 2px; }
-  .coach-active .life-panel { opacity: 0; pointer-events: none; }
-
   @keyframes professor-slide-mobile {
     from { opacity: 0; transform: translateX(40px); }
     to { opacity: 1; transform: translateX(0); }
@@ -6689,6 +6687,7 @@ canvas {
 
   .layout[data-screen="arena"].mobile-lifeforms-open .life-panel {
     transform: translateY(0) scale(1);
+    pointer-events: auto;
   }
 
   .layout[data-screen="arena"] .coach.coach-prompt {

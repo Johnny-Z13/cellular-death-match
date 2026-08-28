@@ -230,4 +230,14 @@ describe('mobile layout CSS', () => {
     expect(css).toContain('.layout[data-screen="arena"]:not(.mobile-log-open) .ticker');
     expect(css).toContain('.layout[data-screen="arena"] .life-panel-head');
   });
+
+  it('keeps the guided specimen freezer tappable while the Professor is speaking', () => {
+    const dishFirst = css.slice(css.indexOf('/* ---- Dish-first mobile arena'));
+    const openDrawer = dishFirst.slice(
+      dishFirst.indexOf('.layout[data-screen="arena"].mobile-lifeforms-open .life-panel {'),
+    );
+
+    expect(openDrawer).toContain('pointer-events: auto');
+    expect(css).not.toContain('.coach-active .life-panel {');
+  });
 });

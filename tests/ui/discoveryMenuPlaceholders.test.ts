@@ -122,6 +122,19 @@ describe('discovery menu placeholders', () => {
     expect(applyVisibilityBody).toContain('setSelectedButtonState(button, selected);');
   });
 
+  it('echoes the exact selected genome and colour in the compact Egg readout', () => {
+    const selectionStart = screensSource.indexOf('function setSelectedLifeform(id: string | null): void {');
+    const selectionEnd = screensSource.indexOf('\n  }\n\n  function activateLifeform', selectionStart);
+    const selectionBody = screensSource.slice(selectionStart, selectionEnd);
+
+    expect(selectionBody).toContain("eggTool?.style.setProperty('--egg-color', rgb(identity.colors.primary));");
+    expect(selectionBody).toContain('syncToolReadouts();');
+    expect(screensSource).toContain('function selectedLifeformName(): string | undefined {');
+    expect(screensSource.match(
+      /const eggName = selectedLifeformName \?\? eggOptions\.get\(eggArchetype\)\?\.name/g,
+    )).toHaveLength(2);
+  });
+
   it('retains the full six-line completed-dish research brief in the dish log', () => {
     expect(screensSource).toContain('while (tickerLines.children.length > 6)');
     expect(css).toContain('.ticker-line:nth-child(n + 7)');

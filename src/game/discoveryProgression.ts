@@ -274,7 +274,11 @@ function buildProgression(base: {
     toolSet.add('water');
     toolSet.add('paste');
     toolSet.add('agitate');
+  }
+  if (notes.has('recipe_bitter_bloom') || notes.has('recipe_pressure_bloom')) {
     lifeformSet.add('bruiser');
+  }
+  if (notes.has('recipe_nutrient_conduit') || notes.has('water_carries')) {
     lifeformSet.add('splitter');
   }
   if (

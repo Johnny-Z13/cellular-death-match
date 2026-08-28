@@ -49,16 +49,34 @@ describe('onboarding stage gates', () => {
     expect(shouldUseOnboardingDishForCurrentStage(1, false)).toBe(false);
   });
 
-  it('does not leak the legacy Bloom bundle into the authored specimen freezer', () => {
-    const bloomed = updateDiscoveryProgression(createDiscoveryProgression(), {
+  it('reveals each earned organism on the next authored Case Trial', () => {
+    let progression = updateDiscoveryProgression(createDiscoveryProgression(), {
       breedIds: ['bloom_mass'],
       noteIds: ['breed_bloom_mass'],
     });
 
-    expect(bloomed.unlockedTools).toContain('water');
-    expect(bloomed.unlockedLifeforms).toContain('bruiser');
-    FIRST_CASE_STAGE_LIFEFORMS.forEach((expected, trialIndex) => {
-      expect(lifeformUnlocksForCurrentStage(bloomed, trialIndex, true)).toEqual(expected);
+    expect(lifeformUnlocksForCurrentStage(progression, 1)).toEqual(['swarmlet', 'bloom_mass']);
+    expect(lifeformUnlocksForCurrentStage(progression, 2)).toEqual(['swarmlet', 'bloom_mass']);
+
+    progression = updateDiscoveryProgression(progression, { noteIds: ['recipe_bitter_bloom'] });
+    expect(lifeformUnlocksForCurrentStage(progression, 2)).toEqual([
+      'swarmlet', 'bruiser', 'bloom_mass',
+    ]);
+
+    progression = updateDiscoveryProgression(progression, { noteIds: ['recipe_nutrient_conduit'] });
+    expect(lifeformUnlocksForCurrentStage(progression, 3)).toEqual([
+      'swarmlet', 'bruiser', 'splitter', 'bloom_mass',
+    ]);
+
+    progression = updateDiscoveryProgression(progression, { noteIds: ['recipe_foam_lightning'] });
+    expect(lifeformUnlocksForCurrentStage(progression, 4)).toEqual([
+      'swarmlet', 'bruiser', 'splitter', 'mirror', 'bloom_mass',
+    ]);
+
+    FIRST_CASE_STAGE_LIFEFORMS.forEach((allowed, trialIndex) => {
+      for (const lifeform of lifeformUnlocksForCurrentStage(progression, trialIndex)) {
+        expect(allowed).toContain(lifeform);
+      }
     });
   });
 });

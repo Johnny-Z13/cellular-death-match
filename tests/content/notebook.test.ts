@@ -66,8 +66,10 @@ describe('notebook catalogue content', () => {
     expect(catalyst?.displayNotes).toContain(DISCOVERY_NOTES.recipe_nutrient_conduit.body);
     expect(catalyst?.displayRecipe).toBe('Protocol: Nutrient + Water → Conduit');
     expect(view.entries.find((entry) => entry.id === 'lab_note_water_carries')?.discovered).toBe(true);
-    expect(view.discoveredCount).toBe(6);
-    expect(view.entries).toHaveLength(6);
+    expect(view.entries.find((entry) => entry.id === 'lifeform_splitter')?.discovered).toBe(true);
+    expect(view.entries.find((entry) => entry.id === 'lifeform_bruiser')).toBeUndefined();
+    expect(view.discoveredCount).toBe(5);
+    expect(view.entries).toHaveLength(5);
   });
 
   it('marks freshly discovered entries as fresh for notebook highlighting', () => {

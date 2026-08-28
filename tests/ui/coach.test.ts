@@ -114,6 +114,12 @@ describe('onboarding coach', () => {
     expect(mainSource).toContain("advanceDiscoveryProgression({ breedIds: ['bloom_mass'] }, { breed: 'stabilized' });");
   });
 
+  it('restores banked Case specimens when a reload starts the authored trials again', () => {
+    expect(mainSource).toContain('const availableBreeds = run.getState().fightIndex < COMMON_COLD_CASE.trials.length');
+    expect(mainSource).toContain(".filter((record) => record.stage === 'stabilized')");
+    expect(mainSource).toContain('lifeformUnlocksForCurrentRun(\n    stagedLifeforms,\n    currentRunLoadout,\n    availableBreeds,');
+  });
+
   it('publishes the HUD bottom edge so the coach never overlaps a wrapped HUD', () => {
     expect(mainSource).toContain("layout.style.setProperty('--hud-bottom'");
     expect(mainSource).toContain('new ResizeObserver(publishHudBottom)');

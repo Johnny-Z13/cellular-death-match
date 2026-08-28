@@ -14,12 +14,18 @@ describe('organic unlock cadence', () => {
     expect(progression.unlockedTools).toEqual([
       'egg', 'nutrient', 'toxin', 'water', 'paste', 'agitate',
     ]);
-    expect(progression.unlockedLifeforms).toEqual(['swarmlet', 'bruiser', 'splitter', 'bloom_mass']);
+    expect(progression.unlockedLifeforms).toEqual(['swarmlet', 'bloom_mass']);
+
+    progression = updateDiscoveryProgression(progression, {
+      noteIds: ['recipe_bitter_bloom'],
+    });
+    expect(progression.unlockedLifeforms).toEqual(['swarmlet', 'bruiser', 'bloom_mass']);
 
     progression = updateDiscoveryProgression(progression, {
       noteIds: ['recipe_nutrient_conduit'],
     });
     expect(progression.unlockedTools).toContain('salt');
+    expect(progression.unlockedLifeforms).toEqual(['swarmlet', 'bruiser', 'splitter', 'bloom_mass']);
 
     progression = updateDiscoveryProgression(progression, {
       noteIds: ['recipe_salt_water_crystal'],

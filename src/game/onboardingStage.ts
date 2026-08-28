@@ -15,15 +15,15 @@ export const FIRST_CASE_STAGE_TOOLS: readonly (readonly ProgressionToolId[])[] =
   ['egg', 'nutrient', 'toxin', 'water', 'paste', 'salt', 'agitate'],
 ];
 
-// The authored Case is the runtime authority for specimens as well as tools.
-// Persistent research may know about a larger legacy bundle, but those strains
-// stay in the freezer until the Professor has introduced the relevant Trial.
+// The authored Case controls when an earned specimen may enter the current
+// trial. The progression state still controls whether the genome was actually
+// decoded, so ending an experiment early cannot grant the next organism.
 export const FIRST_CASE_STAGE_LIFEFORMS: readonly (readonly ProgressionLifeformId[])[] = [
   ONBOARDING_STAGE_LIFEFORMS,
   ['swarmlet', 'bloom_mass'],
-  ['swarmlet', 'bloom_mass'],
-  ['swarmlet', 'bloom_mass'],
-  ['swarmlet', 'bloom_mass'],
+  ['swarmlet', 'bruiser', 'bloom_mass'],
+  ['swarmlet', 'bruiser', 'splitter', 'bloom_mass'],
+  ['swarmlet', 'bruiser', 'splitter', 'mirror', 'bloom_mass'],
 ];
 
 export interface OnboardingBeat {
@@ -149,7 +149,10 @@ export function lifeformUnlocksForCurrentStage(
   _bloomCreatedInCurrentDish = progression.discoveredBreedIds.includes('bloom_mass'),
 ): readonly ProgressionLifeformId[] {
   const authoredLifeforms = FIRST_CASE_STAGE_LIFEFORMS[fightIndex];
-  if (authoredLifeforms) return authoredLifeforms;
+  if (authoredLifeforms) {
+    const earned = new Set(progression.unlockedLifeforms);
+    return authoredLifeforms.filter((lifeform) => earned.has(lifeform));
+  }
   return progression.unlockedLifeforms;
 }
 

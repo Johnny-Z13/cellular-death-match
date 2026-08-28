@@ -22,7 +22,7 @@ describe('genome decode transitions', () => {
     expect(observed.unlockedLifeforms).not.toContain('bloom_mass');
   });
 
-  it('decodes a stabilized breed and foundational genomes made newly seedable by it', () => {
+  it('decodes only the stabilized organism after the opening dish', () => {
     const observed = updateDiscoveryProgression(
       createDiscoveryProgression(),
       { breedIds: ['bloom_mass'] },
@@ -37,9 +37,35 @@ describe('genome decode transitions', () => {
     );
 
     expect(genomeDecodeEventsForProgressionChange(observed, stabilized)).toEqual([
-      { id: 'bruiser', reason: 'research-unlock' },
-      { id: 'splitter', reason: 'research-unlock' },
       { id: 'bloom_mass', reason: 'stabilized' },
+    ]);
+  });
+
+  it('decodes Bruiser and Splitter one at a time from matching protocols', () => {
+    const bloomed = updateDiscoveryProgression(
+      createDiscoveryProgression(),
+      { breedIds: ['bloom_mass'] },
+      '2026-08-28T10:00:00.000Z',
+      { breed: 'stabilized' },
+    );
+    const pressured = updateDiscoveryProgression(
+      bloomed,
+      { noteIds: ['recipe_bitter_bloom'] },
+      '2026-08-28T10:05:00.000Z',
+      { note: 'understood' },
+    );
+    const carried = updateDiscoveryProgression(
+      pressured,
+      { noteIds: ['recipe_nutrient_conduit'] },
+      '2026-08-28T10:10:00.000Z',
+      { note: 'understood' },
+    );
+
+    expect(genomeDecodeEventsForProgressionChange(bloomed, pressured)).toEqual([
+      { id: 'bruiser', reason: 'research-unlock' },
+    ]);
+    expect(genomeDecodeEventsForProgressionChange(pressured, carried)).toEqual([
+      { id: 'splitter', reason: 'research-unlock' },
     ]);
   });
 

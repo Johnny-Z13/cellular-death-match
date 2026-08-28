@@ -1369,10 +1369,19 @@ function currentLifeformUnlocks(): readonly ProgressionLifeformId[] {
   const phase = run.getState().phase;
   if (phase !== 'arena' && phase !== 'upgrade_pick') return stagedLifeforms;
 
+  // The authored Case has no pre-run loadout screen and can explicitly ask for
+  // a previously banked rare specimen (Bloom Mass). Honour stabilized Case
+  // specimens across reloads/replays; open-lab runs remain loadout-constrained.
+  const availableBreeds = run.getState().fightIndex < COMMON_COLD_CASE.trials.length
+    ? discoveryProgression.breedDiscoveryRecords
+      .filter((record) => record.stage === 'stabilized')
+      .map((record) => record.id)
+    : stabilizedBreedsThisRun;
+
   return lifeformUnlocksForCurrentRun(
     stagedLifeforms,
     currentRunLoadout,
-    stabilizedBreedsThisRun,
+    availableBreeds,
   );
 }
 

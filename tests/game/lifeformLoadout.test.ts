@@ -13,13 +13,11 @@ describe('lifeformUnlocksForCurrentRun', () => {
     ]);
   });
 
-  it('surfaces the first Bloom unlock bundle in the current run tray', () => {
-    const staged: ProgressionLifeformId[] = ['swarmlet', 'bruiser', 'splitter', 'bloom_mass'];
+  it('surfaces a newly stabilized Bloom in the current run tray', () => {
+    const staged: ProgressionLifeformId[] = ['swarmlet', 'bloom_mass'];
 
     expect(lifeformUnlocksForCurrentRun(staged, ['swarmlet'], ['bloom_mass'])).toEqual([
       'swarmlet',
-      'bruiser',
-      'splitter',
       'bloom_mass',
     ]);
   });
