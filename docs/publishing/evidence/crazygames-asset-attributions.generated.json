@@ -1,20 +1,19 @@
 {
   "schemaVersion": 1,
   "registry": "docs/publishing/evidence/crazygames-asset-attributions.json",
-  "registrySha256": "ff3846d202a853c637c659077a44211e5393385f5031d9b1235fc2dcfc445f21",
+  "registrySha256": "c24223d29a50ffce7f23cc05fec917663aac1acf48b71afb12e3daa99ba0ea88",
   "scanRoots": [
     "public"
   ],
   "summary": {
-    "registeredAssets": 51,
-    "observedAssets": 51,
+    "registeredAssets": 50,
+    "observedAssets": 50,
     "releaseClearedAssets": 0,
     "statusCounts": {
-      "provider-declared": 50,
-      "review-required": 1
+      "provider-declared": 50
     },
     "integrityCounts": {
-      "matched": 51
+      "matched": 50
     },
     "releaseReady": false,
     "releaseBlockers": [
@@ -142,11 +141,6 @@
         "path": "public/art/title-keyart-1024.png",
         "status": "provider-declared",
         "reason": "Provider route declared; evidence and approval pending"
-      },
-      {
-        "path": "public/art/ui/onboarding-pointer.png",
-        "status": "review-required",
-        "reason": "Source, originality, or approval review required"
       },
       {
         "path": "public/audio/generated/ambience_loop.mp3",
@@ -675,22 +669,6 @@
       "integrity": "matched",
       "declaredStatus": "provider-declared",
       "effectiveStatus": "provider-declared"
-    },
-    {
-      "path": "public/art/ui/onboarding-pointer.png",
-      "kind": "image",
-      "sha256": "478667439d41376daa5ffbcd31c93f16aa4bcadd0779cce03c6279f0b2ef69da",
-      "status": "review-required",
-      "creator": "Z13 Labs (AI-generated, inherited from Brickinetic)",
-      "provider": "OpenAI Image Generation",
-      "credit": "Onboarding pointer generated with OpenAI for Brickinetic and reused by Z13 Labs.",
-      "terms": "https://openai.com/policies/row-terms-of-use/; commercial rights to the two screenshot references are not established.",
-      "evidence": "docs/publishing/evidence/onboarding-pointer-provenance.md",
-      "bytes": 46892,
-      "expectedSha256": "478667439d41376daa5ffbcd31c93f16aa4bcadd0779cce03c6279f0b2ef69da",
-      "integrity": "matched",
-      "declaredStatus": "review-required",
-      "effectiveStatus": "review-required"
     },
     {
       "path": "public/audio/generated/ambience_loop.mp3",

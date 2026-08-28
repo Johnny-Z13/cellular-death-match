@@ -280,17 +280,6 @@
       "evidence": "scripts/generate-keyart.mjs"
     },
     {
-      "path": "public/art/ui/onboarding-pointer.png",
-      "kind": "image",
-      "sha256": "478667439d41376daa5ffbcd31c93f16aa4bcadd0779cce03c6279f0b2ef69da",
-      "status": "review-required",
-      "creator": "Z13 Labs (AI-generated, inherited from Brickinetic)",
-      "provider": "OpenAI Image Generation",
-      "credit": "Onboarding pointer generated with OpenAI for Brickinetic and reused by Z13 Labs.",
-      "terms": "https://openai.com/policies/row-terms-of-use/; commercial rights to the two screenshot references are not established.",
-      "evidence": "docs/publishing/evidence/onboarding-pointer-provenance.md"
-    },
-    {
       "path": "public/audio/generated/ambience_loop.mp3",
       "kind": "audio",
       "sha256": "a5cab1f116e956ef24998fe7a386f2cee590b3e6a349196fd472e716110eec02",

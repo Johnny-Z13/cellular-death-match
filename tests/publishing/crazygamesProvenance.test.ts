@@ -93,7 +93,7 @@ describe('CrazyGames asset provenance', () => {
     const credits = readFileSync(creditsPath, 'utf8')
     const observed = registry.scanRoots.flatMap(listMedia).sort()
 
-    expect(observed).toHaveLength(51)
+    expect(observed).toHaveLength(50)
     expect(report.summary.observedAssets).toBe(observed.length)
     expect(report.assets.filter((asset) => asset.integrity === 'matched')).toHaveLength(observed.length)
 
@@ -149,15 +149,15 @@ describe('CrazyGames asset provenance', () => {
     }
   })
 
-  it('keeps unresolved release decisions explicit', () => {
+  it('keeps unresolved release decisions explicit without importing unused assets', () => {
     const registry = JSON.parse(readFileSync(registryPath, 'utf8')) as Registry
     const report = JSON.parse(readFileSync(reportPath, 'utf8')) as Report
     const nonCleared = registry.assets.filter((asset) => asset.status !== 'cleared')
-    const pointer = registry.assets.find((asset) => asset.path === 'public/art/ui/onboarding-pointer.png')
 
     expect(report.summary.releaseReady).toBe(false)
     expect(report.summary.releaseBlockers).toHaveLength(nonCleared.length)
-    expect(pointer?.status).toBe('review-required')
-    expect(pointer?.evidence).toBe('docs/publishing/evidence/onboarding-pointer-provenance.md')
+    expect(registry.assets).toHaveLength(50)
+    expect(registry.assets.some((asset) => asset.path === 'public/art/ui/onboarding-pointer.png')).toBe(false)
+    expect(registry.assets.filter((asset) => asset.status === 'review-required')).toHaveLength(0)
   })
 })
