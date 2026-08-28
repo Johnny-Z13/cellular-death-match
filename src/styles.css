@@ -6312,12 +6312,12 @@ canvas {
 
 /* ---- Dish-first mobile arena -------------------------------------------
    The culture is the interface. Status compresses into a two-tier mission
-   strip, the specimen fills (and slightly bleeds past) the phone width, and
+   strip, the specimen fills the phone width, and
    the only persistent lower chrome is a clear, thumb-reachable tool dock. */
 @media (max-width: 899px) and (orientation: portrait) {
   .layout[data-screen="arena"] {
-    --mobile-dish-size: min(104vw, calc(100svh - 248px), 800px);
-    --mobile-dish-size: min(104vw, calc(100dvh - 248px), 800px);
+    --mobile-dish-size: min(100vw, calc(100svh - 248px), 800px);
+    --mobile-dish-size: min(100vw, calc(100dvh - 248px), 800px);
     padding:
       calc(76px + env(safe-area-inset-top))
       0
@@ -7433,4 +7433,334 @@ canvas {
 
 .layout[data-screen="arena"] .coach.coach-welcome .coach-portrait img {
   filter: saturate(1.12) contrast(1.2) brightness(0.98);
+}
+
+/* ---- Unified mobile Director rail -------------------------------------
+   Mobile has one status surface: compact telemetry above a persistent Dr. E
+   channel. Authored guidance temporarily replaces the ordinary objective
+   copy inside the same frame instead of stacking a second panel over the dish. */
+.hud-summary,
+.hud-director,
+.hud-director-copy {
+  display: contents;
+}
+
+.hud-director-portrait,
+.hud-director-head,
+.hud-director-title,
+.hud-director-progress {
+  display: none;
+}
+
+.hud-director .hud-objective-row {
+  margin-top: 4px;
+}
+
+@media (max-width: 899px) and (orientation: portrait) {
+  .layout[data-screen="arena"] .hud {
+    height: 104px;
+    min-height: 104px;
+    padding: 6px;
+    overflow: hidden;
+    border-color: rgba(120, 196, 200, 0.3);
+    background:
+      linear-gradient(102deg, rgba(91, 233, 214, 0.075), transparent 58%),
+      rgba(3, 10, 12, 0.94);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.42), 0 0 20px rgba(91, 233, 214, 0.06);
+  }
+
+  .layout[data-screen="arena"] .hud.visible {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 20px minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .layout[data-screen="arena"] .hud-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: center;
+    gap: 4px 10px;
+    min-width: 0;
+    padding: 0 50px 4px 5px;
+    border-bottom: 1px solid rgba(120, 196, 200, 0.14);
+  }
+
+  .layout[data-screen="arena"] .hud-summary .hud-row {
+    display: flex;
+    min-width: 0;
+    align-items: baseline;
+    justify-content: flex-start;
+    gap: 5px;
+  }
+
+  .layout[data-screen="arena"] .hud-summary .hud-key {
+    flex: 0 0 auto;
+    font-size: 6.5px;
+    letter-spacing: 0.1em;
+  }
+
+  .layout[data-screen="arena"] .hud-summary .hud-val {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 8.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .layout[data-screen="arena"] .hud-director {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    min-width: 0;
+    height: 68px;
+    min-height: 68px;
+    overflow: hidden;
+    border-radius: 2px 7px 7px 2px;
+    transition: opacity 140ms ease;
+  }
+
+  .layout[data-screen="arena"] .hud-director-portrait {
+    position: relative;
+    display: block;
+    min-height: 68px;
+    overflow: hidden;
+    border-left: 2px solid var(--bio);
+    background: #020607;
+  }
+
+  .layout[data-screen="arena"] .hud-director-portrait img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 15%;
+    filter: saturate(1.18) contrast(1.2) brightness(1.16);
+    -webkit-mask-image: linear-gradient(90deg, #000 78%, rgba(0, 0, 0, 0.68) 92%, transparent 100%);
+    mask-image: linear-gradient(90deg, #000 78%, rgba(0, 0, 0, 0.68) 92%, transparent 100%);
+  }
+
+  .layout[data-screen="arena"] .hud-director-copy {
+    display: grid;
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    align-content: center;
+    min-width: 0;
+    overflow: hidden;
+    padding: 4px 49px 4px 7px;
+  }
+
+  .layout[data-screen="arena"] .hud-director-head {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--bio-bright);
+    font-family: var(--font-display);
+    font-size: 7px;
+    letter-spacing: 0.14em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .layout[data-screen="arena"] .hud-director-head span:last-child {
+    color: rgba(216, 246, 242, 0.42);
+    font-family: var(--font-mono);
+    letter-spacing: 0.04em;
+  }
+
+  .layout[data-screen="arena"] .hud-director-title {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    color: #f1ffff;
+    font-family: var(--font-serif);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.08;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .layout[data-screen="arena"] .hud-director-progress {
+    display: -webkit-box;
+    min-width: 0;
+    overflow: hidden;
+    color: rgba(226, 250, 247, 0.86);
+    font-size: 8.5px;
+    line-height: 1.15;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .layout[data-screen="arena"] .hud-director .hud-objective-row {
+    display: none;
+  }
+
+  .layout[data-screen="arena"] .hud-director .hud-hint-row {
+    display: block;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .layout[data-screen="arena"] .hud-director .hud-key {
+    display: none;
+  }
+
+  .layout[data-screen="arena"] .hud-director .hud-hint-row {
+    margin-top: 1px;
+  }
+
+  .layout[data-screen="arena"] .hud-director .hud-hint-row .hud-val {
+    display: -webkit-box;
+    width: auto;
+    overflow: hidden;
+    color: rgba(216, 246, 242, 0.66);
+    font-size: 8.5px;
+    line-height: 1.2;
+    text-align: left;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .layout[data-screen="arena"].coach-active .hud-director {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .layout[data-screen="arena"] .coach:not(.coach-welcome),
+  .layout[data-screen="arena"] .coach.coach-prompt:not(.coach-welcome),
+  .layout[data-screen="arena"] .coach.coach-intro:not(.coach-welcome),
+  .layout[data-screen="arena"] .coach.coach-success:not(.coach-welcome) {
+    inset: auto max(6px, env(safe-area-inset-right)) auto max(6px, env(safe-area-inset-left));
+    top: calc(max(5px, env(safe-area-inset-top)) + 30px);
+    width: auto;
+    height: 68px;
+    min-height: 68px;
+    box-sizing: border-box;
+    grid-template-columns: 52px minmax(0, 1fr);
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 2px 7px 7px 2px;
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .layout[data-screen="arena"] .coach:not(.coach-welcome) .coach-portrait,
+  .layout[data-screen="arena"] .coach.coach-success:not(.coach-welcome) .coach-portrait {
+    min-height: 68px;
+    border-left: 2px solid var(--bio);
+  }
+
+  .layout[data-screen="arena"] .coach:not(.coach-welcome) .coach-copy {
+    min-height: 68px;
+    padding: 4px 49px 4px 7px;
+  }
+
+  .layout[data-screen="arena"] .coach:not(.coach-welcome) .coach-title,
+  .layout[data-screen="arena"] .coach.coach-success:not(.coach-welcome) .coach-title {
+    font-size: 15px;
+    line-height: 1.08;
+  }
+
+  .layout[data-screen="arena"] .coach:not(.coach-welcome) .coach-body {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 8.5px;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .layout[data-screen="arena"] .coach:not(.coach-welcome) .coach-skip {
+    position: absolute;
+    right: 1px;
+    top: 12px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .layout[data-screen="arena"] .options-button {
+    top: calc(max(5px, env(safe-area-inset-top)) + 6px);
+    right: max(10px, calc(env(safe-area-inset-right) + 10px));
+  }
+}
+
+@media (max-width: 899px) and (orientation: portrait) and (max-height: 700px) {
+  .layout[data-screen="arena"] .hud {
+    height: 82px;
+    min-height: 82px;
+  }
+
+  .layout[data-screen="arena"] .hud.visible {
+    grid-template-rows: 17px minmax(0, 1fr);
+    gap: 3px;
+  }
+
+  .layout[data-screen="arena"] .hud-summary {
+    padding-bottom: 2px;
+  }
+
+  .layout[data-screen="arena"] .hud-director {
+    grid-template-columns: 44px minmax(0, 1fr);
+    height: 50px;
+    min-height: 50px;
+  }
+
+  .layout[data-screen="arena"] .hud-director-portrait {
+    min-height: 50px;
+  }
+
+  .layout[data-screen="arena"] .hud-director-copy {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    padding-block: 3px;
+  }
+
+  .layout[data-screen="arena"] .hud-director-title {
+    font-size: 11.5px;
+  }
+
+  .layout[data-screen="arena"] .hud-director-progress {
+    font-size: 8px;
+    -webkit-line-clamp: 1;
+  }
+
+  .layout[data-screen="arena"] .hud-director .hud-hint-row {
+    display: none;
+  }
+
+  .layout[data-screen="arena"] .coach:not(.coach-welcome),
+  .layout[data-screen="arena"] .coach.coach-prompt:not(.coach-welcome),
+  .layout[data-screen="arena"] .coach.coach-intro:not(.coach-welcome),
+  .layout[data-screen="arena"] .coach.coach-success:not(.coach-welcome) {
+    top: calc(max(5px, env(safe-area-inset-top)) + 25px);
+    height: 50px;
+    min-height: 50px;
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  .layout[data-screen="arena"] .coach:not(.coach-welcome) .coach-portrait,
+  .layout[data-screen="arena"] .coach.coach-success:not(.coach-welcome) .coach-portrait,
+  .layout[data-screen="arena"] .coach:not(.coach-welcome) .coach-copy {
+    min-height: 50px;
+  }
+
+  .layout[data-screen="arena"] .coach:not(.coach-welcome) .coach-copy {
+    padding-block: 3px;
+  }
+
+  .layout[data-screen="arena"] .coach:not(.coach-welcome) .coach-title,
+  .layout[data-screen="arena"] .coach.coach-success:not(.coach-welcome) .coach-title {
+    font-size: 12px;
+  }
+
+  .layout[data-screen="arena"] .coach:not(.coach-welcome) .coach-body,
+  .layout[data-screen="arena"] .coach:not(.coach-welcome) .coach-step {
+    display: none;
+  }
 }

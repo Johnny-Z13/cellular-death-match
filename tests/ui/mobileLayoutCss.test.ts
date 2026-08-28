@@ -221,7 +221,7 @@ describe('mobile layout CSS', () => {
 
   it('makes the portrait arena dish-first with a compact specimen dock', () => {
     expect(css).toContain('/* ---- Dish-first mobile arena');
-    expect(css).toContain('--mobile-dish-size: min(104vw, calc(100dvh - 248px), 800px)');
+    expect(css).toContain('--mobile-dish-size: min(100vw, calc(100dvh - 248px), 800px)');
     expect(css).toContain('grid-template-columns: repeat(3, minmax(0, 1fr))');
     expect(css).toContain('.layout[data-screen="arena"] .fullscreen-button');
     expect(css).toContain('flex: 1 0 calc((100vw - 27px) / 4)');

@@ -183,6 +183,8 @@ export function createScreens(): Screens {
   const hudEquilibrium = get('hud-equilibrium');
   const hudEco       = get('hud-eco');
   const hudObjective = get('hud-objective');
+  const hudDirectorTitle = get('hud-director-title');
+  const hudDirectorProgress = get('hud-director-progress');
   const hudHint      = get('hud-hint');
   const hudUpgrades  = get('hud-upgrades');
   const toolSummary  = get('tool-summary');
@@ -708,15 +710,19 @@ export function createScreens(): Screens {
       hudObjective.textContent = info.objectiveComplete
         ? `${info.objectiveName}: complete — finish when ready`
         : `${info.objectiveName}: ${info.objectiveSummary}`;
+      hudDirectorTitle.textContent = info.objectiveName;
+      hudDirectorProgress.textContent = info.objectiveComplete
+        ? 'Complete — finish when ready'
+        : info.objectiveSummary;
       hudHint.textContent = info.objectiveComplete
-        ? 'Dr. E: That is the result. Press End to bank it, or keep cultivating.'
-        : `Dr. E: ${info.objectiveHint}`;
+        ? 'That is the result. Press End to bank it, or keep cultivating.'
+        : info.objectiveHint;
       hudUpgrades.textContent = info.upgrades.length === 0 ? 'none' : info.upgrades.join(', ');
     },
     setEquilibrium(info) {
       hudEquilibrium.textContent = info.achieved
-        ? info.biomeName ? `Equilibrium: ${info.biomeName}` : 'Equilibrium reached'
-        : `Equilibrium ${Math.round(Math.max(0, Math.min(1, info.progress)) * 100)}%`;
+        ? info.biomeName ?? 'Stable'
+        : `${Math.round(Math.max(0, Math.min(1, info.progress)) * 100)}%`;
       hud.classList.toggle('hud-equilibrium-achieved', info.achieved);
     },
     updateNotebook(view) {

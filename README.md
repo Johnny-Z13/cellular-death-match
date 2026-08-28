@@ -52,6 +52,7 @@ Every culture's pixels glow in their own color: the dish renders with a bloom pa
 
 ```bash
 npm install
+npx playwright install chromium
 npm run dev -- --port 5199 --strictPort
 ```
 
@@ -78,12 +79,21 @@ http://192.168.1.144:5178/
 ## Scripts
 
 ```bash
-npm test          # Run the Vitest suite
-npm run build    # Typecheck and create a production build
+npm test             # Run the Vitest unit/integration suite
+npm run test:e2e     # Start Vite and run the Playwright browser harness
+npm run qa:mobile    # Run the five-layout responsive Playwright suite
+npm run test:all     # Vitest + Playwright + production build
+npm run build        # Typecheck and create a production build
 npm run typecheck
-npm run qa:mobile # With the dev server running, verify five responsive layouts in Chrome
 npm run preview
 ```
+
+The Playwright harness uses isolated fresh-save browser contexts. It verifies
+the five supported viewport classes, runtime errors, options focus and bounds,
+core dish interactions, reduced motion, and the complete first-discovery path
+from Trial 1 through selecting and placing Bloom Mass in Trial 2. Failure
+screenshots, video, and traces are written to the ignored `test-results/`
+directory; the HTML report is written to ignored `playwright-report/`.
 
 ## Project Structure
 
@@ -116,8 +126,7 @@ simulation behavior remains unchanged.
 Generated local files are ignored via `.gitignore`, including `dist/`, `node_modules/`, local browser artifacts, and local agent/tool state. Before publishing, run:
 
 ```bash
-npm test
-npm run build
+npm run test:all
 git status --short
 ```
 
