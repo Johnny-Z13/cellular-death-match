@@ -15,9 +15,9 @@ import type { ResearchNotebookView } from '../game/researchNotebook';
 import type { StudyChoice } from '../game/objectivePool';
 import type { DishExitState } from '../game/dishExitAction';
 
-type ScreenName = 'title' | 'pick' | 'end' | 'hud' | 'notebook';
+type ScreenName = 'title' | 'method-intro' | 'pick' | 'end' | 'hud' | 'notebook';
 type AppScreenName = ScreenName | 'loadout' | 'objective';
-type LayoutScreenName = 'title' | 'loadout' | 'pick' | 'objective' | 'end' | 'notebook' | 'arena';
+type LayoutScreenName = 'title' | 'loadout' | 'method-intro' | 'pick' | 'objective' | 'end' | 'notebook' | 'arena';
 export type ToolId = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' | 'paste';
 export type ButtonHintLevel = 'hint' | 'ready';
 export type ButtonHintTarget = ToolId | 'notebook';
@@ -115,10 +115,12 @@ export interface Screens {
   updateLabReport(report: LabReport | null): void;
   updateCaseProgress(info: CaseProgressInfo): void;
   onTitleStart(handler: () => void): void;
+  onMethodIntroContinue(handler: () => void): void;
   onEndRestart(handler: () => void): void;
   onNotebookOpen(handler: () => void): void;
   onNotebookClose(handler: () => void): void;
   onFullscreenOpen(handler: () => void): void;
+  setFullscreenAvailable(available: boolean): void;
   setFullscreenActive(active: boolean): void;
   onOptionsOpen(handler: () => void): void;
   onOptionsClose(handler: () => void): void;
@@ -149,6 +151,7 @@ export function createScreens(): Screens {
   const layout = maybeLayout;
   const screenTitle  = get('screen-title');
   const screenLoadout = get('screen-loadout');
+  const screenMethodIntro = get('screen-method-intro');
   const screenPick   = get('screen-pick');
   const screenObjective = get('screen-objective');
   const screenEnd    = get('screen-end');
@@ -163,8 +166,8 @@ export function createScreens(): Screens {
   const titleGenomeProgress = get('title-genome-progress');
   const titleGenomeTrack = get('title-genome-track');
   const titleGenomeLead = get('title-genome-lead');
+  const methodIntroContinue = get('method-intro-continue') as HTMLButtonElement;
   const pickCaseProgress = get('pick-case-progress');
-  const methodHandoff = get('method-handoff');
   const notebookButton = get('notebook-button') as HTMLButtonElement;
   const fullscreenButton = get('fullscreen-button') as HTMLButtonElement;
   const optionsButton = get('options-button') as HTMLButtonElement;
@@ -269,6 +272,7 @@ export function createScreens(): Screens {
   const elFor: Record<AppScreenName, HTMLElement> = {
     title: screenTitle,
     loadout: screenLoadout,
+    'method-intro': screenMethodIntro,
     pick: screenPick,
     objective: screenObjective,
     end: screenEnd,
@@ -280,6 +284,7 @@ export function createScreens(): Screens {
     let screen: LayoutScreenName = 'arena';
     if (screenTitle.classList.contains('visible')) screen = 'title';
     else if (screenLoadout.classList.contains('visible')) screen = 'loadout';
+    else if (screenMethodIntro.classList.contains('visible')) screen = 'method-intro';
     else if (screenPick.classList.contains('visible')) screen = 'pick';
     else if (screenObjective.classList.contains('visible')) screen = 'objective';
     else if (screenEnd.classList.contains('visible')) screen = 'end';
@@ -404,11 +409,11 @@ export function createScreens(): Screens {
   setMobileDrawer('none');
   syncLayoutScreen();
 
-  type NotebookTab = 'study' | 'log' | 'atlas';
+  type NotebookTab = 'atlas' | 'study' | 'log';
   const notebookTabs: Array<{ id: NotebookTab; button: HTMLButtonElement; page: HTMLElement }> = [
+    { id: 'atlas', button: notebookTabAtlas, page: notebookAtlas },
     { id: 'study', button: notebookTabStudy, page: notebookStudy },
     { id: 'log', button: notebookTabLog, page: notebookList },
-    { id: 'atlas', button: notebookTabAtlas, page: notebookAtlas },
   ];
 
   function setNotebookTab(tab: NotebookTab, focus = false): void {
@@ -437,7 +442,7 @@ export function createScreens(): Screens {
       setNotebookTab(notebookTabs[nextIndex]!.id, true);
     });
   }
-  setNotebookTab('study');
+  setNotebookTab('atlas');
 
   function syncToolboxOverflow(): void {
     const overflow = toolbox.scrollWidth > toolbox.clientWidth + 4;
@@ -504,6 +509,7 @@ export function createScreens(): Screens {
       if (
         name === 'title'
         || name === 'loadout'
+        || name === 'method-intro'
         || name === 'pick'
         || name === 'objective'
         || name === 'end'
@@ -517,17 +523,19 @@ export function createScreens(): Screens {
         ? titleStart
         : name === 'loadout'
           ? screenLoadout.querySelector<HTMLButtonElement>('button')
-          : name === 'pick'
-            ? pickChoices.querySelector<HTMLButtonElement>('button')
-            : name === 'objective'
-              ? objectiveChoices.querySelector<HTMLButtonElement>('button')
-              : name === 'end'
-                ? endRestart
-                : name === 'notebook'
-                  ? notebookClose
-                  : name === 'hud'
-                    ? document.getElementById('game')
-                    : null;
+          : name === 'method-intro'
+            ? methodIntroContinue
+            : name === 'pick'
+              ? pickChoices.querySelector<HTMLButtonElement>('button')
+              : name === 'objective'
+                ? objectiveChoices.querySelector<HTMLButtonElement>('button')
+                : name === 'end'
+                  ? endRestart
+                  : name === 'notebook'
+                    ? notebookClose
+                    : name === 'hud'
+                      ? document.getElementById('game')
+                      : null;
       window.requestAnimationFrame(() => focusTarget?.focus({ preventScroll: true }));
     },
     hide(name) {
@@ -1018,16 +1026,13 @@ export function createScreens(): Screens {
         const name = document.createElement('div');
         name.className = 'pick-card-name';
         name.textContent = c.def.name;
-        const kind = document.createElement('span');
-        kind.className = 'pick-card-kind';
-        kind.textContent = 'Method bonus';
         const desc = document.createElement('div');
         desc.className = 'pick-card-desc';
         desc.textContent = c.def.description;
         const action = document.createElement('span');
         action.className = 'pick-card-action';
-        action.textContent = 'Choose this method';
-        btn.append(kind, name, desc, action);
+        action.textContent = 'Choose';
+        btn.append(name, desc, action);
         btn.addEventListener('click', () => onPick(c.id));
         pickChoices.append(btn);
       }
@@ -1119,7 +1124,6 @@ export function createScreens(): Screens {
       pickCaseProgress.textContent = info.openLabUnlocked
         ? 'Case 01 sealed · Open Lab unlocked'
         : `Trial logged · ${completed} / ${info.caseDef.trials.length} sealed`;
-      methodHandoff.hidden = info.activeTrialIndex !== 0;
       titleGenomeProgress.textContent = `${info.archive.decodedGenomes} / ${info.archive.totalGenomes} genomes decoded`;
       titleGenomeTrack.style.setProperty('--genome-total', String(info.archive.totalGenomes));
       titleGenomeTrack.replaceChildren(...Array.from({ length: info.archive.totalGenomes }, (_, index) => {
@@ -1151,6 +1155,9 @@ export function createScreens(): Screens {
     onTitleStart(handler) {
       titleStart.addEventListener('click', handler);
     },
+    onMethodIntroContinue(handler) {
+      methodIntroContinue.addEventListener('click', handler);
+    },
     onEndRestart(handler) {
       endRestart.addEventListener('click', handler);
     },
@@ -1162,6 +1169,9 @@ export function createScreens(): Screens {
     },
     onFullscreenOpen(handler) {
       fullscreenButton.addEventListener('click', handler);
+    },
+    setFullscreenAvailable(available) {
+      fullscreenButton.hidden = !available;
     },
     setFullscreenActive(active) {
       fullscreenButton.setAttribute('aria-label', active ? 'Exit full screen' : 'Enter full screen');

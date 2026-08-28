@@ -2311,35 +2311,35 @@ canvas {
 }
 
 /* ---- Presentation (full screen) mode ----------------------------------- */
-.layout.presentation-mode {
+.layout[data-screen="arena"].presentation-mode {
   padding: 0;
   min-height: 100svh;
   overflow: hidden;
   background: #000;
 }
 
-.presentation-mode .hud,
-.presentation-mode .toolbox,
-.presentation-mode .life-panel,
-.presentation-mode .ticker,
-.presentation-mode .mobile-shell,
-.presentation-mode .notebook-button,
-.presentation-mode .options-button,
-.presentation-mode .options-scrim,
-.presentation-mode .debug,
-.presentation-mode .fx-banner,
-.presentation-mode .fx-toasts,
-.presentation-mode .coach,
-.presentation-mode .screen {
+.layout[data-screen="arena"].presentation-mode .hud,
+.layout[data-screen="arena"].presentation-mode .toolbox,
+.layout[data-screen="arena"].presentation-mode .life-panel,
+.layout[data-screen="arena"].presentation-mode .ticker,
+.layout[data-screen="arena"].presentation-mode .mobile-shell,
+.layout[data-screen="arena"].presentation-mode .notebook-button,
+.layout[data-screen="arena"].presentation-mode .options-button,
+.layout[data-screen="arena"].presentation-mode .options-scrim,
+.layout[data-screen="arena"].presentation-mode .debug,
+.layout[data-screen="arena"].presentation-mode .fx-banner,
+.layout[data-screen="arena"].presentation-mode .fx-toasts,
+.layout[data-screen="arena"].presentation-mode .coach,
+.layout[data-screen="arena"].presentation-mode .screen {
   display: none !important;
 }
 
-.presentation-mode .dish-frame,
-.presentation-mode .dish-glass {
+.layout[data-screen="arena"].presentation-mode .dish-frame,
+.layout[data-screen="arena"].presentation-mode .dish-glass {
   display: none;
 }
 
-.presentation-mode .fullscreen-button {
+.layout[data-screen="arena"].presentation-mode .fullscreen-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2358,13 +2358,13 @@ canvas {
   line-height: 1;
 }
 
-.presentation-mode .fullscreen-button::before {
+.layout[data-screen="arena"].presentation-mode .fullscreen-button::before {
   content: "←";
   font-size: 16px;
   font-weight: 800;
 }
 
-.layout.presentation-mode canvas {
+.layout[data-screen="arena"].presentation-mode canvas {
   width: min(100svw, 100svh);
   height: min(100svw, 100svh);
   max-width: none;
@@ -2977,36 +2977,8 @@ canvas {
 .active-hypothesis strong { color: var(--ink); font: 400 13px/1.35 var(--font-serif); }
 .title-card .title-start-button { display: flex; margin-inline: auto; }
 
-.method-card { width: min(calc(100vw - 36px), 760px); }
-.method-eyebrow { color: var(--amber); }
-.method-sub { margin: -4px auto 12px; color: var(--ink-dim); font-size: 11px; line-height: 1.4; }
-.method-handoff {
-  max-width: 58ch;
-  margin: 0 auto 12px;
-  padding: 10px 12px;
-  border-left: 2px solid var(--bio);
-  background: rgba(91, 233, 214, 0.07);
-  color: rgba(226, 246, 245, 0.8);
-  font: 11px/1.45 var(--font-mono);
-  text-align: left;
-}
-.method-handoff strong { color: var(--bio-bright); }
-.method-choice-instruction {
-  display: flex;
-  justify-content: center;
-  align-items: baseline;
-  gap: 8px;
-  color: var(--ink-dim);
-  font: 9px/1.2 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.method-choice-instruction b {
-  padding: 3px 6px;
-  border: 1px solid rgba(240, 195, 90, 0.5);
-  border-radius: 999px;
-  color: var(--amber);
-}
+.method-card { width: min(calc(100vw - 36px), 680px); }
+.method-sub { margin: -4px auto 4px; color: var(--ink-dim); font-size: 11px; line-height: 1.4; }
 .case-result-strip { margin: 0 auto 15px; max-width: 430px; }
 .case-result-dots { display: flex; gap: 6px; }
 .case-result-dots i { width: 8px; height: 8px; border: 1px solid var(--hairline); border-radius: 50%; }
@@ -4023,15 +3995,12 @@ canvas {
   color: #fff;
 }
 
-.pick-card-kind,
 .pick-card-action {
   font-family: var(--font-mono);
   font-size: 8px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
-
-.pick-card-kind { color: var(--amber); }
 
 .pick-card-action {
   margin-top: auto;
@@ -4227,6 +4196,10 @@ canvas {
 }
 
 @media (min-width: 700px) {
+  .screen-card.method-card {
+    width: min(calc(100vw - 36px), 860px);
+  }
+
   .pick-choices {
     /* Flex, not grid: the screen card shrink-wraps its content, so an
        auto-fit grid collapses to one column. Flex sizes from the cards
@@ -5994,6 +5967,10 @@ canvas {
   pointer-events: none;
 }
 
+.layout:not([data-screen="arena"]) #dbg-fullscreen-mode {
+  display: none;
+}
+
 .layout[data-screen="title"] .options-button {
   right: max(12px, env(safe-area-inset-right));
   z-index: 11 !important;
@@ -7516,9 +7493,150 @@ canvas {
   }
 }
 
+/* ---- Between-trial Method introduction ------------------------------- */
+/* Dr. E defines the system in one focused beat; the next screen is only the
+   decision. Keeping the character art full-bleed prevents the dish from
+   flashing through during the hand-off. */
+.method-intro-screen {
+  z-index: var(--z-dialog);
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+  padding:
+    max(24px, env(safe-area-inset-top))
+    max(24px, env(safe-area-inset-right))
+    max(28px, env(safe-area-inset-bottom))
+    max(24px, env(safe-area-inset-left));
+  background: #020607;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  isolation: isolate;
+}
+
+.method-intro-professor,
+.method-intro-vignette {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+.method-intro-professor { z-index: 0; }
+
+.method-intro-professor img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 18%;
+  filter: saturate(1.08) contrast(1.16) brightness(0.72);
+  animation: professor-welcome-breathe 15s ease-in-out infinite alternate;
+}
+
+.method-intro-vignette {
+  z-index: 1;
+  background:
+    linear-gradient(180deg, rgba(1, 6, 8, 0.02) 25%, rgba(1, 7, 9, 0.42) 55%, #020708 94%),
+    radial-gradient(circle at 52% 31%, rgba(25, 155, 163, 0.11), transparent 52%);
+}
+
+.method-intro-copy {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 10px;
+  width: min(100%, 560px);
+  padding: 22px 24px 24px;
+  border: 1px solid rgba(120, 196, 200, 0.26);
+  border-left: 2px solid var(--bio);
+  border-radius: 4px 18px 18px 4px;
+  background:
+    linear-gradient(115deg, rgba(91, 233, 214, 0.09), transparent 58%),
+    rgba(2, 10, 12, 0.86);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.58), 0 0 30px rgba(91, 233, 214, 0.08);
+  -webkit-backdrop-filter: blur(16px) saturate(118%);
+  backdrop-filter: blur(16px) saturate(118%);
+  animation: card-rise 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.method-intro-kicker {
+  margin: 0;
+  color: var(--bio-bright);
+  font: 9px/1.2 var(--font-display);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.method-intro-copy h2 {
+  margin: 0;
+  color: #f5ffff;
+  font: 400 clamp(38px, 8vw, 58px)/0.98 var(--font-serif);
+  letter-spacing: -0.035em;
+}
+
+.method-intro-copy > p:not(.method-intro-kicker) {
+  max-width: 48ch;
+  margin: 0;
+  color: rgba(226, 250, 247, 0.78);
+  font: 12px/1.55 var(--font-mono);
+}
+
+.method-intro-continue {
+  justify-self: start;
+  min-height: 48px;
+  margin-top: 6px;
+}
+
+@media (min-width: 900px) {
+  .method-intro-screen {
+    align-items: center;
+    justify-content: flex-end;
+    padding-inline: max(6vw, 48px);
+  }
+
+  .method-intro-professor img { object-position: 30% 18%; }
+
+  .method-intro-vignette {
+    background:
+      linear-gradient(90deg, rgba(1, 7, 9, 0.05) 28%, rgba(1, 7, 9, 0.72) 66%, #020708 100%),
+      radial-gradient(circle at 30% 42%, rgba(25, 155, 163, 0.12), transparent 48%);
+  }
+}
+
+@media (max-width: 899px) and (orientation: portrait) {
+  .method-intro-screen {
+    padding:
+      max(14px, env(safe-area-inset-top))
+      max(14px, env(safe-area-inset-right))
+      calc(22px + env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left));
+  }
+
+  .method-intro-copy {
+    gap: 9px;
+    padding: 18px 19px 19px;
+  }
+
+  .method-intro-copy h2 { font-size: clamp(34px, 10vw, 46px); }
+  .method-intro-copy > p:not(.method-intro-kicker) { font-size: 11px; line-height: 1.45; }
+  .method-intro-continue { justify-self: stretch; justify-content: center; width: 100%; }
+}
+
+@media (max-width: 899px) and (orientation: portrait) and (max-height: 700px) {
+  .method-intro-screen { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+  .method-intro-copy { gap: 6px; padding: 13px 15px 14px; }
+  .method-intro-copy h2 { font-size: clamp(30px, 9vw, 38px); }
+  .method-intro-copy > p:not(.method-intro-kicker) { font-size: 10px; line-height: 1.4; }
+  .method-intro-continue { min-height: 44px; margin-top: 2px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .method-intro-professor img,
+  .method-intro-copy { animation: none; }
+}
+
 /* The between-trial Method choice is a compact, centered lab-bench dialog on
-   phones. It keeps the completed dish legible behind it and makes the single
-   required decision explicit without turning the pause into another full-screen beat. */
+   phones. With the definition handled by Dr. E, this surface contains only
+   progress, the decision, and the three available adjustments. */
 @media (max-width: 699px) {
   #screen-pick {
     align-items: center;
@@ -7546,18 +7664,15 @@ canvas {
     box-shadow: 0 -18px 56px rgba(0, 0, 0, 0.58), 0 0 28px rgba(91, 233, 214, 0.1);
   }
 
-  #screen-pick .title-eyebrow { margin-bottom: 7px; }
   #screen-pick .case-result-strip { margin-bottom: 9px; }
   #screen-pick .screen-title { margin-bottom: 7px; font-size: 22px; }
-  #screen-pick .method-sub { margin-bottom: 9px; }
-  #screen-pick .method-handoff { margin-bottom: 9px; padding: 8px 10px; font-size: 9.5px; }
-  #screen-pick .pick-choices { gap: 7px; margin-top: 10px; }
+  #screen-pick .method-sub { margin-bottom: 4px; }
+  #screen-pick .pick-choices { gap: 7px; margin-top: 9px; }
 
   #screen-pick .pick-card {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
-      "kind action"
       "name action"
       "desc action";
     gap: 3px 10px;
@@ -7566,7 +7681,6 @@ canvas {
     border-radius: 10px;
   }
 
-  #screen-pick .pick-card-kind { grid-area: kind; }
   #screen-pick .pick-card-name { grid-area: name; }
   #screen-pick .pick-card-desc { grid-area: desc; font-size: 10.5px; }
   #screen-pick .pick-card-action {

@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/src/styles.css?v=20260828-ui-polish-2" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260828-atlas-first-1" />
   </head>
   <body>
     <main class="layout" data-screen="title">
@@ -259,19 +259,29 @@
         <div id="loadout-mount" class="screen-card"></div>
       </div>
 
+      <div id="screen-method-intro" class="screen method-intro-screen" role="dialog" aria-modal="true" aria-labelledby="method-intro-title">
+        <figure class="method-intro-professor" aria-hidden="true">
+          <img src="/art/professor/professor-emergent-v1.png" width="633" height="760" alt="" />
+        </figure>
+        <div class="method-intro-vignette" aria-hidden="true"></div>
+        <section class="method-intro-copy">
+          <p class="method-intro-kicker">Dr. E. Mergent · Trial logged</p>
+          <h2 id="method-intro-title">Well done.</h2>
+          <p>A Method is one lab adjustment that stays active for the rest of this Case.</p>
+          <button id="method-intro-continue" class="screen-button method-intro-continue" type="button">Choose a Method ›</button>
+        </section>
+      </div>
+
       <div id="screen-pick" class="screen" role="dialog" aria-modal="true" aria-labelledby="pick-title">
         <div class="screen-card method-card">
-          <p class="title-eyebrow method-eyebrow">Back at the lab bench</p>
           <div class="case-result-strip">
             <span id="pick-case-progress">Trial logged · 1 / 5</span>
             <div class="case-result-dots" aria-hidden="true">
               <i data-case-dot="0"></i><i data-case-dot="1"></i><i data-case-dot="2"></i><i data-case-dot="3"></i><i data-case-dot="4"></i>
             </div>
           </div>
-          <h2 id="pick-title" class="screen-title">Choose one Method</h2>
-          <p class="method-sub">Tap one bonus for the next trial. It stays active for the rest of this Case.</p>
-          <p id="method-handoff" class="method-handoff"><strong>Dr. E:</strong> You know the rhythm now. I’ll step back, but I may pop in when the work gets interesting.</p>
-          <div class="method-choice-instruction"><b>Choose 1</b><span>Your next trial starts immediately</span></div>
+          <h2 id="pick-title" class="screen-title">Choose a Method</h2>
+          <p class="method-sub">Pick one lasting adjustment.</p>
           <div id="pick-choices" class="pick-choices">
             <!-- 3 buttons inserted at runtime -->
           </div>
@@ -310,13 +320,13 @@
               <button id="notebook-close" class="notebook-close" type="button" aria-label="Close notebook">Close</button>
             </header>
             <div class="notebook-tabs" role="tablist" aria-label="Research notebook sections">
-              <button id="notebook-tab-study" class="notebook-tab-button is-active" type="button" role="tab" aria-selected="true" aria-controls="notebook-study">Study</button>
+              <button id="notebook-tab-atlas" class="notebook-tab-button is-active" type="button" role="tab" aria-selected="true" aria-controls="notebook-atlas">Atlas</button>
+              <button id="notebook-tab-study" class="notebook-tab-button" type="button" role="tab" aria-selected="false" aria-controls="notebook-study">Study</button>
               <button id="notebook-tab-log" class="notebook-tab-button" type="button" role="tab" aria-selected="false" aria-controls="notebook-list">Findings</button>
-              <button id="notebook-tab-atlas" class="notebook-tab-button" type="button" role="tab" aria-selected="false" aria-controls="notebook-atlas">Atlas</button>
             </div>
-            <div id="notebook-study" class="notebook-study notebook-page is-active" role="tabpanel" aria-labelledby="notebook-tab-study"></div>
+            <div id="notebook-atlas" class="notebook-atlas notebook-page is-active" role="tabpanel" aria-labelledby="notebook-tab-atlas"></div>
+            <div id="notebook-study" class="notebook-study notebook-page" role="tabpanel" aria-labelledby="notebook-tab-study"></div>
             <div id="notebook-list" class="notebook-list notebook-page" role="tabpanel" aria-labelledby="notebook-tab-log"></div>
-            <div id="notebook-atlas" class="notebook-atlas notebook-page" role="tabpanel" aria-labelledby="notebook-tab-atlas"></div>
           </div>
         </section>
       </div>
@@ -399,6 +409,6 @@
         </div>
       </aside>
     </main>
-    <script type="module" src="/src/main.ts?v=20260828-ui-polish-2"></script>
+    <script type="module" src="/src/main.ts?v=20260828-atlas-first-1"></script>
   </body>
 </html>

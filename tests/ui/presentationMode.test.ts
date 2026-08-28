@@ -19,6 +19,7 @@ describe('full screen mode', () => {
 
   it('wires the main UI full screen button through createScreens', () => {
     expect(screensSource).toContain('onFullscreenOpen(handler: () => void): void;');
+    expect(screensSource).toContain('setFullscreenAvailable(available: boolean): void;');
     expect(screensSource).toContain('setFullscreenActive(active: boolean): void;');
     expect(screensSource).toContain("const fullscreenButton = get('fullscreen-button') as HTMLButtonElement;");
     expect(screensSource).toContain('fullscreenButton.addEventListener');
@@ -38,6 +39,22 @@ describe('full screen mode', () => {
     expect(css).toContain('width: min(100svw, 100svh)');
     expect(css).toContain('height: min(100svw, 100svh)');
     expect(css).not.toContain('width: min(96svw, 96svh, 900px)');
+  });
+
+  it('never hides the title screen when full screen is requested before gameplay', () => {
+    expect(css).toContain('.layout[data-screen="arena"].presentation-mode .screen {');
+    expect(css).not.toMatch(/^\.presentation-mode \.screen \{/m);
+    expect(css).toContain('.layout[data-screen="arena"].presentation-mode canvas {');
+    expect(css).toContain('.layout:not([data-screen="arena"]) #dbg-fullscreen-mode {');
+    expect(mainSource).toContain("run.getState().phase !== 'arena'");
+  });
+
+  it('removes custom fullscreen controls on CrazyGames', () => {
+    expect(mainSource).toContain('isCrazyGamesEnvironment');
+    expect(mainSource).toContain('screens.setFullscreenAvailable(customFullscreenAvailable);');
+    expect(mainSource).toContain('debug.setPresentationAvailable(customFullscreenAvailable);');
+    expect(mainSource).toContain("if (enabled && (!customFullscreenAvailable || run.getState().phase !== 'arena')) return;");
+    expect(screensSource).toContain('fullscreenButton.hidden = !available;');
   });
 
   it('uses Escape and native fullscreen exit to leave full screen mode before opening debug UI', () => {

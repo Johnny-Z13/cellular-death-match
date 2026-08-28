@@ -41,7 +41,7 @@ describe('discoverer notebook UI wiring', () => {
   });
 
   it('exposes notebook screen controls through createScreens', () => {
-    expect(screensSource).toContain("type ScreenName = 'title' | 'pick' | 'end' | 'hud' | 'notebook';");
+    expect(screensSource).toContain("type ScreenName = 'title' | 'method-intro' | 'pick' | 'end' | 'hud' | 'notebook';");
     expect(screensSource).toContain('updateNotebook(view: NotebookView): void;');
     expect(screensSource).toContain('onNotebookOpen(handler: () => void): void;');
     expect(screensSource).toContain('onNotebookClose(handler: () => void): void;');
@@ -65,7 +65,7 @@ describe('discoverer notebook UI wiring', () => {
     expect(html).toContain('id="notebook-tab-atlas"');
     expect(html).toContain('id="notebook-atlas"');
     expect(screensSource).toContain('updateAtlas(view: AtlasView): void;');
-    expect(screensSource).toContain("type NotebookTab = 'study' | 'log' | 'atlas';");
+    expect(screensSource).toContain("type NotebookTab = 'atlas' | 'study' | 'log';");
     expect(screensSource).toContain('atlas-node-${node.state}');
     expect(mainSource).toContain('atlasViewForProgression');
     expect(css).toContain('.atlas-node-locked');
@@ -84,8 +84,16 @@ describe('discoverer notebook UI wiring', () => {
     expect(mainSource).toContain('acknowledgeNotebookDiscoveries(discoveryProgression)');
   });
 
-  it('makes hypotheses and optional field studies the default notebook page', () => {
-    expect(html).toContain('id="notebook-study" class="notebook-study notebook-page is-active"');
+  it('makes the genome Atlas the first tab and default notebook page', () => {
+    expect(html.indexOf('id="notebook-tab-atlas"')).toBeLessThan(html.indexOf('id="notebook-tab-study"'));
+    expect(html.indexOf('id="notebook-tab-study"')).toBeLessThan(html.indexOf('id="notebook-tab-log"'));
+    expect(html).toContain('id="notebook-tab-atlas" class="notebook-tab-button is-active"');
+    expect(html).toContain('id="notebook-atlas" class="notebook-atlas notebook-page is-active"');
+    expect(screensSource).toContain("setNotebookTab('atlas');");
+  });
+
+  it('keeps hypotheses and optional field studies available under Study', () => {
+    expect(html).toContain('id="notebook-study" class="notebook-study notebook-page"');
     expect(html).toContain('>Study</button>');
     expect(screensSource).toContain('updateResearchNotebook(view: ResearchNotebookView): void;');
     expect(screensSource).toContain("label.textContent = 'Active hypothesis'");

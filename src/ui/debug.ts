@@ -23,6 +23,7 @@ export interface DebugPanel {
   onClearDiscoveries(handler: () => void): void;
   onRevealDiscoveries(handler: () => void): void;
   onPresentationToggle(handler: () => void): void;
+  setPresentationAvailable(available: boolean): void;
   onReverbToggle(handler: (enabled: boolean) => void): void;
   setReverbEnabled(enabled: boolean): void;
 }
@@ -116,6 +117,9 @@ export function createDebugPanel(): DebugPanel {
     },
     onPresentationToggle(handler) {
       presentationMode.addEventListener('click', handler);
+    },
+    setPresentationAvailable(available) {
+      presentationMode.hidden = !available;
     },
     onReverbToggle(handler) {
       reverbToggle.addEventListener('change', () => handler(reverbToggle.checked));

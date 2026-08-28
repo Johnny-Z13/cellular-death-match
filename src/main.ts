@@ -104,6 +104,7 @@ import {
 import { isObjectiveFeasible, type StudyCapabilities } from './game/objectivePool';
 import { dishExitState } from './game/dishExitAction';
 import { studyIntroductionRoute } from './ui/studyIntroduction';
+import { isCrazyGamesEnvironment } from './platform/crazyGames';
 
 declare const __COMMIT_MESSAGE__: string;
 
@@ -159,6 +160,14 @@ let researchArchive: ResearchArchiveState = loadResearchArchive(runtimeStorage);
 const run = createRun(activeRunCheckpoint?.run.seed ?? (Date.now() & 0xffffffff));
 const screens = createScreens();
 const debug = createDebugPanel();
+const customFullscreenAvailable = !isCrazyGamesEnvironment({
+  currentUrl: window.location.href,
+  referrer: document.referrer,
+  ancestorOrigins: Array.from(window.location.ancestorOrigins),
+});
+layout.dataset.crazygames = String(!customFullscreenAvailable);
+screens.setFullscreenAvailable(customFullscreenAvailable);
+debug.setPresentationAvailable(customFullscreenAvailable);
 const ecologyAudio = createEcologyAudio();
 const uiAudio = createUiAudio();
 const haptics = createHaptics();
@@ -252,6 +261,7 @@ let finalLabReport: LabReport | null = null;
 let newBiomeThisRun = false;
 let observedNotesAtDishStart = new Set<DiscoveryNoteId>();
 let pendingBankPlan: PlannedResearchBank | null = null;
+let pendingMethodIntroduction = false;
 let abandonArmedUntilMs = 0;
 let abandonConfirmationTimer = 0;
 
@@ -565,9 +575,16 @@ screens.onTitleStart(() => {
   }
   beginRunWithCurrentLoadout();
 });
+screens.onMethodIntroContinue(() => {
+  pendingMethodIntroduction = false;
+  uiAudio.play('ui_select');
+  fx.playWipe();
+  showPhase();
+});
 screens.onEndRestart(() => {
   uiAudio.play('ui_select');
   fx.playWipe();
+  pendingMethodIntroduction = false;
   discardActiveRunCheckpoint();
   run.restart();
   finalLabReport = null;
@@ -650,6 +667,7 @@ screens.onEndEpoch(() => {
     return;
   }
   const status = arena.endEpochNow();
+  pendingMethodIntroduction = status === 'won';
   resolveArenaStatus(status);
 });
 
@@ -720,6 +738,7 @@ function showPhase() {
   // Hide every overlay; show the one for the current phase.
   screens.hide('title');
   screens.hide('loadout');
+  screens.hide('method-intro');
   screens.hide('pick');
   screens.hide('objective');
   screens.hide('end');
@@ -789,7 +808,7 @@ function showPhase() {
         startNewFight();
       }
     });
-    screens.show('pick');
+    screens.show(pendingMethodIntroduction ? 'method-intro' : 'pick');
   } else if (state.phase === 'objective_pick') {
     updateButtonHint();
     const choices = run.getObjectiveChoices(currentStudyCapabilityInput());
@@ -889,6 +908,7 @@ function showLoadoutPicker(): void {
 }
 
 function beginRunWithCurrentLoadout(loadout = strainLibrary.getPlayableLoadout()): void {
+  pendingMethodIntroduction = false;
   const playableLoadout = playableLifeformIds(loadout);
   currentRunLoadout = new Set(playableLoadout);
   setEggLifeformSelection(playableLoadout[0] ?? 'swarmlet');
@@ -2180,6 +2200,7 @@ function closeNotebook(): void {
 }
 
 function setPresentationMode(enabled: boolean): void {
+  if (enabled && (!customFullscreenAvailable || run.getState().phase !== 'arena')) return;
   overlayState.presentationMode = enabled;
   screens.setFullscreenActive(enabled);
   if (enabled) {
