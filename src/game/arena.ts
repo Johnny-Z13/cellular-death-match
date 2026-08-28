@@ -383,9 +383,15 @@ export function createArena(opts: CreateArenaOpts): Arena {
       addDishEvent(marker.kind, `NEW LIFEFORM: ${BREED_DEFS[id].name}`, sourceCell.center, marker.radius, marker.color);
     }
     if (!sourceCell || sourceCell.vol <= 0 || archetypes.size >= ECOSYSTEM_MAX_POPULATION) return;
+    // A discovery is born beside its source, never on top of it. `addCell`
+    // intentionally refuses to overwrite occupied pixels, so reusing the
+    // source centre can create a zero-volume specimen (and dead-end Trial 1
+    // after Bloom Mass has already been logged).
+    const seedPos = findStableSeedPos(state, sourceCell.center);
+    if (!seedPos) return;
     arena.spawnEnemy({
       spawn: breedSpawnFor(id, archetypes.get(sourceCell.id)),
-      pos: [...sourceCell.center],
+      pos: seedPos,
     });
     birthCount += 1;
   }
@@ -2057,6 +2063,35 @@ function findEggSeedPos(state: SimState, pos: [number, number]): [number, number
     }
   }
   return null;
+}
+
+// Prefer a completely clear 3×3 patch for newly discovered specimens. A
+// partially clear fallback is still useful in a nearly full dish, but only
+// after searching the whole local area for a stable birth site.
+function findStableSeedPos(state: SimState, pos: [number, number]): [number, number] | null {
+  const { grid } = state;
+  const cx = Math.round(pos[0]);
+  const cy = Math.round(pos[1]);
+  let fallback: [number, number] | null = null;
+  let fallbackPixels = 0;
+
+  for (let r = 0; r <= 24; r++) {
+    for (let dx = -r; dx <= r; dx++) {
+      for (let dy = -r; dy <= r; dy++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const candidate = normalizeCoord(grid, cx + dx, cy + dy);
+        if (!candidate) continue;
+        const openPixels = seedablePixelCount(state, candidate);
+        if (openPixels === 9) return candidate;
+        if (openPixels > fallbackPixels) {
+          fallback = candidate;
+          fallbackPixels = openPixels;
+        }
+      }
+    }
+  }
+
+  return fallback;
 }
 
 function seedablePixelCount(state: SimState, pos: [number, number]): number {

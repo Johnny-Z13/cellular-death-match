@@ -2886,12 +2886,12 @@ describe('arena.tick — applies input', () => {
 });
 
 describe('onboarding dish — tutorial reachability', () => {
-  function onboardingArena(): Arena {
+  function onboardingArena(seed = 7): Arena {
     // fightIndex 0 + no control sample = the coach-driven onboarding dish.
     return createArena({
       LX: 80,
       LY: 80,
-      seed: 7,
+      seed,
       player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
       enemies: [{ archetype: 'swarmlet' as const, targetVol: 120, speed: 8, engulfMultiplier: 4 }],
       wrap: false,
@@ -2912,6 +2912,10 @@ describe('onboarding dish — tutorial reachability', () => {
     // A few ticks for the discovery scan to see the fed colony.
     for (let i = 0; i < 6; i++) arena.tick(noInput);
     expect(arena.getEcology().discoveries.breedIds).toContain('bloom_mass');
+    expect(Array.from(arena.archetypes).some(([id, spawn]) =>
+      spawn.breedId === 'bloom_mass' && (arena.state.cells.get(id)?.vol ?? 0) > 0,
+    )).toBe(true);
+    expect(arena.getObjectiveProgress().complete).toBe(true);
   });
 
   it('auto-spawn failsafe blooms even if the player never seeds a colony', () => {
@@ -2921,6 +2925,31 @@ describe('onboarding dish — tutorial reachability', () => {
     arena.spawnOnboardingSeed();
     for (let i = 0; i < 6; i++) arena.tick(noInput);
     expect(arena.getEcology().discoveries.breedIds).toContain('bloom_mass');
+    expect(Array.from(arena.archetypes).some(([id, spawn]) =>
+      spawn.breedId === 'bloom_mass' && (arena.state.cells.get(id)?.vol ?? 0) > 0,
+    )).toBe(true);
+    expect(arena.getObjectiveProgress().complete).toBe(true);
+  });
+
+  it('cannot dead-end after a bad feed, regardless of seed or dish edge', () => {
+    const feedPositions: [number, number][] = [[1, 1], [40, 40], [78, 78]];
+    for (let seed = 1; seed <= 32; seed++) {
+      const arena = onboardingArena(seed);
+      const feedPos = feedPositions[seed % feedPositions.length]!;
+      expect(arena.applyTool('nutrient', feedPos)).toBe(true);
+      arena.spawnOnboardingSeed();
+
+      const bloom = Array.from(arena.archetypes).find(([id, spawn]) =>
+        spawn.breedId === 'bloom_mass' && (arena.state.cells.get(id)?.vol ?? 0) > 0,
+      );
+      expect(bloom, `seed ${seed} at ${feedPos.join(',')}`).toBeDefined();
+      expect(arena.getObjectiveProgress().complete).toBe(true);
+
+      // Completion is banked immediately, so later culture loss or exhausted
+      // Nutrient cannot return the Professor to an impossible observation.
+      arena.state.cells.get(bloom![0])!.vol = 0;
+      expect(arena.getObjectiveProgress().complete).toBe(true);
+    }
   });
 
   it('never resolves on the deadline — the coach owns the ending', () => {
