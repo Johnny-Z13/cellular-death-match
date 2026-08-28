@@ -93,7 +93,7 @@ describe('CrazyGames asset provenance', () => {
     const credits = readFileSync(creditsPath, 'utf8')
     const observed = registry.scanRoots.flatMap(listMedia).sort()
 
-    expect(observed).toHaveLength(37)
+    expect(observed).toHaveLength(51)
     expect(report.summary.observedAssets).toBe(observed.length)
     expect(report.assets.filter((asset) => asset.integrity === 'matched')).toHaveLength(observed.length)
 
@@ -133,6 +133,19 @@ describe('CrazyGames asset provenance', () => {
       expect(asset.sha256).toBe(sha256(filePath))
       expect(declaration?.sha256).toBe(asset.sha256)
       expect(declaration?.status).toBe('provider-declared')
+    }
+  })
+
+  it('registers every normalized genome reconstruction with generation evidence', () => {
+    const registry = JSON.parse(readFileSync(registryPath, 'utf8')) as Registry
+    const genomes = registry.assets.filter((asset) => asset.path.startsWith('public/art/genomes/'))
+
+    expect(genomes).toHaveLength(14)
+    for (const asset of genomes) {
+      expect(asset.provider).toBe('OpenAI Image Generation + Sharp')
+      expect(asset.status).toBe('provider-declared')
+      expect(asset.evidence).toBe('docs/assets/genomes/README.md')
+      expect(asset.sha256).toBe(sha256(asset.path))
     }
   })
 

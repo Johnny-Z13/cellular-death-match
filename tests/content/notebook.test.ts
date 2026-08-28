@@ -135,19 +135,43 @@ describe('notebook catalogue content', () => {
 });
 
 describe('chimera reframe', () => {
-  it('gives every breed a chimera splice + portrait surfaced in the notebook view', () => {
+  it('preserves chimera lore while surfacing canonical genome art for every lifeform', () => {
     const view = notebookViewForProgression(revealAllDiscoveryProgression(createDiscoveryProgression()));
     const breedEntries = view.entries.filter((e) => e.category === 'lifeform' && e.unlock.breedId);
     expect(breedEntries.length).toBeGreaterThan(0);
     for (const entry of breedEntries) {
       expect(entry.chimeraSplice).toMatch(/ × /); // "Real × Fantastical"
       expect(entry.chimeraPortrait).toContain('/art/chimera/');
+      expect(entry.genomePortrait).toContain('/art/genomes/');
+      expect(entry.genomeAlt.length).toBeGreaterThan(30);
+      expect(entry.eggSynthesisAvailable).toBe(true);
       expect(entry.displayNotes.length).toBeGreaterThan(20);
     }
     // Starter (non-breed) lifeforms carry no chimera data.
     const starter = view.entries.find((e) => e.id === 'lifeform_swarmlet');
     expect(starter?.chimeraSplice).toBeNull();
     expect(starter?.chimeraPortrait).toBeNull();
+    expect(starter?.genomePortrait).toBe('/art/genomes/swarmlet.png');
+    expect(starter?.eggSynthesisAvailable).toBe(true);
+    expect(starter?.isReferenceGenome).toBe(true);
+    expect(view.entries.find((entry) => entry.id === 'lifeform_quill_bloom')?.genomeLineage)
+      .toBe('Needle Swarm × Bloom Mass');
+  });
+
+  it('keeps an observed genome unresolved until the organism is stabilized alive', () => {
+    const observed = updateDiscoveryProgression(
+      createDiscoveryProgression(),
+      { breedIds: ['bloom_mass'] },
+      '2026-08-28T10:00:00.000Z',
+      { breed: 'observed' },
+    );
+    const observedEntry = notebookViewForProgression(observed).entries.find(
+      (entry) => entry.id === 'lifeform_bloom_mass',
+    );
+    expect(observedEntry?.researchStage).toBe('observed');
+    expect(observedEntry?.genomePortrait).toBe('/art/genomes/bloom_mass.png');
+    expect(observedEntry?.eggSynthesisAvailable).toBe(false);
+    expect(observedEntry?.displayRecipe).toBe('Protocol: unresolved');
   });
 });
 
@@ -158,6 +182,8 @@ describe('notebook atlas (progression map)', () => {
     expect(atlas.totalCount).toBe(NOTEBOOK_ENTRIES.length);
     // The onboarding specimen is discovered; the rest are locked but visible.
     expect(atlas.discoveredCount).toBe(1);
+    expect(atlas.groups.find((group) => group.key === 'lifeform')?.label).toBe('Genome Archive');
+    expect(atlas.groups.find((group) => group.key === 'lifeform')?.decoded).toBe(1);
     const allNodes = atlas.groups.flatMap((g) => g.nodes);
     expect(allNodes).toHaveLength(NOTEBOOK_ENTRIES.length);
     expect(allNodes.some((n) => n.state === 'locked')).toBe(true);
@@ -177,5 +203,7 @@ describe('notebook atlas (progression map)', () => {
     const lifeforms = atlas.groups.find((g) => g.key === 'lifeform');
     expect(lifeforms?.nodes.every((n) => n.state === 'stabilized')).toBe(true);
     expect(lifeforms?.nodes.every((n) => Array.isArray(n.color))).toBe(true);
+    expect(lifeforms?.nodes.every((n) => n.decoded && n.genomePortrait?.startsWith('/art/genomes/'))).toBe(true);
+    expect(lifeforms?.decoded).toBe(14);
   });
 });

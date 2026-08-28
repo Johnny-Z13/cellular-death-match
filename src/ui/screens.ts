@@ -705,16 +705,17 @@ export function createScreens(): Screens {
           `notebook-entry-${entry.caution}`,
           `notebook-entry-stage-${entry.researchStage}`,
           entry.isFresh ? 'notebook-entry-new' : 'notebook-entry-discovered',
-          entry.chimeraPortrait ? 'notebook-entry-chimera' : '',
+          entry.genomePortrait ? 'notebook-entry-genome' : '',
         ].filter(Boolean).join(' ');
 
-        // Chimera breeds show a generated specimen portrait; others a label chip.
+        // Every discovered lifeform gets one canonical genome reconstruction.
+        // Observed-but-unstabilized specimens remain visually unresolved.
         let marker: HTMLElement;
-        if (entry.chimeraPortrait) {
+        if (entry.genomePortrait) {
           const img = document.createElement('img');
-          img.className = 'notebook-marker notebook-portrait';
-          img.src = entry.chimeraPortrait;
-          img.alt = `${entry.displayTitle} specimen`;
+          img.className = `notebook-marker notebook-genome-portrait${entry.eggSynthesisAvailable ? ' is-decoded' : ' is-observed'}`;
+          img.src = entry.genomePortrait;
+          img.alt = entry.genomeAlt;
           img.loading = 'lazy';
           marker = img;
         } else {
@@ -738,9 +739,13 @@ export function createScreens(): Screens {
 
         const meta = document.createElement('div');
         meta.className = 'notebook-meta';
-        meta.textContent = entry.chimeraSplice
-          ? `${entry.chimeraSplice} · ${entry.caution}`
-          : `${entry.category.replace('_', ' ')} / ${entry.caution}`;
+        meta.textContent = entry.isReferenceGenome
+          ? `REFERENCE GENOME · ${entry.caution}`
+          : entry.genomeLineage
+            ? `Parents: ${entry.genomeLineage} · ${entry.caution}`
+            : entry.chimeraSplice
+              ? `DNA splice: ${entry.chimeraSplice} · ${entry.caution}`
+              : `${entry.category.replace('_', ' ')} / ${entry.caution}`;
 
         const discoveredAt = document.createElement('div');
         discoveredAt.className = 'notebook-discovered-at';
@@ -896,17 +901,30 @@ export function createScreens(): Screens {
         label.textContent = group.label;
         const count = document.createElement('span');
         count.className = 'atlas-group-count';
-        count.textContent = `${group.discovered} / ${group.total}`;
+        count.textContent = group.key === 'lifeform'
+          ? `${group.decoded} / ${group.total} decoded`
+          : `${group.discovered} / ${group.total}`;
         head.append(label, count);
 
         const grid = document.createElement('div');
         grid.className = 'atlas-grid';
         for (const node of group.nodes) {
           const tile = document.createElement('div');
-          tile.className = `atlas-node atlas-node-${node.state} atlas-node-${node.caution}`;
+          tile.className = `atlas-node atlas-node-${node.state} atlas-node-${node.caution}${node.genomePortrait ? ' atlas-node-genome-entry' : ''}`;
           if (node.color) tile.style.setProperty('--node-color', rgb(node.color));
-          const dot = document.createElement('span');
-          dot.className = 'atlas-node-dot';
+          let marker: HTMLElement;
+          if (node.genomePortrait) {
+            const portrait = document.createElement('img');
+            portrait.className = `atlas-node-genome${node.decoded ? ' is-decoded' : ' is-silhouette'}`;
+            portrait.src = node.genomePortrait;
+            portrait.alt = node.genomeAlt;
+            portrait.loading = 'lazy';
+            marker = portrait;
+          } else {
+            const dot = document.createElement('span');
+            dot.className = 'atlas-node-dot';
+            marker = dot;
+          }
           const text = document.createElement('div');
           text.className = 'atlas-node-text';
           const title = document.createElement('strong');
@@ -914,7 +932,7 @@ export function createScreens(): Screens {
           const hint = document.createElement('small');
           hint.textContent = node.hint;
           text.append(title, hint);
-          tile.append(dot, text);
+          tile.append(marker, text);
           grid.append(tile);
         }
         section.append(head, grid);

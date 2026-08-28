@@ -26,6 +26,23 @@ describe('mobile notification director', () => {
     expect(director.complete('banner:breed')?.key).toBe('toast:tool');
   });
 
+  it('serializes a safe-boundary genome reveal above feedback already in the mobile channel', () => {
+    const director = new NotificationDirector<string>();
+    director.enqueue({ key: 'toast:reaction', priority: 1, payload: 'reaction' });
+    director.enqueue({ key: 'banner:result', priority: 3, payload: 'result' });
+
+    const result = director.enqueue({
+      key: 'genome:splitter',
+      priority: 4,
+      payload: 'splitter',
+    });
+
+    expect(result.action).toBe('replace');
+    expect(director.getActive()?.key).toBe('genome:splitter');
+    expect(director.complete('genome:splitter')?.key).toBe('banner:result');
+    expect(director.complete('banner:result')?.key).toBe('toast:reaction');
+  });
+
   it('upgrades a semantic duplicate instead of replaying its smaller toast', () => {
     const director = new NotificationDirector<string>();
     director.enqueue({ key: 'message:bloom mass', priority: 2, payload: 'toast' });

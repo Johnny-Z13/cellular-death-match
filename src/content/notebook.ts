@@ -7,6 +7,7 @@ import {
   type DiscoveryNoteId,
 } from './catalysis';
 import { LIFEFORM_IDENTITIES, type LifeformIdentityId } from './lifeformIdentity';
+import { genomeArtFor } from './genomeArt';
 import { CHIMERA_LORE } from './chimeras';
 import { EGG_ARCHETYPES, type EnemyArchetype } from './enemies';
 import type { DiscoveryProgressionState } from '../game/discoveryProgression';
@@ -40,6 +41,13 @@ export interface NotebookViewEntry extends NotebookEntry {
   // Chimera reframe (breeds only): spliced-DNA label + specimen portrait.
   chimeraSplice: string | null;
   chimeraPortrait: string | null;
+  genomeId: LifeformIdentityId | null;
+  genomePortrait: string | null;
+  genomeAlt: string;
+  genomeReconstruction: string;
+  genomeLineage: string | null;
+  eggSynthesisAvailable: boolean;
+  isReferenceGenome: boolean;
 }
 
 export interface NotebookView {
@@ -120,6 +128,9 @@ export function notebookViewForProgression(
         : record?.stage ?? 'observed';
 
     const chimera = entry.unlock.breedId ? CHIMERA_LORE[entry.unlock.breedId] : null;
+    const genomeId = lifeformIdForEntry(entry);
+    const genome = genomeId ? genomeArtFor(genomeId) : null;
+    const eggSynthesisAvailable = entry.category === 'lifeform' && researchStage === 'stabilized';
     return [{
       ...entry,
       discovered,
@@ -127,14 +138,23 @@ export function notebookViewForProgression(
       displayTitle: entry.title,
       displayNotes: researchStage === 'observed'
         ? `Evidence: ${entry.category === 'lifeform' ? 'A viable phenotype appeared. Keep it alive through a successful trial to stabilize the specimen.' : 'A reaction signature was recorded. Reproduce it in an assigned trial to resolve the protocol.'}`
-        : `Notes: ${chimera ? `${chimera.lore} ` : ''}${entry.body}`,
+        : `Notes: ${chimera ? `${chimera.lore} ` : ''}${entry.body}${genome ? ` Genome reconstruction: ${genome.reconstructionNote}` : ''}`,
       displayRecipe: researchStage === 'observed'
         ? 'Protocol: unresolved'
-        : recipeLabelFor(entry),
+        : `${recipeLabelFor(entry)}${eggSynthesisAvailable ? ' · Egg synthesis: available' : ''}`,
       discoveredAtLabel: `Discovered on ${formatDiscoveryDate(record?.discoveredAt ?? viewedAt)}`,
       isFresh: record?.fresh === true,
       chimeraSplice: chimera ? chimera.splice : null,
       chimeraPortrait: chimera ? chimera.portrait : null,
+      genomeId,
+      genomePortrait: genome?.asset ?? null,
+      genomeAlt: genome?.alt ?? '',
+      genomeReconstruction: genome?.reconstructionNote ?? '',
+      genomeLineage: genome?.parents
+        ? genome.parents.map((parentId) => LIFEFORM_IDENTITIES[parentId].name).join(' × ')
+        : null,
+      eggSynthesisAvailable,
+      isReferenceGenome: genomeId === 'swarmlet',
     }];
   });
 
@@ -159,12 +179,16 @@ export interface AtlasNode {
   hint: string;         // how to reach it (always shown to drive discovery)
   caution: CautionLevel;
   color: [number, number, number] | null; // identity tint for lifeform nodes
+  genomePortrait: string | null;
+  genomeAlt: string;
+  decoded: boolean;
 }
 
 export interface AtlasGroup {
   key: NotebookCategory;
   label: string;
   discovered: number;
+  decoded: number;
   total: number;
   nodes: AtlasNode[];
 }
@@ -176,7 +200,7 @@ export interface AtlasView {
 }
 
 const ATLAS_GROUP_LABELS: Record<NotebookCategory, string> = {
-  lifeform: 'Lifeforms',
+  lifeform: 'Genome Archive',
   catalyst: 'Catalysts',
   event: 'Lab Events',
   lab_note: 'Field Notes',
@@ -201,6 +225,7 @@ export function atlasViewForProgression(progression: DiscoveryProgressionState):
     key,
     label: ATLAS_GROUP_LABELS[key],
     discovered: 0,
+    decoded: 0,
     total: 0,
     nodes: [],
   }));
@@ -233,6 +258,10 @@ export function atlasViewForProgression(progression: DiscoveryProgressionState):
             : entry.unlock.noteId
               ? noteStages.get(entry.unlock.noteId) ?? 'observed'
               : 'understood';
+    const genomeId = lifeformIdForEntry(entry);
+    const genome = genomeId ? genomeArtFor(genomeId) : null;
+    const decoded = entry.category === 'lifeform' && state === 'stabilized';
+    if (decoded) group.decoded += 1;
     group.nodes.push({
       id: entry.id,
       state,
@@ -240,10 +269,18 @@ export function atlasViewForProgression(progression: DiscoveryProgressionState):
       hint: entry.clue,
       caution: entry.caution,
       color: discovered ? atlasColorFor(entry) : null,
+      genomePortrait: genome?.asset ?? null,
+      genomeAlt: decoded ? genome?.alt ?? '' : '',
+      decoded,
     });
   }
 
   return { discoveredCount, totalCount: NOTEBOOK_ENTRIES.length, groups };
+}
+
+function lifeformIdForEntry(entry: NotebookEntry): LifeformIdentityId | null {
+  if (entry.category !== 'lifeform') return null;
+  return (entry.unlock.breedId ?? entry.unlock.lifeformId ?? null) as LifeformIdentityId | null;
 }
 
 function lifeformEntry(id: EnemyArchetype): NotebookEntry {
@@ -266,7 +303,7 @@ function rareLifeformEntry(id: BreedId): NotebookEntry {
     id: `lifeform_${id}`,
     category: 'lifeform',
     title: identity.name,
-    body: note.body,
+    body: `${identity.role}. ${identity.behavior} ${note.body}`,
     clue: BREED_DEFS[id].discoveryTrigger,
     caution: note.caution,
     unlock: { breedId: id },

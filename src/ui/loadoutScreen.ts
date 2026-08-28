@@ -3,6 +3,7 @@ import type { StrainLibrary } from '../game/strainLibrary';
 export interface LoadoutScreenOptions {
   labelForStrain: (strain: string) => string;
   colorForStrain: (strain: string) => string;
+  artForStrain?: (strain: string) => { src: string; alt: string } | null;
 }
 
 /**
@@ -49,14 +50,23 @@ export function renderLoadoutScreen(
       button.style.setProperty('--strain-color', options.colorForStrain(strain));
       button.disabled = !isSelected && selected.size >= slots;
 
-      const swatch = document.createElement('span');
-      swatch.className = 'loadout-strain-swatch';
-      swatch.setAttribute('aria-hidden', 'true');
+      const art = options.artForStrain?.(strain) ?? null;
+      const marker = art ? document.createElement('img') : document.createElement('span');
+      marker.className = art ? 'loadout-strain-portrait' : 'loadout-strain-swatch';
+      if (art) {
+        const portrait = marker as HTMLImageElement;
+        portrait.src = art.src;
+        portrait.alt = art.alt;
+        portrait.width = 384;
+        portrait.height = 384;
+      } else {
+        marker.setAttribute('aria-hidden', 'true');
+      }
 
       const label = document.createElement('span');
       label.textContent = options.labelForStrain(strain);
 
-      button.append(swatch, label);
+      button.append(marker, label);
       button.addEventListener('click', () => {
         if (selected.has(strain)) {
           selected.delete(strain);

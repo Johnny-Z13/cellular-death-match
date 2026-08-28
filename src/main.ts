@@ -12,14 +12,19 @@ import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/e
 import { BREED_DEFS, DISCOVERY_NOTES, type BreedId, type DiscoveryNoteId } from './content/catalysis';
 import { notebookViewForProgression, atlasViewForProgression } from './content/notebook';
 import { researchNotebookView, type ActiveStudySnapshot } from './game/researchNotebook';
-import { lifeformIdentityForSpawn } from './content/lifeformIdentity';
+import { lifeformIdentityForSpawn, type LifeformIdentityId } from './content/lifeformIdentity';
+import { genomeArtFor, type GenomeArtIdentity } from './content/genomeArt';
 import { createEcologyAudio } from './audio/ecologyAudio';
 import { createUiAudio, DROP_SOUND_FOR_TOOL } from './audio/uiAudio';
 import { createFx } from './ui/fx';
 import { createCoach } from './ui/coach';
 import { createJuice } from './ui/juice';
 import { onboardingIdleNudge } from './ui/onboardingHints';
-import { soundEventForDishSignal, type SoundEventId } from './audio/soundDesign';
+import {
+  LIFEFORM_SOUND_IDENTITIES,
+  soundEventForDishSignal,
+  type SoundEventId,
+} from './audio/soundDesign';
 import { assembleLabReport, type LabReport } from './game/labReport';
 import { createRunTelemetry, type RunTelemetry } from './game/runTelemetry';
 import { createRunEndReportInput } from './game/runFlow';
@@ -27,6 +32,10 @@ import { finalBreedCountsFor, finalBreedVolumesFor } from './game/runSnapshot';
 import { createFixedStepClock, normalizeSimTicksPerSecond } from './game/simClock';
 import { hash2 } from './game/hash';
 import { lifeformUnlocksForCurrentRun } from './game/lifeformLoadout';
+import {
+  appendUniqueGenomeDecodes,
+  genomeDecodeEventsForProgressionChange,
+} from './game/genomeDiscovery';
 import {
   loadDiscoverySave,
   saveDiscoveryState,
@@ -162,6 +171,7 @@ let discoverySave: DiscoverySaveState = loadDiscoverySave(discoveryStorage);
 let discoveryProgression = createDiscoveryProgression(discoverySave);
 const strainLibrary: StrainLibrary = createStrainLibrary(discoveryStorage);
 let researchArchive: ResearchArchiveState = loadResearchArchive(discoveryStorage);
+let pendingGenomeDecodeIds: LifeformIdentityId[] = [];
 // Allow up to PALETTE_SIZE total cell colors for evolving ecosystem spawns.
 const PALETTE_SIZE = 32;
 
@@ -276,6 +286,7 @@ debug.onRevealDiscoveries(() => {
   debug.updateDiscoveries(discoveryDebugInfo());
   setOptionsMenuOpen(false);
   fx.playWipe();
+  fx.showToast('discovery', 'Genome Archive', 'All genomes decoded');
   showPhase();
 });
 debug.onPresentationToggle(() => {
@@ -552,7 +563,7 @@ screens.onEndEpoch(() => {
     fx.playWipe();
     run.achieveHomeostasis();
     uiAudio.stopAmbience();
-    showPhase();
+    showPhaseAfterGenomeReveals();
     return;
   }
   const status = arena.endEpochNow();
@@ -658,6 +669,56 @@ function showPhase() {
   }
 }
 
+function showPhaseAfterGenomeReveals(): void {
+  if (run.getState().phase === 'arena' || pendingGenomeDecodeIds.length === 0) {
+    showPhase();
+    return;
+  }
+  const queued = [...pendingGenomeDecodeIds];
+  pendingGenomeDecodeIds = [];
+  const genomes = queued.map((id) => genomeArtFor(id));
+  screens.closeMobileDrawers();
+  playGenomeDecodeSounds(genomes);
+  fx.showGenomeDecode(
+    genomes.map(genomeRevealInfo),
+    finishGenomeReveal,
+  );
+}
+
+function playGenomeDecodeSounds(genomes: readonly GenomeArtIdentity[]): void {
+  const events = unique(genomes.flatMap((genome): SoundEventId[] => {
+    const identity = LIFEFORM_SOUND_IDENTITIES[genome.soundId];
+    return identity ? [identity.eventId] : [];
+  }));
+  if (events.length === 0) return;
+  ecologyAudio.update({ eating: 0, fighting: 0, reactions: 0, mutations: 0, hatches: 0, events });
+}
+
+function finishGenomeReveal(): void {
+  showPhase();
+  window.requestAnimationFrame(() => {
+    const selector = run.getState().phase === 'upgrade_pick'
+      ? '.pick-card'
+      : run.getState().phase === 'objective_pick'
+        ? '.objective-card'
+        : run.getState().phase === 'run_end'
+          ? '#end-restart'
+          : null;
+    if (!selector) return;
+    document.querySelector<HTMLElement>(selector)?.focus({ preventScroll: true });
+  });
+}
+
+function genomeRevealInfo(genome: GenomeArtIdentity) {
+  return {
+    id: genome.id,
+    name: genome.name,
+    asset: genome.asset,
+    alt: genome.alt,
+    primary: genome.primary,
+  };
+}
+
 function showLoadoutPicker(): void {
   screens.setLoadoutScreen(renderLoadoutScreen(
     strainLibrary,
@@ -666,7 +727,7 @@ function showLoadoutPicker(): void {
       fx.playWipe();
       beginRunWithCurrentLoadout(loadout);
     },
-    { labelForStrain, colorForStrain },
+    { labelForStrain, colorForStrain, artForStrain },
   ));
   screens.hide('title');
   screens.show('loadout');
@@ -679,7 +740,7 @@ function beginRunWithCurrentLoadout(loadout = strainLibrary.getPlayableLoadout()
   resetRunTelemetry();
   if (caseIsSealed()) {
     run.startLateGamePreview();
-    showPhase();
+    showPhaseAfterGenomeReveals();
   } else {
     run.start();
     startNewFight();
@@ -979,7 +1040,7 @@ function loop() {
     fx.playWipe();
     run.failEpoch();
     uiAudio.stopAmbience();
-    showPhase();
+    showPhaseAfterGenomeReveals();
     return;
   }
 
@@ -1028,7 +1089,7 @@ function resolveArenaStatus(status: ArenaStatus): boolean {
     }
     run.completeEpoch();
     if (run.getState().phase === 'run_end') uiAudio.stopAmbience();
-    showPhase();
+    showPhaseAfterGenomeReveals();
     return true;
   }
   if (status === 'lost') {
@@ -1047,7 +1108,7 @@ function resolveArenaStatus(status: ArenaStatus): boolean {
     runTelemetry.recordEpochLapsed();
     run.skipEpoch();
     if (run.getState().phase === 'run_end') uiAudio.stopAmbience();
-    showPhase();
+    showPhaseAfterGenomeReveals();
     return true;
   }
   return false;
@@ -1117,6 +1178,11 @@ function advanceDiscoveryProgression(
     || previousProgression.discoveredNoteIds.join('|') !== nextProgression.discoveredNoteIds.join('|')
     || progressionStageSignature(previousProgression) !== progressionStageSignature(nextProgression);
   if (!changed) return false;
+
+  pendingGenomeDecodeIds = appendUniqueGenomeDecodes(
+    pendingGenomeDecodeIds,
+    genomeDecodeEventsForProgressionChange(previousProgression, nextProgression),
+  );
 
   discoveryProgression = nextProgression;
   recordNewlyDiscoveredBreeds(previousProgression, nextProgression);
@@ -1448,28 +1514,15 @@ function announceUnlocks(
     screens.addTicker(`Research unlocked: ${capitalize(tool)} reagent available.`, 'discovery');
     fx.showToast('catalyst', 'Reagent Unlocked', `${capitalize(tool)} now available`);
   }
-  // A breed unlock is the headline moment; if several things unlock at once,
-  // the breed banner wins the center screen over a plain strain banner.
-  let bannerBreed: string | null = null;
-  let bannerStrain: string | null = null;
   for (const lifeform of next.lifeforms) {
     if (previous.lifeforms.includes(lifeform)) continue;
     didUnlock = true;
     screens.showcaseLifeformUnlock(lifeform);
     if (isBaseArchetype(lifeform)) {
-      screens.addTicker(`Research unlocked: ${ARCHETYPE_INFO[lifeform].name} eggs available.`, 'discovery');
-      fx.showToast('discovery', 'Strain Unlocked', `${ARCHETYPE_INFO[lifeform].name} eggs`);
-      bannerStrain ??= ARCHETYPE_INFO[lifeform].name;
+      screens.addTicker(`Genome decoded: ${ARCHETYPE_INFO[lifeform].name}. Egg synthesis available.`, 'discovery');
     } else if (lifeform in BREED_DEFS) {
-      screens.addTicker(`New lifeform catalogued: ${BREED_DEFS[lifeform].name}.`, 'discovery');
-      fx.showToast('lifeform', 'New Lifeform', BREED_DEFS[lifeform].name);
-      bannerBreed ??= BREED_DEFS[lifeform].name;
+      screens.addTicker(`Genome decoded: ${BREED_DEFS[lifeform].name}. Egg synthesis available.`, 'discovery');
     }
-  }
-  if (bannerBreed) {
-    fx.showUnlockBanner('Breed Unlocked', bannerBreed, 'Catalogued in the Notebook', 'violet');
-  } else if (bannerStrain) {
-    fx.showUnlockBanner('Strain Unlocked', bannerStrain, 'New egg available', 'bio');
   }
   if (didUnlock) haptics.play('discovery');
 }
@@ -1542,6 +1595,12 @@ function colorForStrain(strain: string): string {
   if (isBaseArchetype(strain)) return cssRgb(ARCHETYPE_INFO[strain].color);
   if (isBreedId(strain)) return cssRgb(BREED_DEFS[strain].tint);
   return 'rgb(91, 233, 214)';
+}
+
+function artForStrain(strain: string): { src: string; alt: string } | null {
+  if (!isProgressionLifeformId(strain)) return null;
+  const genome = genomeArtFor(strain);
+  return { src: genome.asset, alt: genome.alt };
 }
 
 function cssRgb(color: readonly [number, number, number]): string {

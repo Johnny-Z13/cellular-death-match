@@ -195,14 +195,14 @@ describe('discovery menu placeholders', () => {
     expect(screensSource).toContain('sortLifeList();');
   });
 
-  it('fires neon echo rings and an arcade unlock banner', () => {
+  it('fires neon rack echoes while routing organism ownership to the genome reveal', () => {
     expect(css).toContain('@keyframes life-echo-ring');
     expect(css).toContain('.life-panel .life-item-discovered::before');
-    expect(css).toContain('.fx-banner.fx-banner-arcade.fx-banner-show');
-    expect(css).toContain('@keyframes fx-arcade-title');
-    expect(fxSource).toContain('showUnlockBanner(eyebrow: string, title: string, sub: string, accent: BannerAccent): void;');
-    expect(fxSource).toContain('fx-banner-arcade');
-    expect(mainSource).toContain("fx.showUnlockBanner('Breed Unlocked'");
-    expect(mainSource).toContain("fx.showUnlockBanner('Strain Unlocked'");
+    expect(css).toContain('.fx-genome.fx-genome-show');
+    expect(css).toContain('@keyframes fx-genome-reveal');
+    expect(fxSource).toContain('showGenomeDecode(items: readonly GenomeRevealInfo[]');
+    expect(mainSource).toContain('fx.showGenomeDecode(');
+    expect(mainSource).not.toContain("fx.showUnlockBanner('Breed Unlocked'");
+    expect(mainSource).not.toContain("fx.showUnlockBanner('Strain Unlocked'");
   });
 });

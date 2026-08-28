@@ -1,20 +1,20 @@
 {
   "schemaVersion": 1,
   "registry": "docs/publishing/evidence/crazygames-asset-attributions.json",
-  "registrySha256": "addce6c2f6fbdc403da77d18ddc90fcfd9ac03d4ce20445eff0af4e5800d39de",
+  "registrySha256": "ff3846d202a853c637c659077a44211e5393385f5031d9b1235fc2dcfc445f21",
   "scanRoots": [
     "public"
   ],
   "summary": {
-    "registeredAssets": 37,
-    "observedAssets": 37,
+    "registeredAssets": 51,
+    "observedAssets": 51,
     "releaseClearedAssets": 0,
     "statusCounts": {
-      "provider-declared": 36,
+      "provider-declared": 50,
       "review-required": 1
     },
     "integrityCounts": {
-      "matched": 37
+      "matched": 51
     },
     "releaseReady": false,
     "releaseBlockers": [
@@ -60,6 +60,76 @@
       },
       {
         "path": "public/art/chimera/vitric_anchor.png",
+        "status": "provider-declared",
+        "reason": "Provider route declared; evidence and approval pending"
+      },
+      {
+        "path": "public/art/genomes/bloom_mass.png",
+        "status": "provider-declared",
+        "reason": "Provider route declared; evidence and approval pending"
+      },
+      {
+        "path": "public/art/genomes/boss.png",
+        "status": "provider-declared",
+        "reason": "Provider route declared; evidence and approval pending"
+      },
+      {
+        "path": "public/art/genomes/bruiser.png",
+        "status": "provider-declared",
+        "reason": "Provider route declared; evidence and approval pending"
+      },
+      {
+        "path": "public/art/genomes/folded_anchor.png",
+        "status": "provider-declared",
+        "reason": "Provider route declared; evidence and approval pending"
+      },
+      {
+        "path": "public/art/genomes/glass_antibody.png",
+        "status": "provider-declared",
+        "reason": "Provider route declared; evidence and approval pending"
+      },
+      {
+        "path": "public/art/genomes/mire_lattice.png",
+        "status": "provider-declared",
+        "reason": "Provider route declared; evidence and approval pending"
+      },
+      {
+        "path": "public/art/genomes/mirror.png",
+        "status": "provider-declared",
+        "reason": "Provider route declared; evidence and approval pending"
+      },
+      {
+        "path": "public/art/genomes/needle_swarm.png",
+        "status": "provider-declared",
+        "reason": "Provider route declared; evidence and approval pending"
+      },
+      {
+        "path": "public/art/genomes/quill_bloom.png",
+        "status": "provider-declared",
+        "reason": "Provider route declared; evidence and approval pending"
+      },
+      {
+        "path": "public/art/genomes/sniper.png",
+        "status": "provider-declared",
+        "reason": "Provider route declared; evidence and approval pending"
+      },
+      {
+        "path": "public/art/genomes/splitter.png",
+        "status": "provider-declared",
+        "reason": "Provider route declared; evidence and approval pending"
+      },
+      {
+        "path": "public/art/genomes/static_lattice.png",
+        "status": "provider-declared",
+        "reason": "Provider route declared; evidence and approval pending"
+      },
+      {
+        "path": "public/art/genomes/swarmlet.png",
+        "status": "provider-declared",
+        "reason": "Provider route declared; evidence and approval pending"
+      },
+      {
+        "path": "public/art/genomes/vitric_anchor.png",
         "status": "provider-declared",
         "reason": "Provider route declared; evidence and approval pending"
       },
@@ -346,6 +416,230 @@
       "evidence": "scripts/generate-chimera-art.mjs",
       "bytes": 46959,
       "expectedSha256": "248bf946192624f2d9eaaa446886af42aaaa7f1cc855a8da5b9431da9e699fc0",
+      "integrity": "matched",
+      "declaredStatus": "provider-declared",
+      "effectiveStatus": "provider-declared"
+    },
+    {
+      "path": "public/art/genomes/bloom_mass.png",
+      "kind": "image",
+      "sha256": "4d38c5a8d046d85b479231007f2e904d9cd9531930e6cd38f3394fde1f84b890",
+      "status": "provider-declared",
+      "creator": "Z13 Labs (AI-generated, palette-normalized)",
+      "provider": "OpenAI Image Generation + Sharp",
+      "credit": "Bloom Mass genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.",
+      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
+      "evidence": "docs/assets/genomes/README.md",
+      "bytes": 673,
+      "expectedSha256": "4d38c5a8d046d85b479231007f2e904d9cd9531930e6cd38f3394fde1f84b890",
+      "integrity": "matched",
+      "declaredStatus": "provider-declared",
+      "effectiveStatus": "provider-declared"
+    },
+    {
+      "path": "public/art/genomes/boss.png",
+      "kind": "image",
+      "sha256": "ca288e3b293ea3424536a891da6f031f99568b467f8f1a84209adfe9134897fe",
+      "status": "provider-declared",
+      "creator": "Z13 Labs (AI-generated, palette-normalized)",
+      "provider": "OpenAI Image Generation + Sharp",
+      "credit": "Boss genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.",
+      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
+      "evidence": "docs/assets/genomes/README.md",
+      "bytes": 587,
+      "expectedSha256": "ca288e3b293ea3424536a891da6f031f99568b467f8f1a84209adfe9134897fe",
+      "integrity": "matched",
+      "declaredStatus": "provider-declared",
+      "effectiveStatus": "provider-declared"
+    },
+    {
+      "path": "public/art/genomes/bruiser.png",
+      "kind": "image",
+      "sha256": "eac1588c9b0cb5f631f939fc54987ccc11e707a7b9c54bf8080251f1eb0f4d07",
+      "status": "provider-declared",
+      "creator": "Z13 Labs (AI-generated, palette-normalized)",
+      "provider": "OpenAI Image Generation + Sharp",
+      "credit": "Bruiser genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.",
+      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
+      "evidence": "docs/assets/genomes/README.md",
+      "bytes": 608,
+      "expectedSha256": "eac1588c9b0cb5f631f939fc54987ccc11e707a7b9c54bf8080251f1eb0f4d07",
+      "integrity": "matched",
+      "declaredStatus": "provider-declared",
+      "effectiveStatus": "provider-declared"
+    },
+    {
+      "path": "public/art/genomes/folded_anchor.png",
+      "kind": "image",
+      "sha256": "b28ec2440665c3a248d842326b8ed5e3a20c11266e3f91cfc0e6980e0e1f40ba",
+      "status": "provider-declared",
+      "creator": "Z13 Labs (AI-generated, palette-normalized)",
+      "provider": "OpenAI Image Generation + Sharp",
+      "credit": "Folded Anchor genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.",
+      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
+      "evidence": "docs/assets/genomes/README.md",
+      "bytes": 725,
+      "expectedSha256": "b28ec2440665c3a248d842326b8ed5e3a20c11266e3f91cfc0e6980e0e1f40ba",
+      "integrity": "matched",
+      "declaredStatus": "provider-declared",
+      "effectiveStatus": "provider-declared"
+    },
+    {
+      "path": "public/art/genomes/glass_antibody.png",
+      "kind": "image",
+      "sha256": "45f69a7725486ea64c4c517014fd3fbc3e0e2dc791693d1aa9300e446343fe2f",
+      "status": "provider-declared",
+      "creator": "Z13 Labs (AI-generated, palette-normalized)",
+      "provider": "OpenAI Image Generation + Sharp",
+      "credit": "Glass Antibody genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.",
+      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
+      "evidence": "docs/assets/genomes/README.md",
+      "bytes": 682,
+      "expectedSha256": "45f69a7725486ea64c4c517014fd3fbc3e0e2dc791693d1aa9300e446343fe2f",
+      "integrity": "matched",
+      "declaredStatus": "provider-declared",
+      "effectiveStatus": "provider-declared"
+    },
+    {
+      "path": "public/art/genomes/mire_lattice.png",
+      "kind": "image",
+      "sha256": "d2d1ae2372274261df399bc0067de5c31a15f22c759888de1afe271309fd620a",
+      "status": "provider-declared",
+      "creator": "Z13 Labs (AI-generated, palette-normalized)",
+      "provider": "OpenAI Image Generation + Sharp",
+      "credit": "Mire Lattice genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.",
+      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
+      "evidence": "docs/assets/genomes/README.md",
+      "bytes": 654,
+      "expectedSha256": "d2d1ae2372274261df399bc0067de5c31a15f22c759888de1afe271309fd620a",
+      "integrity": "matched",
+      "declaredStatus": "provider-declared",
+      "effectiveStatus": "provider-declared"
+    },
+    {
+      "path": "public/art/genomes/mirror.png",
+      "kind": "image",
+      "sha256": "f0b968aec10702920cfb040973dfbb4308de300db2383c95025d0bc341b3552d",
+      "status": "provider-declared",
+      "creator": "Z13 Labs (AI-generated, palette-normalized)",
+      "provider": "OpenAI Image Generation + Sharp",
+      "credit": "Mirror genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.",
+      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
+      "evidence": "docs/assets/genomes/README.md",
+      "bytes": 617,
+      "expectedSha256": "f0b968aec10702920cfb040973dfbb4308de300db2383c95025d0bc341b3552d",
+      "integrity": "matched",
+      "declaredStatus": "provider-declared",
+      "effectiveStatus": "provider-declared"
+    },
+    {
+      "path": "public/art/genomes/needle_swarm.png",
+      "kind": "image",
+      "sha256": "c271cf923a3c1dbf48bbde62dd2cb9f1a6a26abf0b131416334f011158ffb067",
+      "status": "provider-declared",
+      "creator": "Z13 Labs (AI-generated, palette-normalized)",
+      "provider": "OpenAI Image Generation + Sharp",
+      "credit": "Needle Swarm genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.",
+      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
+      "evidence": "docs/assets/genomes/README.md",
+      "bytes": 597,
+      "expectedSha256": "c271cf923a3c1dbf48bbde62dd2cb9f1a6a26abf0b131416334f011158ffb067",
+      "integrity": "matched",
+      "declaredStatus": "provider-declared",
+      "effectiveStatus": "provider-declared"
+    },
+    {
+      "path": "public/art/genomes/quill_bloom.png",
+      "kind": "image",
+      "sha256": "f4ee802db9c74d31b67565aa2869a33caa32f55c7a7f5fc0e3a37d1c1bb69e8d",
+      "status": "provider-declared",
+      "creator": "Z13 Labs (AI-generated, palette-normalized)",
+      "provider": "OpenAI Image Generation + Sharp",
+      "credit": "Quill Bloom genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.",
+      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
+      "evidence": "docs/assets/genomes/README.md",
+      "bytes": 701,
+      "expectedSha256": "f4ee802db9c74d31b67565aa2869a33caa32f55c7a7f5fc0e3a37d1c1bb69e8d",
+      "integrity": "matched",
+      "declaredStatus": "provider-declared",
+      "effectiveStatus": "provider-declared"
+    },
+    {
+      "path": "public/art/genomes/sniper.png",
+      "kind": "image",
+      "sha256": "7cab63f750e524f6b594e6ec39f43230759e58446526be9bb24b1ca273ed2970",
+      "status": "provider-declared",
+      "creator": "Z13 Labs (AI-generated, palette-normalized)",
+      "provider": "OpenAI Image Generation + Sharp",
+      "credit": "Sniper genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.",
+      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
+      "evidence": "docs/assets/genomes/README.md",
+      "bytes": 520,
+      "expectedSha256": "7cab63f750e524f6b594e6ec39f43230759e58446526be9bb24b1ca273ed2970",
+      "integrity": "matched",
+      "declaredStatus": "provider-declared",
+      "effectiveStatus": "provider-declared"
+    },
+    {
+      "path": "public/art/genomes/splitter.png",
+      "kind": "image",
+      "sha256": "8a1f7b8a3eed22f0d50737d9b3d1ebc558c55e4590770c1bf718f67fe588ebf5",
+      "status": "provider-declared",
+      "creator": "Z13 Labs (AI-generated, palette-normalized)",
+      "provider": "OpenAI Image Generation + Sharp",
+      "credit": "Splitter genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.",
+      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
+      "evidence": "docs/assets/genomes/README.md",
+      "bytes": 551,
+      "expectedSha256": "8a1f7b8a3eed22f0d50737d9b3d1ebc558c55e4590770c1bf718f67fe588ebf5",
+      "integrity": "matched",
+      "declaredStatus": "provider-declared",
+      "effectiveStatus": "provider-declared"
+    },
+    {
+      "path": "public/art/genomes/static_lattice.png",
+      "kind": "image",
+      "sha256": "76db93cb90bc90e2e3de67e27e882a4931e799707025bc947844a52627d32c2a",
+      "status": "provider-declared",
+      "creator": "Z13 Labs (AI-generated, palette-normalized)",
+      "provider": "OpenAI Image Generation + Sharp",
+      "credit": "Static Lattice genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.",
+      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
+      "evidence": "docs/assets/genomes/README.md",
+      "bytes": 647,
+      "expectedSha256": "76db93cb90bc90e2e3de67e27e882a4931e799707025bc947844a52627d32c2a",
+      "integrity": "matched",
+      "declaredStatus": "provider-declared",
+      "effectiveStatus": "provider-declared"
+    },
+    {
+      "path": "public/art/genomes/swarmlet.png",
+      "kind": "image",
+      "sha256": "80d4bc49d5f3d404e57448f670ba7eaebf00788bbfe300cedfc28bce0c412305",
+      "status": "provider-declared",
+      "creator": "Z13 Labs (AI-generated, palette-normalized)",
+      "provider": "OpenAI Image Generation + Sharp",
+      "credit": "Swarmlet genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.",
+      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
+      "evidence": "docs/assets/genomes/README.md",
+      "bytes": 469,
+      "expectedSha256": "80d4bc49d5f3d404e57448f670ba7eaebf00788bbfe300cedfc28bce0c412305",
+      "integrity": "matched",
+      "declaredStatus": "provider-declared",
+      "effectiveStatus": "provider-declared"
+    },
+    {
+      "path": "public/art/genomes/vitric_anchor.png",
+      "kind": "image",
+      "sha256": "d7ea351e9e4a3de6b2663f0ce91e0ddeb824d67b3307820ab3c52b6fddc39382",
+      "status": "provider-declared",
+      "creator": "Z13 Labs (AI-generated, palette-normalized)",
+      "provider": "OpenAI Image Generation + Sharp",
+      "credit": "Vitric Anchor genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.",
+      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
+      "evidence": "docs/assets/genomes/README.md",
+      "bytes": 759,
+      "expectedSha256": "d7ea351e9e4a3de6b2663f0ce91e0ddeb824d67b3307820ab3c52b6fddc39382",
       "integrity": "matched",
       "declaredStatus": "provider-declared",
       "effectiveStatus": "provider-declared"

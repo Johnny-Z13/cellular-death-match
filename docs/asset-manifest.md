@@ -21,6 +21,17 @@ The script generates, then recompresses to a 1024² web-friendly PNG via `sharp`
 
 Script: `scripts/generate-chimera-art.mjs` (`--force` to regenerate, or pass a breed key for one). Output `public/art/chimera/<breed>.png`, 384² (recompressed via `sharp`). Microscope-specimen style matching the deep-lab look; shown in notebook breed entries. One per breed: bloom_mass, glass_antibody, needle_swarm, static_lattice, folded_anchor, quill_bloom, vitric_anchor, mire_lattice. Chimera concepts live in `src/content/chimeras.ts`.
 
+### Genome character reconstructions (OpenAI Image Generation)
+
+Source-generation prompts and input digests are pinned in
+`docs/assets/genomes/generation-manifest.json`. Run
+`node scripts/normalize-genome-art.mjs --source-dir <raw-source-directory>` to
+rebuild the 384² transparent, pixel-grid assets in `public/art/genomes/`.
+Normalization maps each generated form to the exact canonical primary RGB from
+`src/content/lifeformIdentity.ts`; this keeps genome art, eggs, and CA organisms
+on one palette contract. The set covers all six base archetypes and all eight
+discoverable breeds.
+
 ## Audio (ElevenLabs — `eleven_text_to_sound_v2`)
 
 Script: `scripts/generate-audio-assets.mjs` (`--force` to regenerate, `--dry-run` to preview,

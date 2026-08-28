@@ -1820,6 +1820,159 @@ canvas {
   100% { transform: scale(1.06); opacity: 0; }
 }
 
+/* Genome decode — a brief safe-boundary reward. The translucent vignette
+   deliberately leaves the live Petri dish legible behind the reconstruction. */
+.fx-genome {
+  --genome-color: var(--bio);
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  margin: 0;
+  padding: max(24px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+  border: 0;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 50% 46%, transparent 0 16%, rgba(1, 5, 7, 0.36) 48%, rgba(1, 4, 5, 0.86) 100%),
+    linear-gradient(180deg, rgba(1, 5, 7, 0.3), rgba(1, 5, 7, 0.58));
+  box-sizing: border-box;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
+  font: inherit;
+  text-align: center;
+}
+
+.fx-genome.fx-genome-show {
+  visibility: visible;
+  pointer-events: auto;
+  animation: fx-genome-reveal 2800ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.fx-genome:focus-visible {
+  outline: none;
+}
+
+.fx-genome:focus-visible .fx-genome-inner {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--genome-color) 68%, transparent);
+}
+
+.fx-genome-inner {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 9px;
+  width: min(760px, 96vw);
+  max-height: calc(100svh - 48px);
+  padding: 20px 26px 18px;
+  border-top: 1px solid color-mix(in srgb, var(--genome-color) 68%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--genome-color) 42%, transparent);
+  background: radial-gradient(ellipse at center, rgba(4, 12, 14, 0.82), rgba(4, 10, 12, 0.34) 68%, transparent);
+  box-sizing: border-box;
+}
+
+.fx-genome-eyebrow,
+.fx-genome-sub,
+.fx-genome-skip {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.fx-genome-eyebrow {
+  color: var(--genome-color);
+  font-size: 11px;
+  letter-spacing: 0.42em;
+  text-shadow: 0 0 18px color-mix(in srgb, var(--genome-color) 72%, transparent);
+}
+
+.fx-genome-art {
+  display: grid;
+  place-items: center;
+  width: min(330px, 46svh, 72vw);
+  aspect-ratio: 1;
+  margin: -4px 0 -10px;
+}
+
+.fx-genome-art img {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 18px color-mix(in srgb, var(--genome-color) 42%, transparent));
+}
+
+.fx-genome-title {
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: clamp(28px, 6vw, 54px);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 12px;
+  background: radial-gradient(ellipse at center, rgba(1, 5, 7, 0.92), rgba(1, 5, 7, 0.54) 58%, transparent 78%);
+  text-shadow: 0 2px 3px #010405, 0 0 26px color-mix(in srgb, var(--genome-color) 56%, transparent);
+}
+
+.fx-genome-sub {
+  color: var(--ink);
+  font-size: 12px;
+  letter-spacing: 0.2em;
+}
+
+.fx-genome-skip {
+  color: var(--ink-faint);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+.fx-genome-scan {
+  position: absolute;
+  z-index: 1;
+  top: -10%;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--genome-color), transparent);
+  box-shadow: 0 0 15px var(--genome-color);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.fx-genome-show .fx-genome-scan {
+  animation: fx-genome-scan 1100ms 180ms ease-in-out 1;
+}
+
+.fx-genome-batch .fx-genome-art {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  width: min(570px, 72svh, 88vw);
+  aspect-ratio: 2 / 1;
+  margin: 0;
+}
+
+.fx-genome-batch .fx-genome-art img {
+  grid-area: auto;
+  min-width: 0;
+}
+
+@keyframes fx-genome-reveal {
+  0% { opacity: 0; }
+  8%, 90% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes fx-genome-scan {
+  0% { top: 2%; opacity: 0; }
+  12%, 78% { opacity: 0.72; }
+  100% { top: 98%; opacity: 0; }
+}
+
 /* Discovery toasts — slide up from above the toolbar. */
 .fx-toasts {
   position: fixed;
@@ -2074,7 +2227,9 @@ canvas {
   .button-ready-pulse::after,
   .notebook-screen.visible .notebook-card,
   .notebook-screen.notebook-screen-closing .notebook-card,
-  .notebook-entry-new {
+  .notebook-entry-new,
+  .fx-genome.fx-genome-show,
+  .fx-genome-show .fx-genome-scan {
     animation: none;
   }
 
@@ -2092,6 +2247,8 @@ canvas {
   }
 
   .fx-banner.fx-banner-show { opacity: 1; }
+  .fx-genome.fx-genome-show { opacity: 1; }
+  .fx-genome-scan { display: none; }
 }
 
 /* ---- Presentation (full screen) mode ----------------------------------- */
@@ -2450,6 +2607,15 @@ canvas {
   border-radius: 50%;
   background: radial-gradient(circle at 38% 34%, #ffffff, var(--strain-color) 48%, rgba(0, 0, 0, 0.62));
   box-shadow: 0 0 14px color-mix(in srgb, var(--strain-color) 60%, transparent);
+}
+
+.loadout-strain-portrait {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 9px color-mix(in srgb, var(--strain-color) 48%, transparent));
 }
 
 .loadout-confirm {
@@ -3025,22 +3191,28 @@ canvas {
   box-shadow: 0 0 16px rgba(214, 200, 94, 0.38);
 }
 
-/* Chimera specimen portrait: a wider framed thumbnail in place of the chip. */
-.notebook-entry-chimera {
-  grid-template-columns: 60px minmax(0, 1fr);
+/* Canonical genome art replaces family swatches for every organism. */
+.notebook-entry-genome {
+  grid-template-columns: 72px minmax(0, 1fr);
 }
 
-.notebook-portrait {
-  width: 60px;
-  height: 60px;
-  object-fit: cover;
-  border-radius: 50%;
+.notebook-genome-portrait {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--bio) 45%, transparent);
-  background: #04080a;
-  box-shadow: 0 0 14px rgba(91, 233, 214, 0.22), inset 0 0 12px rgba(0, 0, 0, 0.6);
+  background: rgba(4, 8, 10, 0.48);
+  box-shadow: 0 0 14px rgba(91, 233, 214, 0.16);
 }
 
-.notebook-entry-new .notebook-portrait {
+.notebook-genome-portrait.is-observed {
+  filter: grayscale(0.8) brightness(0.35);
+  opacity: 0.74;
+}
+
+.notebook-entry-new .notebook-genome-portrait {
   border-color: var(--amber);
   box-shadow: 0 0 16px rgba(214, 200, 94, 0.4);
 }
@@ -3659,6 +3831,25 @@ canvas {
   background: rgba(16, 20, 23, 0.55);
   min-height: 64px;
   box-sizing: border-box;
+}
+
+.atlas-node-genome-entry {
+  grid-template-columns: 54px minmax(0, 1fr);
+  align-items: center;
+  min-height: 76px;
+}
+
+.atlas-node-genome {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--node-color) 42%, transparent));
+}
+
+.atlas-node-genome.is-silhouette {
+  filter: grayscale(1) brightness(0.22);
+  opacity: 0.7;
 }
 
 .atlas-node-dot {

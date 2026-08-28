@@ -52,6 +52,8 @@ describe('discoverer notebook UI wiring', () => {
     expect(screensSource).toContain('entry.displayTitle');
     expect(screensSource).toContain('entry.discoveredAtLabel');
     expect(screensSource).toContain('entry.displayRecipe');
+    expect(screensSource).toContain('entry.genomePortrait');
+    expect(screensSource).toContain('notebook-genome-portrait');
   });
 
   it('adds a tabbed atlas page that maps discovered + locked progression', () => {
@@ -64,6 +66,8 @@ describe('discoverer notebook UI wiring', () => {
     expect(screensSource).toContain('atlas-node-${node.state}');
     expect(mainSource).toContain('atlasViewForProgression');
     expect(css).toContain('.atlas-node-locked');
+    expect(css).toContain('.atlas-node-genome.is-silhouette');
+    expect(screensSource).toContain("`${group.decoded} / ${group.total} decoded`");
     expect(css).toContain('.notebook-tab-button.is-active');
   });
 

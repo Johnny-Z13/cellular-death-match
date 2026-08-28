@@ -57,6 +57,10 @@ class FakeElement {
   readonly style = new FakeStyle();
   disabled = false;
   type = '';
+  src = '';
+  alt = '';
+  width = 0;
+  height = 0;
   private ownText = '';
   private readonly attrs = new Map<string, string>();
   private readonly listeners = new Map<string, Array<() => void>>();
@@ -186,6 +190,12 @@ const options: LoadoutScreenOptions = {
       glass_antibody: 'rgb(190, 244, 255)',
     }[strain] ?? 'rgb(255, 255, 255)';
   },
+  artForStrain(strain) {
+    return {
+      src: `/art/genomes/${strain}.png`,
+      alt: `${strain} genome reconstruction`,
+    };
+  },
 };
 
 function render(library = createLibraryWithStrains(), onConfirm = vi.fn()): FakeElement {
@@ -227,6 +237,16 @@ describe('renderLoadoutScreen', () => {
 
     expect(strainButton(root, 'needle_swarm').style.getPropertyValue('--strain-color')).toBe('rgb(255, 212, 94)');
     expect(strainButton(root, 'glass_antibody').style.getPropertyValue('--strain-color')).toBe('rgb(190, 244, 255)');
+  });
+
+  it('reuses canonical decoded genome art in each egg loadout choice', () => {
+    installFakeDocument();
+    const root = render();
+    const portrait = strainButton(root, 'needle_swarm').querySelector('.loadout-strain-portrait');
+
+    expect(portrait?.tagName).toBe('img');
+    expect(portrait?.src).toBe('/art/genomes/needle_swarm.png');
+    expect(portrait?.alt).toBe('needle_swarm genome reconstruction');
   });
 
   it('toggles selection up to the available slot count', () => {

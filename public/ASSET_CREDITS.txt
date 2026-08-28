@@ -66,6 +66,104 @@ public/art/chimera/vitric_anchor.png
   Release status: Provider route declared; evidence and approval pending
   SHA-256: 248bf946192624f2d9eaaa446886af42aaaa7f1cc855a8da5b9431da9e699fc0
 
+public/art/genomes/bloom_mass.png
+  Credit: Bloom Mass genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.
+  Provider: OpenAI Image Generation + Sharp
+  Terms/evidence: https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending. docs/assets/genomes/README.md
+  Release status: Provider route declared; evidence and approval pending
+  SHA-256: 4d38c5a8d046d85b479231007f2e904d9cd9531930e6cd38f3394fde1f84b890
+
+public/art/genomes/boss.png
+  Credit: Boss genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.
+  Provider: OpenAI Image Generation + Sharp
+  Terms/evidence: https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending. docs/assets/genomes/README.md
+  Release status: Provider route declared; evidence and approval pending
+  SHA-256: ca288e3b293ea3424536a891da6f031f99568b467f8f1a84209adfe9134897fe
+
+public/art/genomes/bruiser.png
+  Credit: Bruiser genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.
+  Provider: OpenAI Image Generation + Sharp
+  Terms/evidence: https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending. docs/assets/genomes/README.md
+  Release status: Provider route declared; evidence and approval pending
+  SHA-256: eac1588c9b0cb5f631f939fc54987ccc11e707a7b9c54bf8080251f1eb0f4d07
+
+public/art/genomes/folded_anchor.png
+  Credit: Folded Anchor genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.
+  Provider: OpenAI Image Generation + Sharp
+  Terms/evidence: https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending. docs/assets/genomes/README.md
+  Release status: Provider route declared; evidence and approval pending
+  SHA-256: b28ec2440665c3a248d842326b8ed5e3a20c11266e3f91cfc0e6980e0e1f40ba
+
+public/art/genomes/glass_antibody.png
+  Credit: Glass Antibody genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.
+  Provider: OpenAI Image Generation + Sharp
+  Terms/evidence: https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending. docs/assets/genomes/README.md
+  Release status: Provider route declared; evidence and approval pending
+  SHA-256: 45f69a7725486ea64c4c517014fd3fbc3e0e2dc791693d1aa9300e446343fe2f
+
+public/art/genomes/mire_lattice.png
+  Credit: Mire Lattice genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.
+  Provider: OpenAI Image Generation + Sharp
+  Terms/evidence: https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending. docs/assets/genomes/README.md
+  Release status: Provider route declared; evidence and approval pending
+  SHA-256: d2d1ae2372274261df399bc0067de5c31a15f22c759888de1afe271309fd620a
+
+public/art/genomes/mirror.png
+  Credit: Mirror genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.
+  Provider: OpenAI Image Generation + Sharp
+  Terms/evidence: https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending. docs/assets/genomes/README.md
+  Release status: Provider route declared; evidence and approval pending
+  SHA-256: f0b968aec10702920cfb040973dfbb4308de300db2383c95025d0bc341b3552d
+
+public/art/genomes/needle_swarm.png
+  Credit: Needle Swarm genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.
+  Provider: OpenAI Image Generation + Sharp
+  Terms/evidence: https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending. docs/assets/genomes/README.md
+  Release status: Provider route declared; evidence and approval pending
+  SHA-256: c271cf923a3c1dbf48bbde62dd2cb9f1a6a26abf0b131416334f011158ffb067
+
+public/art/genomes/quill_bloom.png
+  Credit: Quill Bloom genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.
+  Provider: OpenAI Image Generation + Sharp
+  Terms/evidence: https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending. docs/assets/genomes/README.md
+  Release status: Provider route declared; evidence and approval pending
+  SHA-256: f4ee802db9c74d31b67565aa2869a33caa32f55c7a7f5fc0e3a37d1c1bb69e8d
+
+public/art/genomes/sniper.png
+  Credit: Sniper genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.
+  Provider: OpenAI Image Generation + Sharp
+  Terms/evidence: https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending. docs/assets/genomes/README.md
+  Release status: Provider route declared; evidence and approval pending
+  SHA-256: 7cab63f750e524f6b594e6ec39f43230759e58446526be9bb24b1ca273ed2970
+
+public/art/genomes/splitter.png
+  Credit: Splitter genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.
+  Provider: OpenAI Image Generation + Sharp
+  Terms/evidence: https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending. docs/assets/genomes/README.md
+  Release status: Provider route declared; evidence and approval pending
+  SHA-256: 8a1f7b8a3eed22f0d50737d9b3d1ebc558c55e4590770c1bf718f67fe588ebf5
+
+public/art/genomes/static_lattice.png
+  Credit: Static Lattice genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.
+  Provider: OpenAI Image Generation + Sharp
+  Terms/evidence: https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending. docs/assets/genomes/README.md
+  Release status: Provider route declared; evidence and approval pending
+  SHA-256: 76db93cb90bc90e2e3de67e27e882a4931e799707025bc947844a52627d32c2a
+
+public/art/genomes/swarmlet.png
+  Credit: Swarmlet genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.
+  Provider: OpenAI Image Generation + Sharp
+  Terms/evidence: https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending. docs/assets/genomes/README.md
+  Release status: Provider route declared; evidence and approval pending
+  SHA-256: 80d4bc49d5f3d404e57448f670ba7eaebf00788bbfe300cedfc28bce0c412305
+
+public/art/genomes/vitric_anchor.png
+  Credit: Vitric Anchor genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.
+  Provider: OpenAI Image Generation + Sharp
+  Terms/evidence: https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending. docs/assets/genomes/README.md
+  Release status: Provider route declared; evidence and approval pending
+  SHA-256: d7ea351e9e4a3de6b2663f0ce91e0ddeb824d67b3307820ab3c52b6fddc39382
+
 public/art/professor/professor-emergent-v1.png
   Credit: Professor E. Mergent character art by Z13 Labs, generated with OpenAI.
   Provider: OpenAI Image Generation
