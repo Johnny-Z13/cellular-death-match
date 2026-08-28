@@ -10,6 +10,6 @@ describe('haptic event wiring', () => {
     expect(mainSource).toContain("haptics.play('discovery')");
     expect(mainSource).toContain("haptics.play('success')");
     expect(mainSource).toContain("haptics.play('warning')");
-    expect(mainSource).toContain("haptics.play('failure')");
+    expect(mainSource).toContain("haptics.play(succeeded ? 'success' : 'failure')");
   });
 });

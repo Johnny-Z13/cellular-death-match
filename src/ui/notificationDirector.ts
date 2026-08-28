@@ -78,6 +78,11 @@ export class NotificationDirector<T> {
     return this.queue;
   }
 
+  clear(): void {
+    this.active = null;
+    this.queue = [];
+  }
+
   private insert(notification: DirectedNotification<T>): boolean {
     const entry: QueuedNotification<T> = {
       ...notification,

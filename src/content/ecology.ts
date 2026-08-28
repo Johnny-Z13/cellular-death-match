@@ -27,6 +27,21 @@ export interface ArchetypeEcology {
   summary: string;
 }
 
+/**
+ * Stable phenotype cues used when a catalyst asks for a biological context.
+ * These do not apply mutation stat multipliers: they let an unmutated base
+ * organism behave like its fiction (for example, Bruisers are soft/gel-like)
+ * while `EnemySpawn.traits` remains reserved for acquired mechanical traits.
+ */
+export const ARCHETYPE_REACTION_TRAITS: Record<EnemyArchetype, readonly TraitId[]> = {
+  swarmlet: ['fleet', 'fragile'],
+  bruiser: ['gelatinous'],
+  splitter: ['budding'],
+  sniper: ['fragile'],
+  mirror: ['toxin_resistant', 'gelatinous'],
+  boss: ['gelatinous'],
+};
+
 export const MUTATION_TRAITS: Record<TraitId, TraitDef> = {
   fleet: {
     id: 'fleet',

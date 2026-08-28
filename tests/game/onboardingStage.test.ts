@@ -106,8 +106,8 @@ describe('onboarding beats', () => {
     expect(ONBOARDING_BEATS[3]!.pointerTarget).toBe('dish');
   });
 
-  it('guides all five authored trials with Professor copy and an exact target', () => {
-    expect(TRIAL_ONBOARDING_BEATS).toHaveLength(5);
+  it('keeps exact Professor scripts only for the first two authored Trials', () => {
+    expect(TRIAL_ONBOARDING_BEATS).toHaveLength(2);
     for (const trial of TRIAL_ONBOARDING_BEATS) {
       expect(trial.length).toBeGreaterThanOrEqual(4);
       for (const beat of trial) {
@@ -120,11 +120,10 @@ describe('onboarding beats', () => {
     }
   });
 
-  it('teaches reagent-rack drag with a tappable reveal alternative', () => {
-    const revealBeat = TRIAL_ONBOARDING_BEATS[2]!.find((beat) => beat.id === 'reveal-water');
-    expect(revealBeat?.trigger).toBe('toolbox-scrolled');
-    expect(revealBeat?.pointerTarget).toBe('rack:more');
-    expect(revealBeat?.body).toContain('press the arrow');
+  it('provides no automatic pointer trail for Trials 3–5', () => {
+    expect(TRIAL_ONBOARDING_BEATS[2]).toBeUndefined();
+    expect(TRIAL_ONBOARDING_BEATS[3]).toBeUndefined();
+    expect(TRIAL_ONBOARDING_BEATS[4]).toBeUndefined();
   });
 });
 

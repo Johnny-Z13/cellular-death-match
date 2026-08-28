@@ -110,6 +110,12 @@ npm run qa:mobile # 5 responsive layouts, no overflow/browser errors
 
 Both commands are expected to pass.
 
+## Release Naming
+
+The working CrazyGames release name is **Cellular Death Match**, with "Death Match" retained as two words. The title's microscopic-combat hook is deliberately paired with store copy and cover imagery that foreground ecosystem cultivation, strain breeding, reagent combinations, and collapse pressure so the release does not imply conventional PvP.
+
+The supporting research, alternative-name shortlist, collision screen, metadata copy, and pre-release trademark checklist are recorded in [`docs/crazygames/2026-08-28-naming-and-positioning.md`](./crazygames/2026-08-28-naming-and-positioning.md).
+
 ## Historical Docs
 
 The files under `docs/superpowers/plans/` and the original spec are retained as historical implementation records. They are useful for understanding how the project got here, but `README.md`, `AGENTS.md`, `CLAUDE.md`, `cloud.md`, and this file describe the current product shape.

@@ -2,6 +2,9 @@ export interface OnboardingIdleNudgeInput {
   objectiveComplete: boolean;
   tutorialActive: boolean;
   objectiveHint: string | undefined;
+  guidanceTier?: 'exact' | 'hypothesis';
+  nudgeIndex?: number;
+  recoveryHints?: readonly [principle: string, exactMethod: string];
 }
 
 export interface OnboardingIdleNudge {
@@ -14,7 +17,7 @@ export function onboardingIdleNudge(input: OnboardingIdleNudgeInput): Onboarding
   if (input.objectiveComplete) {
     return {
       title: 'Experiment ready',
-      body: 'Press End to bank this dish and unlock the next research step.',
+      body: 'Bank this result to preserve the evidence and unlock the next research step.',
       interruptTutorial: false,
     };
   }
@@ -24,6 +27,15 @@ export function onboardingIdleNudge(input: OnboardingIdleNudgeInput): Onboarding
       title: 'Make the first discovery',
       body: 'Place one Swarmlet egg, then feed the living cultures with Nutrient until Bloom appears.',
       interruptTutorial: true,
+    };
+  }
+
+  if (input.guidanceTier === 'hypothesis' && input.recoveryHints) {
+    const exact = (input.nudgeIndex ?? 0) > 0;
+    return {
+      title: exact ? 'Exact method' : 'A principle to test',
+      body: exact ? input.recoveryHints[1] : input.recoveryHints[0],
+      interruptTutorial: false,
     };
   }
 

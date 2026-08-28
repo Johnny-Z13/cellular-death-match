@@ -40,7 +40,7 @@ export default defineConfig({
     },
     {
       name: 'small-phone',
-      testIgnore: ['**/director-rail.spec.ts', '**/onboarding.spec.ts', '**/reduced-motion.spec.ts'],
+      testIgnore: ['**/authored-recipes.spec.ts', '**/director-rail.spec.ts', '**/journeys.spec.ts', '**/onboarding.spec.ts', '**/open-lab-journeys.spec.ts', '**/persistence.spec.ts', '**/reduced-motion.spec.ts'],
       use: {
         browserName: 'chromium',
         viewport: { width: 375, height: 667 },
@@ -50,7 +50,7 @@ export default defineConfig({
     },
     {
       name: 'phone-landscape',
-      testIgnore: ['**/director-rail.spec.ts', '**/onboarding.spec.ts', '**/reduced-motion.spec.ts'],
+      testIgnore: ['**/authored-recipes.spec.ts', '**/director-rail.spec.ts', '**/journeys.spec.ts', '**/onboarding.spec.ts', '**/open-lab-journeys.spec.ts', '**/persistence.spec.ts', '**/reduced-motion.spec.ts'],
       use: {
         browserName: 'chromium',
         viewport: { width: 844, height: 390 },
@@ -60,7 +60,7 @@ export default defineConfig({
     },
     {
       name: 'tablet-portrait',
-      testIgnore: ['**/director-rail.spec.ts', '**/onboarding.spec.ts', '**/reduced-motion.spec.ts'],
+      testIgnore: ['**/authored-recipes.spec.ts', '**/director-rail.spec.ts', '**/journeys.spec.ts', '**/onboarding.spec.ts', '**/open-lab-journeys.spec.ts', '**/persistence.spec.ts', '**/reduced-motion.spec.ts'],
       use: {
         browserName: 'chromium',
         viewport: { width: 768, height: 1024 },
@@ -70,7 +70,7 @@ export default defineConfig({
     },
     {
       name: 'desktop',
-      testIgnore: ['**/director-rail.spec.ts', '**/onboarding.spec.ts', '**/reduced-motion.spec.ts'],
+      testIgnore: ['**/authored-recipes.spec.ts', '**/director-rail.spec.ts', '**/journeys.spec.ts', '**/onboarding.spec.ts', '**/open-lab-journeys.spec.ts', '**/persistence.spec.ts', '**/reduced-motion.spec.ts'],
       use: {
         browserName: 'chromium',
         viewport: { width: 1280, height: 720 },

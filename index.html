@@ -106,6 +106,7 @@
           </span>
           <b>now</b>
         </button>
+        <p id="end-action-explanation" class="sr-only" aria-live="polite"></p>
         <button class="tool-button" type="button" data-tool="water">
           <span class="tool-icon water-icon"></span>
           <span>
@@ -237,10 +238,19 @@
               <strong id="title-trial-hypothesis">A fed Swarmlet culture may produce a useful new mass.</strong>
             </div>
           </section>
+          <div class="title-archive-strip" aria-label="Genome Archive progress">
+            <div class="title-archive-head">
+              <span>Genome Archive</span>
+              <b id="title-genome-progress">1 / 14 genomes decoded</b>
+            </div>
+            <div id="title-genome-track" class="title-genome-track" aria-hidden="true"></div>
+            <p id="title-genome-lead">Next lead · Unknown genome signal</p>
+          </div>
           <button id="title-start" class="screen-button title-start-button">
             <span class="screen-button-glyph" aria-hidden="true"></span>
             <span id="title-start-label">Run Trial</span>
           </button>
+          <p id="title-save-note" class="title-save-note">Research saves automatically between boundaries.</p>
           <p id="commit-debug" class="commit-debug">build · …</p>
         </div>
       </div>
@@ -322,7 +332,7 @@
             <img src="/art/professor/professor-emergent-v1.png" width="633" height="760" alt="" />
           </div>
           <div class="hud-director-copy">
-            <div class="hud-director-head"><span>Dr. E · Dish status</span><span>Live</span></div>
+            <div class="hud-director-head"><span id="hud-director-kicker">Dr. E · Dish status</span><span id="hud-director-state">Live</span></div>
             <strong id="hud-director-title" class="hud-director-title">Objective</strong>
             <span id="hud-director-progress" class="hud-director-progress">—</span>
             <div class="hud-row hud-eco-row hud-objective-row"><span class="hud-key">Objective</span><span id="hud-objective" class="hud-val">—</span></div>
@@ -338,7 +348,7 @@
         <div class="life-panel-head">
           <div class="life-panel-title-row">
             <h2 class="life-panel-title">Specimen freezer</h2>
-            <span id="life-count" class="life-count">1 / 14 ready</span>
+            <span id="life-count" class="life-count">1 specimen available in this Study</span>
             <button id="life-panel-close" class="life-panel-close" type="button" aria-label="Close specimen freezer">Close</button>
           </div>
           <p id="life-summary" class="life-summary">Pick an egg strain to seed the dish.</p>
@@ -351,6 +361,7 @@
         <div class="ticker-title">DISH LOG</div>
         <div id="ticker-lines" class="ticker-lines"></div>
       </aside>
+      <p id="study-start-announcer" class="sr-only" aria-live="polite"></p>
 
       <div id="fx-banner" class="fx-banner" aria-hidden="true" aria-live="polite" aria-atomic="true">
         <div class="fx-banner-inner">

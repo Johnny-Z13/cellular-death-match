@@ -201,12 +201,21 @@ describe('catalysis content', () => {
     const recipe = reactionRecipeFor(['hatch', 'nutrient', 'toxin'], {
       traits: ['budding', 'toxin_resistant'],
       archetypes: ['swarmlet'],
-    });
+    }, 'hatch');
 
     expect(recipe?.id).toBe('incubator_shock');
     expect(recipe?.caution).toBe('critical');
     expect(recipe?.effect.type).toBe('flare');
     expect(DISCOVERY_NOTES.recipe_incubator_shock?.title).toBe('Incubator Shock');
+  });
+
+  it('keeps egg-first nutrient and toxin pressure on the Bitter Bloom path', () => {
+    const recipe = reactionRecipeFor(['hatch', 'nutrient', 'toxin'], {
+      traits: ['budding'],
+      archetypes: ['splitter'],
+    }, 'toxin');
+
+    expect(recipe?.id).toBe('bitter_bloom');
   });
 
   it('discovers toxin mist when water dilutes toxin around quick starter cultures', () => {

@@ -31,4 +31,10 @@ describe('unified mobile Director rail', () => {
     expect(screens).toContain('hudDirectorProgress.textContent = info.objectiveComplete');
     expect(screens).toContain("info.biomeName ?? 'Stable'");
   });
+
+  it('clears one-shot accessible assignment copy after its timer or a screen boundary', () => {
+    expect(screens).toContain("if (name !== 'hud') clearStudyStartAnnouncement();");
+    expect(screens).toContain("studyStartAnnouncer.textContent = '';");
+    expect(screens).toContain('if (lastStudyStartKey !== announcementKey) return;');
+  });
 });

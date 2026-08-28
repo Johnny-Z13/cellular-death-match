@@ -7,9 +7,9 @@ const screensSource = readFileSync('src/ui/screens.ts', 'utf8');
 
 describe('end button ready affordance', () => {
   it('flashes the End button when the dish can be banked', () => {
-    expect(screensSource).toContain("endEpochButton.classList.toggle('end-action-ready', complete);");
-    expect(screensSource).toContain("endLabel.textContent = complete ? 'bank result' : 'bank or leave'");
-    expect(screensSource).toContain("endState.textContent = complete ? 'ready' : 'now'");
+    expect(screensSource).toContain("endEpochButton.classList.toggle('end-action-ready', state.mode === 'bank');");
+    expect(screensSource).toContain('endTitle.textContent = state.label');
+    expect(screensSource).toContain('endState.textContent = state.detail');
     expect(css).toContain('.end-action.end-action-ready::after');
     expect(css).toContain('animation: end-ready-flash');
     expect(css).toContain('@keyframes end-ready-flash');
@@ -22,6 +22,7 @@ describe('end button ready affordance', () => {
     const restingRule = endIconRules[0] ?? '';
     expect(restingRule).toContain('box-shadow: none;');
     expect(restingRule).not.toContain('0 0 14px');
-    expect(screensSource).not.toContain("endEpochButton.disabled");
+    expect(screensSource).toContain('endEpochButton.disabled = state.disabled');
+    expect(css).toContain('.end-action:disabled');
   });
 });

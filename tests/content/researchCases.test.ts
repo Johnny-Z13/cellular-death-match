@@ -15,6 +15,7 @@ describe('Common Cold research Case', () => {
       expect(OBJECTIVES[index]?.name).toBe(trial.name);
       expect(trial.hypothesis.length).toBeGreaterThan(20);
       expect(trial.introducedFeature.length).toBeGreaterThan(0);
+      expect(trial.recoveryHints.every((hint) => hint.length > 20)).toBe(true);
     }
     expect(OBJECTIVES.slice(1, 4).map((objective) => objective.recipeId)).toEqual([
       'bitter_bloom',
@@ -22,6 +23,9 @@ describe('Common Cold research Case', () => {
       'foam_lightning',
     ]);
     expect(OBJECTIVES[4]?.recipeId).toBe('brine_channel');
+    expect(COMMON_COLD_CASE.trials.map((trial) => trial.guidanceTier)).toEqual([
+      'exact', 'exact', 'hypothesis', 'hypothesis', 'hypothesis',
+    ]);
   });
 
   it('clamps UI lookups to an authored Trial', () => {

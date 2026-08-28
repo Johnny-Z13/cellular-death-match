@@ -23,8 +23,10 @@ describe('Case record', () => {
   });
 
   it('keeps an in-memory result when storage writes are denied', () => {
-    const next = recordCompletedTrial({ setItem: () => { throw new Error('denied'); } }, { completedTrialIds: [] }, 'culture-shock');
+    const next = recordCompletedTrial({
+      getItem: () => null,
+      setItem: () => { throw new Error('denied'); },
+    }, { completedTrialIds: [] }, 'culture-shock');
     expect(next.completedTrialIds).toEqual(['culture-shock']);
   });
 });
-

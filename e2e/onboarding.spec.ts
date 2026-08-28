@@ -29,14 +29,17 @@ test.describe('first discovery progression', () => {
     await reveal.click();
     await expect(page.locator('#screen-pick')).toHaveClass(/visible/);
     await expect(page.locator('#pick-choices .pick-card')).toHaveCount(3);
-    await page.locator('#pick-choices .pick-card').first().click();
+    const methodCard = page.locator('#pick-choices .pick-card').first();
+    await expect(methodCard).toBeFocused();
+    await methodCard.press('Enter');
 
     await expect(page.locator('.layout')).toHaveAttribute('data-screen', 'arena');
     await expect(page.locator('#hud-fight')).toHaveText('2 / 5');
     await expect(page.locator('#coach-title')).toHaveText('Press Bloom Mass.');
+    await expect(page.locator('#mobile-lifeforms-toggle')).toBeFocused();
 
     await page.locator('#mobile-lifeforms-toggle').click();
-    await expect(page.locator('#life-count')).toHaveText('2 / 14 ready');
+    await expect(page.locator('#life-count')).toHaveText('2 specimens available in this Study');
     const bloom = page.locator('[data-lifeform-id="bloom_mass"]');
     await expect(bloom).toBeVisible();
     await expect(bloom).toBeEnabled();

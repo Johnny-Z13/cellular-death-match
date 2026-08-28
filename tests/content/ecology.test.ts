@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { EGG_ARCHETYPES } from '../../src/content/enemies';
 import {
   ARCHETYPE_ECOLOGY,
+  ARCHETYPE_REACTION_TRAITS,
   CRISES,
   MUTATION_TRAITS,
   pickMutationTrait,
@@ -20,6 +21,15 @@ describe('ecology content', () => {
     for (const profile of Object.values(ARCHETYPE_ECOLOGY)) {
       for (const target of [...profile.prefers, ...profile.avoids]) {
         expect(known.has(target)).toBe(true);
+      }
+    }
+  });
+
+  it('gives every base organism a stable catalyst phenotype', () => {
+    for (const archetype of EGG_ARCHETYPES) {
+      expect(ARCHETYPE_REACTION_TRAITS[archetype].length).toBeGreaterThan(0);
+      for (const trait of ARCHETYPE_REACTION_TRAITS[archetype]) {
+        expect(MUTATION_TRAITS[trait]).toBeDefined();
       }
     }
   });

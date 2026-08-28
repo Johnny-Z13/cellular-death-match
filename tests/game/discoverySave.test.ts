@@ -81,4 +81,30 @@ describe('discovery save', () => {
     expect(saved.breedDiscoveryRecords[0]).toMatchObject({ id: 'needle_swarm', stage: 'stabilized' });
     expect(saved.noteDiscoveryRecords[0]).toMatchObject({ id: 'breed_needle_swarm', stage: 'understood' });
   });
+
+  it('repairs legacy cross-category stages without granting extra ownership', () => {
+    const storage = createMemoryStorage();
+    storage.setItem(DISCOVERY_SAVE_KEY, JSON.stringify({
+      persistenceEnabled: true,
+      discoveredBreedIds: ['needle_swarm'],
+      discoveredNoteIds: ['recipe_bitter_bloom'],
+      breedDiscoveryRecords: [{
+        id: 'needle_swarm',
+        discoveredAt: '2026-08-28T10:00:00.000Z',
+        fresh: false,
+        stage: 'understood',
+      }],
+      noteDiscoveryRecords: [{
+        id: 'recipe_bitter_bloom',
+        discoveredAt: '2026-08-28T10:00:00.000Z',
+        fresh: false,
+        stage: 'stabilized',
+      }],
+      revealAll: false,
+    }));
+
+    const saved = loadDiscoverySave(storage);
+    expect(saved.breedDiscoveryRecords[0]?.stage).toBe('observed');
+    expect(saved.noteDiscoveryRecords[0]?.stage).toBe('understood');
+  });
 });

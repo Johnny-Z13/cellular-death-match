@@ -1,6 +1,7 @@
 import type { DiscoveryStorage } from './discoverySave';
+import { writeVerifiedJson, type VerifiedWriteResult } from './verifiedStorage';
 
-const STRAIN_LIBRARY_KEY = 'cellular-death-match.strains.v1';
+export const STRAIN_LIBRARY_KEY = 'cellular-death-match.strains.v1';
 const MAX_LOADOUT_SLOTS = 6;
 const DEFAULT_STRAIN = 'swarmlet';
 
@@ -19,12 +20,14 @@ export interface StrainLibrary {
   getLoadoutSlots(): number;
   getRunCount(): number;
   getBiomeCount(): number;
+  getState(): StrainLibraryState;
+  replaceState(next: StrainLibraryState): void;
   bankStrain(breedId: string): void;
   addLoadoutSlot(): void;
   setLoadout(strains: string[]): void;
   incrementRunCount(): void;
   incrementBiomeCount(): void;
-  save(): void;
+  save(): VerifiedWriteResult<StrainLibraryState>;
 }
 
 function defaultState(): StrainLibraryState {
@@ -37,7 +40,7 @@ function defaultState(): StrainLibraryState {
   };
 }
 
-function sanitize(value: unknown): StrainLibraryState {
+export function canonicalStrainLibraryState(value: unknown): StrainLibraryState {
   const defaults = defaultState();
 
   if (typeof value !== 'object' || value === null) return defaults;
@@ -90,18 +93,7 @@ function playableLoadoutFor(state: StrainLibraryState): string[] {
 }
 
 export function createStrainLibrary(storage: DiscoveryStorage): StrainLibrary {
-  let state: StrainLibraryState;
-
-  const raw = storage.getItem(STRAIN_LIBRARY_KEY);
-  if (raw === null) {
-    state = defaultState();
-  } else {
-    try {
-      state = sanitize(JSON.parse(raw));
-    } catch {
-      state = defaultState();
-    }
-  }
+  let state = loadStrainLibraryState(storage);
 
   return {
     getAvailableStrains(): string[] {
@@ -126,6 +118,14 @@ export function createStrainLibrary(storage: DiscoveryStorage): StrainLibrary {
 
     getBiomeCount(): number {
       return state.biomeCount;
+    },
+
+    getState(): StrainLibraryState {
+      return cloneState(state);
+    },
+
+    replaceState(next: StrainLibraryState): void {
+      state = canonicalStrainLibraryState(next);
     },
 
     bankStrain(breedId: string): void {
@@ -163,8 +163,42 @@ export function createStrainLibrary(storage: DiscoveryStorage): StrainLibrary {
       state.biomeCount += 1;
     },
 
-    save(): void {
-      storage.setItem(STRAIN_LIBRARY_KEY, JSON.stringify(state));
+    save(): VerifiedWriteResult<StrainLibraryState> {
+      const result = saveStrainLibraryStateVerified(storage, state);
+      state = result.value;
+      return result;
     },
+  };
+}
+
+export function loadStrainLibraryState(
+  storage: Pick<DiscoveryStorage, 'getItem'>,
+): StrainLibraryState {
+  try {
+    const raw = storage.getItem(STRAIN_LIBRARY_KEY);
+    return raw === null ? defaultState() : canonicalStrainLibraryState(JSON.parse(raw));
+  } catch {
+    return defaultState();
+  }
+}
+
+export function saveStrainLibraryStateVerified(
+  storage: Pick<DiscoveryStorage, 'getItem' | 'setItem'>,
+  state: StrainLibraryState,
+): VerifiedWriteResult<StrainLibraryState> {
+  const canonical = canonicalStrainLibraryState(state);
+  return writeVerifiedJson(
+    storage,
+    STRAIN_LIBRARY_KEY,
+    canonical,
+    () => loadStrainLibraryState(storage),
+  );
+}
+
+function cloneState(state: StrainLibraryState): StrainLibraryState {
+  return {
+    ...state,
+    availableStrains: [...state.availableStrains],
+    loadout: [...state.loadout],
   };
 }

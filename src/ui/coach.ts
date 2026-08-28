@@ -13,6 +13,7 @@ export interface Coach {
   beginRun(): void;
   beginTrial(trialIndex: number): void;
   report(event: CoachEvent): void;
+  leaveArena(completed: boolean): void;
   dismiss(): void;
   getBeatIndex(): number;
   getCurrentButtonHint(): string | undefined;
@@ -231,8 +232,8 @@ export function createCoach(): Coach {
     const success = trialSuccessCopy(currentTrialIndex);
     titleEl.textContent = success.title;
     bodyEl.textContent = success.body;
-    stepEl.textContent = 'End when ready';
-    if (actionEl) actionEl.textContent = 'Press End when ready';
+    stepEl.textContent = 'Result ready';
+    if (actionEl) actionEl.textContent = 'Bank result when ready';
     if (skipBtn) {
       skipBtn.textContent = '';
       skipBtn.hidden = true;
@@ -259,9 +260,17 @@ export function createCoach(): Coach {
   }
 
   function finishSuccess(coach: Coach): void {
+    coach.leaveArena(true);
+  }
+
+  function leaveArena(coach: Coach, completed: boolean): void {
+    if (!active) {
+      hide();
+      return;
+    }
     const completedTrialIndex = currentTrialIndex;
-    finish(true);
-    coach.onOnboardingComplete?.(completedTrialIndex);
+    finish(completed);
+    if (completed) coach.onOnboardingComplete?.(completedTrialIndex);
   }
 
   function hideNudgeNow(): void {
@@ -347,6 +356,9 @@ export function createCoach(): Coach {
       }
       render();
     },
+    leaveArena(completed) {
+      leaveArena(coach, completed);
+    },
     dismiss() {
       finish(false);
     },
@@ -388,23 +400,23 @@ function trialSuccessCopy(trialIndex: number): { title: string; body: string } {
   const copy = [
     {
       title: 'Experiment complete.',
-      body: 'You’ve met the goal. End is live whenever you’re ready — keep playing with your organisms as long as you like.',
+      body: 'You’ve met the goal. Bank the result whenever you’re ready — keep playing with your organisms as long as you like.',
     },
     {
       title: 'Bitter Bloom. Logged.',
-      body: 'Feed, then pressure: a repeatable protocol. End whenever you’re ready, or keep observing.',
+      body: 'Feed, then pressure: a repeatable protocol. Bank it whenever you’re ready, or keep observing.',
     },
     {
       title: 'Nutrient Conduit. Logged.',
-      body: 'Water carried food through living tissue. End whenever you’re ready, or keep observing.',
+      body: 'Water carried food through living tissue. Bank it whenever you’re ready, or keep observing.',
     },
     {
       title: 'Foam Lightning. Logged.',
-      body: 'A second Water pulse discharged the Foam. End whenever you’re ready, or keep observing.',
+      body: 'A second Water pulse discharged the Foam. Bank it whenever you’re ready, or keep observing.',
     },
     {
       title: 'Brine Channel. Logged.',
-      body: 'The wider ecosystem held. End whenever you’re ready, or keep observing.',
+      body: 'The wider ecosystem held. Bank it whenever you’re ready, or keep observing.',
     },
   ];
   return copy[trialIndex] ?? { title: 'Good work.', body: 'The result is logged.' };

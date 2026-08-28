@@ -4,6 +4,14 @@ Mobile-first cellular ecosystem roguelike in a Petri dish. Seed lifeforms, feed 
 
 The simulation is a TypeScript/Canvas port inspired by James Simon's cellular Potts model work, with a game layer built around evolving lineages, archetype eggs, lab tools, objectives, upgrades, and responsive touch-friendly play.
 
+## Release Name And Positioning
+
+The planned CrazyGames release name is **Cellular Death Match**. Keep "Death Match" as two words: the spacing preserves the double reading of *cellular death* and *death match* while avoiding an even stronger promise of conventional PvP.
+
+The name is memorable and preliminarily distinctive, but its combat framing must be balanced by accurate store copy and cover imagery. The release description should lead with ecosystem cultivation, strain breeding, reagent combinations, and collapse pressure. The CrazyGames cover should show visibly different cultures competing inside the dish, with lab intervention evident in the scene.
+
+See [CrazyGames Naming And Release Positioning](./docs/crazygames/2026-08-28-naming-and-positioning.md) for the research, alternatives, collision screen, metadata copy, and pre-release clearance checklist.
+
 ## Influences
 
 This project sits in the lineage of Conway's Game of Life, cellular automata, and the wider maths of emergence: simple local rules, repeated many times, producing surprising global behavior. Cellular Death Match uses a cellular Potts-style model rather than Life's exact birth/survival rules, but the fascination is the same: watching order, competition, blooms, collapse, and apparent intention emerge from tiny stochastic updates.
@@ -15,8 +23,8 @@ The game layer leans into that by asking the player to cultivate conditions inst
 ## Current Gameplay
 
 - **Roguelike runs** — open-ended, no fixed epoch count. Runs fail when the ecosystem collapses; homeostasis becomes a visible equilibrium state the player can observe before ending the trial.
-- **Guided onboarding** — Epoch 1 is a 3-beat auto-advancing tutorial (~30 seconds). Epochs 2-3 teach ecology and breeding.
-- **Procedural mid-game** — from Epoch 4+, choose between 2 objectives each epoch. Pressure escalates: crises come faster, outbreaks hit harder, mutations grow wilder.
+- **Guided Case** — five authored Trials teach placement, catalysis, reaction chaining, and equilibrium without turning the dish into a speed run.
+- **Procedural Open Lab** — after the Case is sealed, choose between 2 field studies each epoch. Pressure escalates: crises come faster, outbreaks hit harder, mutations grow wilder.
 - **Homeostasis win state** — when 3+ breeds hold stable volume share for 20 seconds, the HUD recognizes a living ecosystem, pauses pressure, and marks the dish "Equilibrium."
 - **Strain library** — discovered breeds are banked across runs. Before each run, pick an egg loadout from your collection.
 - **CPM energy profiles** — each breed has distinct physics coefficients (Ising surface tension, volume preservation, movement responsiveness). Bruisers are compact blobs; swarmlets spread thin with pseudopods; bloom mass flows like an amorphous film.
@@ -81,6 +89,9 @@ http://192.168.1.144:5178/
 ```bash
 npm test             # Run the Vitest unit/integration suite
 npm run test:e2e     # Start Vite and run the Playwright browser harness
+npm run test:e2e:journey # Play all 5 Case Trials, enter Open Lab, reload, resume
+npm run test:e2e:save    # Exercise Case/Open Lab save checkpoints
+npm run test:e2e:soak    # Repeat the critical save/discovery paths 3 times
 npm run qa:mobile    # Run the five-layout responsive Playwright suite
 npm run test:all     # Vitest + Playwright + production build
 npm run build        # Typecheck and create a production build
@@ -88,10 +99,12 @@ npm run typecheck
 npm run preview
 ```
 
-The Playwright harness uses isolated fresh-save browser contexts. It verifies
-the five supported viewport classes, runtime errors, options focus and bounds,
-core dish interactions, reduced motion, and the complete first-discovery path
-from Trial 1 through selecting and placing Bloom Mass in Trial 2. Failure
+The Playwright harness uses isolated browser contexts. It verifies the five
+supported viewport classes, runtime errors, core dish interactions, reduced
+motion, the full five-Trial Case, and Open Lab loadout/discovery paths. Save
+tests reload a fresh Trial, a partially played dish, a ready-to-bank dish, a
+genome reveal, a Method choice, Trial 2, and an active Open Lab Study. The soak
+command repeats the critical save and catalysis paths three times. Failure
 screenshots, video, and traces are written to the ignored `test-results/`
 directory; the HTML report is written to ignored `playwright-report/`.
 
@@ -130,4 +143,4 @@ npm run test:all
 git status --short
 ```
 
-See [AGENTS.md](./AGENTS.md), [CLAUDE.md](./CLAUDE.md), [cloud.md](./cloud.md), and [docs/current-state.md](./docs/current-state.md) for contributor and deployment notes.
+See [AGENTS.md](./AGENTS.md), [CLAUDE.md](./CLAUDE.md), [cloud.md](./cloud.md), [docs/current-state.md](./docs/current-state.md), and the [CrazyGames naming decision](./docs/crazygames/2026-08-28-naming-and-positioning.md) for contributor, deployment, and release-positioning notes.

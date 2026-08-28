@@ -54,6 +54,9 @@ describe('discoverer notebook UI wiring', () => {
     expect(screensSource).toContain('entry.displayRecipe');
     expect(screensSource).toContain('entry.genomePortrait');
     expect(screensSource).toContain('notebook-genome-portrait');
+    expect(screensSource).toContain('entry.researchStateLabel');
+    expect(screensSource).toContain('entry.researchNextAction');
+    expect(screensSource).not.toContain("? 'OBS'");
   });
 
   it('adds a tabbed atlas page that maps discovered + locked progression', () => {

@@ -20,7 +20,8 @@ describe('Professor onboarding pointer', () => {
     expect(mainSource).toContain("target === 'dish'");
     expect(mainSource).toContain("target.startsWith('tool:')");
     expect(mainSource).toContain("target.startsWith('lifeform:')");
-    expect(mainSource).toContain('setOnboardingDishPointerTarget(pos, true)');
+    expect(mainSource).toContain('setOnboardingDishPointerTarget(arena.getLastEggCellPos() ?? pos, true)');
+    expect(mainSource).toContain('onboardingDishGuideTracksLastEgg ? arena.getLastEggCellPos() : null');
     expect(mainSource).toContain("onboardingGuidePointer.classList.add('is-visible')");
     expect(css).toContain('.onboarding-professor-pointer');
     expect(css).toContain('.onboarding-professor-pointer.is-visible');

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DISCOVERY_SAVE_KEY, createMemoryStorage } from '../../src/game/discoverySave';
 import { applyOnboardingStateReset, ONBOARDING_RESET_KEY } from '../../src/game/onboardingReset';
+import { RUN_CHECKPOINT_KEY } from '../../src/game/runCheckpoint';
 
 describe('onboarding state reset', () => {
   it('clears legacy and current discovery/tutorial keys exactly once', () => {
@@ -16,6 +17,7 @@ describe('onboarding state reset', () => {
     storage.setItem('cdm.coach.seen.v7', '1');
     storage.setItem('cdm.coach.seen.v8', '1');
     storage.setItem('cdm.coach.trials.v1', '[0,1,2]');
+    storage.setItem(RUN_CHECKPOINT_KEY, '{"run":{"phase":"arena"}}');
     storage.setItem('cdm.audio.muted', '1');
 
     expect(applyOnboardingStateReset(storage)).toBe(true);
@@ -31,6 +33,7 @@ describe('onboarding state reset', () => {
     expect(storage.getItem('cdm.coach.seen.v7')).toBeNull();
     expect(storage.getItem('cdm.coach.seen.v8')).toBeNull();
     expect(storage.getItem('cdm.coach.trials.v1')).toBeNull();
+    expect(storage.getItem(RUN_CHECKPOINT_KEY)).toBeNull();
     expect(storage.getItem('cdm.audio.muted')).toBe('1');
     expect(storage.getItem(ONBOARDING_RESET_KEY)).toBe('1');
 

@@ -1,11 +1,23 @@
 import { describe, it, expect } from 'vitest';
 import type { ObjectiveDef } from '../../src/content/objectives';
-import { createRun, FIXED_EPOCH_COUNT } from '../../src/game/run';
+import {
+  createRun,
+  FIXED_EPOCH_COUNT,
+  planEpochCompletion,
+  planRunConclusion,
+} from '../../src/game/run';
+
+const studyCaps = {
+  knownBreeds: new Set(['needle_swarm', 'bloom_mass'] as const),
+  seedableLifeforms: new Set(['swarmlet', 'needle_swarm', 'bloom_mass']),
+  unlockedTools: ['egg', 'nutrient', 'toxin', 'water', 'salt'],
+  toolBudget: { egg: 8, nutrient: 5, toxin: 4, water: 6, salt: 4, acid: 0, agitate: 2 },
+};
 
 function pickFirstUpgradeAndObjective(run: ReturnType<typeof createRun>): void {
   run.pickUpgrade(run.getState().pendingPickChoices[0]!);
   if (run.getState().phase === 'objective_pick') {
-    run.setChosenObjective(run.getObjectiveChoices(new Set(['needle_swarm', 'bloom_mass']), ['nutrient', 'toxin', 'water', 'salt'])[0]!);
+    run.setChosenObjective(run.getObjectiveChoices(studyCaps)[0]!);
   }
 }
 
@@ -32,6 +44,46 @@ describe('start', () => {
   });
 });
 
+describe('restore', () => {
+  it('hydrates a safe between-dish snapshot without sharing mutable arrays', () => {
+    const run = createRun(42);
+    const snapshot = {
+      phase: 'arena' as const,
+      fightIndex: 2,
+      upgrades: [{ id: 'food_1', stacks: 1 }],
+      outcome: null,
+      pendingPickChoices: [],
+      seed: 42,
+      epochResults: ['completed', 'lapsed'] as Array<'completed' | 'lapsed'>,
+    };
+    run.restore(snapshot);
+    snapshot.upgrades[0]!.stacks = 9;
+    snapshot.epochResults.push('completed');
+
+    expect(run.getState()).toMatchObject({
+      phase: 'arena',
+      fightIndex: 2,
+      upgrades: [{ id: 'food_1', stacks: 1 }],
+      seed: 42,
+      epochResults: ['completed', 'lapsed'],
+    });
+  });
+
+  it('restores the serialized seed used by deterministic future choices', () => {
+    const run = createRun(999);
+    run.restore({
+      phase: 'arena',
+      fightIndex: 1,
+      upgrades: [],
+      outcome: null,
+      pendingPickChoices: [],
+      seed: 17,
+      epochResults: ['completed'],
+    });
+    expect(run.getState().seed).toBe(17);
+  });
+});
+
 describe('late-game preview', () => {
   it('opens directly on the first procedural objective with the Case sealed', () => {
     const run = createRun(42);
@@ -46,6 +98,31 @@ describe('late-game preview', () => {
 });
 
 describe('winFight — non-final fight', () => {
+  it('plans deterministic completion without mutating serialized input', () => {
+    const run = createRun(42);
+    run.start();
+    const before = run.getState();
+    const first = planEpochCompletion(before);
+    const second = planEpochCompletion(before);
+
+    expect(first).toEqual(second);
+    expect(before.phase).toBe('arena');
+    expect(before.epochResults).toEqual([]);
+    expect(first).toMatchObject({ phase: 'upgrade_pick', epochResults: ['completed'] });
+    expect(first.pendingPickChoices).toHaveLength(3);
+
+    run.completeEpoch();
+    expect(run.getState()).toEqual(first);
+  });
+
+  it('plans terminal state without mutating the source', () => {
+    const run = createRun(42);
+    run.start();
+    const before = run.getState();
+    expect(planRunConclusion(before, 'won')).toMatchObject({ phase: 'run_end', outcome: 'won' });
+    expect(before).toMatchObject({ phase: 'arena', outcome: null });
+  });
+
   it('transitions arena → upgrade_pick with 3 unique choices', () => {
     const run = createRun(42);
     run.start();
@@ -153,7 +230,7 @@ describe('loseFight', () => {
     const choice = run.getState().pendingPickChoices[0]!;
     run.pickUpgrade(choice);
     if (run.getState().phase === 'objective_pick') {
-      run.setChosenObjective(run.getObjectiveChoices(new Set(['needle_swarm', 'bloom_mass']), ['nutrient', 'toxin', 'water', 'salt'])[0]!);
+      run.setChosenObjective(run.getObjectiveChoices(studyCaps)[0]!);
     }
     run.loseFight();
     const s = run.getState();
@@ -276,7 +353,7 @@ describe('objectives', () => {
     run.completeEpoch();
     run.pickUpgrade(run.getState().pendingPickChoices[0]!);
     expect(run.getState().phase).toBe('objective_pick');
-    const choices = run.getObjectiveChoices(new Set(['bloom_mass']), ['egg', 'nutrient', 'toxin', 'water']);
+    const choices = run.getObjectiveChoices(studyCaps);
     expect(choices.length).toBe(2);
   });
 });

@@ -40,7 +40,7 @@ describe('juice wiring', () => {
 
   it('sets the End-ready state even when the control sample is absent', () => {
     const loopStart = mainSource.indexOf('function loop()');
-    const epochCompleteIdx = mainSource.indexOf('screens.setEpochComplete(', loopStart);
+    const epochCompleteIdx = mainSource.indexOf('updateDishExitAction();', loopStart);
     const announcementIdx = mainSource.indexOf('announceEpochCompletion(', epochCompleteIdx);
     expect(epochCompleteIdx).toBeGreaterThan(-1);
     expect(announcementIdx).toBeGreaterThan(epochCompleteIdx);

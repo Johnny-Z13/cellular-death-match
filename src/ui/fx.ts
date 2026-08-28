@@ -17,9 +17,11 @@ export interface GenomeRevealInfo {
   asset: string;
   alt: string;
   primary: readonly [number, number, number];
+  archivePosition: string;
 }
 
 export interface Fx {
+  clearPhaseVisuals(): void;
   showEpochBanner(eyebrow: string, title: string, sub?: string): void;
   showUnlockBanner(eyebrow: string, title: string, sub: string, accent: BannerAccent): void;
   showGenomeDecode(items: readonly GenomeRevealInfo[], onComplete: () => void): void;
@@ -74,6 +76,7 @@ export function createFx(): Fx {
   let finishActiveGenome: (() => void) | null = null;
 
   genomeReveal?.addEventListener('click', () => finishActiveGenome?.());
+  wipe?.addEventListener('animationend', () => wipe.classList.remove('fx-wipe-play'));
 
   function isCompactMobile(): boolean {
     return window.matchMedia('(max-width: 899px)').matches;
@@ -159,7 +162,7 @@ export function createFx(): Fx {
     const batch = items.length > 2;
     genomeEyebrow.textContent = batch ? 'GENOME ARCHIVE EXPANDED' : 'GENOME DECODED';
     genomeTitle.textContent = batch ? `${items.length} GENOMES DECODED` : items[0]!.name;
-    genomeSub.textContent = 'EGG SYNTHESIS UNLOCKED';
+    genomeSub.textContent = `${items[0]!.archivePosition} · EGG SYNTHESIS UNLOCKED`;
     genomeArt.replaceChildren(...items.map((item) => {
       const img = document.createElement('img');
       img.src = item.asset;
@@ -262,6 +265,15 @@ export function createFx(): Fx {
   }
 
   return {
+    clearPhaseVisuals() {
+      window.clearTimeout(desktopBannerTimer);
+      window.clearTimeout(mobileTimer);
+      window.clearTimeout(mobileExitTimer);
+      activeMobileToast?.remove();
+      activeMobileToast = null;
+      hideBanner();
+      mobileDirector.clear();
+    },
     showEpochBanner(eyebrow, title, sub = '') {
       if (isCompactMobile()) {
         enqueueMobile({ kind: 'banner', eyebrow, title, sub, accent: null }, 3);

@@ -2,12 +2,14 @@ import {
   DISCOVERY_SAVE_KEY,
   type DiscoveryStorage,
 } from './discoverySave';
+import { RUN_CHECKPOINT_KEY } from './runCheckpoint';
 
 export const ONBOARDING_RESET_KEY = 'cdm.onboarding-reset.v2';
 
 const KNOWN_DISCOVERY_KEYS = [
   'cellular-death-match.discovery.v1',
   DISCOVERY_SAVE_KEY,
+  RUN_CHECKPOINT_KEY,
 ] as const;
 
 const KNOWN_COACH_KEYS = [

@@ -3,7 +3,7 @@ import { createArena, type Arena, type ArenaStatus } from './game/arena';
 import { createRenderer, type Renderer } from './ui/render';
 import { createDebugPanel } from './ui/debug';
 import { createScreens, type ToolId } from './ui/screens';
-import { SIM_SPEED_TUNING } from './content/ecologyTuning';
+import { AGITATION_TUNING, SIM_SPEED_TUNING, TOOL_TUNING } from './content/ecologyTuning';
 import { renderLoadoutScreen } from './ui/loadoutScreen';
 import { getUpgradeDef } from './content/upgrades';
 import { COMMON_COLD_CASE, trialForIndex } from './content/researchCases';
@@ -29,6 +29,12 @@ import { assembleLabReport, type LabReport } from './game/labReport';
 import { createRunTelemetry, type RunTelemetry } from './game/runTelemetry';
 import { createRunEndReportInput } from './game/runFlow';
 import { finalBreedCountsFor, finalBreedVolumesFor } from './game/runSnapshot';
+import {
+  clearRunCheckpointVerified,
+  loadRunCheckpoint,
+  saveRunCheckpoint,
+  type RunCheckpoint,
+} from './game/runCheckpoint';
 import { createFixedStepClock, normalizeSimTicksPerSecond } from './game/simClock';
 import { hash2 } from './game/hash';
 import { lifeformUnlocksForCurrentRun } from './game/lifeformLoadout';
@@ -38,7 +44,7 @@ import {
 } from './game/genomeDiscovery';
 import {
   loadDiscoverySave,
-  saveDiscoveryState,
+  saveDiscoveryStateVerified,
   type DiscoverySaveState,
 } from './game/discoverySave';
 import {
@@ -61,13 +67,18 @@ import {
   shouldUseOnboardingDishForCurrentStage,
   toolUnlocksForCurrentStage,
 } from './game/onboardingStage';
-import { createStrainLibrary, type StrainLibrary } from './game/strainLibrary';
+import {
+  createStrainLibrary,
+  loadStrainLibraryState,
+  type StrainLibrary,
+} from './game/strainLibrary';
 import {
   loadResearchArchive,
   recordResearchEvidence,
   researchSealById,
   revealAllResearchArchive,
   saveResearchArchive,
+  saveResearchArchiveVerified,
   type ResearchArchiveState,
 } from './game/researchArchive';
 import { createTitleAutomata } from './ui/titleAutomata';
@@ -78,6 +89,21 @@ import {
   performanceProfileFor,
   shouldRenderFrame,
 } from './ui/mobilePerformance';
+import {
+  executeResearchBank,
+  loadPendingResearchBank,
+  planResearchBank,
+  replayPendingResearchBank,
+  type PlannedResearchBank,
+  type ResearchBankCommit,
+} from './game/researchBank';
+import {
+  persistResearchOwnershipReconciliation,
+  reconcileResearchOwnership,
+} from './game/researchOwnership';
+import { isObjectiveFeasible, type StudyCapabilities } from './game/objectivePool';
+import { dishExitState } from './game/dishExitAction';
+import { studyIntroductionRoute } from './ui/studyIntroduction';
 
 declare const __COMMIT_MESSAGE__: string;
 
@@ -112,7 +138,25 @@ if (commitDebug) {
   commitDebug.textContent = `build · ${gist}`;
 }
 
-const run = createRun(Date.now() & 0xffffffff);
+const runtimeStorage = window.localStorage;
+applyOnboardingStateReset(runtimeStorage);
+const startupBankReplay = replayPendingResearchBank(runtimeStorage);
+let persistenceUnavailable = startupBankReplay?.status === 'unavailable';
+let pendingResearchBank: ResearchBankCommit | null = loadPendingResearchBank(runtimeStorage);
+let discoverySave: DiscoverySaveState = loadDiscoverySave(runtimeStorage);
+if (!pendingResearchBank) {
+  const ownershipRepair = reconcileResearchOwnership(
+    discoverySave,
+    loadStrainLibraryState(runtimeStorage),
+  );
+  const ownershipRepairResult = persistResearchOwnershipReconciliation(runtimeStorage, ownershipRepair);
+  persistenceUnavailable ||= ownershipRepairResult.status === 'unavailable';
+  discoverySave = loadDiscoverySave(runtimeStorage);
+}
+let activeRunCheckpoint: RunCheckpoint | null = loadRunCheckpoint(runtimeStorage);
+let caseRecord = loadCaseRecord(runtimeStorage);
+let researchArchive: ResearchArchiveState = loadResearchArchive(runtimeStorage);
+const run = createRun(activeRunCheckpoint?.run.seed ?? (Date.now() & 0xffffffff));
 const screens = createScreens();
 const debug = createDebugPanel();
 const ecologyAudio = createEcologyAudio();
@@ -138,8 +182,6 @@ if (hudEl && typeof ResizeObserver === 'function') {
   publishHudBottom();
 }
 
-const runtimeStorage = window.localStorage;
-let caseRecord = loadCaseRecord(runtimeStorage);
 const simClock = createFixedStepClock({
   ticksPerSecond: loadSimTicksPerSecond(runtimeStorage),
   nowMs: performance.now(),
@@ -166,11 +208,8 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pagehide', () => uiAudio.stopAmbience());
 const discoveryStorage = runtimeStorage;
-applyOnboardingStateReset(discoveryStorage);
-let discoverySave: DiscoverySaveState = loadDiscoverySave(discoveryStorage);
 let discoveryProgression = createDiscoveryProgression(discoverySave);
 const strainLibrary: StrainLibrary = createStrainLibrary(discoveryStorage);
-let researchArchive: ResearchArchiveState = loadResearchArchive(discoveryStorage);
 let pendingGenomeDecodeIds: LifeformIdentityId[] = [];
 // Allow up to PALETTE_SIZE total cell colors for evolving ecosystem spawns.
 const PALETTE_SIZE = 32;
@@ -197,6 +236,7 @@ let nudgeCountThisEpoch = 0;
 let heardDishEventIds = new Set<number>();
 let lastOpeningBloomCreated = false;
 let onboardingDishGuidePos: [number, number] = [LX * 0.58, LY * 0.52];
+let onboardingDishGuideTracksLastEgg = false;
 let discoveredBreedsThisRun = new Set<string>();
 let stabilizedBreedsThisRun = new Set<string>();
 let lastArenaEvidenceSignature = '';
@@ -206,12 +246,14 @@ let runTelemetry: RunTelemetry = createRunTelemetry({
   startedAtMs: performance.now(),
   runNumber: strainLibrary.getRunCount() + 1,
 });
-let didBankRunStrains = false;
 let newStrainsBankedThisRun: string[] = [];
 let notebookEntryCountAtRunStart = notebookViewForProgression(discoveryProgression).discoveredCount;
 let finalLabReport: LabReport | null = null;
 let newBiomeThisRun = false;
 let observedNotesAtDishStart = new Set<DiscoveryNoteId>();
+let pendingBankPlan: PlannedResearchBank | null = null;
+let abandonArmedUntilMs = 0;
+let abandonConfirmationTimer = 0;
 
 let performanceResizeFrame = 0;
 function refreshVisualPerformanceProfile(): void {
@@ -267,10 +309,6 @@ document.getElementById('delete-data-confirm')?.addEventListener('click', () => 
 });
 debug.onRevealDiscoveries(() => {
   discoveryProgression = revealAllDiscoveryProgression(discoveryProgression);
-  for (const lifeform of ALL_PROGRESSION_LIFEFORMS) strainLibrary.bankStrain(lifeform);
-  while (strainLibrary.getLoadoutSlots() < 6) strainLibrary.addLoadoutSlot();
-  strainLibrary.setLoadout(ALL_PROGRESSION_LIFEFORMS.slice(0, 6));
-  strainLibrary.save();
   researchArchive = saveResearchArchive(
     discoveryStorage,
     revealAllResearchArchive(researchArchive),
@@ -347,6 +385,7 @@ screens.setHapticsEnabled(haptics.isEnabled());
 
 screens.onLifeformSelect((id) => {
   if (!isSeedableLifeformId(id)) return;
+  clearAbandonConfirmation();
   coach.report(`lifeform:${id}`);
   setEggLifeformSelection(id);
   screens.setSelectedLifeform(id);
@@ -404,10 +443,11 @@ let pasteCursor: [number, number] | null = null;
 function registerPlayerAction(): void {
   lastActionTick = tickCount;
   coach.hideNudge();
+  clearAbandonConfirmation();
 }
 
 function applySelectedToolAt(pos: [number, number]): boolean {
-  if (!arena || run.getState().phase !== 'arena') return false;
+  if (!arena || run.getState().phase !== 'arena' || pendingBankPlan) return false;
   ecologyAudio.unlock();
   if (selectedTool === 'paste') {
     if (arena.applyTool('paste', pos)) {
@@ -431,7 +471,13 @@ function applySelectedToolAt(pos: [number, number]): boolean {
     screens.updateToolCharges(arena.getToolStates());
     coach.report(`${selectedTool}-used`);
     if (selectedTool === 'egg') {
-      setOnboardingDishPointerTarget(pos, true);
+      onboardingDishGuideTracksLastEgg = true;
+      setOnboardingDishPointerTarget(arena.getLastEggCellPos() ?? pos, true);
+    } else {
+      // Once the first reagent lands, subsequent "same spot" instructions
+      // follow that field rather than chasing a moving organism.
+      onboardingDishGuideTracksLastEgg = false;
+      setOnboardingDishPointerTarget(pos);
     }
     updateButtonHint();
     screens.closeMobileDrawers();
@@ -442,7 +488,7 @@ function applySelectedToolAt(pos: [number, number]): boolean {
 }
 
 canvas.addEventListener('pointerdown', (event) => {
-  if (!arena || run.getState().phase !== 'arena') return;
+  if (!arena || run.getState().phase !== 'arena' || pendingBankPlan) return;
   const pos = canvasEventToGridPos(event);
   if (selectedTool === 'paste') {
     // Begin a drawn stroke; subsequent pointermove events lay the trail.
@@ -463,7 +509,7 @@ canvas.addEventListener('keydown', (event) => {
 });
 
 canvas.addEventListener('pointermove', (event) => {
-  if (!pasteStrokeActive || !arena || run.getState().phase !== 'arena') return;
+  if (!pasteStrokeActive || !arena || run.getState().phase !== 'arena' || pendingBankPlan) return;
   const pos = canvasEventToGridPos(event);
   pasteCursor = pos;
   if (arena.applyTool('paste', pos)) {
@@ -496,7 +542,24 @@ screens.onTitleStart(() => {
   ecologyAudio.unlock();
   uiAudio.unlock();
   uiAudio.play('ui_select');
-  if (strainLibrary.getAvailableStrains().length > 1) {
+  if (pendingResearchBank) {
+    const replay = replayPendingResearchBank(runtimeStorage);
+    if (replay?.status === 'unavailable') {
+      persistenceUnavailable = true;
+      haptics.play('warning');
+      fx.showToast('catalyst', 'Save unavailable', 'Your result is still waiting to be banked');
+      return;
+    }
+    pendingResearchBank = loadPendingResearchBank(runtimeStorage);
+    persistenceUnavailable = pendingResearchBank !== null;
+    window.location.reload();
+    return;
+  }
+  if (activeRunCheckpoint) {
+    resumeRunFromCheckpoint();
+    return;
+  }
+  if (caseIsSealed() && strainLibrary.getAvailableStrains().length > 1) {
     showLoadoutPicker();
     return;
   }
@@ -505,6 +568,7 @@ screens.onTitleStart(() => {
 screens.onEndRestart(() => {
   uiAudio.play('ui_select');
   fx.playWipe();
+  discardActiveRunCheckpoint();
   run.restart();
   finalLabReport = null;
   screens.updateLabReport(null);
@@ -513,6 +577,7 @@ screens.onEndRestart(() => {
 });
 screens.onToolSelect((tool) => {
   if (!currentToolUnlocks().includes(tool)) return;
+  clearAbandonConfirmation();
   coach.report(`${tool}-selected`);
   uiAudio.play('ui_select');
   selectedTool = tool;
@@ -526,7 +591,7 @@ screens.onToolboxReveal(() => {
   window.requestAnimationFrame(syncOnboardingPointer);
 });
 screens.onAgitate(() => {
-  if (!arena || run.getState().phase !== 'arena') return;
+  if (!arena || run.getState().phase !== 'arena' || pendingBankPlan) return;
   ecologyAudio.unlock();
   uiAudio.play('ui_tap');
   if (!arena.agitate()) return;
@@ -542,7 +607,14 @@ screens.onAgitate(() => {
 screens.onEndEpoch(() => {
   if (!arena || run.getState().phase !== 'arena') return;
   ecologyAudio.unlock();
+  if (pendingBankPlan) {
+    uiAudio.play('ui_tap');
+    completeResearchBankBoundary(pendingBankPlan);
+    return;
+  }
   const objectiveComplete = arena.getObjectiveProgress().complete;
+  const equilibriumComplete = !isOnboardingEpoch(run.getState().fightIndex)
+    && arena.getEquilibrium().achieved;
   // Trial 1 is the interaction tutorial. End cannot act as an accidental
   // escape hatch before the player has completed the taught sequence.
   if (isOnboardingEpoch(run.getState().fightIndex) && !objectiveComplete) {
@@ -550,25 +622,77 @@ screens.onEndEpoch(() => {
     haptics.play('warning');
     return;
   }
+  if (!objectiveComplete && !equilibriumComplete) {
+    const nowMs = performance.now();
+    if (abandonArmedUntilMs <= nowMs) {
+      abandonArmedUntilMs = nowMs + 4_000;
+      window.clearTimeout(abandonConfirmationTimer);
+      abandonConfirmationTimer = window.setTimeout(() => {
+        abandonArmedUntilMs = 0;
+        updateDishExitAction();
+      }, 4_050);
+      haptics.play('warning');
+      updateDishExitAction();
+      return;
+    }
+    abandonCurrentDish();
+    return;
+  }
   uiAudio.play('ui_tap');
   coach.report('end-experiment');
+  // The End control is the canonical phase boundary. If the player banks the
+  // dish before the success card's delayed animation arrives, retire the
+  // coach immediately so it cannot cover the Method/Objective screens.
+  coach.leaveArena(objectiveComplete);
   const equilibriumCanEndRun = !isOnboardingEpoch(run.getState().fightIndex);
   if (equilibriumCanEndRun && arena.getEquilibrium().achieved) {
-    persistArenaDiscoveries(arena, true);
-    sampleRunTelemetryFromArena(arena);
-    syncResearchArchive(arena.getEquilibrium().biomeName);
-    bankRunStrains();
-    uiAudio.play('epoch_win');
-    haptics.play('success');
-    fx.playWipe();
-    run.achieveHomeostasis();
-    uiAudio.stopAmbience();
-    showPhaseAfterGenomeReveals();
+    bankCompletedStudy('won');
     return;
   }
   const status = arena.endEpochNow();
   resolveArenaStatus(status);
 });
+
+function updateDishExitAction(): void {
+  if (!arena || run.getState().phase !== 'arena') return;
+  const objectiveComplete = arena.getObjectiveProgress().complete;
+  const equilibriumComplete = !isOnboardingEpoch(run.getState().fightIndex)
+    && arena.getEquilibrium().achieved;
+  screens.setDishExitState(dishExitState({
+    complete: objectiveComplete || equilibriumComplete,
+    firstTrial: isOnboardingEpoch(run.getState().fightIndex),
+    openLab: run.getState().fightIndex >= COMMON_COLD_CASE.trials.length,
+    saveBlocked: pendingBankPlan !== null,
+    armedUntilMs: abandonArmedUntilMs,
+    nowMs: performance.now(),
+  }));
+}
+
+function clearAbandonConfirmation(update = true): void {
+  if (abandonArmedUntilMs === 0 && abandonConfirmationTimer === 0) return;
+  abandonArmedUntilMs = 0;
+  window.clearTimeout(abandonConfirmationTimer);
+  abandonConfirmationTimer = 0;
+  if (update) updateDishExitAction();
+}
+
+function abandonCurrentDish(): void {
+  if (!arena) return;
+  clearAbandonConfirmation(false);
+  persistArenaDiscoveries(arena);
+  coach.leaveArena(false);
+  discardActiveRunCheckpoint();
+  pendingBankPlan = null;
+  pendingResearchBank = null;
+  run.restart();
+  arena = null;
+  renderer = null;
+  finalLabReport = null;
+  uiAudio.stopAmbience();
+  uiAudio.play('ui_select');
+  fx.playWipe();
+  showPhase();
+}
 screens.setEggOptions(EGG_ARCHETYPES.map((archetype) => ({
   archetype,
   ...ARCHETYPE_INFO[archetype],
@@ -576,6 +700,7 @@ screens.setEggOptions(EGG_ARCHETYPES.map((archetype) => ({
 applyDiscoveryProgressionUi();
 screens.onEggSelect((archetype) => {
   if (!isUnlockedEggArchetype(archetype)) return;
+  clearAbandonConfirmation();
   uiAudio.play('ui_select');
   setEggLifeformSelection(archetype);
   selectedTool = 'egg';
@@ -602,7 +727,19 @@ function showPhase() {
   screens.hide('hud');
   overlayState.notebookOpen = false;
   const state = run.getState();
-  const activeTrialIndex = Math.min(state.fightIndex, COMMON_COLD_CASE.trials.length - 1);
+  if (state.phase !== 'arena') {
+    clearAbandonConfirmation(false);
+    screens.clearStudyStartAnnouncement();
+  }
+  if (state.phase !== 'arena') fx.clearPhaseVisuals();
+  const resumeState = state.phase === 'title' ? activeRunCheckpoint?.run : undefined;
+  const resumeFightIndex = resumeState?.phase === 'upgrade_pick'
+    ? resumeState.fightIndex + 1
+    : resumeState?.fightIndex;
+  const activeTrialIndex = Math.min(
+    resumeFightIndex ?? (state.phase === 'title' ? consecutiveCompletedCaseTrialCount() : state.fightIndex),
+    COMMON_COLD_CASE.trials.length - 1,
+  );
   const recordedResults = COMMON_COLD_CASE.trials.map((trial) => (
     caseRecord.completedTrialIds.includes(trial.id) ? 'completed' as const : undefined
   ));
@@ -615,6 +752,17 @@ function showPhase() {
     activeTrialIndex,
     completedResults: state.phase === 'title' ? recordedResults : currentResults,
     openLabUnlocked: caseIsSealed(),
+    resumeAvailable: state.phase === 'title' && activeRunCheckpoint !== null,
+    resumePhase: state.phase !== 'title' || !activeRunCheckpoint
+      ? null
+      : activeRunCheckpoint.run.phase === 'arena'
+        ? 'dish-restart'
+        : activeRunCheckpoint.run.phase === 'upgrade_pick'
+          ? 'method-choice'
+          : 'study-choice',
+    saveAvailable: !persistenceUnavailable,
+    pendingBank: pendingResearchBank !== null,
+    archive: notebookViewForProgression(discoveryProgression).archive,
   });
   if (overlayState.presentationMode && state.phase !== 'arena') {
     setPresentationMode(false);
@@ -634,6 +782,7 @@ function showPhase() {
       uiAudio.play('ui_select');
       fx.playWipe();
       run.pickUpgrade(id);
+      saveActiveRunCheckpoint();
       if (run.getState().phase === 'objective_pick') {
         showPhase();
       } else {
@@ -643,11 +792,11 @@ function showPhase() {
     screens.show('pick');
   } else if (state.phase === 'objective_pick') {
     updateButtonHint();
-    const choices = run.getObjectiveChoices(new Set(discoveryProgression.discoveredBreedIds), currentToolUnlocks());
+    const choices = run.getObjectiveChoices(currentStudyCapabilityInput());
     screens.setObjectiveChoices(choices, (objective) => {
       uiAudio.play('ui_select');
-      fx.playWipe();
       run.setChosenObjective(objective);
+      saveActiveRunCheckpoint();
       startNewFight();
     });
     screens.show('objective');
@@ -695,6 +844,7 @@ function playGenomeDecodeSounds(genomes: readonly GenomeArtIdentity[]): void {
 }
 
 function finishGenomeReveal(): void {
+  saveActiveRunCheckpoint();
   showPhase();
   window.requestAnimationFrame(() => {
     const selector = run.getState().phase === 'upgrade_pick'
@@ -710,12 +860,14 @@ function finishGenomeReveal(): void {
 }
 
 function genomeRevealInfo(genome: GenomeArtIdentity) {
+  const archive = notebookViewForProgression(discoveryProgression).archive;
   return {
     id: genome.id,
     name: genome.name,
     asset: genome.asset,
     alt: genome.alt,
     primary: genome.primary,
+    archivePosition: `${archive.decodedGenomes} / ${archive.totalGenomes} GENOMES DECODED`,
   };
 }
 
@@ -740,11 +892,94 @@ function beginRunWithCurrentLoadout(loadout = strainLibrary.getPlayableLoadout()
   resetRunTelemetry();
   if (caseIsSealed()) {
     run.startLateGamePreview();
+    saveActiveRunCheckpoint();
     showPhaseAfterGenomeReveals();
   } else {
-    run.start();
+    const completedTrialCount = consecutiveCompletedCaseTrialCount();
+    if (completedTrialCount > 0) {
+      run.restore({
+        phase: 'arena',
+        fightIndex: completedTrialCount,
+        upgrades: [],
+        outcome: null,
+        pendingPickChoices: [],
+        seed: run.getState().seed,
+        epochResults: Array.from({ length: completedTrialCount }, () => 'completed' as const),
+      });
+    } else {
+      run.start();
+    }
     startNewFight();
   }
+}
+
+function resumeRunFromCheckpoint(): void {
+  const checkpoint = activeRunCheckpoint;
+  if (!checkpoint) return;
+  run.restore(checkpoint.run);
+  const playableLoadout = playableLifeformIds(checkpoint.loadout);
+  currentRunLoadout = new Set(playableLoadout);
+  setEggLifeformSelection(playableLoadout[0] ?? 'swarmlet');
+  pendingGenomeDecodeIds = checkpoint.pendingGenomeDecodeIds.filter(isProgressionLifeformId);
+  resetRunTelemetry();
+  stabilizedBreedsThisRun = new Set(checkpoint.runStabilizedBreedIds);
+  const restoredState = run.getState();
+  if (
+    restoredState.phase === 'arena'
+    && restoredState.chosenObjective
+    && !isObjectiveFeasible(restoredState.chosenObjective, {
+      ...currentStudyCapabilityInput(),
+      epochIndex: restoredState.fightIndex,
+      seed: restoredState.seed + restoredState.fightIndex,
+    })
+  ) {
+    run.restore({
+      ...restoredState,
+      phase: 'objective_pick',
+      chosenObjective: undefined,
+    });
+    saveActiveRunCheckpoint();
+    fx.showToast('catalyst', 'Study refreshed', 'The saved Method could not reproduce that Study');
+    showPhase();
+    return;
+  }
+  if (run.getState().phase === 'arena') startNewFight();
+  else showPhaseAfterGenomeReveals();
+}
+
+function saveActiveRunCheckpoint(): void {
+  const state = run.getState();
+  if (state.phase !== 'arena' && state.phase !== 'upgrade_pick' && state.phase !== 'objective_pick') return;
+  const saved = saveRunCheckpoint(runtimeStorage, {
+    run: state,
+    loadout: [...currentRunLoadout],
+    pendingGenomeDecodeIds,
+    runStabilizedBreedIds: [...stabilizedBreedsThisRun].filter(isBreedId),
+  });
+  if (saved) {
+    activeRunCheckpoint = saved;
+  } else {
+    persistenceUnavailable = true;
+  }
+}
+
+function discardActiveRunCheckpoint(): void {
+  const cleared = clearRunCheckpointVerified(runtimeStorage);
+  // Honour the user's in-session discard even when this browser cannot make
+  // the removal durable. The save status warns that a reload may recover it.
+  activeRunCheckpoint = null;
+  if (cleared.status !== 'saved') {
+    persistenceUnavailable = true;
+  }
+}
+
+function consecutiveCompletedCaseTrialCount(): number {
+  let completed = 0;
+  for (const trial of COMMON_COLD_CASE.trials) {
+    if (!caseRecord.completedTrialIds.includes(trial.id)) break;
+    completed += 1;
+  }
+  return completed;
 }
 
 function caseIsSealed(): boolean {
@@ -772,7 +1007,6 @@ function resetRunTelemetry(): void {
   stabilizedBreedsThisRun = new Set();
   peakBiodiversity = 0;
   longestStabilityStreak = 0;
-  didBankRunStrains = false;
   newStrainsBankedThisRun = [];
   finalLabReport = null;
   newBiomeThisRun = false;
@@ -821,6 +1055,7 @@ function totalStrainsAvailableForReport(): number {
 }
 
 function startNewFight() {
+  screens.clearStudyStartAnnouncement();
   const playerCfg = run.getPlayerConfig();
   const runState = run.getState();
   const useOnboardingDish = shouldUseOnboardingDishForCurrentStage(runState.fightIndex, false);
@@ -855,32 +1090,46 @@ function startNewFight() {
   didAnnounceCompletion = false;
   didAnnounceEquilibrium = false;
   lastOpeningBloomCreated = false;
+  onboardingDishGuidePos = [LX * 0.58, LY * 0.52];
+  onboardingDishGuideTracksLastEgg = false;
   lastActionTick = 0;
   nudgeCountThisEpoch = 0;
   applyDiscoveryProgressionUi();
-  screens.setEpochComplete(false);
+  clearAbandonConfirmation();
+  updateDishExitAction();
   screens.clearTicker();
   const objective = run.getObjective();
   screens.addTicker(`Dr. E: ${objective.name}. ${objective.hint ?? objective.description}`);
   if (!uiAudio.isMuted()) uiAudio.startAmbience();
   uiAudio.play('epoch_begin');
   haptics.play('impact');
-  fx.showEpochBanner(
-    runState.fightIndex < COMMON_COLD_CASE.trials.length
-      ? `Case 01 · Trial ${runState.fightIndex + 1}`
-      : `Open Lab · Study ${runState.fightIndex - COMMON_COLD_CASE.trials.length + 1}`,
-    objective.name,
-    objective.description,
-  );
+  const openLabStudy = runState.fightIndex >= COMMON_COLD_CASE.trials.length;
+  const authoredTrial = COMMON_COLD_CASE.trials[runState.fightIndex];
+  const introduction = studyIntroductionRoute({
+    guidanceTier: authoredTrial?.guidanceTier ?? 'hypothesis',
+    openLab: openLabStudy,
+    compactViewport: window.matchMedia('(max-width: 899px)').matches,
+  });
+  if (introduction.owner === 'director') {
+    const kindLabel = introduction.kind === 'study' ? 'Study' : 'Trial';
+    screens.announceStudyStart({
+      key: `${runState.seed}:${runState.fightIndex}:${objective.name}`,
+      kind: introduction.kind,
+      message: `Dr. E. New ${kindLabel}: ${objective.name}. ${objective.description}`,
+    });
+  }
+  if (introduction.showCentralBanner) {
+    fx.showEpochBanner(
+      `Case 01 · Trial ${runState.fightIndex + 1}`,
+      objective.name,
+      objective.description,
+    );
+  }
   // The lesson is marked complete only after the player uses the newly taught
-  // End control. Trial 1 also banks the Bloom Mass before normal arena
-  // resolution opens the Method choice.
-  coach.onOnboardingComplete = (trialIndex) => {
-    if (trialIndex === 0) {
-      advanceDiscoveryProgression({ breedIds: ['bloom_mass'] }, { breed: 'stabilized' });
-    }
-  };
+  // End control. Stabilization is committed by the verified bank boundary.
+  coach.onOnboardingComplete = () => {};
   coach.beginTrial(runState.fightIndex);
+  saveActiveRunCheckpoint();
   screens.updateToolCharges(arena.getToolStates());
   screens.updateAgitation(arena.getAgitationState());
   updateButtonHint();
@@ -892,7 +1141,34 @@ function startNewFight() {
     debug.setSwatch(2 + i, swatchForArchetype(enemies[i]!.archetype));
   }
   showPhase();
+  focusStudyStart(authoredTrial);
   loop();
+}
+
+function focusStudyStart(authoredTrial: (typeof COMMON_COLD_CASE.trials)[number] | undefined): void {
+  // `screens.show('hud')` restores a safe canvas baseline. This later callback
+  // refines it for exact guided Trials, after the outgoing Method/Study card
+  // has disappeared and the coach has rendered its first actionable step.
+  window.requestAnimationFrame(() => {
+    if (!authoredTrial || authoredTrial.guidanceTier === 'hypothesis') {
+      canvas.focus({ preventScroll: true });
+      return;
+    }
+
+    const coachContinue = document.getElementById('coach-skip') as HTMLButtonElement | null;
+    if (authoredTrial.number === 1 && coach.isActive() && coachContinue && !coachContinue.hidden) {
+      coachContinue.focus({ preventScroll: true });
+      return;
+    }
+
+    const compactViewport = window.matchMedia('(max-width: 899px)').matches;
+    const exactControl = authoredTrial.number === 2 && compactViewport
+      ? document.getElementById('mobile-lifeforms-toggle')
+      : authoredTrial.number === 2
+        ? document.querySelector<HTMLElement>('[data-lifeform-id="bloom_mass"]')
+        : document.querySelector<HTMLElement>('[data-tool="egg"]');
+    (exactControl ?? canvas).focus({ preventScroll: true });
+  });
 }
 
 function loop() {
@@ -901,6 +1177,20 @@ function loop() {
   if (phase !== 'arena') return;            // stop the loop on any non-arena phase
 
   const now = performance.now();
+  if (pendingBankPlan) {
+    // The journal plan is a frozen snapshot. Preserve that exact result while
+    // storage is unavailable so Retry cannot overwrite later dish activity.
+    simClock.reset(now);
+    if (shouldRenderFrame(lastRenderAt, now, visualProfile.targetRenderFps)) {
+      renderer.render(arena.state, arena.archetypes, arena.getDishEvents());
+      renderToolEffects(arena);
+      juice.draw();
+      lastRenderAt = now;
+    }
+    updateDishExitAction();
+    scheduleLoop();
+    return;
+  }
   if (document.hidden) {
     // Browsers normally suspend rAF in the background, but explicitly reset
     // the clock so returning to the tab can never replay hidden wall time.
@@ -1010,7 +1300,8 @@ function loop() {
       return u.stacks > 1 ? `${def.name} x${u.stacks}` : def.name;
     }),
   });
-  screens.setEpochComplete(objective.complete || (equilibriumCanEndRun && equilibrium.achieved));
+  if (objective.complete || (equilibriumCanEndRun && equilibrium.achieved)) clearAbandonConfirmation(false);
+  updateDishExitAction();
   // Tool state (charges + cooldown wipes) refreshes every frame regardless of
   // the control sample — the onboarding dish has no player cell.
   screens.updateToolCharges(arena.getToolStates());
@@ -1032,15 +1323,7 @@ function loop() {
 
   // Ecosystem collapse check: if all cells dead past onboarding, end run.
   if (!isOnboardingEpoch(run.getState().fightIndex) && arena.isEcosystemCollapsed() && tickCount > 120) {
-    sampleRunTelemetryFromArena(arena);
-    syncResearchArchive();
-    bankRunStrains();
-    uiAudio.play('epoch_fail');
-    haptics.play('failure');
-    fx.playWipe();
-    run.failEpoch();
-    uiAudio.stopAmbience();
-    showPhaseAfterGenomeReveals();
+    bankCompletedStudy('lost', false);
     return;
   }
 
@@ -1055,41 +1338,116 @@ function loop() {
   scheduleLoop();
 }
 
-function bankRunStrains(): string[] {
-  if (didBankRunStrains) return [...newStrainsBankedThisRun];
-  didBankRunStrains = true;
+function bankCompletedStudy(
+  terminalOutcome?: 'won' | 'lost',
+  completedStudy = true,
+): boolean {
+  if (!arena) return false;
+  persistArenaDiscoveries(arena);
+  sampleRunTelemetryFromArena(arena);
+  const discoveries = arena.getEcology().discoveries;
+  const runState = run.getState();
+  const completedTrial = completedStudy ? COMMON_COLD_CASE.trials[runState.fightIndex] : undefined;
+  const createdAt = new Date().toISOString();
+  const plan = planResearchBank({
+    id: `study-${runState.seed}-${runState.fightIndex}-${runState.epochResults.length}-${terminalOutcome ?? 'continue'}`,
+    createdAt,
+    run: runState,
+    objective: arena.getObjectiveProgress().def,
+    discovery: discoveryProgression,
+    strainState: strainLibrary.getState(),
+    caseRecord,
+    archive: researchArchive,
+    discoveredNoteIds: discoveries.noteIds,
+    livingBreedIds: completedStudy
+      ? livingDiscoveredBreedIds(arena, discoveries.breedIds)
+      : [],
+    loadout: [...currentRunLoadout],
+    pendingGenomeDecodeIds,
+    runStabilizedBreedIds: [...stabilizedBreedsThisRun].filter(isBreedId),
+    caseTrialId: completedTrial?.id,
+    allCaseTrialIds: COMMON_COLD_CASE.trials.map((trial) => trial.id),
+    researchEvidence: {
+      reactions: arena.getEcology().reactions,
+      peakBiodiversity,
+      stabilitySeconds: Math.round(longestStabilityStreak / 60),
+      biomeName: terminalOutcome === 'won' ? arena.getEquilibrium().biomeName : undefined,
+    },
+    completedStudy,
+    terminalOutcome,
+  });
+  pendingBankPlan = plan;
+  return completeResearchBankBoundary(plan);
+}
 
-  const alreadyAvailable = new Set(strainLibrary.getAvailableStrains());
-  const newlyBanked: string[] = [];
-  for (const breedId of stabilizedBreedsThisRun) {
-    if (!alreadyAvailable.has(breedId)) newlyBanked.push(breedId);
-    strainLibrary.bankStrain(breedId);
+function completeResearchBankBoundary(plan: PlannedResearchBank): boolean {
+  const result = executeResearchBank(runtimeStorage, plan.commit);
+  pendingResearchBank = loadPendingResearchBank(runtimeStorage);
+  if (result.status === 'unavailable') {
+    persistenceUnavailable = true;
+    haptics.play('warning');
+    updateDishExitAction();
+    screens.addTicker('Dr. E: Save unavailable. The dish is preserved — press Retry save.', 'caution');
+    fx.showToast('catalyst', 'Save unavailable', 'Dish preserved · retry when ready');
+    return false;
   }
-  newStrainsBankedThisRun = unique([...newStrainsBankedThisRun, ...newlyBanked]);
-  strainLibrary.incrementRunCount();
-  strainLibrary.save();
-  return newlyBanked;
+
+  const previousProgression = discoveryProgression;
+  const previousAvailability = currentUnlockAvailability();
+  const previousStrains = new Set(strainLibrary.getAvailableStrains());
+  discoverySave = result.commit.discovery;
+  discoveryProgression = plan.progression;
+  strainLibrary.replaceState(result.commit.strains);
+  caseRecord = result.commit.caseRecord;
+  researchArchive = result.commit.archive;
+  activeRunCheckpoint = result.commit.checkpoint;
+  pendingGenomeDecodeIds = result.commit.checkpoint
+    ? result.commit.checkpoint.pendingGenomeDecodeIds.filter(isProgressionLifeformId)
+    : unique([
+      ...pendingGenomeDecodeIds,
+      ...plan.newGenomeDecodeIds.filter(isProgressionLifeformId),
+    ]);
+  if (result.commit.checkpoint) {
+    stabilizedBreedsThisRun = new Set(result.commit.checkpoint.runStabilizedBreedIds);
+  }
+  newStrainsBankedThisRun = unique([
+    ...newStrainsBankedThisRun,
+    ...result.commit.strains.availableStrains.filter((id) => !previousStrains.has(id)),
+  ]);
+  recordNewlyDiscoveredBreeds(previousProgression, discoveryProgression);
+  recordNewlyStabilizedBreeds(previousProgression, discoveryProgression);
+  run.restore(plan.runAfter);
+  if (result.commit.checkpoint) runTelemetry.recordEpochCompleted();
+  else if (run.getState().outcome === 'won') runTelemetry.recordEpochCompleted();
+  else runTelemetry.recordEpochLapsed();
+  newBiomeThisRun ||= plan.newBiome;
+  persistenceUnavailable = false;
+  pendingResearchBank = null;
+  pendingBankPlan = null;
+
+  applyDiscoveryProgressionUi();
+  announceDiscoveryProgressionChange(previousProgression, discoveryProgression);
+  announceUnlocks(previousAvailability, currentUnlockAvailability());
+  for (const sealId of plan.newSealIds) {
+    const seal = researchSealById(sealId);
+    fx.showToast('discovery', 'Research Seal', seal.title);
+    screens.addTicker(`Dr. E: Research seal stamped — ${seal.title}.`, 'discovery');
+  }
+  debug.updateDiscoveries(discoveryDebugInfo());
+  refreshNotebook();
+
+  const succeeded = run.getState().outcome !== 'lost';
+  uiAudio.play(succeeded ? 'epoch_win' : 'epoch_fail');
+  haptics.play(succeeded ? 'success' : 'failure');
+  fx.playWipe();
+  if (run.getState().phase === 'run_end') uiAudio.stopAmbience();
+  showPhaseAfterGenomeReveals();
+  return true;
 }
 
 function resolveArenaStatus(status: ArenaStatus): boolean {
   if (status === 'won') {
-    if (arena) {
-      persistArenaDiscoveries(arena, true);
-      sampleRunTelemetryFromArena(arena);
-      syncResearchArchive();
-    }
-    runTelemetry.recordEpochCompleted();
-    uiAudio.play('epoch_win');
-    haptics.play('success');
-    fx.playWipe();
-    const completedTrial = COMMON_COLD_CASE.trials[run.getState().fightIndex];
-    if (completedTrial) {
-      caseRecord = recordCompletedTrial(runtimeStorage, caseRecord, completedTrial.id);
-      syncResearchArchive();
-    }
-    run.completeEpoch();
-    if (run.getState().phase === 'run_end') uiAudio.stopAmbience();
-    showPhaseAfterGenomeReveals();
+    bankCompletedStudy();
     return true;
   }
   if (status === 'lost') {
@@ -1107,6 +1465,7 @@ function resolveArenaStatus(status: ArenaStatus): boolean {
     fx.showToast('catalyst', 'Objective Lapsed', 'Moving to the next ecosystem');
     runTelemetry.recordEpochLapsed();
     run.skipEpoch();
+    saveActiveRunCheckpoint();
     if (run.getState().phase === 'run_end') uiAudio.stopAmbience();
     showPhaseAfterGenomeReveals();
     return true;
@@ -1136,6 +1495,17 @@ function persistArenaDiscoveries(ar: Arena, completed = false): void {
   if (!completed && evidenceSignature === lastArenaEvidenceSignature) return;
   lastArenaEvidenceSignature = evidenceSignature;
   advanceDiscoveryProgression(discoveries, { breed: 'observed', note: 'observed' });
+
+  // Repeating evidence in a later dish is itself the proof that promotes an
+  // observation into an understood protocol. This must not depend on also
+  // completing the currently assigned (and possibly unrelated) Study.
+  const repeatedRecipeNotes = discoveries.noteIds.filter((noteId) => (
+    noteId.startsWith('recipe_') && observedNotesAtDishStart.has(noteId)
+  ));
+  if (repeatedRecipeNotes.length > 0) {
+    advanceDiscoveryProgression({ noteIds: repeatedRecipeNotes }, { note: 'understood' });
+  }
+
   if (!completed) return;
 
   const objective = ar.getObjectiveProgress().def;
@@ -1144,17 +1514,6 @@ function persistArenaDiscoveries(ar: Arena, completed = false): void {
     if (discoveries.noteIds.includes(noteId)) {
       advanceDiscoveryProgression({ noteIds: [noteId] }, { note: 'understood' });
     }
-  }
-
-  // A reaction first appears as evidence. Reproducing that same signature in
-  // a later dish turns it into a protocol, even when it was not the assigned
-  // Study. This replaces the old automatic post-Case grant conveyor with
-  // discovery the player actually performed.
-  const repeatedRecipeNotes = discoveries.noteIds.filter((noteId) => (
-    noteId.startsWith('recipe_') && observedNotesAtDishStart.has(noteId)
-  ));
-  if (repeatedRecipeNotes.length > 0) {
-    advanceDiscoveryProgression({ noteIds: repeatedRecipeNotes }, { note: 'understood' });
   }
 
   const livingBreedIds = livingDiscoveredBreedIds(ar, discoveries.breedIds);
@@ -1213,7 +1572,12 @@ function syncResearchArchive(biomeName?: string | null): void {
     stabilitySeconds: Math.round(longestStabilityStreak / 60),
     biomeName,
   });
-  researchArchive = saveResearchArchive(discoveryStorage, result.state);
+  const archiveSave = saveResearchArchiveVerified(discoveryStorage, result.state);
+  if (archiveSave.status !== 'saved') {
+    persistenceUnavailable = true;
+    return;
+  }
+  researchArchive = archiveSave.value;
   if (result.newBiome) {
     newBiomeThisRun = true;
     strainLibrary.incrementBiomeCount();
@@ -1310,7 +1674,7 @@ function discoveryDebugInfo(): {
 }
 
 function saveRuntimeDiscoveryState(): void {
-  discoverySave = saveDiscoveryState(discoveryStorage, {
+  const result = saveDiscoveryStateVerified(discoveryStorage, {
     ...discoverySave,
     discoveredBreedIds: discoveryProgression.discoveredBreedIds,
     discoveredNoteIds: discoveryProgression.discoveredNoteIds,
@@ -1318,6 +1682,11 @@ function saveRuntimeDiscoveryState(): void {
     noteDiscoveryRecords: discoveryProgression.noteDiscoveryRecords,
     revealAll: discoveryProgression.revealAll,
   });
+  if (result.status === 'saved') {
+    discoverySave = result.value;
+  }
+  saveActiveRunCheckpoint();
+  if (result.status !== 'saved') persistenceUnavailable = true;
 }
 
 function applyDiscoveryProgressionUi(): void {
@@ -1366,8 +1735,7 @@ function currentLifeformUnlocks(): readonly ProgressionLifeformId[] {
     run.getState().fightIndex,
     openingBloomCreatedInCurrentDish(),
   );
-  const phase = run.getState().phase;
-  if (phase !== 'arena' && phase !== 'upgrade_pick') return stagedLifeforms;
+  if (run.getState().fightIndex < COMMON_COLD_CASE.trials.length) return stagedLifeforms;
 
   // The authored Case has no pre-run loadout screen and can explicitly ask for
   // a previously banked rare specimen (Bloom Mass). Honour stabilized Case
@@ -1383,6 +1751,29 @@ function currentLifeformUnlocks(): readonly ProgressionLifeformId[] {
     currentRunLoadout,
     availableBreeds,
   );
+}
+
+function currentStudyCapabilityInput(): Omit<StudyCapabilities, 'epochIndex' | 'seed'> {
+  const player = run.getPlayerConfig();
+  return {
+    knownBreeds: new Set(
+      discoveryProgression.breedDiscoveryRecords
+        .filter((record) => record.stage === 'stabilized')
+        .map((record) => record.id),
+    ),
+    seedableLifeforms: new Set(currentLifeformUnlocks()),
+    unlockedTools: currentCapabilityUnlocks(),
+    toolBudget: {
+      egg: player.eggCharges ?? TOOL_TUNING.egg.charges,
+      nutrient: player.nutrientCharges ?? TOOL_TUNING.nutrient.charges,
+      toxin: player.toxinCharges ?? TOOL_TUNING.toxin.charges,
+      water: player.waterCharges ?? TOOL_TUNING.water.charges,
+      salt: player.saltCharges ?? TOOL_TUNING.salt.charges,
+      acid: player.acidCharges ?? TOOL_TUNING.acid.charges,
+      paste: player.pasteCharges ?? TOOL_TUNING.paste.charges,
+      agitate: player.agitationCharges ?? AGITATION_TUNING.defaultCharges,
+    },
+  };
 }
 
 interface UnlockAvailability {
@@ -1422,8 +1813,15 @@ function syncOnboardingPointer(): void {
   let y = 0;
   if (target === 'dish') {
     const rect = canvas.getBoundingClientRect();
-    x = rect.left + (onboardingDishGuidePos[0] / LX) * rect.width;
-    y = rect.top + (onboardingDishGuidePos[1] / LY) * rect.height;
+    const liveEggPos = onboardingDishGuideTracksLastEgg ? arena.getLastEggCellPos() : null;
+    const guidePos: [number, number] = liveEggPos
+      ? [
+        Math.max(12, Math.min(LX * 0.86, liveEggPos[0] + 12)),
+        Math.max(16, Math.min(LY * 0.86, liveEggPos[1] + 8)),
+      ]
+      : onboardingDishGuidePos;
+    x = rect.left + (guidePos[0] / LX) * rect.width;
+    y = rect.top + (guidePos[1] / LY) * rect.height;
   } else {
     const needsMobileDrawer = target.startsWith('lifeform:')
       && window.matchMedia('(max-width: 899px)').matches
@@ -1549,10 +1947,14 @@ function maybeNudgeIdlePlayer(objectiveComplete: boolean, hint: string | undefin
   if (coach.isActive()) return;
   if (nudgeCountThisEpoch >= MAX_NUDGES_PER_EPOCH) return;
   if (tickCount - lastActionTick < NUDGE_IDLE_TICKS) return;
+  const authoredTrial = COMMON_COLD_CASE.trials[run.getState().fightIndex];
   const nudge = onboardingIdleNudge({
     objectiveComplete,
     tutorialActive: coach.isActive(),
     objectiveHint: hint,
+    guidanceTier: authoredTrial?.guidanceTier,
+    nudgeIndex: nudgeCountThisEpoch,
+    recoveryHints: authoredTrial?.recoveryHints,
   });
   nudgeCountThisEpoch += 1;
   lastActionTick = tickCount; // another full idle stretch before the next one
@@ -1572,8 +1974,8 @@ function announceEpochCompletion(complete: boolean, objectiveName: string): void
     didAnnounceCompletion = true;
     uiAudio.play('experiment_ready');
     haptics.play('success');
-    fx.showToast('discovery', 'Experiment Complete', `${objectiveName} — finish when ready`);
-    screens.addTicker('Dr. E: Goal complete. End is live when you are ready, or keep cultivating.', 'discovery');
+    fx.showToast('discovery', 'Result Ready', `${objectiveName} — bank when ready`);
+    screens.addTicker('Dr. E: Goal complete. Bank the result when you are ready, or keep cultivating.', 'discovery');
     coach.report('objective-complete');
     updateButtonHint();
   } else if (!complete && didAnnounceCompletion) {
@@ -1587,7 +1989,7 @@ function announceEquilibrium(info: { achieved: boolean; progress: number; biomeN
   uiAudio.play('epoch_win');
   haptics.play('success');
   fx.showToast('discovery', 'Stable Ecosystem', info.biomeName ?? 'Equilibrium');
-  screens.addTicker('Equilibrium reached: pressure paused. End when ready, or keep observing.', 'discovery');
+  screens.addTicker('Equilibrium reached: pressure paused. Bank when ready, or keep observing.', 'discovery');
 }
 
 function labelForStrain(strain: string): string {
@@ -1652,6 +2054,7 @@ function setOptionsMenuOpen(open: boolean): void {
   const optionsPanel = document.getElementById('debug');
   const optionsButton = document.getElementById('options-button');
   if (open) {
+    clearAbandonConfirmation();
     const activeElement = document.activeElement;
     optionsReturnFocus = activeElement instanceof HTMLElement && activeElement !== document.body
       ? activeElement
@@ -1732,6 +2135,7 @@ function activeStudySnapshot(): ActiveStudySnapshot | null {
 }
 
 function openNotebook(): void {
+  clearAbandonConfirmation();
   // Render with fresh-discovery badges first, then acknowledge them so the
   // NEW markers show this open and clear (persistently) for the next one.
   refreshNotebook();

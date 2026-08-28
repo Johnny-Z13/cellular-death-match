@@ -6,6 +6,7 @@ import { type PlayerConfig } from '../content/upgrades';
 import { type EnemyArchetype, type EnemySpawn, ARCHETYPE_DEFAULTS } from '../content/enemies';
 import {
   ARCHETYPE_ECOLOGY,
+  ARCHETYPE_REACTION_TRAITS,
   CRISES,
   MUTATION_TRAITS,
   pickMutationTrait,
@@ -87,6 +88,7 @@ export interface Arena {
   getToolStates(): Record<LabTool, ToolState>;
   getAgitationState(): AgitationState;
   getToolEffects(): ToolEffect[];
+  getLastEggCellPos(): [number, number] | null;
   getDishEvents(): DishEventMarker[];
   applyTool(tool: LabTool, pos: [number, number], opts?: ApplyToolOpts): boolean;
   endPasteStroke(): void;
@@ -326,6 +328,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
   // from toolEffects so a long trail never evicts catalysis effects (and so it
   // isn't mistaken for a placed reagent during reaction/accident checks).
   const trailEffects: ToolEffect[] = [];
+  let lastEggCellId: CellId | null = null;
   let lastTrailStamp: [number, number] | null = null;
   let pasteDrawnSinceCharge = 0;
   const dishEvents: DishEventMarker[] = [];
@@ -595,6 +598,10 @@ export function createArena(opts: CreateArenaOpts): Arena {
         pos: [...effect.pos],
       }));
     },
+    getLastEggCellPos(): [number, number] | null {
+      const cell = lastEggCellId === null ? undefined : state.cells.get(lastEggCellId);
+      return cell && cell.vol > 0 ? [...cell.center] : null;
+    },
     endPasteStroke(): void {
       // Called on pointerup so the next drawn stroke starts fresh (and pays its
       // opening charge) rather than continuing the previous line. The cooldown
@@ -625,7 +632,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           ? breedSpawnFor(applyOpts.eggBreedId)
           : eggSpawnFor(applyOpts.eggArchetype ?? 'swarmlet', state.rng.random());
         applyEggSynergies(state, toolEffects, seedPos, spawn, pushSignal);
-        this.spawnEnemy({ spawn, pos: seedPos });
+        lastEggCellId = this.spawnEnemy({ spawn, pos: seedPos });
         const hatchEffect: ToolEffect = {
           type: 'hatch',
           pos: seedPos,
@@ -1267,6 +1274,7 @@ function reactionContextFor(
     const spawn = archetypes.get(id);
     if (!spawn) continue;
     archetypeSet.add(spawn.archetype);
+    for (const trait of ARCHETYPE_REACTION_TRAITS[spawn.archetype]) traits.push(trait);
     for (const trait of spawn.traits ?? []) traits.push(trait);
   }
   return { traits, archetypes: [...archetypeSet], agitated };

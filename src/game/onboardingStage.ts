@@ -39,7 +39,7 @@ export const ONBOARDING_BEATS: readonly OnboardingBeat[] = [
   {
     id: 'select-egg',
     title: 'I’m Dr. E. Press Egg.',
-    body: 'Load one Swarmlet culture.',
+    body: 'Trial 1 — Culture Shock. Load one Swarmlet culture.',
     trigger: 'egg-selected',
     action: 'Press Egg',
     pointerTarget: 'tool:egg',
@@ -73,40 +73,12 @@ export const ONBOARDING_BEATS: readonly OnboardingBeat[] = [
 export const TRIAL_ONBOARDING_BEATS: readonly (readonly OnboardingBeat[])[] = [
   ONBOARDING_BEATS,
   [
-    beat('select-bloom', 'Press Bloom Mass.', 'Use the specimen we stabilized.', 'lifeform:bloom_mass', 'Press Bloom Mass', 'lifeform:bloom_mass'),
+    beat('select-bloom', 'Press Bloom Mass.', 'Trial 2 — Bitter Medicine. Use the specimen we stabilized.', 'lifeform:bloom_mass', 'Press Bloom Mass', 'lifeform:bloom_mass'),
     beat('place-bloom', 'Place it here.', 'Tap the marked point.', 'egg-used', 'Tap the dish', 'dish'),
     beat('select-nutrient', 'Press Nutrient.', 'Feed first. Order matters.', 'nutrient-selected', 'Press Nutrient', 'tool:nutrient'),
     beat('feed-bloom', 'Feed the culture.', 'Tap beside the Bloom Mass.', 'nutrient-used', 'Tap the dish', 'dish'),
     beat('select-toxin', 'Now press Toxin.', 'Add pressure to the fed tissue.', 'toxin-selected', 'Press Toxin', 'tool:toxin'),
     beat('apply-toxin', 'Test the fed field.', 'Tap the same spot.', 'toxin-used', 'Tap the same spot', 'dish'),
-  ],
-  [
-    beat('select-bloom', 'Press Bloom Mass.', 'This time, we test a carrier.', 'lifeform:bloom_mass', 'Press Bloom Mass', 'lifeform:bloom_mass'),
-    beat('place-bloom', 'Place it here.', 'Tap the marked point.', 'egg-used', 'Tap the dish', 'dish'),
-    beat('select-nutrient', 'Press Nutrient.', 'Start with food.', 'nutrient-selected', 'Press Nutrient', 'tool:nutrient'),
-    beat('feed-bloom', 'Feed the culture.', 'Tap beside the Bloom Mass.', 'nutrient-used', 'Tap the dish', 'dish'),
-    beat('reveal-water', 'Reveal more reagents.', 'Drag the rack, or press the arrow.', 'toolbox-scrolled', 'Reveal more reagents', 'rack:more'),
-    beat('select-water', 'Press Water.', 'Carry food through the tissue.', 'water-selected', 'Press Water', 'tool:water'),
-    beat('apply-water', 'Wash the fed field.', 'Tap the same spot.', 'water-used', 'Tap the same spot', 'dish'),
-  ],
-  [
-    beat('select-swarmlet', 'Press Swarmlet.', 'Fast tissue shows the discharge.', 'lifeform:swarmlet', 'Press Swarmlet', 'lifeform:swarmlet'),
-    beat('place-swarmlet', 'Place it here.', 'Tap the marked point.', 'egg-used', 'Tap the dish', 'dish'),
-    beat('select-toxin', 'Press Toxin.', 'Begin with pressure.', 'toxin-selected', 'Press Toxin', 'tool:toxin'),
-    beat('apply-toxin', 'Add the Toxin field.', 'Tap beside the Swarmlet.', 'toxin-used', 'Tap the dish', 'dish'),
-    beat('select-water', 'Press Water.', 'The first pulse makes Foam.', 'water-selected', 'Press Water', 'tool:water'),
-    beat('make-foam', 'Create the Foam.', 'Tap the Toxin field.', 'water-used', 'Tap the same spot', 'dish'),
-    beat('strike-foam', 'Water again. Same spot.', 'Strike the Foam before it fades.', 'water-used', 'Tap the Foam', 'dish'),
-  ],
-  [
-    beat('select-bloom', 'Press Bloom Mass.', 'Its tissue can carry the channel.', 'lifeform:bloom_mass', 'Press Bloom Mass', 'lifeform:bloom_mass'),
-    beat('place-bloom', 'Give it room.', 'Tap the marked point.', 'egg-used', 'Tap the dish', 'dish'),
-    beat('select-salt', 'Press Salt first.', 'Set the channel boundary.', 'salt-selected', 'Press Salt', 'tool:salt'),
-    beat('apply-salt', 'Salt the culture.', 'Tap beside the Bloom Mass.', 'salt-used', 'Tap the dish', 'dish'),
-    beat('select-nutrient', 'Now press Nutrient.', 'Give the channel something to carry.', 'nutrient-selected', 'Press Nutrient', 'tool:nutrient'),
-    beat('apply-nutrient', 'Feed the salted field.', 'Tap the same spot.', 'nutrient-used', 'Tap the same spot', 'dish'),
-    beat('select-water', 'Finish with Water.', 'The final reagent matters.', 'water-selected', 'Press Water', 'tool:water'),
-    beat('apply-water', 'Open the Brine Channel.', 'Tap here. Then sustain three cultures.', 'water-used', 'Tap the same spot', 'dish'),
   ],
 ];
 

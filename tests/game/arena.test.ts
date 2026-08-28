@@ -1853,7 +1853,7 @@ describe('arena ecosystem mode', () => {
       seed: 221,
       player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
       enemies: [
-        { archetype: 'bruiser' as const, targetVol: 260, speed: 8, engulfMultiplier: 6, traits: ['gelatinous'] },
+        { archetype: 'bruiser' as const, targetVol: 260, speed: 8, engulfMultiplier: 6 },
       ],
       wrap: false,
       mode: 'ecosystem',
@@ -1865,6 +1865,7 @@ describe('arena ecosystem mode', () => {
     expect(arena.applyTool('water', cell.center)).toBe(true);
 
     expect(arena.getToolEffects().some((effect) => effect.type === 'crystal')).toBe(true);
+    expect(arena.getEcology().discoveries.noteIds).toContain('recipe_salt_water_crystal');
     arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     expect(cell.intent.speed).toBeLessThanOrEqual(2.6);
   });

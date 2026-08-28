@@ -9,6 +9,8 @@ export interface ResearchTrialDef {
   resultPromise: string;
   objectiveKind: ObjectiveKind;
   introducedFeature: string;
+  guidanceTier: 'exact' | 'hypothesis';
+  recoveryHints: readonly [principle: string, exactMethod: string];
 }
 
 export interface ResearchCaseDef {
@@ -36,6 +38,11 @@ export const COMMON_COLD_CASE: ResearchCaseDef = {
       resultPromise: 'Bloom Mass egg',
       objectiveKind: 'stabilize_breed',
       introducedFeature: 'Egg and Nutrient',
+      guidanceTier: 'exact',
+      recoveryHints: [
+        'A growing culture needs one measured feed.',
+        'Place a Swarmlet Egg, then place Nutrient beside it.',
+      ],
     },
     {
       id: 'bitter-medicine',
@@ -46,6 +53,11 @@ export const COMMON_COLD_CASE: ResearchCaseDef = {
       resultPromise: 'Bitter Bloom protocol',
       objectiveKind: 'understand_recipe',
       introducedFeature: 'Toxin',
+      guidanceTier: 'exact',
+      recoveryHints: [
+        'Feed budding tissue before applying pressure.',
+        'Place Bloom Mass, add Nutrient, then overlap it with Toxin.',
+      ],
     },
     {
       id: 'carrier-medium',
@@ -56,6 +68,11 @@ export const COMMON_COLD_CASE: ResearchCaseDef = {
       resultPromise: 'Nutrient Conduit protocol',
       objectiveKind: 'understand_recipe',
       introducedFeature: 'Water',
+      guidanceTier: 'hypothesis',
+      recoveryHints: [
+        'Water can carry an existing food field through budding tissue.',
+        'Place Bloom Mass, add Nutrient, then overlap the same field with Water.',
+      ],
     },
     {
       id: 'storm-in-a-dish',
@@ -66,6 +83,11 @@ export const COMMON_COLD_CASE: ResearchCaseDef = {
       resultPromise: 'Foam Lightning protocol',
       objectiveKind: 'understand_recipe',
       introducedFeature: 'Paste and Agitate',
+      guidanceTier: 'hypothesis',
+      recoveryHints: [
+        'An unstable Foam signal can accept a second Water pulse before it fades.',
+        'Near Swarmlet, overlap Toxin with Water to make Foam; then add Water there again.',
+      ],
     },
     {
       id: 'cure-ish',
@@ -76,6 +98,11 @@ export const COMMON_COLD_CASE: ResearchCaseDef = {
       resultPromise: 'Applied protocol record',
       objectiveKind: 'apply_recipe',
       introducedFeature: 'Equilibrium',
+      guidanceTier: 'hypothesis',
+      recoveryHints: [
+        'A channel needs a boundary, food to carry, and Water—then a diverse dish must survive it.',
+        'On Bloom Mass, overlap Salt, Nutrient, then Water; keep three cultures alive and dominance at 60% or less.',
+      ],
     },
   ],
 };

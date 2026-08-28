@@ -33,6 +33,8 @@ export interface NotebookEntry {
 export interface NotebookViewEntry extends NotebookEntry {
   discovered: boolean;
   researchStage: ResearchStage;
+  researchStateLabel: string;
+  researchNextAction: string;
   displayTitle: string;
   displayNotes: string;
   displayRecipe: string;
@@ -56,7 +58,23 @@ export interface NotebookView {
   understoodCount: number;
   stabilizedCount: number;
   totalCount: number;
+  archive: GenomeArchiveProgress;
   entries: NotebookViewEntry[];
+}
+
+export interface GenomeArchiveLead {
+  state: 'observed' | 'locked' | 'complete';
+  label: string;
+  clue: string;
+}
+
+export interface GenomeArchiveProgress {
+  decodedGenomes: number;
+  observedGenomes: number;
+  totalGenomes: number;
+  understoodProtocols: number;
+  totalProtocols: number;
+  nextLead: GenomeArchiveLead;
 }
 
 const BASE_LIFEFORMS: readonly EnemyArchetype[] = EGG_ARCHETYPES;
@@ -131,16 +149,21 @@ export function notebookViewForProgression(
     const genomeId = lifeformIdForEntry(entry);
     const genome = genomeId ? genomeArtFor(genomeId) : null;
     const eggSynthesisAvailable = entry.category === 'lifeform' && researchStage === 'stabilized';
+    const researchCopy = researchStateCopy(entry.category, researchStage);
     return [{
       ...entry,
       discovered,
       researchStage,
+      researchStateLabel: researchCopy.label,
+      researchNextAction: researchCopy.nextAction,
       displayTitle: entry.title,
       displayNotes: researchStage === 'observed'
-        ? `Evidence: ${entry.category === 'lifeform' ? 'A viable phenotype appeared. Keep it alive through a successful trial to stabilize the specimen.' : 'A reaction signature was recorded. Reproduce it in an assigned trial to resolve the protocol.'}`
+        ? `Evidence: ${entry.category === 'lifeform' ? 'A viable phenotype appeared.' : 'A reaction signature was recorded.'}`
         : `Notes: ${chimera ? `${chimera.lore} ` : ''}${entry.body}${genome ? ` Genome reconstruction: ${genome.reconstructionNote}` : ''}`,
       displayRecipe: researchStage === 'observed'
-        ? 'Protocol: unresolved'
+        ? entry.category === 'lifeform'
+          ? 'Genome sequence: unresolved · Egg synthesis: unavailable'
+          : 'Protocol: unresolved'
         : `${recipeLabelFor(entry)}${eggSynthesisAvailable ? ' · Egg synthesis: available' : ''}`,
       discoveredAtLabel: `Discovered on ${formatDiscoveryDate(record?.discoveredAt ?? viewedAt)}`,
       isFresh: record?.fresh === true,
@@ -164,8 +187,82 @@ export function notebookViewForProgression(
     understoodCount: entries.filter((entry) => entry.researchStage === 'understood').length,
     stabilizedCount: entries.filter((entry) => entry.researchStage === 'stabilized').length,
     totalCount: NOTEBOOK_ENTRIES.length,
+    archive: genomeArchiveProgress(progression),
     entries,
   };
+}
+
+function researchStateCopy(
+  category: NotebookCategory,
+  stage: ResearchStage,
+): { label: string; nextAction: string } {
+  if (category === 'lifeform') {
+    return stage === 'stabilized'
+      ? { label: 'Genome decoded', nextAction: 'Egg synthesis available.' }
+      : { label: 'Phenotype observed', nextAction: 'Keep it alive through a completed result to decode it.' };
+  }
+  return stage === 'observed'
+    ? { label: 'Signal observed', nextAction: 'Reproduce it in a fresh later dish to understand the protocol.' }
+    : { label: 'Protocol understood', nextAction: 'Repeatable method added to Findings.' };
+}
+
+export function genomeArchiveProgress(
+  progression: DiscoveryProgressionState,
+): GenomeArchiveProgress {
+  const lifeformIds = Object.keys(LIFEFORM_IDENTITIES) as LifeformIdentityId[];
+  const breedStages = new Map(progression.breedDiscoveryRecords.map((record) => [record.id, record.stage]));
+  const decoded = new Set<LifeformIdentityId>();
+  const observed = new Set<LifeformIdentityId>();
+  if (progression.revealAll) {
+    for (const id of lifeformIds) decoded.add(id);
+  } else {
+    for (const id of progression.unlockedLifeforms) {
+      if (!(id in BREED_DEFS)) decoded.add(id);
+    }
+    for (const id of RARE_LIFEFORMS) {
+      const stage = breedStages.get(id);
+      if (stage === 'stabilized') decoded.add(id);
+      else if (stage === 'observed') observed.add(id);
+    }
+  }
+
+  const protocolNoteIds = [...new Set(REACTION_RECIPES.map((recipe) => recipe.discoveryNoteId))];
+  const noteStages = new Map(progression.noteDiscoveryRecords.map((record) => [record.id, record.stage]));
+  const understoodProtocols = progression.revealAll
+    ? protocolNoteIds.length
+    : protocolNoteIds.filter((id) => noteStages.get(id) === 'understood').length;
+  const observedLead = RARE_LIFEFORMS.find((id) => observed.has(id));
+  const lockedLead = lifeformIds.find((id) => !decoded.has(id) && !observed.has(id));
+
+  return {
+    decodedGenomes: decoded.size,
+    observedGenomes: observed.size,
+    totalGenomes: lifeformIds.length,
+    understoodProtocols,
+    totalProtocols: protocolNoteIds.length,
+    nextLead: observedLead
+      ? {
+        state: 'observed',
+        label: `${LIFEFORM_IDENTITIES[observedLead].name} phenotype observed`,
+        clue: 'Stabilize this living phenotype in a successful Study.',
+      }
+      : lockedLead
+        ? {
+          state: 'locked',
+          label: 'Unknown genome signal',
+          clue: lockedGenomeClue(lockedLead),
+        }
+        : {
+          state: 'complete',
+          label: 'Genome Archive complete',
+          clue: 'The catalogue is complete. The dish is not.',
+        },
+  };
+}
+
+function lockedGenomeClue(id: LifeformIdentityId): string {
+  if (id in BREED_DEFS) return BREED_DEFS[id as BreedId].discoveryTrigger;
+  return LIFEFORM_IDENTITIES[id].origin;
 }
 
 // ---- Atlas: the full progression map (discovered + still-locked) -----------

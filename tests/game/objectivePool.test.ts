@@ -9,8 +9,10 @@ import type { DrawContext } from '../../src/game/objectivePool';
 
 const baseCtx: DrawContext = {
   epochIndex: 0,
-  discoveredBreeds: new Set(),
-  unlockedTools: ['nutrient', 'toxin', 'water', 'salt'],
+  knownBreeds: new Set(),
+  seedableLifeforms: new Set(['swarmlet']),
+  unlockedTools: ['egg', 'nutrient', 'toxin', 'water', 'salt'],
+  toolBudget: { egg: 8, nutrient: 5, toxin: 4, water: 6, salt: 4, acid: 3, agitate: 2 },
   seed: 42,
 };
 
@@ -29,19 +31,20 @@ describe('OBJECTIVE_POOL', () => {
       expect(obj.description.length).toBeGreaterThan(0);
       expect(typeof obj.target).toBe('string');
       expect(obj.target.length).toBeGreaterThan(0);
-      expect(typeof obj.available).toBe('function');
+      expect(typeof obj.availability).toBe('function');
     }
   });
 
   it('keeps protector unavailable until fragile-culture survival is tracked', () => {
     const protector = OBJECTIVE_POOL.find((obj) => obj.kind === 'protector');
     expect(protector).toBeDefined();
-    expect(protector?.available({
+    expect(protector?.availability({
       ...baseCtx,
       epochIndex: 8,
-      discoveredBreeds: new Set(['bloom_mass', 'needle_swarm']),
-      unlockedTools: ['nutrient', 'toxin', 'water', 'salt', 'acid'],
-    })).toBe(false);
+      knownBreeds: new Set(['bloom_mass', 'needle_swarm']),
+      seedableLifeforms: new Set(['bloom_mass', 'needle_swarm']),
+      unlockedTools: ['egg', 'nutrient', 'toxin', 'water', 'salt', 'acid'],
+    }).available).toBe(false);
     expect(protector?.unavailableReason).toMatch(/fragile/i);
   });
 
@@ -62,11 +65,11 @@ describe('OBJECTIVE_POOL', () => {
     const crisis = OBJECTIVE_POOL.find((obj) => obj.kind === 'crisis_survivor');
     expect(crisis).toBeDefined();
     for (let epochIndex = 0; epochIndex < 20; epochIndex++) {
-      expect(crisis?.available({
+      expect(crisis?.availability({
         ...baseCtx,
         epochIndex,
-        discoveredBreeds: new Set(['bloom_mass', 'needle_swarm']),
-      })).toBe(crisisSurvivorResolvableForEpoch(epochIndex));
+        knownBreeds: new Set(['bloom_mass', 'needle_swarm']),
+      }).available).toBe(crisisSurvivorResolvableForEpoch(epochIndex));
     }
   });
 });
@@ -75,8 +78,9 @@ describe('drawObjectives', () => {
   it('returns exactly 2 choices', () => {
     const ctx: DrawContext = {
       ...baseCtx,
-      discoveredBreeds: new Set(['bloom_mass', 'needle_swarm']),
-      unlockedTools: ['nutrient', 'toxin', 'water', 'salt', 'acid'],
+      knownBreeds: new Set(['bloom_mass', 'needle_swarm']),
+      seedableLifeforms: new Set(['bloom_mass', 'needle_swarm']),
+      unlockedTools: ['egg', 'nutrient', 'toxin', 'water', 'salt', 'acid'],
       epochIndex: 6,
     };
     const choices = drawObjectives(ctx);
@@ -86,9 +90,10 @@ describe('drawObjectives', () => {
   it('filters out cross_breed when no undiscovered hybrid can be bred', () => {
     const ctx: DrawContext = {
       ...baseCtx,
-      discoveredBreeds: new Set(),
+      knownBreeds: new Set(),
+      seedableLifeforms: new Set(),
       epochIndex: 6,
-      unlockedTools: ['nutrient', 'toxin', 'water', 'salt', 'acid'],
+      unlockedTools: ['egg', 'nutrient', 'toxin', 'water', 'salt', 'acid'],
     };
     // Run many seeds to verify cross_breed never appears when < 2 breeds known
     for (let seed = 0; seed < 50; seed++) {
@@ -100,7 +105,8 @@ describe('drawObjectives', () => {
 
     const alreadyKnownHybrid: DrawContext = {
       ...ctx,
-      discoveredBreeds: new Set(['needle_swarm', 'bloom_mass', 'quill_bloom']),
+      knownBreeds: new Set(['needle_swarm', 'bloom_mass', 'quill_bloom']),
+      seedableLifeforms: new Set(['needle_swarm', 'bloom_mass']),
     };
     for (let seed = 0; seed < 50; seed++) {
       const choices = drawObjectives({ ...alreadyKnownHybrid, seed });
@@ -113,21 +119,61 @@ describe('drawObjectives', () => {
   it('allows cross_breed when discovered parents can create a new hybrid', () => {
     const ctx: DrawContext = {
       ...baseCtx,
-      discoveredBreeds: new Set(['needle_swarm', 'bloom_mass']),
+      knownBreeds: new Set(['needle_swarm', 'bloom_mass']),
+      seedableLifeforms: new Set(['needle_swarm', 'bloom_mass']),
       epochIndex: 6,
-      unlockedTools: ['nutrient', 'toxin', 'water', 'salt', 'acid'],
+      unlockedTools: ['egg', 'nutrient', 'toxin', 'water', 'salt', 'acid'],
     };
 
     const crossBreed = OBJECTIVE_POOL.find((obj) => obj.kind === 'cross_breed');
-    expect(crossBreed?.available(ctx)).toBe(true);
+    expect(crossBreed?.availability(ctx).available).toBe(true);
+  });
+
+  it('rejects a globally decoded parent that is not in the active loadout', () => {
+    const crossBreed = OBJECTIVE_POOL.find((obj) => obj.kind === 'cross_breed');
+    const result = crossBreed?.availability({
+      ...baseCtx,
+      epochIndex: 6,
+      knownBreeds: new Set(['needle_swarm', 'bloom_mass']),
+      seedableLifeforms: new Set(['needle_swarm']),
+    });
+    expect(result?.available).toBe(false);
+    expect(result?.reason).toMatch(/equipped/i);
+  });
+
+  it('rejects cross-breeding when the Method has no Nutrient budget', () => {
+    const crossBreed = OBJECTIVE_POOL.find((obj) => obj.kind === 'cross_breed');
+    const result = crossBreed?.availability({
+      ...baseCtx,
+      epochIndex: 6,
+      knownBreeds: new Set(['needle_swarm', 'bloom_mass']),
+      seedableLifeforms: new Set(['needle_swarm', 'bloom_mass']),
+      toolBudget: { ...baseCtx.toolBudget, nutrient: 0 },
+    });
+    expect(result?.available).toBe(false);
+    expect(result?.reason).toMatch(/Method/i);
+  });
+
+  it('requires a compatible culture and enough repeat charges for Reaction Chain', () => {
+    const chain = OBJECTIVE_POOL.find((obj) => obj.kind === 'reaction_chain');
+    expect(chain?.availability({
+      ...baseCtx,
+      seedableLifeforms: new Set(['boss']),
+      toolBudget: { ...baseCtx.toolBudget, nutrient: 2, toxin: 2, water: 2, salt: 2 },
+    }).available).toBe(false);
+    expect(chain?.availability({
+      ...baseCtx,
+      seedableLifeforms: new Set(['swarmlet']),
+    }).available).toBe(true);
   });
 
   it('filters out acid_sculptor when acid is not in unlockedTools', () => {
     const ctx: DrawContext = {
       ...baseCtx,
-      discoveredBreeds: new Set(['bloom_mass', 'needle_swarm']),
+      knownBreeds: new Set(['bloom_mass', 'needle_swarm']),
+      seedableLifeforms: new Set(['bloom_mass', 'needle_swarm']),
       epochIndex: 6,
-      unlockedTools: ['nutrient', 'toxin', 'water', 'salt'], // no acid
+      unlockedTools: ['egg', 'nutrient', 'toxin', 'water', 'salt'], // no acid
     };
     for (let seed = 0; seed < 50; seed++) {
       const choices = drawObjectives({ ...ctx, seed });
@@ -140,8 +186,9 @@ describe('drawObjectives', () => {
   it('different seeds produce different choices (probabilistic)', () => {
     const ctx: DrawContext = {
       ...baseCtx,
-      discoveredBreeds: new Set(['bloom_mass', 'needle_swarm']),
-      unlockedTools: ['nutrient', 'toxin', 'water', 'salt', 'acid'],
+      knownBreeds: new Set(['bloom_mass', 'needle_swarm']),
+      seedableLifeforms: new Set(['bloom_mass', 'needle_swarm']),
+      unlockedTools: ['egg', 'nutrient', 'toxin', 'water', 'salt', 'acid'],
       epochIndex: 6,
     };
     const results = new Set<string>();
@@ -156,8 +203,9 @@ describe('drawObjectives', () => {
   it('returns at most 2 even when many objectives are available', () => {
     const ctx: DrawContext = {
       ...baseCtx,
-      discoveredBreeds: new Set(['bloom_mass', 'needle_swarm', 'glass_antibody']),
-      unlockedTools: ['nutrient', 'toxin', 'water', 'salt', 'acid'],
+      knownBreeds: new Set(['bloom_mass', 'needle_swarm', 'glass_antibody']),
+      seedableLifeforms: new Set(['bloom_mass', 'needle_swarm', 'glass_antibody']),
+      unlockedTools: ['egg', 'nutrient', 'toxin', 'water', 'salt', 'acid'],
       epochIndex: 8,
     };
     const choices = drawObjectives(ctx);
@@ -168,10 +216,11 @@ describe('drawObjectives', () => {
     const ctx: DrawContext = {
       ...baseCtx,
       epochIndex: 0,
-      discoveredBreeds: new Set(), // no breeds
-      unlockedTools: ['nutrient', 'toxin'], // only 2 tools, no acid
+      knownBreeds: new Set(), // no breeds
+      seedableLifeforms: new Set(['swarmlet']),
+      unlockedTools: ['egg', 'nutrient', 'toxin'], // only 2 reagents, no acid
     };
-    const kinds = OBJECTIVE_POOL.filter((o) => o.available(ctx)).map((o) => o.kind);
+    const kinds = OBJECTIVE_POOL.filter((o) => o.availability(ctx).available).map((o) => o.kind);
     const choices = drawObjectives(ctx);
     for (const choice of choices) {
       expect(kinds).toContain(choice.kind);

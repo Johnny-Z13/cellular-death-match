@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createMemoryStorage } from '../../src/game/discoverySave';
 import {
+  MAX_BIOME_ARCHIVE_RECORDS,
   RESEARCH_SEALS,
   emptyResearchArchive,
   loadResearchArchive,
@@ -71,5 +72,23 @@ describe('research archive', () => {
       maxReactions: 3,
       longestStabilitySeconds: 20,
     });
+  });
+
+  it('compacts only the oldest biome after the generous archive boundary', () => {
+    const recordedAt = '2026-08-27T10:00:00.000Z';
+    const full = {
+      ...emptyResearchArchive(),
+      biomeRecords: Array.from({ length: MAX_BIOME_ARCHIVE_RECORDS }, (_, index) => ({
+        name: `Biome ${index}`,
+        recordedAt,
+      })),
+    };
+
+    const update = recordResearchEvidence(full, { biomeName: 'Newest Basin' }, recordedAt);
+
+    expect(update.newBiome).toBe(true);
+    expect(update.state.biomeRecords).toHaveLength(MAX_BIOME_ARCHIVE_RECORDS);
+    expect(update.state.biomeRecords.some((record) => record.name === 'Biome 0')).toBe(false);
+    expect(update.state.biomeRecords.at(-1)?.name).toBe('Newest Basin');
   });
 });

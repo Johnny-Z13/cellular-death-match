@@ -72,50 +72,36 @@ describe('run telemetry', () => {
     expect(mainSource).toContain('equilibriumBiomeName: arena?.getEquilibrium().biomeName');
     expect(mainSource).not.toContain('classifyBiome(finalBreedCounts).name');
     expect(mainSource).toContain('newBiome: newBiomeThisRun');
-    expect(mainSource).toContain('syncResearchArchive(arena.getEquilibrium().biomeName);');
+    expect(mainSource).toContain("biomeName: terminalOutcome === 'won' ? arena.getEquilibrium().biomeName : undefined");
   });
 
   it('samples the current arena before every run phase transition that can replace it', () => {
     expect(mainSource).toContain('function sampleRunTelemetryFromArena(ar: Arena): void');
+    expect(mainSource).not.toContain("resolveArenaStatus('won');");
+    const bankBranch = branchSource('function bankCompletedStudy(', 'function completeResearchBankBoundary(');
+    expect(appearsBefore(bankBranch, 'persistArenaDiscoveries(arena);', 'sampleRunTelemetryFromArena(arena);')).toBe(true);
+    expect(appearsBefore(bankBranch, 'sampleRunTelemetryFromArena(arena);', 'planResearchBank({')).toBe(true);
+    expect(appearsBefore(
+      branchSource("if (status === 'lost')", 'return false;'),
+      'sampleRunTelemetryFromArena(arena);',
+      'run.skipEpoch();',
+    )).toBe(true);
+    expect(appearsBefore(
+      branchSource("if (status === 'lost')", 'return false;'),
+      'persistArenaDiscoveries(arena);',
+      'sampleRunTelemetryFromArena(arena);',
+    )).toBe(true);
+    expect(appearsBefore(
+      branchSource("if (status === 'lost')", 'return false;'),
+      'persistArenaDiscoveries(arena);',
+      'run.skipEpoch();',
+    )).toBe(true);
     expect(branchSource(
-      'coach.onOnboardingComplete = (trialIndex) => {',
-      'coach.beginTrial(runState.fightIndex);',
-    )).not.toContain("resolveArenaStatus('won');");
-    expect(appearsBefore(
-      branchSource("if (status === 'won')", "if (status === 'lost')"),
-      'sampleRunTelemetryFromArena(arena);',
-      'run.completeEpoch();',
-    )).toBe(true);
-    expect(appearsBefore(
-      branchSource("if (status === 'lost')", 'return false;'),
-      'sampleRunTelemetryFromArena(arena);',
-      'run.skipEpoch();',
-    )).toBe(true);
-    expect(appearsBefore(
-      branchSource("if (status === 'lost')", 'return false;'),
-      'persistArenaDiscoveries(arena);',
-      'sampleRunTelemetryFromArena(arena);',
-    )).toBe(true);
-    expect(appearsBefore(
-      branchSource("if (status === 'lost')", 'return false;'),
-      'persistArenaDiscoveries(arena);',
-      'run.skipEpoch();',
-    )).toBe(true);
-    expect(appearsBefore(
-      branchSource('if (equilibriumCanEndRun && arena.getEquilibrium().achieved)', 'const status = arena.endEpochNow();'),
-      'sampleRunTelemetryFromArena(arena);',
-      'bankRunStrains();',
-    )).toBe(true);
-    expect(appearsBefore(
-      branchSource('if (equilibriumCanEndRun && arena.getEquilibrium().achieved)', 'const status = arena.endEpochNow();'),
-      'sampleRunTelemetryFromArena(arena);',
-      'run.achieveHomeostasis();',
-    )).toBe(true);
-    expect(appearsBefore(
-      branchSource('arena.isEcosystemCollapsed()', '// Status check'),
-      'sampleRunTelemetryFromArena(arena);',
-      'bankRunStrains();',
-    )).toBe(true);
+      'if (equilibriumCanEndRun && arena.getEquilibrium().achieved)',
+      'const status = arena.endEpochNow();',
+    )).toContain("bankCompletedStudy('won');");
+    expect(branchSource('arena.isEcosystemCollapsed()', '// Status check'))
+      .toContain("bankCompletedStudy('lost', false);");
   });
 });
 

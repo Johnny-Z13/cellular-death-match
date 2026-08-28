@@ -110,8 +110,10 @@ describe('onboarding coach', () => {
     expect(mainSource).toContain('arena.spawnOnboardingSeed()');
   });
 
-  it('banks the taught Bloom Mass before Trial 2 asks the player to select it', () => {
-    expect(mainSource).toContain("advanceDiscoveryProgression({ breedIds: ['bloom_mass'] }, { breed: 'stabilized' });");
+  it('banks the taught Bloom Mass through the verified completion boundary', () => {
+    expect(mainSource).toContain('livingDiscoveredBreedIds(arena, discoveries.breedIds)');
+    expect(mainSource).toContain('planResearchBank({');
+    expect(mainSource).toContain('executeResearchBank(runtimeStorage, plan.commit)');
   });
 
   it('restores banked Case specimens when a reload starts the authored trials again', () => {
@@ -231,6 +233,7 @@ describe('onboarding coach', () => {
     expect(css).toContain('.coach.coach-intro.coach-exit');
     expect(css).toContain('.coach.coach-prompt.coach-exit');
     expect(css).toContain('.coach-success-active .fx-banner');
+    expect(css).toContain('.layout:not([data-screen="arena"]) .coach');
   });
 
   it('keeps the canonical phone transmission in the measured band above the dish', () => {
@@ -350,6 +353,27 @@ describe('onboarding coach', () => {
     expect(coach.isPresentingSuccess()).toBe(false);
   });
 
+  it('retires and records the coach when End wins before the delayed success card appears', () => {
+    vi.useFakeTimers();
+    const elements = installCoachDom();
+    const coach = createCoach();
+    const onComplete = vi.fn();
+    coach.onOnboardingComplete = onComplete;
+
+    coach.beginTrial(1);
+    for (const event of [
+      'lifeform:bloom_mass', 'egg-used', 'nutrient-selected', 'nutrient-used',
+      'toxin-selected', 'toxin-used',
+    ]) coach.report(event);
+
+    expect(elements.get('coach-title')?.textContent).toBe('Watch the culture.');
+    coach.leaveArena(true);
+
+    expect(coach.isActive()).toBe(false);
+    expect(elements.get('coach')?.classList.contains('coach-show')).toBe(false);
+    expect(onComplete).toHaveBeenCalledWith(1);
+  });
+
   it('latches an early completed objective and celebrates after the final required action', () => {
     vi.useFakeTimers();
     const elements = installCoachDom();
@@ -401,7 +425,7 @@ describe('onboarding coach', () => {
       objectiveHint: 'unused',
     })).toEqual({
       title: 'Experiment ready',
-      body: 'Press End to bank this dish and unlock the next research step.',
+      body: 'Bank this result to preserve the evidence and unlock the next research step.',
       interruptTutorial: false,
     });
 
@@ -414,5 +438,26 @@ describe('onboarding coach', () => {
       body: 'Place one Swarmlet egg, then feed the living cultures with Nutrient until Bloom appears.',
       interruptTutorial: true,
     });
+
+    const recoveryHints = [
+      'Water can carry an existing food field through budding tissue.',
+      'Place Bloom Mass, add Nutrient, then overlap the same field with Water.',
+    ] as const;
+    expect(onboardingIdleNudge({
+      objectiveComplete: false,
+      tutorialActive: false,
+      objectiveHint: 'unused',
+      guidanceTier: 'hypothesis',
+      nudgeIndex: 0,
+      recoveryHints,
+    })).toMatchObject({ title: 'A principle to test', body: recoveryHints[0] });
+    expect(onboardingIdleNudge({
+      objectiveComplete: false,
+      tutorialActive: false,
+      objectiveHint: 'unused',
+      guidanceTier: 'hypothesis',
+      nudgeIndex: 1,
+      recoveryHints,
+    })).toMatchObject({ title: 'Exact method', body: recoveryHints[1] });
   });
 });

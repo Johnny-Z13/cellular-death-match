@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DISCOVERY_NOTES } from '../../src/content/catalysis';
+import { DISCOVERY_NOTES, REACTION_RECIPES } from '../../src/content/catalysis';
 import { EGG_ARCHETYPES } from '../../src/content/enemies';
 import {
   NOTEBOOK_ENTRIES,
@@ -94,6 +94,8 @@ describe('notebook catalogue content', () => {
     );
 
     expect(entry?.researchStage).toBe('observed');
+    expect(entry?.researchStateLabel).toBe('Signal observed');
+    expect(entry?.researchNextAction).toContain('fresh later dish');
     expect(entry?.displayRecipe).toBe('Protocol: unresolved');
     expect(entry?.displayNotes).toContain('reaction signature');
   });
@@ -134,6 +136,54 @@ describe('notebook catalogue content', () => {
     expect(baseIds).toEqual(EGG_ARCHETYPES);
     expect(lifeformEntries).toHaveLength(14);
   });
+
+  it('derives the global Genome Archive north star from canonical content', () => {
+    const fresh = notebookViewForProgression(createDiscoveryProgression()).archive;
+    expect(fresh).toMatchObject({ decodedGenomes: 1, observedGenomes: 0, totalGenomes: 14 });
+    expect(fresh.nextLead).toMatchObject({ state: 'locked', label: 'Unknown genome signal' });
+
+    const observed = updateDiscoveryProgression(
+      createDiscoveryProgression(),
+      { breedIds: ['bloom_mass'] },
+      '2026-08-28T10:00:00.000Z',
+      { breed: 'observed' },
+    );
+    expect(notebookViewForProgression(observed).archive).toMatchObject({
+      decodedGenomes: 1, observedGenomes: 1,
+    });
+    const stabilized = updateDiscoveryProgression(
+      observed,
+      { breedIds: ['bloom_mass'] },
+      '2026-08-28T10:05:00.000Z',
+      { breed: 'stabilized' },
+    );
+    expect(notebookViewForProgression(stabilized).archive.decodedGenomes).toBe(2);
+  });
+
+  it('counts only distinct recipe-backed protocols and expands in reveal-all mode', () => {
+    const totalProtocols = new Set(REACTION_RECIPES.map((recipe) => recipe.discoveryNoteId)).size;
+    const observed = updateDiscoveryProgression(
+      createDiscoveryProgression(),
+      { noteIds: ['recipe_bitter_bloom', 'water_carries'] },
+      undefined,
+      { note: 'observed' },
+    );
+    const understood = updateDiscoveryProgression(
+      observed,
+      { noteIds: ['recipe_bitter_bloom'] },
+      undefined,
+      { note: 'understood' },
+    );
+    expect(notebookViewForProgression(understood).archive).toMatchObject({
+      understoodProtocols: 1,
+      totalProtocols,
+    });
+    const revealed = notebookViewForProgression(
+      revealAllDiscoveryProgression(createDiscoveryProgression()),
+    ).archive;
+    expect(revealed.decodedGenomes).toBe(revealed.totalGenomes);
+    expect(revealed.understoodProtocols).toBe(totalProtocols);
+  });
 });
 
 describe('chimera reframe', () => {
@@ -171,9 +221,11 @@ describe('chimera reframe', () => {
       (entry) => entry.id === 'lifeform_bloom_mass',
     );
     expect(observedEntry?.researchStage).toBe('observed');
+    expect(observedEntry?.researchStateLabel).toBe('Phenotype observed');
+    expect(observedEntry?.researchNextAction).toContain('completed result');
     expect(observedEntry?.genomePortrait).toBe('/art/genomes/bloom_mass.png');
     expect(observedEntry?.eggSynthesisAvailable).toBe(false);
-    expect(observedEntry?.displayRecipe).toBe('Protocol: unresolved');
+    expect(observedEntry?.displayRecipe).toBe('Genome sequence: unresolved · Egg synthesis: unavailable');
   });
 });
 

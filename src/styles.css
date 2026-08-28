@@ -683,6 +683,27 @@ canvas {
   border-color: #d99188;
 }
 
+.end-action.end-action-confirm {
+  border-color: var(--danger);
+  background: linear-gradient(180deg, rgba(255, 123, 92, 0.18), var(--panel-raised));
+  color: #ffd9d0;
+}
+
+.end-action.end-action-confirm b,
+.end-action.end-action-retry b {
+  color: var(--danger);
+}
+
+.end-action.end-action-retry {
+  border-color: var(--amber);
+  background: linear-gradient(180deg, rgba(240, 195, 90, 0.16), var(--panel-raised));
+}
+
+.end-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.54;
+}
+
 /* Experiment complete: the End button becomes the signposted next step. It
    glows and breathes so the player notices they can finish — without being
    forced out of a dish they want to keep cultivating. */
@@ -3244,8 +3265,10 @@ canvas {
   font-size: 8px;
   font-weight: 400;
   letter-spacing: 0.08em;
-  line-height: 1;
-  white-space: nowrap;
+  max-width: 48%;
+  line-height: 1.15;
+  text-align: right;
+  white-space: normal;
 }
 
 .notebook-status-new {
@@ -3293,6 +3316,14 @@ canvas {
   font-family: var(--font-serif);
   font-size: 13px;
   line-height: 1.45;
+}
+
+.notebook-entry p.notebook-next-action {
+  margin: 8px 0 4px;
+  color: var(--bio-bright);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.35;
 }
 
 .notebook-entry small {
@@ -3978,6 +4009,7 @@ canvas {
 }
 
 .objective-card-target,
+.objective-card-uses,
 .objective-card-hint {
   font-size: 11px;
   line-height: 1.35;
@@ -4003,8 +4035,32 @@ canvas {
   color: #d8f8ff;
 }
 
+.objective-card-uses {
+  color: var(--amber);
+}
+
 .objective-card-hint {
   color: var(--ink-faint);
+}
+
+.title-save-note {
+  margin: 8px 0 0;
+  color: var(--ink-faint);
+  font-size: 10px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
 }
 
 /* ---- HUD --------------------------------------------------------------- */
@@ -5987,7 +6043,7 @@ canvas {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(22px, 4.4svh, 54px);
+  gap: clamp(10px, 1.8svh, 18px);
   width: min(92vw, 760px);
   max-width: none;
   margin: 0;
@@ -6000,6 +6056,66 @@ canvas {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   animation: title-lockup-arrive 720ms 90ms cubic-bezier(0.18, 0.9, 0.22, 1) both;
+}
+
+.screen-title-screen .title-archive-strip {
+  box-sizing: border-box;
+  width: min(86vw, 600px);
+  padding: 8px 11px;
+  border: 1px solid rgba(91, 233, 214, 0.28);
+  border-radius: 10px;
+  background: rgba(2, 13, 17, 0.72);
+  box-shadow: inset 0 0 22px rgba(91, 233, 214, 0.045);
+  color: var(--ink-dim);
+}
+
+.title-archive-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--bio);
+  font-size: 8px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.title-archive-head b {
+  color: var(--ink);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.title-genome-track {
+  display: grid;
+  grid-template-columns: repeat(var(--genome-total, 1), minmax(4px, 1fr));
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.title-genome-track i {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(123, 158, 166, 0.18);
+}
+
+.title-genome-track i.is-decoded { background: var(--bio); box-shadow: 0 0 7px rgba(91, 233, 214, 0.55); }
+.title-genome-track i.is-observed { background: var(--amber); }
+
+.title-archive-strip p {
+  margin: 6px 0 0;
+  overflow: hidden;
+  color: var(--ink-faint);
+  font-size: 8px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.screen-title-screen .title-save-note {
+  width: min(86vw, 600px);
+  margin: -3px 0 0;
+  color: rgba(211, 239, 243, 0.62);
+  text-shadow: 0 1px 3px #000;
 }
 
 .screen-title-screen .title-card::before {
@@ -6121,7 +6237,7 @@ canvas {
 @media (max-height: 700px) and (orientation: portrait) {
   .screen-title-screen .title-card {
     top: 60svh;
-    gap: clamp(20px, 4svh, 30px);
+    gap: 7px;
   }
 
   .screen-title-screen .title-card .title-wordmark {
@@ -6131,6 +6247,9 @@ canvas {
   .screen-title-screen .title-start-button {
     height: clamp(72px, 11.6svh, 82px);
   }
+
+  .screen-title-screen .title-archive-strip { padding-block: 6px; }
+  .screen-title-screen .title-archive-strip p { margin-top: 4px; }
 }
 
 @media (min-width: 900px) and (orientation: landscape) {
@@ -6813,6 +6932,16 @@ canvas {
 .layout[data-screen="arena"] .coach.coach-show {
   display: grid;
   animation: professor-transmission-in 320ms cubic-bezier(0.18, 0.9, 0.22, 1) both;
+}
+
+/* A stale animation timer must never leak the dish coach across a screen
+   boundary and obscure a Method, Objective, loadout, or report decision. */
+.layout:not([data-screen="arena"]) .coach {
+  display: none !important;
+}
+
+.layout:not([data-screen="arena"]) .fx-banner {
+  display: none !important;
 }
 
 .layout[data-screen="arena"] .coach.coach-exit {
@@ -7519,6 +7648,10 @@ canvas {
     transition: opacity 140ms ease;
   }
 
+  .layout[data-screen="arena"] .hud-director.hud-director-intro {
+    animation: hud-director-intro-pulse 720ms ease-out both;
+  }
+
   .layout[data-screen="arena"] .hud-director-portrait {
     position: relative;
     display: block;
@@ -7570,7 +7703,7 @@ canvas {
   }
 
   .layout[data-screen="arena"] .hud-director-title {
-    display: block;
+    display: -webkit-box;
     min-width: 0;
     overflow: hidden;
     color: #f1ffff;
@@ -7578,8 +7711,9 @@ canvas {
     font-size: 13px;
     font-weight: 400;
     line-height: 1.08;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   .layout[data-screen="arena"] .hud-director-progress {
@@ -7688,6 +7822,19 @@ canvas {
   .layout[data-screen="arena"] .options-button {
     top: calc(max(5px, env(safe-area-inset-top)) + 6px);
     right: max(10px, calc(env(safe-area-inset-right) + 10px));
+  }
+}
+
+@keyframes hud-director-intro-pulse {
+  0% { border-color: rgba(91, 233, 214, 0.92); box-shadow: 0 0 0 rgba(91, 233, 214, 0); }
+  35% { border-color: rgba(91, 233, 214, 0.72); box-shadow: 0 0 18px rgba(91, 233, 214, 0.2); }
+  100% { border-color: rgba(120, 196, 200, 0.3); box-shadow: 0 0 0 rgba(91, 233, 214, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layout[data-screen="arena"] .hud-director.hud-director-intro {
+    animation: none;
+    border-color: rgba(91, 233, 214, 0.72);
   }
 }
 

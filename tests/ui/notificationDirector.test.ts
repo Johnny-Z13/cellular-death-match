@@ -77,4 +77,15 @@ describe('mobile notification director', () => {
     expect(director.enqueue({ key: 'low-b', priority: 1, payload: 'low-b' }).action).toBe('dropped');
     expect(director.getQueued().map((item) => item.key)).toEqual(['high', 'low-a']);
   });
+
+  it('clears active and queued feedback at a screen boundary', () => {
+    const director = new NotificationDirector<string>();
+    director.enqueue({ key: 'active', priority: 3, payload: 'active' });
+    director.enqueue({ key: 'queued', priority: 2, payload: 'queued' });
+
+    director.clear();
+
+    expect(director.getActive()).toBeNull();
+    expect(director.getQueued()).toEqual([]);
+  });
 });

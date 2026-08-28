@@ -1,4 +1,5 @@
 import type { DiscoveryStorage } from './discoverySave';
+import { writeVerifiedJson, type VerifiedWriteResult } from './verifiedStorage';
 
 export const CASE_RECORD_KEY = 'cellular-death-match.case-record.v1';
 
@@ -11,35 +12,42 @@ export function loadCaseRecord(storage: Pick<DiscoveryStorage, 'getItem'>): Case
     const raw = storage.getItem(CASE_RECORD_KEY);
     if (!raw) return { completedTrialIds: [] };
     const value: unknown = JSON.parse(raw);
-    if (!isObject(value) || !Array.isArray(value.completedTrialIds)) {
-      return { completedTrialIds: [] };
-    }
-    return {
-      completedTrialIds: [...new Set(value.completedTrialIds.filter((id): id is string => typeof id === 'string'))],
-    };
+    return canonicalCaseRecord(value);
   } catch {
     return { completedTrialIds: [] };
   }
 }
 
 export function recordCompletedTrial(
-  storage: Pick<DiscoveryStorage, 'setItem'>,
+  storage: Pick<DiscoveryStorage, 'getItem' | 'setItem'>,
   record: CaseRecord,
   trialId: string,
 ): CaseRecord {
-  const next = {
+  const next = canonicalCaseRecord({
     completedTrialIds: [...new Set([...record.completedTrialIds, trialId])],
-  };
-  try {
-    storage.setItem(CASE_RECORD_KEY, JSON.stringify(next));
-  } catch {
-    // Browsers may deny storage in private/embedded contexts. The in-memory
-    // record still updates for the active visit.
+  });
+  return saveCaseRecordVerified(storage, next).value;
+}
+
+export function saveCaseRecordVerified(
+  storage: Pick<DiscoveryStorage, 'getItem' | 'setItem'>,
+  record: CaseRecord,
+): VerifiedWriteResult<CaseRecord> {
+  const canonical = canonicalCaseRecord(record);
+  return writeVerifiedJson(storage, CASE_RECORD_KEY, canonical, () => loadCaseRecord(storage));
+}
+
+export function canonicalCaseRecord(value: unknown): CaseRecord {
+  if (!isObject(value) || !Array.isArray(value.completedTrialIds)) {
+    return { completedTrialIds: [] };
   }
-  return next;
+  return {
+    completedTrialIds: [...new Set(
+      value.completedTrialIds.filter((id): id is string => typeof id === 'string'),
+    )],
+  };
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
-

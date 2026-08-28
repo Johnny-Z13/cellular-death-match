@@ -7,17 +7,23 @@ import {
   type CautionLevel,
   type DiscoveryNoteId,
 } from '../content/catalysis';
-import type { DiscoverySaveRecord, DiscoverySaveState, ResearchStage } from './discoverySave';
+import type {
+  DiscoverySaveRecord,
+  DiscoverySaveState,
+  LifeformResearchStage,
+  ProtocolResearchStage,
+  ResearchStage,
+} from './discoverySave';
 
 export type ProgressionToolId = 'egg' | 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' | 'paste' | 'agitate';
 export type ProgressionLifeformId = EnemyArchetype | BreedId;
-export type DiscoveryRecord<Id extends string> = DiscoverySaveRecord<Id>;
+export type DiscoveryRecord<Id extends string, Stage extends ResearchStage = ResearchStage> = DiscoverySaveRecord<Id, Stage>;
 
 export interface DiscoveryProgressionState {
   discoveredBreedIds: BreedId[];
   discoveredNoteIds: DiscoveryNoteId[];
-  breedDiscoveryRecords: DiscoveryRecord<BreedId>[];
-  noteDiscoveryRecords: DiscoveryRecord<DiscoveryNoteId>[];
+  breedDiscoveryRecords: DiscoveryRecord<BreedId, LifeformResearchStage>[];
+  noteDiscoveryRecords: DiscoveryRecord<DiscoveryNoteId, ProtocolResearchStage>[];
   unlockedTools: ProgressionToolId[];
   unlockedLifeforms: ProgressionLifeformId[];
   revealAll: boolean;
@@ -29,8 +35,8 @@ export interface DiscoveryDelta {
 }
 
 export interface DiscoveryStageDelta {
-  breed?: ResearchStage;
-  note?: ResearchStage;
+  breed?: LifeformResearchStage;
+  note?: ProtocolResearchStage;
 }
 
 export type DiscoveryTickerTone = 'discovery' | 'caution' | 'critical';
@@ -254,8 +260,8 @@ export function discoveryAnnouncementsForProgressionChange(
 function buildProgression(base: {
   discoveredBreedIds: BreedId[];
   discoveredNoteIds: DiscoveryNoteId[];
-  breedDiscoveryRecords: DiscoveryRecord<BreedId>[];
-  noteDiscoveryRecords: DiscoveryRecord<DiscoveryNoteId>[];
+  breedDiscoveryRecords: DiscoveryRecord<BreedId, LifeformResearchStage>[];
+  noteDiscoveryRecords: DiscoveryRecord<DiscoveryNoteId, ProtocolResearchStage>[];
   revealAll: boolean;
 }): DiscoveryProgressionState {
   const toolSet = new Set<ProgressionToolId>(STARTER_PROGRESSION_TOOLS);
@@ -331,19 +337,19 @@ function uniqueValid(values: readonly string[], allowed: Set<string>): string[] 
   return [...new Set(values.filter((value) => allowed.has(value)))];
 }
 
-function discoveryRecordsForIds<Id extends string>(
-  existingRecords: readonly DiscoveryRecord<Id>[] | undefined,
+function discoveryRecordsForIds<Id extends string, Stage extends ResearchStage>(
+  existingRecords: readonly DiscoveryRecord<Id, Stage>[] | undefined,
   ids: readonly Id[],
   discoveredAt: string,
   freshForMissing: boolean,
   allowed: Set<string>,
-  stageForMissing: ResearchStage,
-  promoteStage?: ResearchStage,
+  stageForMissing: Stage,
+  promoteStage?: Stage,
   idsToPromote: readonly Id[] = [],
-): DiscoveryRecord<Id>[] {
+): DiscoveryRecord<Id, Stage>[] {
   const wantedIds = new Set<string>(ids);
   const promoteIds = new Set<string>(idsToPromote);
-  const records = new Map<string, DiscoveryRecord<Id>>();
+  const records = new Map<string, DiscoveryRecord<Id, Stage>>();
 
   for (const record of existingRecords ?? []) {
     if (!allowed.has(record.id) || !wantedIds.has(record.id)) continue;
@@ -377,7 +383,7 @@ function stageRank(stage: ResearchStage | undefined): number {
   return 0;
 }
 
-function higherResearchStage(current: ResearchStage, requested: ResearchStage): ResearchStage {
+function higherResearchStage<Stage extends ResearchStage>(current: Stage, requested: Stage): Stage {
   return stageRank(requested) > stageRank(current) ? requested : current;
 }
 

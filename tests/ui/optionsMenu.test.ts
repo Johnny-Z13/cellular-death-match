@@ -34,9 +34,9 @@ describe('options menu', () => {
     expect(mainSource).toContain('window.location.reload();');
   });
 
-  it('turns reveal-all into a persistent, fully stocked procedural preview', () => {
+  it('turns reveal-all into a non-owning, fully stocked procedural preview', () => {
     expect(mainSource).not.toContain('setDiscoveryPersistence');
-    expect(mainSource).toContain('for (const lifeform of ALL_PROGRESSION_LIFEFORMS) strainLibrary.bankStrain(lifeform);');
+    expect(mainSource).not.toContain('for (const lifeform of ALL_PROGRESSION_LIFEFORMS) strainLibrary.bankStrain(lifeform);');
     expect(mainSource).toContain('run.startLateGamePreview();');
     expect(mainSource).toContain('revealAllResearchArchive(researchArchive)');
     expect(mainSource).toContain('if (discoveryProgression.revealAll) return ALL_PROGRESSION_TOOLS;');

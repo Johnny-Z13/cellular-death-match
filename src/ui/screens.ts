@@ -3,7 +3,7 @@ import type { LabReport } from '../game/labReport';
 import type { UpgradeDef } from '../content/upgrades';
 import type { EnemyArchetype } from '../content/enemies';
 import type { ObjectiveDef } from '../content/objectives';
-import type { NotebookView, AtlasView } from '../content/notebook';
+import type { NotebookView, AtlasView, GenomeArchiveProgress } from '../content/notebook';
 import {
   LIFEFORM_IDENTITIES,
   type LifeformIdentityId,
@@ -12,6 +12,8 @@ import { createIconCells } from './iconCells';
 import { renderLabReport } from './labReportScreen';
 import type { ResearchCaseDef, ResearchTrialDef } from '../content/researchCases';
 import type { ResearchNotebookView } from '../game/researchNotebook';
+import type { StudyChoice } from '../game/objectivePool';
+import type { DishExitState } from '../game/dishExitAction';
 
 type ScreenName = 'title' | 'pick' | 'end' | 'hud' | 'notebook';
 type AppScreenName = ScreenName | 'loadout' | 'objective';
@@ -72,6 +74,11 @@ export interface CaseProgressInfo {
   activeTrialIndex: number;
   completedResults: readonly ('completed' | 'lapsed' | undefined)[];
   openLabUnlocked: boolean;
+  resumeAvailable: boolean;
+  resumePhase: 'dish-restart' | 'method-choice' | 'study-choice' | null;
+  saveAvailable: boolean;
+  pendingBank: boolean;
+  archive: GenomeArchiveProgress;
 }
 
 export interface Screens {
@@ -103,7 +110,7 @@ export interface Screens {
   updateAtlas(view: AtlasView): void;
   setLoadoutScreen(el: HTMLElement): void;
   setPickChoices(choices: PickChoice[], onPick: (id: string) => void): void;
-  setObjectiveChoices(choices: ObjectiveDef[], onPick: (objective: ObjectiveDef) => void): void;
+  setObjectiveChoices(choices: StudyChoice[], onPick: (objective: ObjectiveDef) => void): void;
   updateEnd(info: EndInfo): void;
   updateLabReport(report: LabReport | null): void;
   updateCaseProgress(info: CaseProgressInfo): void;
@@ -120,7 +127,9 @@ export interface Screens {
   onHapticsToggle(handler: () => void): void;
   setHapticsAvailable(available: boolean): void;
   setHapticsEnabled(enabled: boolean): void;
-  setEpochComplete(complete: boolean): void;
+  setDishExitState(state: DishExitState): void;
+  announceStudyStart(info: { key: string; kind: 'trial' | 'study'; message: string }): void;
+  clearStudyStartAnnouncement(): void;
   openMobileLifeformsDrawer(): void;
   closeMobileDrawers(): void;
   onToolboxReveal(handler: () => void): void;
@@ -147,9 +156,13 @@ export function createScreens(): Screens {
   const hud          = get('hud');
   const titleStart   = get('title-start');
   const titleStartLabel = get('title-start-label');
+  const titleSaveNote = get('title-save-note');
   const titleCaseProgress = get('title-case-progress');
   const titleTrialLabel = get('title-trial-label');
   const titleTrialHypothesis = get('title-trial-hypothesis');
+  const titleGenomeProgress = get('title-genome-progress');
+  const titleGenomeTrack = get('title-genome-track');
+  const titleGenomeLead = get('title-genome-lead');
   const pickCaseProgress = get('pick-case-progress');
   const methodHandoff = get('method-handoff');
   const notebookButton = get('notebook-button') as HTMLButtonElement;
@@ -185,6 +198,9 @@ export function createScreens(): Screens {
   const hudObjective = get('hud-objective');
   const hudDirectorTitle = get('hud-director-title');
   const hudDirectorProgress = get('hud-director-progress');
+  const hudDirector = get('hud-director');
+  const hudDirectorKicker = get('hud-director-kicker');
+  const hudDirectorState = get('hud-director-state');
   const hudHint      = get('hud-hint');
   const hudUpgrades  = get('hud-upgrades');
   const toolSummary  = get('tool-summary');
@@ -202,6 +218,11 @@ export function createScreens(): Screens {
   const agitateButton = get('agitate-button') as HTMLButtonElement;
   const agitateCount = get('agitate-count');
   const endEpochButton = get('end-epoch-button') as HTMLButtonElement;
+  const endActionExplanation = get('end-action-explanation');
+  const studyStartAnnouncer = get('study-start-announcer');
+  let lastStudyStartKey = '';
+  let studyStartTimer = 0;
+  let lastDishExitAnnouncement = '';
   const toolButtons  = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-tool]'));
   const toolbox = get('toolbox');
   const toolboxMore = get('toolbox-more') as HTMLButtonElement;
@@ -289,6 +310,14 @@ export function createScreens(): Screens {
     setMobileDrawer('none');
   }
 
+  function clearStudyStartAnnouncement(): void {
+    window.clearTimeout(studyStartTimer);
+    hudDirector.classList.remove('hud-director-intro');
+    hudDirectorKicker.textContent = 'Dr. E · Dish status';
+    hudDirectorState.textContent = 'Live';
+    studyStartAnnouncer.textContent = '';
+  }
+
   function applyLifeformVisibility(): void {
     let readyCount = 0;
     for (const [id, button] of lifeButtons) {
@@ -299,7 +328,7 @@ export function createScreens(): Screens {
       const selected = !locked && id === selectedLifeformId;
       setSelectedButtonState(button, selected);
     }
-    lifeCount.textContent = `${readyCount} / ${lifeButtons.size} ready`;
+    lifeCount.textContent = `${readyCount} ${readyCount === 1 ? 'specimen' : 'specimens'} available in this Study`;
     sortLifeList();
   }
 
@@ -471,6 +500,7 @@ export function createScreens(): Screens {
 
   return {
     show(name) {
+      if (name !== 'hud') clearStudyStartAnnouncement();
       if (
         name === 'title'
         || name === 'loadout'
@@ -708,14 +738,14 @@ export function createScreens(): Screens {
       const crisis = info.crisis === 'none' ? '' : `, ${info.crisis} active`;
       hudEco.textContent = `${info.livingEnemies} lifeforms, ${info.worldEvents} fertile events, ${info.outbreaks} outbreaks, ${info.reactions} reactions, ${info.accidents} accidents, ${info.mutations} mutations, ${info.births} births, ${info.supplyDrops} drops, ${info.dominant} dominant${crisis}`;
       hudObjective.textContent = info.objectiveComplete
-        ? `${info.objectiveName}: complete — finish when ready`
+        ? `${info.objectiveName}: complete — bank when ready`
         : `${info.objectiveName}: ${info.objectiveSummary}`;
       hudDirectorTitle.textContent = info.objectiveName;
       hudDirectorProgress.textContent = info.objectiveComplete
-        ? 'Complete — finish when ready'
+        ? 'Complete — bank when ready'
         : info.objectiveSummary;
       hudHint.textContent = info.objectiveComplete
-        ? 'That is the result. Press End to bank it, or keep cultivating.'
+        ? 'That is the result. Bank it now, or keep cultivating.'
         : info.objectiveHint;
       hudUpgrades.textContent = info.upgrades.length === 0 ? 'none' : info.upgrades.join(', ');
     },
@@ -726,7 +756,7 @@ export function createScreens(): Screens {
       hud.classList.toggle('hud-equilibrium-achieved', info.achieved);
     },
     updateNotebook(view) {
-      notebookProgress.textContent = `${view.observedCount} observed · ${view.understoodCount} understood · ${view.stabilizedCount} stabilized`;
+      notebookProgress.textContent = `${view.archive.decodedGenomes} / ${view.archive.totalGenomes} genomes decoded · ${view.archive.understoodProtocols} / ${view.archive.totalProtocols} protocols understood`;
       notebookList.replaceChildren();
       for (const entry of view.entries) {
         if (!entry.discovered) continue;
@@ -753,9 +783,10 @@ export function createScreens(): Screens {
         } else {
           const span = document.createElement('span');
           span.className = 'notebook-marker';
-          span.textContent = entry.researchStage === 'observed'
-            ? 'OBS'
-            : entry.researchStage === 'understood' ? 'HYP' : 'STB';
+          span.textContent = entry.category === 'catalyst'
+            ? 'RXN'
+            : entry.category === 'event' ? 'EVT' : 'NOTE';
+          span.setAttribute('aria-hidden', 'true');
           marker = span;
         }
 
@@ -766,7 +797,7 @@ export function createScreens(): Screens {
         title.textContent = entry.displayTitle;
         const status = document.createElement('span');
         status.className = `notebook-status notebook-status-${entry.researchStage}${entry.isFresh ? ' notebook-status-new' : ''}`;
-        status.textContent = entry.researchStage.toUpperCase();
+        status.textContent = entry.researchStateLabel;
         header.append(title, status);
 
         const meta = document.createElement('div');
@@ -786,11 +817,15 @@ export function createScreens(): Screens {
         const body = document.createElement('p');
         body.className = 'notebook-notes';
         body.textContent = entry.displayNotes;
+        const nextAction = document.createElement('p');
+        nextAction.className = 'notebook-next-action';
+        nextAction.textContent = entry.researchNextAction;
         const clue = document.createElement('small');
         clue.className = 'notebook-recipe';
         clue.textContent = entry.displayRecipe;
 
-        copy.append(header, meta, discoveredAt, body, clue);
+        card.setAttribute('aria-label', `${entry.displayTitle}. ${entry.researchStateLabel}. ${entry.researchNextAction}`);
+        copy.append(header, meta, discoveredAt, nextAction, body, clue);
         card.append(marker, copy);
         notebookList.append(card);
       }
@@ -1015,10 +1050,13 @@ export function createScreens(): Screens {
         const target = document.createElement('div');
         target.className = 'objective-card-target';
         target.textContent = objective.target;
+        const uses = document.createElement('div');
+        uses.className = 'objective-card-uses';
+        uses.textContent = `Uses: ${objective.uses}`;
         const hint = document.createElement('div');
         hint.className = 'objective-card-hint';
         hint.textContent = objective.hint ?? '';
-        btn.append(name, mode, desc, target, hint);
+        btn.append(name, mode, desc, target, uses, hint);
         btn.addEventListener('click', () => onPick(objective));
         objectiveChoices.append(btn);
       }
@@ -1059,11 +1097,43 @@ export function createScreens(): Screens {
       titleTrialHypothesis.textContent = info.openLabUnlocked
         ? 'Choose a field study, cultivate freely, and bank whatever the dish teaches you.'
         : info.activeTrial.hypothesis;
-      titleStartLabel.textContent = info.openLabUnlocked ? 'Enter Open Lab' : 'Run Trial';
+      titleStartLabel.textContent = info.resumeAvailable
+        ? info.resumePhase === 'dish-restart'
+          ? info.openLabUnlocked ? 'Restart Study' : 'Restart Trial'
+          : info.openLabUnlocked ? 'Continue Study' : 'Continue Case'
+        : info.openLabUnlocked ? 'Enter Open Lab' : 'Run Trial';
+      if (info.pendingBank) {
+        titleStartLabel.textContent = 'Retry save';
+        titleSaveNote.textContent = 'A completed result is waiting to be banked.';
+      } else if (!info.saveAvailable) {
+        titleSaveNote.textContent = 'Saving unavailable in this browser. You can still experiment.';
+      } else if (info.resumePhase === 'dish-restart') {
+        titleSaveNote.textContent = 'Assignment saved; active cultures restart cleanly.';
+      } else if (info.resumePhase === 'method-choice') {
+        titleSaveNote.textContent = 'Result saved; choose the next Method to continue.';
+      } else if (info.resumePhase === 'study-choice') {
+        titleSaveNote.textContent = 'Method saved; choose the next Study to continue.';
+      } else {
+        titleSaveNote.textContent = 'Research saves automatically between boundaries.';
+      }
       pickCaseProgress.textContent = info.openLabUnlocked
         ? 'Case 01 sealed · Open Lab unlocked'
         : `Trial logged · ${completed} / ${info.caseDef.trials.length} sealed`;
       methodHandoff.hidden = info.activeTrialIndex !== 0;
+      titleGenomeProgress.textContent = `${info.archive.decodedGenomes} / ${info.archive.totalGenomes} genomes decoded`;
+      titleGenomeTrack.style.setProperty('--genome-total', String(info.archive.totalGenomes));
+      titleGenomeTrack.replaceChildren(...Array.from({ length: info.archive.totalGenomes }, (_, index) => {
+        const cell = document.createElement('i');
+        cell.className = index < info.archive.decodedGenomes
+          ? 'is-decoded'
+          : index < info.archive.decodedGenomes + info.archive.observedGenomes
+            ? 'is-observed'
+            : '';
+        return cell;
+      }));
+      titleGenomeLead.textContent = info.archive.nextLead.state === 'complete'
+        ? info.archive.nextLead.clue
+        : `Next lead · ${info.archive.nextLead.label} · ${info.archive.nextLead.clue}`;
 
       document.querySelectorAll<HTMLElement>('[data-case-trial]').forEach((node) => {
         const index = Number(node.dataset.caseTrial);
@@ -1124,16 +1194,51 @@ export function createScreens(): Screens {
       hapticsButton.setAttribute('aria-label', enabled ? 'Disable haptics' : 'Enable haptics');
       hapticsButton.textContent = enabled ? 'Haptics — On' : 'Haptics — Off';
     },
-    setEpochComplete(complete) {
-      // Glow the End button + flag the HUD so the player sees the experiment is
-      // ready to bank, without forcing them out of a flourishing dish.
-      endEpochButton.classList.toggle('end-action-ready', complete);
+    setDishExitState(state) {
+      endEpochButton.dataset.exitMode = state.mode;
+      endEpochButton.disabled = state.disabled;
+      endEpochButton.classList.toggle('end-action-ready', state.mode === 'bank');
+      endEpochButton.classList.toggle('end-action-confirm', state.mode === 'confirm-abandon');
+      endEpochButton.classList.toggle('end-action-retry', state.mode === 'retry-save');
+      endEpochButton.setAttribute('aria-label', `${state.label}. ${state.detail}. ${state.explanation}`);
+      const endTitle = endEpochButton.querySelector<HTMLElement>('strong');
+      if (endTitle) endTitle.textContent = state.label;
       const endLabel = endEpochButton.querySelector<HTMLElement>('small');
-      if (endLabel) endLabel.textContent = complete ? 'bank result' : 'bank or leave';
+      if (endLabel) endLabel.textContent = state.explanation;
       const endState = endEpochButton.querySelector<HTMLElement>('b');
-      if (endState) endState.textContent = complete ? 'ready' : 'now';
-      hud.classList.toggle('hud-complete', complete);
+      if (endState) endState.textContent = state.detail;
+      hud.classList.toggle('hud-complete', state.mode === 'bank' || state.mode === 'retry-save');
+      const announcement = state.mode === 'confirm-abandon' || state.mode === 'retry-save'
+        ? state.explanation
+        : '';
+      if (announcement !== lastDishExitAnnouncement) {
+        lastDishExitAnnouncement = announcement;
+        endActionExplanation.textContent = announcement;
+      }
     },
+    announceStudyStart(info) {
+      if (info.key === lastStudyStartKey) return;
+      lastStudyStartKey = info.key;
+      window.clearTimeout(studyStartTimer);
+      hudDirectorKicker.textContent = `Dr. E · New ${info.kind}`;
+      hudDirectorState.textContent = 'Assigned';
+      hudDirector.classList.remove('hud-director-intro');
+      void hudDirector.offsetWidth;
+      hudDirector.classList.add('hud-director-intro');
+      studyStartAnnouncer.textContent = '';
+      window.requestAnimationFrame(() => {
+        studyStartAnnouncer.textContent = info.message;
+      });
+      const announcementKey = info.key;
+      studyStartTimer = window.setTimeout(() => {
+        if (lastStudyStartKey !== announcementKey) return;
+        hudDirector.classList.remove('hud-director-intro');
+        hudDirectorKicker.textContent = 'Dr. E · Dish status';
+        hudDirectorState.textContent = 'Live';
+        studyStartAnnouncer.textContent = '';
+      }, 2_600);
+    },
+    clearStudyStartAnnouncement,
     openMobileLifeformsDrawer() {
       setMobileDrawer(unlockedLifeformIds.size > 1 ? 'lifeforms' : 'none');
     },

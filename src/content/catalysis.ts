@@ -230,6 +230,7 @@ export const REACTION_RECIPES: readonly ReactionRecipe[] = [
     id: 'incubator_shock',
     name: 'Incubator Shock',
     inputs: ['hatch', 'nutrient', 'toxin'],
+    trigger: 'hatch',
     archetypes: ['swarmlet', 'splitter', 'bruiser'],
     caution: 'critical',
     discoveryNoteId: 'recipe_incubator_shock',

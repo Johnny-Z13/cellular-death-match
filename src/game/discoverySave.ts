@@ -4,6 +4,7 @@ import {
   type BreedId,
   type DiscoveryNoteId,
 } from '../content/catalysis';
+import { writeVerifiedJson, type VerifiedWriteResult } from './verifiedStorage';
 
 export interface DiscoveryStorage {
   getItem(key: string): string | null;
@@ -12,20 +13,25 @@ export interface DiscoveryStorage {
 }
 
 export type ResearchStage = 'observed' | 'understood' | 'stabilized';
+export type LifeformResearchStage = 'observed' | 'stabilized';
+export type ProtocolResearchStage = 'observed' | 'understood';
 
-export interface DiscoverySaveRecord<Id extends string> {
+export interface DiscoverySaveRecord<
+  Id extends string,
+  Stage extends ResearchStage = ResearchStage,
+> {
   id: Id;
   discoveredAt: string;
   fresh: boolean;
-  stage: ResearchStage;
+  stage: Stage;
 }
 
 export interface DiscoverySaveState {
   persistenceEnabled: boolean;
   discoveredBreedIds: BreedId[];
   discoveredNoteIds: DiscoveryNoteId[];
-  breedDiscoveryRecords: DiscoverySaveRecord<BreedId>[];
-  noteDiscoveryRecords: DiscoverySaveRecord<DiscoveryNoteId>[];
+  breedDiscoveryRecords: DiscoverySaveRecord<BreedId, LifeformResearchStage>[];
+  noteDiscoveryRecords: DiscoverySaveRecord<DiscoveryNoteId, ProtocolResearchStage>[];
   revealAll: boolean;
 }
 
@@ -57,7 +63,7 @@ export function loadDiscoverySave(storage: DiscoveryStorage): DiscoverySaveState
   if (!raw) return emptySave();
 
   try {
-    return sanitizeState(JSON.parse(raw));
+    return canonicalDiscoveryState(JSON.parse(raw));
   } catch {
     return emptySave();
   }
@@ -67,9 +73,20 @@ export function saveDiscoveryState(
   storage: DiscoveryStorage,
   state: DiscoverySaveInput,
 ): DiscoverySaveState {
-  const sanitized = sanitizeState(state);
-  storage.setItem(DISCOVERY_SAVE_KEY, JSON.stringify(sanitized));
-  return sanitized;
+  return saveDiscoveryStateVerified(storage, state).value;
+}
+
+export function saveDiscoveryStateVerified(
+  storage: DiscoveryStorage,
+  state: DiscoverySaveInput,
+): VerifiedWriteResult<DiscoverySaveState> {
+  const sanitized = canonicalDiscoveryState(state);
+  return writeVerifiedJson(
+    storage,
+    DISCOVERY_SAVE_KEY,
+    sanitized,
+    () => loadDiscoverySave(storage),
+  );
 }
 
 export function clearDiscoverySave(storage: DiscoveryStorage): DiscoverySaveState {
@@ -109,7 +126,7 @@ export function revealAllDiscoveries(storage: DiscoveryStorage): DiscoverySaveSt
   });
 }
 
-function sanitizeState(value: unknown): DiscoverySaveState {
+export function canonicalDiscoveryState(value: unknown): DiscoverySaveState {
   if (!isObject(value)) return emptySave();
 
   // Research is a collection game, so discoveries persist by default. Older
@@ -130,6 +147,7 @@ function sanitizeState(value: unknown): DiscoverySaveState {
       BREED_IDS,
       false,
       'stabilized',
+      'breed',
     ),
     noteDiscoveryRecords: sanitizeRecords(
       value.noteDiscoveryRecords,
@@ -137,6 +155,7 @@ function sanitizeState(value: unknown): DiscoverySaveState {
       NOTE_IDS,
       false,
       'understood',
+      'note',
     ),
     revealAll: value.revealAll === true,
   };
@@ -153,15 +172,16 @@ function emptySave(): DiscoverySaveState {
   };
 }
 
-function sanitizeRecords<Id extends string>(
+function sanitizeRecords<Id extends string, Stage extends ResearchStage>(
   value: unknown,
   ids: readonly Id[],
   allowed: Set<string>,
   fallbackFresh: boolean,
-  fallbackStage: ResearchStage,
-): DiscoverySaveRecord<Id>[] {
+  fallbackStage: Stage,
+  category: 'breed' | 'note',
+): DiscoverySaveRecord<Id, Stage>[] {
   const allowedIds = new Set<string>(ids);
-  const records = new Map<string, DiscoverySaveRecord<Id>>();
+  const records = new Map<string, DiscoverySaveRecord<Id, Stage>>();
 
   if (Array.isArray(value)) {
     for (const item of value) {
@@ -171,7 +191,7 @@ function sanitizeRecords<Id extends string>(
         id: item.id as Id,
         discoveredAt: validDateString(item.discoveredAt),
         fresh: item.fresh === true,
-        stage: validResearchStage(item.stage, fallbackStage),
+        stage: validResearchStage(item.stage, fallbackStage, category) as Stage,
       });
     }
   }
@@ -189,10 +209,18 @@ function sanitizeRecords<Id extends string>(
   return ids.map((id) => records.get(id)!);
 }
 
-function validResearchStage(value: unknown, fallback: ResearchStage): ResearchStage {
-  return value === 'observed' || value === 'understood' || value === 'stabilized'
-    ? value
-    : fallback;
+function validResearchStage(
+  value: unknown,
+  fallback: ResearchStage,
+  category: 'breed' | 'note',
+): ResearchStage {
+  if (category === 'breed') {
+    if (value === 'stabilized') return value;
+    if (value === 'observed' || value === 'understood') return 'observed';
+    return fallback;
+  }
+  if (value === 'understood' || value === 'stabilized') return 'understood';
+  return value === 'observed' ? value : fallback;
 }
 
 function uniqueValidIds(value: unknown, allowed: Set<string>): string[] {
@@ -207,7 +235,10 @@ function isObject(value: unknown): value is Record<string, unknown> {
 }
 
 function validDateString(value: unknown): string {
-  return typeof value === 'string' && value.length > 0
+  return typeof value === 'string'
+    && value.length > 0
+    && value.length <= 64
+    && Number.isFinite(Date.parse(value))
     ? value
     : new Date().toISOString();
 }
