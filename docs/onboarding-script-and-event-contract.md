@@ -98,7 +98,7 @@ There are two full-screen Dr. E states.
 | Exit trigger | The player activates `Choose a Method ›`. The Method-choice screen then owns focus. |
 | Reload | If the saved boundary restores directly to Method choice, the full-screen definition is not replayed. |
 
-Genome Decoded is a separate safe-boundary reward screen. It may appear before the Method handoff, but it never shares the screen with Dr. E guidance or the onboarding arrow.
+Genome Decoded is a separate safe-boundary reward screen. It may appear before the Method handoff, but it never shares the screen with Dr. E guidance or the onboarding arrow. Its exit remains opaque until the destination screen is staged, so the arena cannot flash between Genome Decoded and the Method handoff.
 
 ### 2. Onboarding arrow — shipped
 

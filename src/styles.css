@@ -2054,8 +2054,7 @@ canvas {
 
 @keyframes fx-genome-reveal {
   0% { opacity: 0; }
-  8%, 90% { opacity: 1; }
-  100% { opacity: 0; }
+  8%, 100% { opacity: 1; }
 }
 
 @keyframes fx-genome-scan {

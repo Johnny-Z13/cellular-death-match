@@ -29,6 +29,21 @@ describe('genome decode presentation', () => {
     expect(mainSource).not.toContain('advanceDiscoveryProgression(previousProgression, nextProgression, fx.showGenomeDecode');
   });
 
+  it('keeps the reveal opaque until the destination screen is staged', () => {
+    const revealKeyframes = css.slice(
+      css.indexOf('@keyframes fx-genome-reveal'),
+      css.indexOf('@keyframes fx-genome-scan'),
+    );
+    expect(revealKeyframes).toContain('8%, 100% { opacity: 1; }');
+    expect(revealKeyframes).not.toContain('100% { opacity: 0; }');
+
+    const finishBoundary = fxSource.slice(
+      fxSource.indexOf('finishActiveGenome = () => {'),
+      fxSource.indexOf('desktopGenomeTimer = window.setTimeout'),
+    );
+    expect(finishBoundary.indexOf('onComplete();')).toBeLessThan(finishBoundary.indexOf('hideGenomeReveal();'));
+  });
+
   it('serializes above ordinary mobile feedback and collapses bulk unlocks to one summary', () => {
     expect(fxSource).toContain("enqueueMobile({ kind: 'genome', items, onComplete }, 4)");
     expect(fxSource).toContain('const batch = items.length > 2;');

@@ -197,8 +197,11 @@ export function createFx(): Fx {
     finishActiveGenome = () => {
       if (finished) return;
       finished = true;
-      hideGenomeReveal();
+      // Stage the destination while the fully opaque Genome layer still owns
+      // the screen. Removing it afterward prevents the arena from flashing
+      // between this reward and the Method handoff.
       onComplete();
+      hideGenomeReveal();
       if (notificationKey) finishMobile(notificationKey);
     };
     desktopGenomeTimer = window.setTimeout(
