@@ -26,7 +26,8 @@ describe('epoch intro banner timing', () => {
 
   it('keeps ordinary Trial and Study introductions in a deduplicated visible rail', () => {
     expect(mainSource).toContain('studyIntroductionRoute({');
-    expect(mainSource).toContain("if (introduction.owner === 'director')");
+    expect(mainSource).toContain("const directorIntroduction = introduction.owner === 'director'");
+    expect(mainSource).toContain('if (directorIntroduction && !deferDirectorForMobileToolboxLesson)');
     expect(mainSource).toContain('if (introduction.showCentralBanner)');
     expect(css).toContain('.hud-director.hud-director-intro');
     expect(css).toContain('@keyframes hud-director-intro-pulse');

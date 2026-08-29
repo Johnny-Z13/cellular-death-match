@@ -135,6 +135,8 @@ export interface Screens {
   openMobileLifeformsDrawer(): void;
   closeMobileDrawers(): void;
   onToolboxReveal(handler: () => void): void;
+  prepareToolboxRevealLesson(tool: ToolId): boolean;
+  isToolVisibleInToolbox(tool: ToolId): boolean;
 }
 
 export type TickerTone = 'normal' | 'discovery' | 'caution' | 'critical';
@@ -452,6 +454,24 @@ export function createScreens(): Screens {
     toolboxMore.setAttribute('aria-label', atEnd ? 'Show earlier reagents' : 'Show more reagents');
     const glyph = toolboxMore.querySelector('span');
     if (glyph) glyph.textContent = atEnd ? '‹' : '›';
+  }
+
+  function isToolVisibleInToolbox(tool: ToolId): boolean {
+    const button = toolButtons.find((candidate) => candidate.dataset.tool === tool);
+    if (!button || button.hidden) return false;
+    const rackRect = toolbox.getBoundingClientRect();
+    const buttonRect = button.getBoundingClientRect();
+    const moreRect = toolboxMore.hidden ? null : toolboxMore.getBoundingClientRect();
+    const visibleRight = moreRect && moreRect.width > 0
+      ? Math.min(rackRect.right, moreRect.left - 2)
+      : rackRect.right;
+    return buttonRect.left >= rackRect.left - 2 && buttonRect.right <= visibleRight + 2;
+  }
+
+  function prepareToolboxRevealLesson(tool: ToolId): boolean {
+    toolbox.scrollLeft = 0;
+    syncToolboxOverflow();
+    return toolbox.scrollWidth > toolbox.clientWidth + 4 && !isToolVisibleInToolbox(tool);
   }
 
   toolboxMore.addEventListener('click', () => {
@@ -1257,6 +1277,12 @@ export function createScreens(): Screens {
     },
     onToolboxReveal(handler) {
       toolboxRevealHandler = handler;
+    },
+    prepareToolboxRevealLesson(tool) {
+      return prepareToolboxRevealLesson(tool);
+    },
+    isToolVisibleInToolbox(tool) {
+      return isToolVisibleInToolbox(tool);
     },
   };
 }

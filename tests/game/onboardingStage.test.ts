@@ -9,6 +9,7 @@ import {
   toolUnlocksForCurrentStage,
   shouldUseOnboardingDishForCurrentStage,
   FIRST_CASE_STAGE_LIFEFORMS,
+  MOBILE_TOOLBOX_ONBOARDING_BEAT,
   ONBOARDING_BEATS,
   TRIAL_ONBOARDING_BEATS,
   isOnboardingEpoch,
@@ -124,6 +125,17 @@ describe('onboarding beats', () => {
     expect(TRIAL_ONBOARDING_BEATS[2]).toBeUndefined();
     expect(TRIAL_ONBOARDING_BEATS[3]).toBeUndefined();
     expect(TRIAL_ONBOARDING_BEATS[4]).toBeUndefined();
+  });
+
+  it('defines one separate mobile rack lesson without turning Trial 3 into an exact recipe trail', () => {
+    expect(MOBILE_TOOLBOX_ONBOARDING_BEAT).toMatchObject({
+      title: 'More tools are in the rack.',
+      trigger: 'toolbox-scrolled',
+      pointerTarget: 'rack:more',
+      kicker: 'Dr. E · Instrument tip',
+      step: 'New control',
+    });
+    expect(MOBILE_TOOLBOX_ONBOARDING_BEAT.body).toContain('reveal Water');
   });
 });
 

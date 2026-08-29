@@ -136,6 +136,33 @@ describe('onboarding coach', () => {
     expect(mainSource).toContain('coach.beginTrial(runState.fightIndex);');
   });
 
+  it('runs the mobile rack lesson once and completes only on its semantic reveal event', () => {
+    vi.useFakeTimers();
+    const elements = installCoachDom();
+    const coach = createCoach();
+    const completed = vi.fn();
+
+    expect(coach.hasSeenMobileToolboxLesson()).toBe(false);
+    expect(coach.beginMobileToolboxLesson(completed)).toBe(true);
+    expect(coach.isMobileToolboxLessonActive()).toBe(true);
+    expect(elements.get('coach-kicker')?.textContent).toBe('Dr. E · Instrument tip');
+    expect(elements.get('coach-title')?.textContent).toBe('More tools are in the rack.');
+    expect(elements.get('coach-body')?.textContent).toContain('reveal Water');
+    expect(elements.get('coach-step')?.textContent).toBe('New control');
+    expect(coach.getCurrentPointerTarget()).toBe('rack:more');
+
+    coach.report('water-selected');
+    expect(coach.isMobileToolboxLessonActive()).toBe(true);
+    expect(completed).not.toHaveBeenCalled();
+
+    coach.report('toolbox-scrolled');
+    expect(coach.isMobileToolboxLessonActive()).toBe(false);
+    expect(coach.isActive()).toBe(false);
+    expect(coach.hasSeenMobileToolboxLesson()).toBe(true);
+    expect(completed).toHaveBeenCalledOnce();
+    expect(coach.beginMobileToolboxLesson()).toBe(false);
+  });
+
   it('holds on a large first-run welcome until the player continues', () => {
     vi.useFakeTimers();
     const elements = installCoachDom();

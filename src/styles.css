@@ -6701,7 +6701,7 @@ canvas {
     gap: 5px;
     padding:
       7px
-      max(6px, env(safe-area-inset-right))
+      calc(max(6px, env(safe-area-inset-right)) + 40px)
       calc(7px + env(safe-area-inset-bottom))
       max(6px, env(safe-area-inset-left));
     scroll-padding-inline: 6px;
@@ -6933,6 +6933,42 @@ canvas {
   border-right: 3px solid var(--bio-bright);
   border-bottom: 3px solid var(--bio-bright);
   transform: translateX(-50%) rotate(45deg);
+}
+
+/* The Trial 3 mobile lesson reuses Dr. E's pointer as a horizontal gesture
+   cue. The line points left across the rack while the message names the
+   equivalent overflow button for keyboard and tap users. */
+.onboarding-professor-pointer[data-target="rack:more"] span {
+  left: auto;
+  right: 50%;
+  top: calc(100% + 7px);
+  width: 58px;
+  height: 3px;
+  transform: none;
+}
+
+.layout[data-screen="arena"] .onboarding-professor-pointer[data-target="rack:more"] {
+  z-index: calc(var(--z-chrome) + 1);
+  transform: translate(calc(-100% - 8px), calc(-100% - 18px));
+}
+
+.onboarding-professor-pointer[data-target="rack:more"] span::after {
+  content: "←";
+  left: -15px;
+  bottom: -8px;
+  width: auto;
+  height: auto;
+  border: 0;
+  color: var(--bio-bright);
+  font: 18px/1 var(--font-display);
+  text-shadow: 0 0 9px rgba(91, 233, 214, 0.9);
+  transform: none;
+}
+
+.onboarding-professor-pointer[data-target="rack:more"].is-visible {
+  /* Unlike action pointers, this gesture cue must remain beside the persistent
+     instruction instead of waiting for the instruction rail to retract. */
+  opacity: 1 !important;
 }
 
 .onboarding-professor-pointer.is-visible {
@@ -7232,6 +7268,25 @@ canvas {
   .layout[data-screen="arena"] .coach .coach-body,
   .layout[data-screen="arena"] .coach .coach-step {
     display: none;
+  }
+
+  .layout[data-screen="arena"] .coach.coach-toolbox-lesson {
+    min-height: 70px;
+    grid-template-columns: 62px minmax(0, 1fr);
+  }
+
+  .layout[data-screen="arena"] .coach.coach-toolbox-lesson .coach-portrait {
+    min-height: 70px;
+  }
+
+  .layout[data-screen="arena"] .coach.coach-toolbox-lesson .coach-copy {
+    min-height: 70px;
+  }
+
+  .layout[data-screen="arena"] .coach.coach-toolbox-lesson .coach-body {
+    display: block;
+    font-size: 8px;
+    line-height: 1.2;
   }
 
   .layout[data-screen="arena"] .coach .coach-skip {
@@ -8117,5 +8172,24 @@ canvas {
   .layout[data-screen="arena"] .coach:not(.coach-welcome) .coach-body,
   .layout[data-screen="arena"] .coach:not(.coach-welcome) .coach-step {
     display: none;
+  }
+
+  .layout[data-screen="arena"] .coach.coach-toolbox-lesson:not(.coach-welcome) {
+    height: 68px;
+    min-height: 68px;
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+
+  .layout[data-screen="arena"] .coach.coach-toolbox-lesson:not(.coach-welcome) .coach-portrait,
+  .layout[data-screen="arena"] .coach.coach-toolbox-lesson:not(.coach-welcome) .coach-copy {
+    min-height: 68px;
+  }
+
+  .layout[data-screen="arena"] .coach.coach-toolbox-lesson:not(.coach-welcome) .coach-body {
+    display: -webkit-box;
+    font-size: 8px;
+    line-height: 1.2;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 }

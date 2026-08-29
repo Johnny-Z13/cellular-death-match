@@ -33,6 +33,8 @@ export interface OnboardingBeat {
   readonly trigger: string;
   readonly action: string;
   readonly pointerTarget: string;
+  readonly kicker?: string;
+  readonly step?: string;
 }
 
 export const ONBOARDING_BEATS: readonly OnboardingBeat[] = [
@@ -81,6 +83,19 @@ export const TRIAL_ONBOARDING_BEATS: readonly (readonly OnboardingBeat[])[] = [
     beat('apply-toxin', 'Test the fed field.', 'Tap the same spot.', 'toxin-used', 'Tap the same spot', 'dish'),
   ],
 ];
+
+// Trial 3 remains hypothesis-led. This one-off mobile beat teaches only the
+// rack gesture needed to reach its newly relevant Water tool.
+export const MOBILE_TOOLBOX_ONBOARDING_BEAT: OnboardingBeat = {
+  id: 'reveal-mobile-tools',
+  kicker: 'Dr. E · Instrument tip',
+  title: 'More tools are in the rack.',
+  body: 'Drag tools left to reveal Water — or tap ›.',
+  step: 'New control',
+  trigger: 'toolbox-scrolled',
+  action: 'Drag tools left',
+  pointerTarget: 'rack:more',
+};
 
 function beat(
   id: string,

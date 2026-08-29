@@ -615,6 +615,10 @@ screens.onToolSelect((tool) => {
   updateButtonHint();
 });
 screens.onToolboxReveal(() => {
+  if (coach.isMobileToolboxLessonActive() && !screens.isToolVisibleInToolbox('water')) {
+    window.requestAnimationFrame(syncOnboardingPointer);
+    return;
+  }
   coach.report('toolbox-scrolled');
   window.requestAnimationFrame(syncOnboardingPointer);
 });
@@ -1150,13 +1154,19 @@ function startNewFight() {
     openLab: openLabStudy,
     compactViewport: window.matchMedia('(max-width: 899px)').matches,
   });
-  if (introduction.owner === 'director') {
-    const kindLabel = introduction.kind === 'study' ? 'Study' : 'Trial';
-    screens.announceStudyStart({
-      key: `${runState.seed}:${runState.fightIndex}:${objective.name}`,
-      kind: introduction.kind,
-      message: `Dr. E. New ${kindLabel}: ${objective.name}. ${objective.description}`,
-    });
+  const directorIntroduction = introduction.owner === 'director'
+    ? {
+        key: `${runState.seed}:${runState.fightIndex}:${objective.name}`,
+        kind: introduction.kind,
+        message: `Dr. E. New ${introduction.kind === 'study' ? 'Study' : 'Trial'}: ${objective.name}. ${objective.description}`,
+      }
+    : null;
+  const deferDirectorForMobileToolboxLesson = directorIntroduction !== null
+    && authoredTrial?.number === 3
+    && window.matchMedia('(max-width: 899px)').matches
+    && !coach.hasSeenMobileToolboxLesson();
+  if (directorIntroduction && !deferDirectorForMobileToolboxLesson) {
+    screens.announceStudyStart(directorIntroduction);
   }
   if (introduction.showCentralBanner) {
     fx.showEpochBanner(
@@ -1181,15 +1191,42 @@ function startNewFight() {
     debug.setSwatch(2 + i, swatchForArchetype(enemies[i]!.archetype));
   }
   showPhase();
-  focusStudyStart(authoredTrial);
+  focusStudyStart(
+    authoredTrial,
+    deferDirectorForMobileToolboxLesson && directorIntroduction
+      ? () => screens.announceStudyStart(directorIntroduction)
+      : undefined,
+  );
   loop();
 }
 
-function focusStudyStart(authoredTrial: (typeof COMMON_COLD_CASE.trials)[number] | undefined): void {
+function focusStudyStart(
+  authoredTrial: (typeof COMMON_COLD_CASE.trials)[number] | undefined,
+  announceDeferredDirector?: () => void,
+): void {
   // `screens.show('hud')` restores a safe canvas baseline. This later callback
   // refines it for exact guided Trials, after the outgoing Method/Study card
   // has disappeared and the coach has rendered its first actionable step.
   window.requestAnimationFrame(() => {
+    const compactViewport = window.matchMedia('(max-width: 899px)').matches;
+    if (
+      authoredTrial?.number === 3
+      && compactViewport
+      && !coach.hasSeenMobileToolboxLesson()
+      && screens.prepareToolboxRevealLesson('water')
+    ) {
+      const started = coach.beginMobileToolboxLesson(() => {
+        announceDeferredDirector?.();
+        document.querySelector<HTMLElement>('[data-tool="water"]')?.focus({ preventScroll: true });
+        syncOnboardingPointer();
+      });
+      if (started) {
+        syncOnboardingPointer();
+        document.getElementById('toolbox-more')?.focus({ preventScroll: true });
+        return;
+      }
+    }
+    announceDeferredDirector?.();
     if (!authoredTrial || authoredTrial.guidanceTier === 'hypothesis') {
       canvas.focus({ preventScroll: true });
       return;
@@ -1201,7 +1238,6 @@ function focusStudyStart(authoredTrial: (typeof COMMON_COLD_CASE.trials)[number]
       return;
     }
 
-    const compactViewport = window.matchMedia('(max-width: 899px)').matches;
     const exactControl = authoredTrial.number === 2 && compactViewport
       ? document.getElementById('mobile-lifeforms-toggle')
       : authoredTrial.number === 2

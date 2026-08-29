@@ -109,7 +109,11 @@ test('plays the five-Trial Case, records discovery cadence, and resumes an Open 
   await expect(trialThreeMethod).toBeFocused();
   await trialThreeMethod.press('Enter');
   startedAt = Date.now();
-  await expect(page.locator('#game')).toBeFocused();
+  await expect(page.locator('#coach-title')).toHaveText('More tools are in the rack.');
+  await expect(page.locator('#toolbox-more')).toBeFocused();
+  await page.locator('#toolbox-more').click();
+  await expect(page.locator('[data-tool="water"]')).toBeInViewport({ ratio: 0.9 });
+  await expect(page.locator('#coach')).toHaveAttribute('aria-hidden', 'true');
   await selectLifeform(page, 'bloom_mass');
   await clickDish(page, 0.52, 0.52);
   await selectToolAndApply(page, 'nutrient', false);

@@ -2,7 +2,12 @@
 // speaks from a shallow transmission rail above the dish. Each instruction
 // clears while the exact pointer remains. Trial 1 is: one egg, one feed.
 
-import { ONBOARDING_BEATS, TRIAL_ONBOARDING_BEATS, type OnboardingBeat } from '../game/onboardingStage';
+import {
+  MOBILE_TOOLBOX_ONBOARDING_BEAT,
+  ONBOARDING_BEATS,
+  TRIAL_ONBOARDING_BEATS,
+  type OnboardingBeat,
+} from '../game/onboardingStage';
 
 export type CoachEvent = string;
 
@@ -11,8 +16,11 @@ export interface Coach {
   isPresentingSuccess(): boolean;
   isAwaitingObjective(): boolean;
   hasSeenTutorial(): boolean;
+  hasSeenMobileToolboxLesson(): boolean;
+  isMobileToolboxLessonActive(): boolean;
   beginRun(): void;
   beginTrial(trialIndex: number): void;
+  beginMobileToolboxLesson(onComplete?: () => void): boolean;
   report(event: CoachEvent): void;
   leaveArena(completed: boolean): void;
   dismiss(): void;
@@ -27,6 +35,7 @@ export interface Coach {
 
 const SEEN_KEY = 'cdm.coach.seen.v8';
 const SEEN_TRIALS_KEY = 'cdm.coach.trials.v1';
+const MOBILE_TOOLBOX_SEEN_KEY = 'cdm.coach.mobile-toolbox-seen.v1';
 const SUCCESS_OBSERVATION_MS = 2600;
 const SLIDE_OUT_MS = 520;
 
@@ -54,6 +63,8 @@ export function createCoach(): Coach {
   let exitTimer = 0;
   let autoSpawnTriggered = false;
   let presentingSuccess = false;
+  let mobileToolboxLessonActive = false;
+  let mobileToolboxLessonComplete: (() => void) | null = null;
 
   function seen(): boolean {
     return seenTrials().has(0) || (() => {
@@ -79,6 +90,14 @@ export function createCoach(): Coach {
     } catch { /* ignore */ }
   }
 
+  function mobileToolboxLessonSeen(): boolean {
+    try { return window.localStorage.getItem(MOBILE_TOOLBOX_SEEN_KEY) === '1'; } catch { return false; }
+  }
+
+  function markMobileToolboxLessonSeen(): void {
+    try { window.localStorage.setItem(MOBILE_TOOLBOX_SEEN_KEY, '1'); } catch { /* ignore */ }
+  }
+
   function clearPresentationTimers(): void {
     window.clearTimeout(presentationTimer);
     window.clearTimeout(exitTimer);
@@ -89,6 +108,7 @@ export function createCoach(): Coach {
     root?.classList.remove('coach-intro');
     root?.classList.remove('coach-prompt');
     root?.classList.remove('coach-success');
+    root?.classList.remove('coach-toolbox-lesson');
     root?.classList.remove('coach-exit');
     layout?.classList.remove('coach-welcome-active');
     layout?.classList.remove('coach-intro-active');
@@ -150,6 +170,8 @@ export function createCoach(): Coach {
     presentingSuccess = false;
     awaitingObjective = false;
     objectiveObserved = false;
+    mobileToolboxLessonActive = false;
+    mobileToolboxLessonComplete = null;
     // Persist only genuine completion. A reload or dismissal midway through a
     // trial must return to a clean, fully guided dish on the next visit.
     if (completed) markSeen(currentTrialIndex);
@@ -185,11 +207,14 @@ export function createCoach(): Coach {
     clearPresentationClasses();
     const isFirstInstruction = currentTrialIndex === 0 && beatIndex === 0;
     root.classList.add('coach-prompt');
+    if (mobileToolboxLessonActive) root.classList.add('coach-toolbox-lesson');
+    else root.classList.remove('coach-toolbox-lesson');
     layout?.classList.add('coach-prompt-active');
-    kickerEl.textContent = isFirstInstruction ? 'Dr. E · First instruction' : 'Dr. E · Next instruction';
+    kickerEl.textContent = beat.kicker
+      ?? (isFirstInstruction ? 'Dr. E · First instruction' : 'Dr. E · Next instruction');
     titleEl.textContent = beat.title;
     bodyEl.textContent = beat.body;
-    stepEl.textContent = `${beatIndex + 1} / ${currentBeats.length}`;
+    stepEl.textContent = beat.step ?? `${beatIndex + 1} / ${currentBeats.length}`;
     if (actionEl) actionEl.textContent = beat.action;
     if (skipBtn) {
       skipBtn.textContent = '';
@@ -297,6 +322,12 @@ export function createCoach(): Coach {
     hasSeenTutorial() {
       return seen();
     },
+    hasSeenMobileToolboxLesson() {
+      return mobileToolboxLessonSeen();
+    },
+    isMobileToolboxLessonActive() {
+      return mobileToolboxLessonActive;
+    },
     getBeatIndex() {
       return beatIndex;
     },
@@ -320,6 +351,8 @@ export function createCoach(): Coach {
       coach.beginTrial(0);
     },
     beginTrial(trialIndex) {
+      mobileToolboxLessonActive = false;
+      mobileToolboxLessonComplete = null;
       const beats = TRIAL_ONBOARDING_BEATS[trialIndex];
       if (!beats || seenTrials().has(trialIndex) || (trialIndex === 0 && seen())) {
         active = false;
@@ -336,6 +369,21 @@ export function createCoach(): Coach {
       if (trialIndex === 0) renderWelcome();
       else render();
     },
+    beginMobileToolboxLesson(onComplete) {
+      if (mobileToolboxLessonSeen()) return false;
+      currentTrialIndex = 2;
+      currentBeats = [MOBILE_TOOLBOX_ONBOARDING_BEAT];
+      active = true;
+      awaitingObjective = false;
+      objectiveObserved = false;
+      beatIndex = 0;
+      autoSpawnTriggered = false;
+      presentingSuccess = false;
+      mobileToolboxLessonActive = true;
+      mobileToolboxLessonComplete = onComplete ?? null;
+      render();
+      return true;
+    },
     report(event) {
       if (!active || mode === 'welcome') return;
       if (mode === 'success') {
@@ -351,6 +399,13 @@ export function createCoach(): Coach {
       const beat = currentBeats[beatIndex];
       if (!beat || beat.trigger !== event) return;
       beatIndex += 1;
+      if (mobileToolboxLessonActive && beatIndex >= currentBeats.length) {
+        markMobileToolboxLessonSeen();
+        const onComplete = mobileToolboxLessonComplete;
+        finish(false);
+        onComplete?.();
+        return;
+      }
       if (beatIndex >= currentBeats.length) {
         awaitingObjective = true;
         autoSpawnTriggered = false;
