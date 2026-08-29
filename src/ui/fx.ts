@@ -197,7 +197,7 @@ export function createFx(): Fx {
       finished = true;
       // Stage the destination while the fully opaque Genome layer still owns
       // the screen. Removing it afterward prevents the arena from flashing
-      // between this reward and the Method handoff.
+      // between this reward and its staged Method/autonomy destination.
       onComplete();
       hideGenomeReveal();
       if (notificationKey) finishMobile(notificationKey);

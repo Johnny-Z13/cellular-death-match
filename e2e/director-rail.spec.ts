@@ -16,7 +16,7 @@ test('keeps objective status in Dr. E’s rail when authored coaching is inactiv
   await expect(page.locator('#coach')).toHaveAttribute('aria-hidden', 'true');
   const director = page.locator('#hud-director');
   await expect(director).toBeVisible();
-  await expect(director.locator('.hud-director-head')).toContainText('Dr. E · Dish status');
+  await expect(director.locator('.hud-director-head')).toContainText('Dr. E');
   await expect(page.locator('#hud-director-title')).toHaveText('Culture Shock');
   await expect(page.locator('#hud-director-progress')).toContainText('Bloom Mass');
   await expect(page.locator('#hud-objective')).toContainText('Culture Shock');
@@ -65,12 +65,13 @@ test('keeps objective status in Dr. E’s rail when authored coaching is inactiv
       hint: metrics('hud-hint'),
     };
   });
-  for (const metric of [textFit.title, textFit.progress, textFit.hint]) {
+  for (const metric of [textFit.title, textFit.progress]) {
     expect(metric.top).toBeGreaterThanOrEqual(textFit.rail.top - 1);
     expect(metric.bottom).toBeLessThanOrEqual(textFit.rail.bottom + 1);
     expect(metric.left).toBeGreaterThanOrEqual(textFit.rail.left - 1);
     expect(metric.right).toBeLessThanOrEqual(textFit.rail.right + 1);
   }
+  await expect(page.locator('#hud-hint')).toBeHidden();
   expect(textFit.viewport.scrollWidth).toBeLessThanOrEqual(textFit.viewport.clientWidth);
   const longHudBox = await page.locator('#hud').boundingBox();
   expect(longHudBox!.height).toBeLessThanOrEqual(106);

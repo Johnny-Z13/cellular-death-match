@@ -472,12 +472,12 @@ export function createCoach(): Coach {
 function trialSuccessCopy(trialIndex: number): { title: string; body: string } {
   const copy = [
     {
-      title: 'Experiment complete.',
-      body: 'You’ve met the goal. Bank the result whenever you’re ready — keep playing with your organisms as long as you like.',
+      title: 'Bloom Mass stabilized.',
+      body: 'Bank this culture when ready, or keep observing.',
     },
     {
       title: 'Bitter Bloom. Logged.',
-      body: 'Feed, then pressure: a repeatable protocol. Bank it whenever you’re ready, or keep observing.',
+      body: 'Bank this culture when ready, or keep observing.',
     },
     {
       title: 'Nutrient Conduit. Logged.',

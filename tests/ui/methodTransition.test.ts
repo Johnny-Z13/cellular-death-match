@@ -8,21 +8,26 @@ const screensSource = readFileSync('src/ui/screens.ts', 'utf8');
 const css = readFileSync('src/styles.css', 'utf8');
 
 describe('between-trial Method transition', () => {
-  it('lets Dr. E define a Method before presenting the decision', () => {
+  it('uses the full-screen Dr. E surface for one meaningful autonomy handoff', () => {
     expect(html).toContain('id="screen-method-intro"');
     expect(html).toContain('role="dialog" aria-modal="true" aria-labelledby="method-intro-title"');
-    expect(html).toContain('A Method is one lab adjustment that stays active for the rest of this Case.');
+    expect(html).toContain('Right. You’re on your own now.');
+    expect(html).toContain('I’ll check in from time to time.');
+    expect(html).not.toContain('Well done.');
     expect(html).toContain('id="method-intro-continue"');
     expect(html).toContain('Choose a Method ›');
     expect(css).toContain('.method-intro-screen {');
     expect(css).toContain('calc(22px + env(safe-area-inset-bottom))');
   });
 
-  it('shows the introduction only after a successful player-ended trial', () => {
-    expect(mainSource).toContain("pendingMethodIntroduction = status === 'won';");
-    expect(mainSource).toContain("screens.show(pendingMethodIntroduction ? 'method-intro' : 'pick');");
+  it('shows the autonomy handoff only at the exact-to-hypothesis boundary', () => {
+    expect(mainSource).toContain("const AUTONOMY_HANDOFF_TRIAL_INDEX = 1;");
+    expect(mainSource).toContain("state.phase === 'upgrade_pick'");
+    expect(mainSource).toContain('state.fightIndex === AUTONOMY_HANDOFF_TRIAL_INDEX');
+    expect(mainSource).toContain("screens.show(shouldShowAutonomyHandoff() ? 'method-intro' : 'pick');");
     expect(mainSource).toContain('screens.onMethodIntroContinue(() => {');
-    expect(mainSource).toContain('pendingMethodIntroduction = false;\n  uiAudio.play');
+    expect(mainSource).toContain('acknowledgeAutonomyHandoff();\n  uiAudio.play');
+    expect(mainSource).not.toContain('pendingMethodIntroduction');
     expect(screensSource).toContain("name === 'method-intro'");
     expect(screensSource).toContain('? methodIntroContinue');
   });

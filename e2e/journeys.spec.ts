@@ -62,9 +62,14 @@ async function finishTrial(
   objective: string,
   startedAt: number,
   timings: TrialTiming[],
+  testInfo: TestInfo,
 ): Promise<void> {
   await expect(page.locator('#end-epoch-button')).toHaveClass(/end-action-ready/, { timeout: 35_000 });
+  await expect(page.getByText('Result Ready', { exact: true })).toHaveCount(0);
   timings.push({ trial, objective, activeMs: Date.now() - startedAt });
+  if (trial === 5) {
+    await page.screenshot({ path: testInfo.outputPath('trial-5-result-ready.png') });
+  }
   await page.locator('#end-epoch-button').click();
   const reveal = page.locator('#fx-genome');
   const introduction = page.locator('#screen-method-intro');
@@ -75,6 +80,12 @@ async function finishTrial(
       || await pick.evaluate((element) => element.classList.contains('visible'))
   )).toBe(true);
   if (await reveal.getAttribute('aria-hidden') === 'false') await reveal.click();
+  if (trial === 2) {
+    await expect(introduction).toHaveClass(/visible/);
+    await expect(page.locator('#method-intro-title')).toHaveText('Right. You’re on your own now.');
+  } else {
+    await expect(introduction).not.toHaveClass(/visible/);
+  }
   await continueToMethodPicker(page);
 }
 
@@ -93,7 +104,7 @@ test('plays the five-Trial Case, records discovery cadence, and resumes an Open 
   let startedAt = Date.now();
   await startFirstTrial(page);
   await completeOpeningActions(page);
-  await finishTrial(page, 1, 'Culture Shock', startedAt, timings);
+  await finishTrial(page, 1, 'Culture Shock', startedAt, timings, testInfo);
 
   startedAt = await pickMethod(page);
   await expect(page.locator('#coach-title')).toHaveText('Open Eggs. Choose Bloom Mass.');
@@ -103,7 +114,7 @@ test('plays the five-Trial Case, records discovery cadence, and resumes an Open 
   await selectToolAndApply(page, 'nutrient');
   await expect(page.locator('#coach-title')).toHaveText('Now press Toxin.');
   await selectToolAndApply(page, 'toxin');
-  await finishTrial(page, 2, 'Bitter Medicine', startedAt, timings);
+  await finishTrial(page, 2, 'Bitter Medicine', startedAt, timings, testInfo);
 
   const trialThreeMethod = page.locator('#pick-choices .pick-card').first();
   await expect(trialThreeMethod).toBeFocused();
@@ -123,7 +134,7 @@ test('plays the five-Trial Case, records discovery cadence, and resumes an Open 
   await clickDish(page, 0.52, 0.52);
   await selectToolAndApply(page, 'nutrient', false);
   await selectToolAndApply(page, 'water', false);
-  await finishTrial(page, 3, 'Carrier Medium', startedAt, timings);
+  await finishTrial(page, 3, 'Carrier Medium', startedAt, timings, testInfo);
 
   startedAt = await pickMethod(page);
   await selectLifeform(page, 'swarmlet');
@@ -132,7 +143,7 @@ test('plays the five-Trial Case, records discovery cadence, and resumes an Open 
   await selectToolAndApply(page, 'water', false);
   await waitForToolReady(page, 'water');
   await clickDish(page, 0.52, 0.52);
-  await finishTrial(page, 4, 'Storm in a Dish', startedAt, timings);
+  await finishTrial(page, 4, 'Storm in a Dish', startedAt, timings, testInfo);
 
   startedAt = await pickMethod(page);
   await selectLifeform(page, 'bloom_mass');
@@ -140,7 +151,7 @@ test('plays the five-Trial Case, records discovery cadence, and resumes an Open 
   await selectToolAndApply(page, 'salt', false);
   await selectToolAndApply(page, 'nutrient', false);
   await selectToolAndApply(page, 'water', false);
-  await finishTrial(page, 5, 'The Cure-ish', startedAt, timings);
+  await finishTrial(page, 5, 'The Cure-ish', startedAt, timings, testInfo);
 
   const save = await page.evaluate(() => ({
     caseRecord: JSON.parse(window.localStorage.getItem('cellular-death-match.case-record.v1') ?? '{}'),

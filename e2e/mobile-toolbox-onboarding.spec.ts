@@ -98,7 +98,7 @@ test('teaches a native mobile rack drag and persists the demonstrated gesture', 
   await expect(page.locator('.layout')).not.toHaveClass(/mobile-toolbox-lesson-active/);
   await expect(page.locator('[data-tool="water"]')).not.toHaveAttribute('aria-disabled');
   await expect(page.locator('[data-tool="salt"]')).toHaveAttribute('aria-disabled', 'true');
-  await expect(page.locator('#hud-director-kicker')).toHaveText(/Dr\. E · (New trial|Dish status)/);
+  await expect(page.locator('#hud-director-kicker')).toHaveText(/Dr\. E(?: · New trial)?/);
   await expect.poll(() => page.evaluate(() => (
     window.localStorage.getItem('cdm.coach.mobile-toolbox-seen.v1')
   ))).toBe('1');

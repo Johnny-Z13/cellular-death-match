@@ -78,6 +78,7 @@ export async function continueToMethodPicker(page: Page): Promise<void> {
   const picker = page.locator('#screen-pick');
   if (await picker.evaluate((element) => element.classList.contains('visible'))) return;
   await expect(introduction).toHaveClass(/visible/);
+  await expect(page.locator('#method-intro-title')).toHaveText('Right. You’re on your own now.');
   await expect(page.locator('#method-intro-continue')).toBeFocused();
   await page.locator('#method-intro-continue').click();
   await expect(picker).toHaveClass(/visible/);

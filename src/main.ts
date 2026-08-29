@@ -265,9 +265,35 @@ let finalLabReport: LabReport | null = null;
 let newBiomeThisRun = false;
 let observedNotesAtDishStart = new Set<DiscoveryNoteId>();
 let pendingBankPlan: PlannedResearchBank | null = null;
-let pendingMethodIntroduction = false;
+const AUTONOMY_HANDOFF_SEEN_KEY = 'cdm.coach.autonomy-handoff-seen.v1';
+const AUTONOMY_HANDOFF_TRIAL_INDEX = 1;
+let autonomyHandoffAcknowledged = false;
 let abandonArmedUntilMs = 0;
 let abandonConfirmationTimer = 0;
+
+function hasSeenAutonomyHandoff(): boolean {
+  if (autonomyHandoffAcknowledged) return true;
+  try {
+    return runtimeStorage.getItem(AUTONOMY_HANDOFF_SEEN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function shouldShowAutonomyHandoff(): boolean {
+  const state = run.getState();
+  return state.phase === 'upgrade_pick'
+    && state.fightIndex === AUTONOMY_HANDOFF_TRIAL_INDEX
+    && state.epochResults.length === AUTONOMY_HANDOFF_TRIAL_INDEX + 1
+    && !hasSeenAutonomyHandoff();
+}
+
+function acknowledgeAutonomyHandoff(): void {
+  autonomyHandoffAcknowledged = true;
+  try {
+    runtimeStorage.setItem(AUTONOMY_HANDOFF_SEEN_KEY, '1');
+  } catch { /* the in-memory acknowledgement still prevents a loop */ }
+}
 
 let performanceResizeFrame = 0;
 function refreshVisualPerformanceProfile(): void {
@@ -638,7 +664,7 @@ screens.onTitleStart(() => {
   beginRunWithCurrentLoadout();
 });
 screens.onMethodIntroContinue(() => {
-  pendingMethodIntroduction = false;
+  acknowledgeAutonomyHandoff();
   uiAudio.play('ui_select');
   fx.playWipe();
   showPhase();
@@ -646,7 +672,6 @@ screens.onMethodIntroContinue(() => {
 screens.onEndRestart(() => {
   uiAudio.play('ui_select');
   fx.playWipe();
-  pendingMethodIntroduction = false;
   discardActiveRunCheckpoint();
   run.restart();
   finalLabReport = null;
@@ -747,7 +772,6 @@ screens.onEndEpoch(() => {
     return;
   }
   const status = arena.endEpochNow();
-  pendingMethodIntroduction = status === 'won';
   resolveArenaStatus(status);
 });
 
@@ -892,7 +916,7 @@ function showPhase() {
         startNewFight();
       }
     });
-    screens.show(pendingMethodIntroduction ? 'method-intro' : 'pick');
+    screens.show(shouldShowAutonomyHandoff() ? 'method-intro' : 'pick');
   } else if (state.phase === 'objective_pick') {
     updateButtonHint();
     const choices = run.getObjectiveChoices(currentStudyCapabilityInput());
@@ -954,7 +978,7 @@ function finishGenomeReveal(): void {
   showPhase();
   window.requestAnimationFrame(() => {
     const selector = run.getState().phase === 'upgrade_pick'
-      ? '.pick-card'
+      ? shouldShowAutonomyHandoff() ? '#method-intro-continue' : '.pick-card'
       : run.getState().phase === 'objective_pick'
         ? '.objective-card'
         : run.getState().phase === 'run_end'
@@ -992,7 +1016,6 @@ function showLoadoutPicker(): void {
 }
 
 function beginRunWithCurrentLoadout(loadout = strainLibrary.getPlayableLoadout()): void {
-  pendingMethodIntroduction = false;
   const playableLoadout = playableLifeformIds(loadout);
   currentRunLoadout = new Set(playableLoadout);
   setEggLifeformSelection(playableLoadout[0] ?? 'swarmlet');
@@ -1469,7 +1492,7 @@ function loop() {
   screens.updateToolCharges(arena.getToolStates());
   screens.updateAgitation(arena.getAgitationState());
   updateButtonHint();
-  announceEpochCompletion(objective.complete, objective.def.name);
+  announceEpochCompletion(objective.complete);
   announceEquilibrium(equilibrium);
   maybeNudgeIdlePlayer(objective.complete, objective.def.hint);
   updateTicker(arena);
@@ -2158,14 +2181,15 @@ function maybeNudgeIdlePlayer(objectiveComplete: boolean, hint: string | undefin
 
 // Fire a one-time "experiment complete" signpost the first moment the dish
 // satisfies its objective, so the player knows they can finish (or keep
-// cultivating). Latched objectives stay complete; balance objectives can flip
-// back to incomplete, so we re-arm the announcement if completion is lost.
-function announceEpochCompletion(complete: boolean, objectiveName: string): void {
+// cultivating). The HUD, bank control, audio, and haptic response already make
+// this state explicit; avoid duplicating it in a transient toast. Latched
+// objectives stay complete; balance objectives can flip back to incomplete, so
+// we re-arm the announcement if completion is lost.
+function announceEpochCompletion(complete: boolean): void {
   if (complete && !didAnnounceCompletion) {
     didAnnounceCompletion = true;
     uiAudio.play('experiment_ready');
     haptics.play('success');
-    fx.showToast('discovery', 'Result Ready', `${objectiveName} — bank when ready`);
     screens.addTicker('Dr. E: Goal complete. Bank the result when you are ready, or keep cultivating.', 'discovery');
     coach.report('objective-complete');
     updateButtonHint();

@@ -9,7 +9,7 @@ This document is the source of truth for Cellular Death Match onboarding present
 
 The onboarding has three primary Dr. E surfaces:
 
-1. **Full-screen Dr. E** for theatrical first contact and between-Trial Method handoffs.
+1. **Full-screen Dr. E** for theatrical first contact and one autonomy handoff after exact instruction ends.
 2. **The onboarding arrow** for the one exact control or dish location required now.
 3. **The Dr. E message rail** for exact instructions, live study status, success, and recovery help.
 
@@ -26,7 +26,7 @@ Only one surface owns the player's next action at a time.
 
 | Surface | Job | May cover the dish? | Input behavior |
 | --- | --- | --- | --- |
-| Full-screen Dr. E | First welcome; explain the Method system at a safe boundary | Yes, only before active control or between Trials | Modal. Its continue button owns focus. Options remains available during the first welcome. |
+| Full-screen Dr. E | First welcome; mark the one transition from exact instruction to independent play | Yes, only before active control or at the Trial 2 boundary | Modal. Its continue button owns focus. Options remains available during the first welcome. |
 | Onboarding arrow | Point to the exact current control or dish coordinate during an action lesson | No | Decorative and `pointer-events: none`; it never intercepts the target. It is not used for the mobile rack gesture. |
 | Exact Dr. E message | Give one imperative action during Trials 1–2 and the mobile rack lesson | No | Persistent until the matching semantic event; not dismissed by tapping elsewhere. |
 | Dr. E dish-status message | State the Trial, hypothesis, evidence, and live progress during Trials 3–5 and Open Lab | No | Informational; the dish remains interactive. |
@@ -39,7 +39,8 @@ The exact coach and director rail must not issue competing instructions. Exact c
 ### Mobile: viewport below 900px
 
 - The full-screen welcome uses full-bleed Dr. E art with the copy card and primary action above the bottom safe area.
-- The full-screen Method handoff also uses full-bleed Dr. E art; `Choose a Method` spans the available card width.
+- The one post-Trial-2 autonomy handoff also uses full-bleed Dr. E art; `Choose a Method` spans the available card width.
+- The compact top HUD omits `Dish · Open` for untimed objectives, keeps Trial and Equilibrium telemetry, and limits Dr. E to objective plus actionable progress. The longer Hint row remains available to desktop and assistive technology but is not a fourth visible mobile line.
 - Exact Dr. E messages sit at the top, directly below the telemetry strip and above the dish.
 - On short mobile screens, the compact message may hide body and step detail when the title is sufficient. The rack lesson keeps its body visible because it explains both the drag and button paths.
 - `Eggs` opens the specimen freezer as a blocking drawer.
@@ -54,7 +55,7 @@ The exact coach and director rail must not issue competing instructions. Exact c
 ### Desktop: viewport 900px and wider
 
 - The first welcome places Dr. E on the left and the welcome copy on the right.
-- The Method handoff uses full-screen Dr. E art with its copy card toward the right.
+- The autonomy handoff uses full-screen Dr. E art with its copy card toward the right.
 - Exact Dr. E messages use the compact lower-left transmission rail.
 - Trial telemetry and the director message remain in the top HUD.
 - The reagent panel is exposed as a desktop control rail; there is no drag-to-reveal lesson.
@@ -90,19 +91,19 @@ There are two full-screen Dr. E states.
 | Simulation | Authoritative culture time is held during the welcome and first untouched instruction. |
 | Persistence | It is marked seen only when Trial 1 is genuinely completed and banked. Reloading an unfinished Trial starts a clean dish and repeats the welcome. |
 
-#### B. Between-Trial Method handoff — shipped
+#### B. Autonomy handoff after Trial 2 — shipped
 
 | Field | Script / behavior |
 | --- | --- |
-| Kicker | `Dr. E. Mergent · Trial logged` |
-| Title | `Well done.` |
-| Body | `A Method is one lab adjustment that stays active for the rest of this Case.` |
+| Kicker | `Dr. E. Mergent · Briefing complete` |
+| Title | `Right. You’re on your own now.` |
+| Body | `Run the next trials your way. I’ll check in from time to time.` |
 | Action | `Choose a Method ›` |
-| Entry trigger | A Trial ends with status `won`, the verified bank boundary succeeds, and any queued Genome Decoded presentation has finished. |
+| Entry trigger | Trial 2 is banked, Bruiser is revealed, and the player is moving from exact instructions into the hypothesis-led Trials. It is never shown after Trials 1, 3, 4, or 5. |
 | Exit trigger | The player activates `Choose a Method ›`. The Method-choice screen then owns focus. |
-| Reload | If the saved boundary restores directly to Method choice, the full-screen definition is not replayed. |
+| Persistence | The acknowledgement is stored. Reload before acknowledging returns to the handoff; reload after acknowledging returns directly to Method choice. |
 
-Genome Decoded is a separate safe-boundary reward screen. It may appear before the Method handoff, but it never shares the screen with Dr. E guidance or the onboarding arrow. It remains visible until the player explicitly taps, clicks, presses Enter, or presses Space. On continuation, its exit remains opaque until the destination screen is staged, so the arena cannot flash between Genome Decoded and the Method handoff.
+Genome Decoded is a separate safe-boundary reward screen. It never shares the screen with Dr. E guidance or the onboarding arrow. It remains visible until the player explicitly taps, clicks, presses Enter, or presses Space. On continuation, its exit remains opaque until the destination is staged, so the arena cannot flash before either the Method choice or the one Trial-2 autonomy handoff.
 
 ### 2. Onboarding arrow — shipped
 
@@ -149,9 +150,10 @@ The same portrait and message language has two owners.
 
 - Used for Trials 3–5 and Open Lab.
 - On entry, briefly shows `Dr. E · New trial` or `Dr. E · New study` for 2.6 seconds.
-- Then becomes `Dr. E · Dish status` with state `Live`.
+- Then becomes `Dr. E` with state `Live`.
 - The title is the objective name; the body is live objective progress.
-- Completion changes the body to `Complete — bank when ready`.
+- Completion changes the header to `Dr. E · Result` / `Ready` and the body to `Bank when ready — or keep cultivating.`
+- On mobile, untimed `Dish · Open` telemetry and the separate Hint line are hidden because neither changes the immediate decision.
 - It does not use a step counter or point to every recipe action.
 
 ## Event semantics
@@ -220,12 +222,12 @@ When the taught sequence and objective are both complete, the compact message re
 | Field | Script |
 | --- | --- |
 | Kicker | `Trial 01 · Goal complete` |
-| Title | `Experiment complete.` |
-| Body | `You’ve met the goal. Bank the result whenever you’re ready — keep playing with your organisms as long as you like.` |
+| Title | `Bloom Mass stabilized.` |
+| Body | `Bank this culture when ready, or keep observing.` |
 | State | `Result ready` |
 | Arrow | `end` |
 
-The player banks the result. Bloom Mass becomes a safe-boundary Genome Decoded reward, followed by the full-screen Method handoff and Method choice.
+The player banks the result. Bloom Mass becomes a safe-boundary Genome Decoded reward, followed directly by Method choice.
 
 ### Trial 2 — Bitter Medicine
 
@@ -261,11 +263,11 @@ Success:
 | --- | --- |
 | Kicker | `Trial 02 · Goal complete` |
 | Title | `Bitter Bloom. Logged.` |
-| Body | `Feed, then pressure: a repeatable protocol. Bank it whenever you’re ready, or keep observing.` |
+| Body | `Bank this culture when ready, or keep observing.` |
 | State | `Result ready` |
 | Arrow | `end` |
 
-Banking the result understands the Bitter Bloom protocol and unlocks Bruiser. The Bruiser Genome Decoded reward is followed by the full-screen Method handoff and Method choice.
+Banking the result understands the Bitter Bloom protocol and unlocks Bruiser. The Bruiser Genome Decoded reward is followed by the one full-screen autonomy handoff, then Method choice.
 
 ### Trial 3 — Carrier Medium
 
@@ -328,16 +330,16 @@ For 2.6 seconds:
 | Body | `Reproduce Nutrient Conduit by carrying food through a budding culture with Water.` |
 | State | `Live` |
 
-Then the rail changes to `Dr. E · Dish status` and shows live progress.
+Then the rail changes to `Dr. E` / `Live` and shows live progress.
 
 Idle recovery after approximately 22 seconds without meaningful action:
 
 1. Principle: `Water can carry an existing food field through budding tissue.`
 2. After another idle interval, exact method: `Place Bloom Mass, add Nutrient, then overlap the same field with Water.`
 
-Objective completion changes the rail to `Complete — bank when ready` and shows the Result Ready notification. There is no sequential recipe pointer after the rack lesson.
+Objective completion changes the rail to `Dr. E · Result` / `Ready` with `Bank when ready — or keep cultivating.` The rail and Bank control are the only visual result prompts; no duplicate Result Ready toast is shown. There is no sequential recipe pointer after the rack lesson.
 
-Banking the result understands Nutrient Conduit and unlocks Splitter. Any Genome Decoded reward appears before the next full-screen Method handoff.
+Banking the result understands Nutrient Conduit and unlocks Splitter. Any Genome Decoded reward appears directly before Method choice.
 
 ### Trial 4 — Storm in a Dish
 
@@ -358,7 +360,7 @@ Idle recovery:
 1. Principle: `An unstable Foam signal can accept a second Water pulse before it fades.`
 2. Exact method: `Near Swarmlet, overlap Toxin with Water to make Foam; then add Water there again.`
 
-There is no automatic pointer trail. The director shows live progress and switches to `Complete — bank when ready` when Foam Lightning is understood. Banking may unlock Mirror before the next Method handoff.
+There is no automatic pointer trail. The director shows live progress and switches to the compact `Result` / `Ready` state when Foam Lightning is understood. Banking may unlock Mirror before the next Method choice.
 
 ### Trial 5 — The Cure-ish
 
@@ -379,7 +381,7 @@ Idle recovery:
 1. Principle: `A channel needs a boundary, food to carry, and Water—then a diverse dish must survive it.`
 2. Exact method: `On Bloom Mass, overlap Salt, Nutrient, then Water; keep three cultures alive and dominance at 60% or less.`
 
-The director shows Brine Channel, living-culture, and dominance progress. Completion changes the rail to `Complete — bank when ready`. Banking seals the five-Trial Case and transitions toward Open Lab.
+The director shows Brine Channel, living-culture, and dominance progress. Completion changes the rail to the compact `Result` / `Ready` state. Banking seals the five-Trial Case and transitions toward Open Lab without another full-screen congratulations message.
 
 ## Idle and recovery rules
 

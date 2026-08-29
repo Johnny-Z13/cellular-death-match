@@ -107,7 +107,7 @@ test('chooses a rare-genome loadout and resumes the same Open Lab study', async 
   await expect(page.locator('#fx-banner')).toHaveAttribute('aria-hidden', 'true');
   await expect(page.locator('#game')).toBeFocused();
   await expect(page.locator('#study-start-announcer')).toBeEmpty({ timeout: 4_000 });
-  await expect(page.locator('#hud-director-kicker')).toHaveText('Dr. E · Dish status');
+  await expect(page.locator('#hud-director-kicker')).toHaveText('Dr. E');
   await chooseLifeform(page, 'bloom_mass');
 
   const saved = await page.evaluate(() => JSON.parse(

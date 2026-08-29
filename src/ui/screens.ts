@@ -326,7 +326,7 @@ export function createScreens(): Screens {
   function clearStudyStartAnnouncement(): void {
     window.clearTimeout(studyStartTimer);
     hudDirector.classList.remove('hud-director-intro');
-    hudDirectorKicker.textContent = 'Dr. E · Dish status';
+    hudDirectorKicker.textContent = 'Dr. E';
     hudDirectorState.textContent = 'Live';
     studyStartAnnouncer.textContent = '';
   }
@@ -763,6 +763,7 @@ export function createScreens(): Screens {
       hudVol.textContent = `${info.vol} / ${Math.round(info.targetVol)}`;
       hudTimeKey.textContent = info.objectiveTimed ? 'Window' : 'Dish';
       hudProgress.textContent = info.objectiveTimed ? `${info.secondsRemaining}s` : 'Open';
+      hud.classList.toggle('hud-objective-timed', info.objectiveTimed);
       const urgent = info.objectiveTimed && !info.objectiveComplete;
       hudProgress.classList.toggle(
         'hud-deadline-warning',
@@ -785,11 +786,18 @@ export function createScreens(): Screens {
         : `${info.objectiveName}: ${info.objectiveSummary}`;
       hudDirectorTitle.textContent = info.objectiveName;
       hudDirectorProgress.textContent = info.objectiveComplete
-        ? 'Complete — bank when ready'
+        ? 'Bank when ready — or keep cultivating.'
         : info.objectiveSummary;
       hudHint.textContent = info.objectiveComplete
         ? 'That is the result. Bank it now, or keep cultivating.'
         : info.objectiveHint;
+      if (info.objectiveComplete && hudDirector.classList.contains('hud-director-intro')) {
+        clearStudyStartAnnouncement();
+      }
+      if (!hudDirector.classList.contains('hud-director-intro')) {
+        hudDirectorKicker.textContent = info.objectiveComplete ? 'Dr. E · Result' : 'Dr. E';
+        hudDirectorState.textContent = info.objectiveComplete ? 'Ready' : 'Live';
+      }
       hudUpgrades.textContent = info.upgrades.length === 0 ? 'none' : info.upgrades.join(', ');
     },
     setEquilibrium(info) {
@@ -1296,7 +1304,7 @@ export function createScreens(): Screens {
       studyStartTimer = window.setTimeout(() => {
         if (lastStudyStartKey !== announcementKey) return;
         hudDirector.classList.remove('hud-director-intro');
-        hudDirectorKicker.textContent = 'Dr. E · Dish status';
+        hudDirectorKicker.textContent = 'Dr. E';
         hudDirectorState.textContent = 'Live';
         studyStartAnnouncer.textContent = '';
       }, 2_600);

@@ -7605,10 +7605,10 @@ canvas {
   }
 }
 
-/* ---- Between-trial Method introduction ------------------------------- */
-/* Dr. E defines the system in one focused beat; the next screen is only the
-   decision. Keeping the character art full-bleed prevents the dish from
-   flashing through during the hand-off. */
+/* ---- One-time autonomy handoff --------------------------------------- */
+/* After Trial 2, Dr. E marks the shift from exact instruction to independent
+   experimentation. Keeping the character art full-bleed prevents the dish
+   from flashing through during this single milestone. */
 .method-intro-screen {
   z-index: var(--z-dialog);
   align-items: flex-end;
@@ -7747,8 +7747,8 @@ canvas {
 }
 
 /* The between-trial Method choice is a compact, centered lab-bench dialog on
-   phones. With the definition handled by Dr. E, this surface contains only
-   progress, the decision, and the three available adjustments. */
+   phones. It contains only progress, the decision, and the three available
+   adjustments; ordinary Trial boundaries go here directly. */
 @media (max-width: 699px) {
   #screen-pick {
     align-items: center;
@@ -7855,8 +7855,8 @@ canvas {
 
 @media (max-width: 899px) and (orientation: portrait) {
   .layout[data-screen="arena"] .hud {
-    height: 104px;
-    min-height: 104px;
+    height: 96px;
+    min-height: 96px;
     padding: 6px;
     overflow: hidden;
     border-color: rgba(120, 196, 200, 0.3);
@@ -7869,8 +7869,8 @@ canvas {
   .layout[data-screen="arena"] .hud.visible {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 20px minmax(0, 1fr);
-    gap: 4px;
+    grid-template-rows: 18px minmax(0, 1fr);
+    gap: 3px;
   }
 
   .layout[data-screen="arena"] .hud-summary {
@@ -7879,8 +7879,17 @@ canvas {
     align-items: center;
     gap: 4px 10px;
     min-width: 0;
-    padding: 0 50px 4px 5px;
+    padding: 0 50px 3px 7px;
     border-bottom: 1px solid rgba(120, 196, 200, 0.14);
+  }
+
+  .layout[data-screen="arena"] .hud:not(.hud-objective-timed) .hud-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 24px;
+  }
+
+  .layout[data-screen="arena"] .hud:not(.hud-objective-timed) .hud-window-row {
+    display: none;
   }
 
   .layout[data-screen="arena"] .hud-summary .hud-row {
@@ -7907,13 +7916,17 @@ canvas {
 
   .layout[data-screen="arena"] .hud-director {
     display: grid;
-    grid-template-columns: 52px minmax(0, 1fr);
+    grid-template-columns: 48px minmax(0, 1fr);
     min-width: 0;
-    height: 68px;
-    min-height: 68px;
+    height: 62px;
+    min-height: 62px;
     overflow: hidden;
     border-radius: 2px 7px 7px 2px;
     transition: opacity 140ms ease;
+  }
+
+  .layout[data-screen="arena"] .hud.hud-complete .hud-director {
+    background: linear-gradient(90deg, rgba(91, 233, 214, 0.07), transparent 68%);
   }
 
   .layout[data-screen="arena"] .hud-director.hud-director-intro {
@@ -7923,7 +7936,7 @@ canvas {
   .layout[data-screen="arena"] .hud-director-portrait {
     position: relative;
     display: block;
-    min-height: 68px;
+    min-height: 62px;
     overflow: hidden;
     border-left: 2px solid var(--bio);
     background: #020607;
@@ -7943,11 +7956,11 @@ canvas {
 
   .layout[data-screen="arena"] .hud-director-copy {
     display: grid;
-    grid-template-rows: auto auto auto minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
     align-content: center;
     min-width: 0;
     overflow: hidden;
-    padding: 4px 49px 4px 7px;
+    padding: 4px 49px 4px 8px;
   }
 
   .layout[data-screen="arena"] .hud-director-head {
@@ -7968,6 +7981,10 @@ canvas {
     color: rgba(216, 246, 242, 0.42);
     font-family: var(--font-mono);
     letter-spacing: 0.04em;
+  }
+
+  .layout[data-screen="arena"] .hud.hud-complete .hud-director-head span:last-child {
+    color: var(--bio-bright);
   }
 
   .layout[data-screen="arena"] .hud-director-title {
@@ -8000,32 +8017,11 @@ canvas {
   }
 
   .layout[data-screen="arena"] .hud-director .hud-hint-row {
-    display: block;
-    min-width: 0;
-    margin: 0;
-    padding: 0;
-    border: 0;
+    display: none;
   }
 
   .layout[data-screen="arena"] .hud-director .hud-key {
     display: none;
-  }
-
-  .layout[data-screen="arena"] .hud-director .hud-hint-row {
-    margin-top: 1px;
-  }
-
-  .layout[data-screen="arena"] .hud-director .hud-hint-row .hud-val {
-    display: -webkit-box;
-    width: auto;
-    overflow: hidden;
-    color: rgba(216, 246, 242, 0.66);
-    font-size: 8.5px;
-    line-height: 1.2;
-    text-align: left;
-    white-space: normal;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
   }
 
   .layout[data-screen="arena"].coach-active .hud-director {
@@ -8038,7 +8034,7 @@ canvas {
   .layout[data-screen="arena"] .coach.coach-intro:not(.coach-welcome),
   .layout[data-screen="arena"] .coach.coach-success:not(.coach-welcome) {
     inset: auto max(6px, env(safe-area-inset-right)) auto max(6px, env(safe-area-inset-left));
-    top: calc(max(5px, env(safe-area-inset-top)) + 30px);
+    top: calc(max(5px, env(safe-area-inset-top)) + 28px);
     width: auto;
     height: 68px;
     min-height: 68px;
@@ -8107,6 +8103,15 @@ canvas {
 }
 
 @media (max-width: 899px) and (orientation: portrait) and (max-height: 700px) {
+  /* Keep transient research notices clear of the Notebook pill on short phones. */
+  .layout[data-screen="arena"] .fx-toasts {
+    right: calc(100px + env(safe-area-inset-right));
+  }
+
+  .layout[data-screen="arena"] .fx-toast-kicker {
+    display: none;
+  }
+
   .layout[data-screen="arena"] .hud {
     height: 82px;
     min-height: 82px;
