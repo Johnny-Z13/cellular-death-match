@@ -40,7 +40,7 @@ export default defineConfig({
     },
     {
       name: 'small-phone',
-      testIgnore: ['**/authored-recipes.spec.ts', '**/director-rail.spec.ts', '**/journeys.spec.ts', '**/onboarding.spec.ts', '**/open-lab-journeys.spec.ts', '**/persistence.spec.ts', '**/reduced-motion.spec.ts'],
+      testIgnore: ['**/authored-recipes.spec.ts', '**/director-rail.spec.ts', '**/onboarding.spec.ts', '**/open-lab-journeys.spec.ts', '**/persistence.spec.ts', '**/reduced-motion.spec.ts'],
       use: {
         browserName: 'chromium',
         viewport: { width: 375, height: 667 },
@@ -70,7 +70,7 @@ export default defineConfig({
     },
     {
       name: 'desktop',
-      testIgnore: ['**/authored-recipes.spec.ts', '**/director-rail.spec.ts', '**/journeys.spec.ts', '**/onboarding.spec.ts', '**/open-lab-journeys.spec.ts', '**/persistence.spec.ts', '**/reduced-motion.spec.ts'],
+      testIgnore: ['**/authored-recipes.spec.ts', '**/director-rail.spec.ts', '**/onboarding.spec.ts', '**/open-lab-journeys.spec.ts', '**/persistence.spec.ts', '**/reduced-motion.spec.ts'],
       use: {
         browserName: 'chromium',
         viewport: { width: 1280, height: 720 },

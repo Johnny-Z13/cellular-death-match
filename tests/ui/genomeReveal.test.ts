@@ -8,7 +8,7 @@ const fxSource = readFileSync('src/ui/fx.ts', 'utf8');
 const mainSource = readFileSync('src/main.ts', 'utf8');
 
 describe('genome decode presentation', () => {
-  it('uses the agreed three-line copy and a native immediately skippable control', () => {
+  it('uses the agreed three-line copy and a native explicit-continue control', () => {
     expect(html).toContain('id="fx-genome"');
     expect(html).toContain('type="button"');
     expect(html).toContain('GENOME DECODED');
@@ -16,6 +16,7 @@ describe('genome decode presentation', () => {
     expect(html).toContain('Tap or press to continue');
     expect(fxSource).toContain("genomeReveal?.addEventListener('click'");
     expect(fxSource).toContain('genomeReveal.focus({ preventScroll: true });');
+    expect(fxSource).not.toContain('desktopGenomeTimer');
     expect(mainSource).toContain('document.querySelector<HTMLElement>(selector)?.focus({ preventScroll: true });');
   });
 
@@ -39,7 +40,7 @@ describe('genome decode presentation', () => {
 
     const finishBoundary = fxSource.slice(
       fxSource.indexOf('finishActiveGenome = () => {'),
-      fxSource.indexOf('desktopGenomeTimer = window.setTimeout'),
+      fxSource.indexOf('\n  }\n\n  function finishMobile'),
     );
     expect(finishBoundary.indexOf('onComplete();')).toBeLessThan(finishBoundary.indexOf('hideGenomeReveal();'));
   });

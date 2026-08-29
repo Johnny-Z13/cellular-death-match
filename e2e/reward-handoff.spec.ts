@@ -37,10 +37,12 @@ test('keeps the reward boundary covered from Genome Decoded into the Method hand
     };
   });
   expect(
-    lateRevealFrame.revealOpacity >= 0.99 || lateRevealFrame.methodIntroVisible,
+    lateRevealFrame.revealOpacity >= 0.99 && !lateRevealFrame.methodIntroVisible,
     `Late reveal exposed ${lateRevealFrame.layoutScreen} at opacity ${lateRevealFrame.revealOpacity}`,
   ).toBe(true);
 
+  await expect(page.locator('#fx-genome')).toBeFocused();
+  await page.locator('#fx-genome').click();
   await expect(page.locator('#screen-method-intro')).toHaveClass(/visible/);
   await expect(page.locator('#method-intro-continue')).toBeFocused();
   await page.waitForTimeout(350);

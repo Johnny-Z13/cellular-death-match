@@ -67,7 +67,6 @@ export function createFx(): Fx {
   const genomeArt = document.getElementById('fx-genome-art');
 
   let desktopBannerTimer = 0;
-  let desktopGenomeTimer = 0;
   let mobileTimer = 0;
   let mobileExitTimer = 0;
   let activeMobileToast: HTMLElement | null = null;
@@ -148,7 +147,6 @@ export function createFx(): Fx {
   }
 
   function hideGenomeReveal(): void {
-    window.clearTimeout(desktopGenomeTimer);
     genomeReveal?.classList.remove('fx-genome-show', 'fx-genome-batch');
     genomeReveal?.setAttribute('aria-hidden', 'true');
     genomeReveal?.setAttribute('tabindex', '-1');
@@ -204,10 +202,6 @@ export function createFx(): Fx {
       hideGenomeReveal();
       if (notificationKey) finishMobile(notificationKey);
     };
-    desktopGenomeTimer = window.setTimeout(
-      () => finishActiveGenome?.(),
-      reduceMotion ? 3000 : 2800,
-    );
   }
 
   function finishMobile(key: string): void {

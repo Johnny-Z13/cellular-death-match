@@ -79,7 +79,7 @@ test('keeps the Petri dish playable and core controls usable', async ({ page }, 
   expect(optionsPanelBox!.x + optionsPanelBox!.width).toBeLessThanOrEqual(metrics.viewport.width + 1);
   expect(optionsPanelBox!.y + optionsPanelBox!.height).toBeLessThanOrEqual(metrics.viewport.height + 1);
   await page.locator('#options-close').click();
-  await expect(options).toBeFocused();
+  await expect(page.locator('[data-tool="egg"]')).toBeFocused();
 
   if (testInfo.project.name === 'phone-landscape') {
     const rails = await page.evaluate(() => {

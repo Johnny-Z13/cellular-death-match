@@ -25,6 +25,7 @@ export interface Coach {
   leaveArena(completed: boolean): void;
   dismiss(): void;
   getBeatIndex(): number;
+  getExpectedTrigger(): string | undefined;
   getCurrentButtonHint(): string | undefined;
   getCurrentPointerTarget(): string | undefined;
   shouldAutoSpawn(): boolean;
@@ -254,6 +255,12 @@ export function createCoach(): Coach {
     root.classList.add('coach-success');
     layout?.classList.add('coach-prompt-active');
     layout?.classList.add('coach-success-active');
+    writeSuccessCopy();
+    show();
+  }
+
+  function writeSuccessCopy(): void {
+    if (!kickerEl || !titleEl || !bodyEl || !stepEl) return;
     kickerEl.textContent = `Trial ${String(currentTrialIndex + 1).padStart(2, '0')} · Goal complete`;
     const success = trialSuccessCopy(currentTrialIndex);
     titleEl.textContent = success.title;
@@ -264,7 +271,6 @@ export function createCoach(): Coach {
       skipBtn.textContent = '';
       skipBtn.hidden = true;
     }
-    show();
   }
 
   function celebrateSuccess(): void {
@@ -275,6 +281,10 @@ export function createCoach(): Coach {
     awaitingObjective = false;
     mode = 'observing';
     clearPresentationTimers();
+    // The Bank control becomes ready immediately. Publish matching copy before
+    // the rail retracts so there is never a frame that says “Goal in progress”
+    // beside a ready result.
+    writeSuccessCopy();
 
     // Dish-first rule: finish retracting any instruction, then let the live
     // culture evolve on its own before Professor commentary returns.
@@ -330,6 +340,10 @@ export function createCoach(): Coach {
     },
     getBeatIndex() {
       return beatIndex;
+    },
+    getExpectedTrigger() {
+      if (!active || awaitingObjective || mode !== 'tutorial') return undefined;
+      return currentBeats[beatIndex]?.trigger;
     },
     getCurrentButtonHint() {
       if (!active || awaitingObjective || mode === 'welcome') return undefined;

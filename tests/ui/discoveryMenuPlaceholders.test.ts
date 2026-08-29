@@ -40,17 +40,17 @@ describe('discovery menu placeholders', () => {
     expect(screensSource).not.toContain('lifeButtons.set(option.archetype, item)');
   });
 
-  it('applies lifeform selected state through the same click activation path as reagent buttons', () => {
+  it('applies lifeform selected state only after the activation handler accepts it', () => {
     const activateLifeformStart = screensSource.indexOf('function activateLifeform(id: string): void {');
     expect(activateLifeformStart).toBeGreaterThan(-1);
     const activateLifeformEnd = screensSource.indexOf('\n  }\n\n  return {', activateLifeformStart);
     const activateLifeformBody = screensSource.slice(activateLifeformStart, activateLifeformEnd);
 
     expect(activateLifeformBody).toContain('setSelectedLifeform(id);');
-    expect(activateLifeformBody).toContain('lifeformSelectHandler?.(id);');
+    expect(activateLifeformBody).toContain('if (lifeformSelectHandler?.(id) === false) return;');
     expect(activateLifeformBody).toContain('eggSelectHandler?.(eggOption.archetype);');
-    expect(activateLifeformBody.indexOf('setSelectedLifeform(id);')).toBeLessThan(
-      activateLifeformBody.indexOf('lifeformSelectHandler?.(id);'),
+    expect(activateLifeformBody.indexOf('lifeformSelectHandler?.(id)')).toBeLessThan(
+      activateLifeformBody.indexOf('setSelectedLifeform(id);'),
     );
     expect(activateLifeformBody.indexOf('setSelectedLifeform(id);')).toBeLessThan(
       activateLifeformBody.indexOf('eggSelectHandler?.(eggOption.archetype);'),
@@ -64,9 +64,10 @@ describe('discovery menu placeholders', () => {
     const activateLifeformBody = screensSource.slice(activateLifeformStart, activateLifeformEnd);
 
     expect(activateLifeformBody).toContain('if (!unlockedLifeformIds.has(id)) return;');
+    expect(activateLifeformBody).toContain('if (toolboxLessonActive) return;');
     expect(activateLifeformBody).toContain('setSelectedLifeform(id);');
-    expect(activateLifeformBody).toContain('lifeformSelectHandler?.(id);');
-    expect(screensSource).toContain("btn.addEventListener('click', () => handler(tool));");
+    expect(activateLifeformBody).toContain('lifeformSelectHandler?.(id) === false');
+    expect(screensSource).toContain('if (!toolboxLessonActive) handler(tool);');
     expect(screensSource).toContain("button.addEventListener('click', () => activateLifeform(option.archetype));");
     expect(screensSource).toContain("item.addEventListener('click', () => activateLifeform(id));");
     expect(screensSource).not.toContain('setSelectedLifeform(selectedEggArchetype)');

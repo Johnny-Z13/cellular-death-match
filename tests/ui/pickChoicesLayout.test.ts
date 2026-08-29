@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const css = readFileSync('src/styles.css', 'utf8') as string;
+const screensSource = readFileSync('src/ui/screens.ts', 'utf8') as string;
 
 describe('pick popup layout', () => {
   it('centers trial/upgrade choice cards for any card count on desktop', () => {
@@ -34,5 +35,13 @@ describe('pick popup layout', () => {
     expect(css).toContain('@keyframes fx-wipe-cycle {\n  0% { opacity: 1; }');
     expect(css).toContain('animation: card-rise 200ms cubic-bezier(0.2, 0.8, 0.2, 1);');
     expect(css).not.toContain('animation: screen-fade-in');
+  });
+
+  it('makes Method and Study choices single-use at phase boundaries', () => {
+    expect(screensSource.match(/let picked = false;/g)).toHaveLength(2);
+    expect(screensSource.match(/if \(picked\) return;/g)).toHaveLength(2);
+    expect(screensSource).toContain("pickChoices.querySelectorAll<HTMLButtonElement>('button')");
+    expect(screensSource).toContain("objectiveChoices.querySelectorAll<HTMLButtonElement>('button')");
+    expect(screensSource.match(/choice\.disabled = true;/g)).toHaveLength(2);
   });
 });

@@ -6496,6 +6496,23 @@ canvas {
   }
 }
 
+@keyframes mobile-toolbox-lesson-pulse {
+  0%, 100% {
+    border-color: rgba(107, 207, 232, 0.72);
+    box-shadow: -9px 0 22px rgba(4, 8, 10, 0.88), 0 0 14px rgba(91, 233, 214, 0.2);
+  }
+  50% {
+    border-color: rgba(174, 255, 246, 0.98);
+    box-shadow: -12px 0 28px rgba(4, 8, 10, 0.92), 0 0 0 3px rgba(91, 233, 214, 0.2), 0 0 24px rgba(91, 233, 214, 0.58);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layout[data-screen="arena"].mobile-toolbox-lesson-active .toolbox-more {
+    animation: none !important;
+  }
+}
+
 /* ---- Dish-first mobile arena -------------------------------------------
    The culture is the interface. Status compresses into a two-tier mission
    strip, the specimen fills the phone width, and
@@ -6742,6 +6759,31 @@ canvas {
     outline-offset: 2px;
   }
 
+  /* The rack lesson owns input without laying a second Professor portrait
+     over the controls. The native edge control is the only bright target;
+     reagent tiles still form the swipe surface but cannot activate. */
+  .layout[data-screen="arena"].mobile-toolbox-lesson-active .toolbox {
+    cursor: grab;
+  }
+
+  .layout[data-screen="arena"].mobile-toolbox-lesson-active .toolbox .tool-button,
+  .layout[data-screen="arena"].mobile-toolbox-lesson-active #game,
+  .layout[data-screen="arena"].mobile-toolbox-lesson-active .mobile-shell,
+  .layout[data-screen="arena"].mobile-toolbox-lesson-active .notebook-button {
+    pointer-events: none;
+  }
+
+  .layout[data-screen="arena"].mobile-toolbox-lesson-active .mobile-shell-button,
+  .layout[data-screen="arena"].mobile-toolbox-lesson-active .notebook-button {
+    opacity: 0.48;
+  }
+
+  .layout[data-screen="arena"].mobile-toolbox-lesson-active .toolbox-more {
+    color: #ffffff;
+    background: linear-gradient(90deg, rgba(7, 23, 26, 0.88), rgba(19, 57, 61, 0.99));
+    animation: mobile-toolbox-lesson-pulse 1.05s ease-in-out infinite;
+  }
+
   .layout[data-screen="arena"] .tool-button {
     position: relative;
     flex: 1 0 calc((100vw - 27px) / 4);
@@ -6932,42 +6974,6 @@ canvas {
   border-right: 3px solid var(--bio-bright);
   border-bottom: 3px solid var(--bio-bright);
   transform: translateX(-50%) rotate(45deg);
-}
-
-/* The Trial 3 mobile lesson reuses Dr. E's pointer as a horizontal gesture
-   cue. The line points left across the rack while the message names the
-   equivalent overflow button for keyboard and tap users. */
-.onboarding-professor-pointer[data-target="rack:more"] span {
-  left: auto;
-  right: 50%;
-  top: calc(100% + 7px);
-  width: 58px;
-  height: 3px;
-  transform: none;
-}
-
-.layout[data-screen="arena"] .onboarding-professor-pointer[data-target="rack:more"] {
-  z-index: calc(var(--z-chrome) + 1);
-  transform: translate(calc(-100% - 8px), calc(-100% - 18px));
-}
-
-.onboarding-professor-pointer[data-target="rack:more"] span::after {
-  content: "←";
-  left: -15px;
-  bottom: -8px;
-  width: auto;
-  height: auto;
-  border: 0;
-  color: var(--bio-bright);
-  font: 18px/1 var(--font-display);
-  text-shadow: 0 0 9px rgba(91, 233, 214, 0.9);
-  transform: none;
-}
-
-.onboarding-professor-pointer[data-target="rack:more"].is-visible {
-  /* Unlike action pointers, this gesture cue must remain beside the persistent
-     instruction instead of waiting for the instruction rail to retract. */
-  opacity: 1 !important;
 }
 
 .onboarding-professor-pointer.is-visible {

@@ -27,7 +27,7 @@ Only one surface owns the player's next action at a time.
 | Surface | Job | May cover the dish? | Input behavior |
 | --- | --- | --- | --- |
 | Full-screen Dr. E | First welcome; explain the Method system at a safe boundary | Yes, only before active control or between Trials | Modal. Its continue button owns focus. Options remains available during the first welcome. |
-| Onboarding arrow | Point to the exact current control, rack edge, or dish coordinate | No | Decorative and `pointer-events: none`; it never intercepts the target. |
+| Onboarding arrow | Point to the exact current control or dish coordinate during an action lesson | No | Decorative and `pointer-events: none`; it never intercepts the target. It is not used for the mobile rack gesture. |
 | Exact Dr. E message | Give one imperative action during Trials 1–2 and the mobile rack lesson | No | Persistent until the matching semantic event; not dismissed by tapping elsewhere. |
 | Dr. E dish-status message | State the Trial, hypothesis, evidence, and live progress during Trials 3–5 and Open Lab | No | Informational; the dish remains interactive. |
 | Professor's note | Offer bounded recovery after inactivity | No permanent obstruction | Dismissible with `Got it`; also retracts after nine seconds. |
@@ -46,6 +46,8 @@ The exact coach and director rail must not issue competing instructions. Exact c
 - The reagent rack is a native horizontally scrollable strip with scroll snapping.
 - A player can drag/swipe the rack horizontally or press its `›`/`‹` overflow control.
 - The mobile rack lesson appears only when the required reagent is outside the initially visible rack window.
+- A new dish always selects Egg. It never inherits the previous Trial's Toxin or another reagent beneath an onboarding lesson.
+- During the rack lesson, reagent activation, dish input, drawers, Notebook, and the Bank/Abandon control are temporarily disabled. The rack, its overflow button, and Options remain available.
 - The central Trial banner is suppressed; Dr. E's top rail is authoritative.
 - Safe-area insets protect top messages, rack controls, and modal actions.
 
@@ -65,7 +67,9 @@ The exact coach and director rail must not issue competing instructions. Exact c
 - Every required action has a semantic button or canvas target; motion and color are not the only cues.
 - The onboarding arrow is decorative. The Dr. E title/body supplies the accessible instruction.
 - The mobile rack lesson accepts both a touch drag and activation of the focusable `Show more reagents` button.
+- The rack's native overflow control is the visual and focus cue. Reduced motion leaves the same bright static control without pulsing it.
 - Modal surfaces restore predictable focus to their primary action. Exact Trial starts focus the first required control.
+- After every accepted exact action, keyboard focus follows Dr. E's next target. Closing Options or Notebook returns to that target rather than to unrelated chrome.
 
 ## Core UI elements
 
@@ -98,7 +102,7 @@ There are two full-screen Dr. E states.
 | Exit trigger | The player activates `Choose a Method ›`. The Method-choice screen then owns focus. |
 | Reload | If the saved boundary restores directly to Method choice, the full-screen definition is not replayed. |
 
-Genome Decoded is a separate safe-boundary reward screen. It may appear before the Method handoff, but it never shares the screen with Dr. E guidance or the onboarding arrow. Its exit remains opaque until the destination screen is staged, so the arena cannot flash between Genome Decoded and the Method handoff.
+Genome Decoded is a separate safe-boundary reward screen. It may appear before the Method handoff, but it never shares the screen with Dr. E guidance or the onboarding arrow. It remains visible until the player explicitly taps, clicks, presses Enter, or presses Space. On continuation, its exit remains opaque until the destination screen is staged, so the arena cannot flash between Genome Decoded and the Method handoff.
 
 ### 2. Onboarding arrow — shipped
 
@@ -111,7 +115,6 @@ Supported target vocabulary:
 | `dish` | An authored point in the dish; after egg placement, later dish pointers track beside the most recent egg. |
 | `tool:<id>` | The matching reagent button, such as `tool:nutrient`. |
 | `lifeform:<id>` | Desktop: the visible specimen card. Mobile: `Eggs` until the freezer is open, then the specimen card. |
-| `rack:more` | The mobile rack overflow edge / `Show more reagents` control. Trial 3 uses it for the one-time mobile rack lesson. |
 | `end` | The Bank result / End control after exact-coach success. |
 
 Visibility rules:
@@ -121,12 +124,12 @@ Visibility rules:
 - It follows layout changes and reruns positioning after the mobile rack scrolls.
 - Reduced motion removes the bob but leaves a static pointer.
 
-Mobile gesture cue:
+Mobile rack cue:
 
-- For the Trial 3 rack lesson, reuse the onboarding arrow at `rack:more`.
-- Add a short horizontal leftward gesture cue over the tool strip; do not introduce another character surface.
-- Reduced motion uses a static left arrow and the same drag-or-tap instruction.
-- The target remains clickable because the cue has no pointer events.
+- Trial 3 does not render the portrait arrow over the rack. Dr. E is already present in the top message, and a second portrait obscures controls and can appear to endorse the wrong reagent.
+- The native `Show more reagents` edge button receives focus and a restrained cyan pulse while the copy says `Drag tools left to reveal Water — or tap ›.`
+- The reagent tiles remain the native swipe surface but cannot activate or spend charges while the lesson owns input.
+- Reduced motion removes the pulse; focus, contrast, copy, and the semantic button remain sufficient.
 
 ### 3. Dr. E message rail — shipped
 
@@ -137,8 +140,9 @@ The same portrait and message language has two owners.
 - Used for Trials 1–2.
 - Shows a kicker, title, body, and `step / total`.
 - Persists until the exact semantic event for that beat occurs.
-- Out-of-order unrelated actions do not advance it.
+- Out-of-order tools, specimens, and dish actions neither advance the lesson nor change the selected tool/specimen, spend a charge, or alter the dish.
 - A successful action can satisfy more than one semantic fact. For example, successfully placing an already-selected Egg reports both Egg selection and Egg use.
+- After an accepted action, focus moves to the next exact control or the dish. Interrupting with Options or Notebook preserves the step and restores that focus on close.
 - Once all taught actions are complete, it changes to observation, then success.
 
 #### Director / dish status
@@ -287,7 +291,7 @@ Do not use the full-screen Dr. E surface. The compact top message temporarily ow
 | Body | `Drag tools left to reveal Water — or tap ›.` |
 | Step | `New control` |
 | Trigger | `toolbox-scrolled` |
-| Arrow target | `rack:more`, with a leftward gesture cue over the tool row |
+| Visual cue | Focus and pulse the native `Show more reagents` (`›`) edge control. Do not render the portrait arrow over the controls. |
 
 Completion accepts either:
 
@@ -301,6 +305,13 @@ After completion:
 - reveal/focus Water if needed;
 - return ownership to the Trial 3 director message;
 - never replay this beat on desktop or when all required tools already fit.
+
+While the lesson is active:
+
+- the new dish starts with Egg selected, regardless of the previous Trial's last reagent;
+- reagent activation, specimen selection, dish actions, Notebook, Log, Eggs, and Bank/Abandon are blocked at both the UI and gameplay-handler boundaries;
+- the horizontal rack, `Show more reagents`, and Options remain available;
+- the simulation remains held, so learning the control cannot contaminate or advance the dish.
 
 #### Desktop start
 
@@ -397,7 +408,10 @@ Player action resets the idle clock. Recovery does not accumulate while the docu
 - A real horizontal touch drag completes the lesson.
 - Pressing `›` also completes the lesson.
 - Partial movement that leaves Water hidden or covered does not complete it accidentally.
-- The onboarding arrow or gesture cue never captures touch input.
+- No Dr. E portrait arrow is rendered over the reagent row.
+- The native rack itself accepts a swipe starting on a reagent tile without activating that reagent.
+- Toxin or another reagent from Trial 2 is not selected when Trial 3 opens; Egg is selected.
+- Tool, specimen, dish, Notebook, drawer, and Bank/Abandon actions cannot spend a charge or alter the culture until the lesson completes, including programmatic activation routed through gameplay handlers.
 - Water becomes visible after completion.
 - The lesson does not reveal the Trial 3 recipe beyond naming the newly required tool.
 - Desktop never displays the mobile rack lesson.
@@ -405,6 +419,19 @@ Player action resets the idle clock. Recovery does not accumulate while the docu
 - Reduced motion shows a static cue.
 - Reload before demonstrating the gesture shows the lesson again; reload after demonstrating it does not.
 - The director message becomes authoritative immediately after the lesson completes.
+
+## Exact-flow resilience acceptance criteria
+
+- During the Trial 1 welcome, Options is usable, culture time is held, and closing Options restores focus to `Tap to continue`.
+- In Trials 1–2, a wrong reagent, wrong specimen, premature dish action, repeated tap, or programmatic activation cannot consume a charge or contaminate the authored sequence.
+- A valid direct Egg placement can satisfy both the already-selected Egg step and the placement step without desynchronizing the coach.
+- The Bank control cannot become actionable until both the authoritative objective and the taught action sequence are complete.
+- The moment Bank becomes actionable, Dr. E's visible copy must also say the experiment is complete; `Goal in progress` may never coexist with a ready result.
+- Closing Notebook or Options returns focus to Dr. E's current required action.
+- Reloading an unbanked Trial restarts a clean dish with full exact guidance; reloading a banked reward boundary restores that boundary without replaying live culture.
+- Genome Decoded never advances on a timer. Its promised `Tap or press to continue` interaction is authoritative in normal and reduced-motion modes.
+- Double activation at Bank, Genome, Method, or Study boundaries cannot apply the transition twice.
+- The complete five-Trial first-session journey passes at 390×844, 375×667, and 1280×720, with the Trial 3 rack lesson appearing only when the control is actually obscured.
 
 ## Implementation map
 
@@ -423,4 +450,4 @@ Player action resets the idle clock. Recovery does not accumulate while the docu
 
 ## Mobile rack implementation note
 
-The Trial 3 rack beat is intentionally separate from `TRIAL_ONBOARDING_BEATS`: Trials 3–5 remain hypothesis-led, while this conditional beat teaches only mobile interface grammar. It is offered at the start of Trial 3 when Water is obscured, stored under `cdm.coach.mobile-toolbox-seen.v1`, and completed only after Water is fully visible. The Trial 3 director introduction is deferred while the lesson owns the next action, then restored immediately afterward.
+The Trial 3 rack beat is intentionally separate from `TRIAL_ONBOARDING_BEATS`: Trials 3–5 remain hypothesis-led, while this conditional beat teaches only mobile interface grammar. It is offered at the start of Trial 3 when Water is obscured, stored under `cdm.coach.mobile-toolbox-seen.v1`, and completed only after Water is fully visible. While it owns input, the native edge control is highlighted, the portrait pointer stays hidden, ordinary arena actions are locked, and authoritative culture time is held. The Trial 3 director introduction is deferred until the lesson completes, then normal input and guidance are restored immediately.

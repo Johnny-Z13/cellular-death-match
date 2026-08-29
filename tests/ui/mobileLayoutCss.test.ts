@@ -144,6 +144,17 @@ describe('mobile layout CSS', () => {
     expect(reducedMotion).toContain('transition: none !important');
   });
 
+  it('teaches rack overflow with the native control while locking arena actions', () => {
+    expect(css).toContain('.mobile-toolbox-lesson-active .toolbox .tool-button');
+    expect(css).toContain('.mobile-toolbox-lesson-active #game');
+    expect(css).toContain('pointer-events: none');
+    expect(css).toContain('.mobile-toolbox-lesson-active .toolbox-more');
+    expect(css).toContain('animation: mobile-toolbox-lesson-pulse');
+    expect(css).toContain('@media (prefers-reduced-motion: reduce)');
+    expect(css).toMatch(/mobile-toolbox-lesson-active \.toolbox-more \{\s+animation: none !important;/);
+    expect(css).not.toContain('.onboarding-professor-pointer[data-target="rack:more"]');
+  });
+
   it('repositions chrome and choreographs one compact mobile event rail', () => {
     const mobile = mediaBlock('(max-width: 899px)');
     // Options + Full screen tuck to the top-right; the Notebook tab is on the dish.

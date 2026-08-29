@@ -353,6 +353,7 @@ debug.updateDiscoveries(discoveryDebugInfo());
 refreshNotebook();
 
 screens.onNotebookOpen(() => {
+  if (coach.isMobileToolboxLessonActive()) return;
   uiAudio.unlock();
   uiAudio.play('ui_select');
   openNotebook();
@@ -398,7 +399,12 @@ screens.setHapticsAvailable(haptics.isSupported());
 screens.setHapticsEnabled(haptics.isEnabled());
 
 screens.onLifeformSelect((id) => {
-  if (!isSeedableLifeformId(id)) return;
+  if (coach.isMobileToolboxLessonActive()) return false;
+  if (!isSeedableLifeformId(id)) return false;
+  if (!exactLessonAllowsLifeformSelection(id)) {
+    rejectOutOfSequenceAction();
+    return false;
+  }
   clearAbandonConfirmation();
   coach.report(`lifeform:${id}`);
   // Choosing a specimen is also a semantic Egg selection. This keeps the
@@ -413,6 +419,8 @@ screens.onLifeformSelect((id) => {
   screens.setTool('egg');
   screens.closeMobileDrawers();
   updateButtonHint();
+  window.requestAnimationFrame(focusCurrentOnboardingTarget);
+  return true;
 });
 
 window.addEventListener('keydown', (event) => {
@@ -464,8 +472,50 @@ function registerPlayerAction(): void {
   clearAbandonConfirmation();
 }
 
+function exactLessonAllowsToolSelection(tool: ToolId): boolean {
+  if (coach.isMobileToolboxLessonActive()) return false;
+  if (!coach.isActive() || coach.isAwaitingObjective() || coach.isPresentingSuccess()) return true;
+  const expected = coach.getExpectedTrigger();
+  if (!expected) return false;
+  return expected === `${tool}-selected`
+    || expected === `${tool}-used`
+    || (tool === 'egg' && expected === 'egg-selected');
+}
+
+function exactLessonAllowsLifeformSelection(id: string): boolean {
+  if (coach.isMobileToolboxLessonActive()) return false;
+  if (!coach.isActive() || coach.isAwaitingObjective() || coach.isPresentingSuccess()) return true;
+  const expected = coach.getExpectedTrigger();
+  if (!expected) return false;
+  return expected === `lifeform:${id}` || expected === 'egg-selected';
+}
+
+function exactLessonAllowsDishAction(tool: ToolId): boolean {
+  if (coach.isMobileToolboxLessonActive()) return false;
+  if (!coach.isActive() || coach.isAwaitingObjective() || coach.isPresentingSuccess()) return true;
+  const expected = coach.getExpectedTrigger();
+  if (!expected) return false;
+  return expected === `${tool}-used`
+    || (tool === 'egg' && expected === 'egg-selected');
+}
+
+function rejectOutOfSequenceAction(): void {
+  haptics.play('warning');
+  updateButtonHint();
+  window.requestAnimationFrame(focusCurrentOnboardingTarget);
+}
+
 function applySelectedToolAt(pos: [number, number]): boolean {
-  if (!arena || run.getState().phase !== 'arena' || pendingBankPlan) return false;
+  if (
+    !arena
+    || run.getState().phase !== 'arena'
+    || pendingBankPlan
+    || coach.isMobileToolboxLessonActive()
+  ) return false;
+  if (!exactLessonAllowsDishAction(selectedTool)) {
+    rejectOutOfSequenceAction();
+    return false;
+  }
   ecologyAudio.unlock();
   if (selectedTool === 'paste') {
     if (arena.applyTool('paste', pos)) {
@@ -501,6 +551,7 @@ function applySelectedToolAt(pos: [number, number]): boolean {
       setOnboardingDishPointerTarget(pos);
     }
     updateButtonHint();
+    window.requestAnimationFrame(focusCurrentOnboardingTarget);
     screens.closeMobileDrawers();
     registerPlayerAction();
     return true;
@@ -604,7 +655,12 @@ screens.onEndRestart(() => {
   showPhase();
 });
 screens.onToolSelect((tool) => {
+  if (coach.isMobileToolboxLessonActive()) return;
   if (!currentToolUnlocks().includes(tool)) return;
+  if (!exactLessonAllowsToolSelection(tool)) {
+    rejectOutOfSequenceAction();
+    return;
+  }
   clearAbandonConfirmation();
   coach.report(`${tool}-selected`);
   uiAudio.play('ui_select');
@@ -613,6 +669,7 @@ screens.onToolSelect((tool) => {
   if (tool === 'egg') screens.openMobileLifeformsDrawer();
   else screens.closeMobileDrawers();
   updateButtonHint();
+  window.requestAnimationFrame(focusCurrentOnboardingTarget);
 });
 screens.onToolboxReveal(() => {
   if (coach.isMobileToolboxLessonActive() && !screens.isToolVisibleInToolbox('water')) {
@@ -623,7 +680,12 @@ screens.onToolboxReveal(() => {
   window.requestAnimationFrame(syncOnboardingPointer);
 });
 screens.onAgitate(() => {
-  if (!arena || run.getState().phase !== 'arena' || pendingBankPlan) return;
+  if (
+    !arena
+    || run.getState().phase !== 'arena'
+    || pendingBankPlan
+    || coach.isMobileToolboxLessonActive()
+  ) return;
   ecologyAudio.unlock();
   uiAudio.play('ui_tap');
   if (!arena.agitate()) return;
@@ -637,7 +699,7 @@ screens.onAgitate(() => {
   canvas.classList.add('dish-shake');
 });
 screens.onEndEpoch(() => {
-  if (!arena || run.getState().phase !== 'arena') return;
+  if (!arena || run.getState().phase !== 'arena' || coach.isMobileToolboxLessonActive()) return;
   ecologyAudio.unlock();
   if (pendingBankPlan) {
     uiAudio.play('ui_tap');
@@ -738,6 +800,7 @@ screens.setEggOptions(EGG_ARCHETYPES.map((archetype) => ({
 })));
 applyDiscoveryProgressionUi();
 screens.onEggSelect((archetype) => {
+  if (coach.isMobileToolboxLessonActive()) return;
   if (!isUnlockedEggArchetype(archetype)) return;
   clearAbandonConfirmation();
   uiAudio.play('ui_select');
@@ -1099,6 +1162,7 @@ function totalStrainsAvailableForReport(): number {
 }
 
 function startNewFight() {
+  screens.setToolboxLessonActive(false);
   screens.clearStudyStartAnnouncement();
   const playerCfg = run.getPlayerConfig();
   const runState = run.getState();
@@ -1134,6 +1198,9 @@ function startNewFight() {
   didAnnounceCompletion = false;
   didAnnounceEquilibrium = false;
   lastOpeningBloomCreated = false;
+  // Every new dish begins from the safe planting verb. Trial 3 must not
+  // inherit Toxin from Trial 2 beneath the rack lesson.
+  selectedTool = 'egg';
   onboardingDishGuidePos = [LX * 0.58, LY * 0.52];
   onboardingDishGuideTracksLastEgg = false;
   lastActionTick = 0;
@@ -1215,7 +1282,9 @@ function focusStudyStart(
       && !coach.hasSeenMobileToolboxLesson()
       && screens.prepareToolboxRevealLesson('water')
     ) {
+      screens.setToolboxLessonActive(true);
       const started = coach.beginMobileToolboxLesson(() => {
+        screens.setToolboxLessonActive(false);
         announceDeferredDirector?.();
         document.querySelector<HTMLElement>('[data-tool="water"]')?.focus({ preventScroll: true });
         syncOnboardingPointer();
@@ -1225,6 +1294,7 @@ function focusStudyStart(
         document.getElementById('toolbox-more')?.focus({ preventScroll: true });
         return;
       }
+      screens.setToolboxLessonActive(false);
     }
     announceDeferredDirector?.();
     if (!authoredTrial || authoredTrial.guidanceTier === 'hypothesis') {
@@ -1893,6 +1963,42 @@ function setOnboardingDishPointerTarget(pos: [number, number], besideEgg = false
   ];
 }
 
+function onboardingControlForTarget(target: string): HTMLElement | null {
+  if (target === 'dish') return canvas;
+  const needsMobileDrawer = target.startsWith('lifeform:')
+    && window.matchMedia('(max-width: 899px)').matches
+    && layout.dataset.mobileDrawer !== 'lifeforms';
+  const selector = needsMobileDrawer
+    ? '#mobile-lifeforms-toggle'
+    : target === 'end'
+      ? '#end-epoch-button'
+      : target.startsWith('tool:')
+        ? `[data-tool="${target.slice('tool:'.length)}"]`
+        : target.startsWith('lifeform:')
+          ? `[data-lifeform-id="${target.slice('lifeform:'.length)}"]`
+          : null;
+  return selector ? document.querySelector<HTMLElement>(selector) : null;
+}
+
+function focusCurrentOnboardingTarget(): boolean {
+  if (run.getState().phase !== 'arena' || !coach.isActive()) return false;
+  if (coach.isMobileToolboxLessonActive()) {
+    document.getElementById('toolbox-more')?.focus({ preventScroll: true });
+    return true;
+  }
+  const coachAction = document.getElementById('coach-skip') as HTMLButtonElement | null;
+  if (coachAction && !coachAction.hidden) {
+    coachAction.focus({ preventScroll: true });
+    return true;
+  }
+  const target = coach.getCurrentPointerTarget();
+  if (!target) return false;
+  const targetElement = onboardingControlForTarget(target);
+  if (!targetElement || targetElement.hidden) return false;
+  targetElement.focus({ preventScroll: true });
+  return true;
+}
+
 function syncOnboardingPointer(): void {
   if (!onboardingGuidePointer) return;
   onboardingGuidePointer.classList.remove('is-visible');
@@ -1915,22 +2021,7 @@ function syncOnboardingPointer(): void {
     x = rect.left + (guidePos[0] / LX) * rect.width;
     y = rect.top + (guidePos[1] / LY) * rect.height;
   } else {
-    const needsMobileDrawer = target.startsWith('lifeform:')
-      && window.matchMedia('(max-width: 899px)').matches
-      && layout.dataset.mobileDrawer !== 'lifeforms';
-    const selector = needsMobileDrawer
-      ? '#mobile-lifeforms-toggle'
-      : target === 'rack:more'
-        ? '#toolbox-more'
-      : target === 'end'
-        ? '#end-epoch-button'
-      : target.startsWith('tool:')
-      ? `[data-tool="${target.slice('tool:'.length)}"]`
-      : target.startsWith('lifeform:')
-        ? `[data-lifeform-id="${target.slice('lifeform:'.length)}"]`
-        : null;
-    if (!selector) return;
-    const targetElement = document.querySelector<HTMLElement>(selector);
+    const targetElement = onboardingControlForTarget(target);
     if (!targetElement || targetElement.hidden) return;
     const rect = targetElement.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
@@ -1969,7 +2060,10 @@ document.getElementById('coach-skip')?.addEventListener('click', () => {
   window.requestAnimationFrame(syncOnboardingPointer);
   // The first tap dismisses the full-size welcome before the compact lesson
   // is rendered. Reposition once that cinematic handoff has completed.
-  window.setTimeout(syncOnboardingPointer, 560);
+  window.setTimeout(() => {
+    syncOnboardingPointer();
+    focusCurrentOnboardingTarget();
+  }, 560);
 });
 document.getElementById('mobile-lifeforms-toggle')?.addEventListener('click', () => {
   window.requestAnimationFrame(syncOnboardingPointer);
@@ -2177,8 +2271,9 @@ function setOptionsMenuOpen(open: boolean): void {
   if (open) {
     document.getElementById('options-close')?.focus();
   } else {
-    optionsReturnFocus?.focus();
+    const fallback = optionsReturnFocus;
     optionsReturnFocus = null;
+    if (!focusCurrentOnboardingTarget()) fallback?.focus();
   }
 }
 
@@ -2261,6 +2356,11 @@ function openNotebook(): void {
 
 function closeNotebook(): void {
   const wasOpen = overlayState.notebookOpen;
+  const restoreFocus = () => {
+    if (wasOpen && !focusCurrentOnboardingTarget()) {
+      document.getElementById('notebook-button')?.focus({ preventScroll: true });
+    }
+  };
   overlayState.notebookOpen = false;
   // Let the tablet slide out before hiding; reduced-motion closes instantly.
   const notebookScreen = document.getElementById('screen-notebook');
@@ -2270,11 +2370,11 @@ function closeNotebook(): void {
     window.setTimeout(() => {
       notebookScreen.classList.remove('notebook-screen-closing');
       screens.hide('notebook');
-      if (wasOpen) document.getElementById('notebook-button')?.focus({ preventScroll: true });
+      restoreFocus();
     }, 210);
   } else {
     screens.hide('notebook');
-    if (wasOpen) document.getElementById('notebook-button')?.focus({ preventScroll: true });
+    restoreFocus();
   }
   applyOverlayState();
 }

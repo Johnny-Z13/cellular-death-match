@@ -101,7 +101,7 @@ export interface Screens {
   setLifeformUnlocks(ids: readonly string[]): void;
   showcaseLifeformUnlock(id: string): void;
   onEggSelect(handler: (archetype: EnemyArchetype) => void): void;
-  onLifeformSelect(handler: (id: string) => void): void;
+  onLifeformSelect(handler: (id: string) => boolean | void): void;
   setSelectedLifeform(id: string | null): void;
   updateHud(info: HudInfo): void;
   setEquilibrium(info: EquilibriumInfo): void;
@@ -135,6 +135,7 @@ export interface Screens {
   openMobileLifeformsDrawer(): void;
   closeMobileDrawers(): void;
   onToolboxReveal(handler: () => void): void;
+  setToolboxLessonActive(active: boolean): void;
   prepareToolboxRevealLesson(tool: ToolId): boolean;
   isToolVisibleInToolbox(tool: ToolId): boolean;
 }
@@ -249,10 +250,15 @@ export function createScreens(): Screens {
     cooldownTicks: 0,
   };
   let eggSelectHandler: ((archetype: EnemyArchetype) => void) | null = null;
-  let lifeformSelectHandler: ((id: string) => void) | null = null;
+  let lifeformSelectHandler: ((id: string) => boolean | void) | null = null;
   const optionByArchetype = new Map<EnemyArchetype, EggOption>();
   const iconCells = createIconCells();
   let toolboxRevealHandler: (() => void) | null = null;
+  let toolboxLessonActive = false;
+  const toolboxLessonControlState = new Map<
+    HTMLButtonElement,
+    { ariaDisabled: string | null; tabIndex: string | null }
+  >();
 
   // A lifeform swatch is the colour bloom (halo + locked-gray fallback) with a
   // tiny live cellular-automata canvas on top, so the icon reads as a living
@@ -394,18 +400,21 @@ export function createScreens(): Screens {
   }
 
   function activateLifeform(id: string): void {
+    if (toolboxLessonActive) return;
     if (!unlockedLifeformIds.has(id)) return;
+    if (lifeformSelectHandler?.(id) === false) return;
     setSelectedLifeform(id);
-    lifeformSelectHandler?.(id);
     const eggOption = optionByArchetype.get(id as EnemyArchetype);
     if (eggOption) eggSelectHandler?.(eggOption.archetype);
   }
 
   mobileLifeformsToggle.addEventListener('click', () => {
+    if (toolboxLessonActive) return;
     setMobileDrawer(mobileDrawer === 'lifeforms' ? 'none' : 'lifeforms');
   });
   lifePanelClose.addEventListener('click', closeMobileDrawers);
   mobileLogToggle.addEventListener('click', () => {
+    if (toolboxLessonActive) return;
     setMobileDrawer(mobileDrawer === 'log' ? 'none' : 'log');
   });
   setMobileDrawer('none');
@@ -637,15 +646,21 @@ export function createScreens(): Screens {
       for (const btn of toolButtons) {
         const tool = btn.dataset.tool;
         if (isToolId(tool)) {
-          btn.addEventListener('click', () => handler(tool));
+          btn.addEventListener('click', () => {
+            if (!toolboxLessonActive) handler(tool);
+          });
         }
       }
     },
     onAgitate(handler) {
-      agitateButton.addEventListener('click', handler);
+      agitateButton.addEventListener('click', () => {
+        if (!toolboxLessonActive) handler();
+      });
     },
     onEndEpoch(handler) {
-      endEpochButton.addEventListener('click', handler);
+      endEpochButton.addEventListener('click', () => {
+        if (!toolboxLessonActive) handler();
+      });
     },
     setEggOptions(options) {
       iconCells.reset();
@@ -1039,6 +1054,7 @@ export function createScreens(): Screens {
     },
     setPickChoices(choices, onPick) {
       pickChoices.replaceChildren();
+      let picked = false;
       for (const c of choices) {
         const btn = document.createElement('button');
         btn.className = 'pick-card';
@@ -1053,12 +1069,20 @@ export function createScreens(): Screens {
         action.className = 'pick-card-action';
         action.textContent = 'Choose';
         btn.append(name, desc, action);
-        btn.addEventListener('click', () => onPick(c.id));
+        btn.addEventListener('click', () => {
+          if (picked) return;
+          picked = true;
+          pickChoices.querySelectorAll<HTMLButtonElement>('button').forEach((choice) => {
+            choice.disabled = true;
+          });
+          onPick(c.id);
+        });
         pickChoices.append(btn);
       }
     },
     setObjectiveChoices(choices, onPick) {
       objectiveChoices.replaceChildren();
+      let picked = false;
       for (const objective of choices) {
         const btn = document.createElement('button');
         btn.className = 'pick-card objective-card';
@@ -1082,7 +1106,14 @@ export function createScreens(): Screens {
         hint.className = 'objective-card-hint';
         hint.textContent = objective.hint ?? '';
         btn.append(name, mode, desc, target, uses, hint);
-        btn.addEventListener('click', () => onPick(objective));
+        btn.addEventListener('click', () => {
+          if (picked) return;
+          picked = true;
+          objectiveChoices.querySelectorAll<HTMLButtonElement>('button').forEach((choice) => {
+            choice.disabled = true;
+          });
+          onPick(objective);
+        });
         objectiveChoices.append(btn);
       }
     },
@@ -1182,7 +1213,9 @@ export function createScreens(): Screens {
       endRestart.addEventListener('click', handler);
     },
     onNotebookOpen(handler) {
-      notebookButton.addEventListener('click', handler);
+      notebookButton.addEventListener('click', () => {
+        if (!toolboxLessonActive) handler();
+      });
     },
     onNotebookClose(handler) {
       notebookClose.addEventListener('click', handler);
@@ -1270,13 +1303,45 @@ export function createScreens(): Screens {
     },
     clearStudyStartAnnouncement,
     openMobileLifeformsDrawer() {
-      setMobileDrawer(unlockedLifeformIds.size > 1 ? 'lifeforms' : 'none');
+      if (!toolboxLessonActive) {
+        setMobileDrawer(unlockedLifeformIds.size > 1 ? 'lifeforms' : 'none');
+      }
     },
     closeMobileDrawers() {
       closeMobileDrawers();
     },
     onToolboxReveal(handler) {
       toolboxRevealHandler = handler;
+    },
+    setToolboxLessonActive(active) {
+      if (active === toolboxLessonActive) return;
+      toolboxLessonActive = active;
+      layout.classList.toggle('mobile-toolbox-lesson-active', active);
+      if (active) closeMobileDrawers();
+      for (const control of [
+        ...toolButtons,
+        agitateButton,
+        endEpochButton,
+        mobileLifeformsToggle,
+        mobileLogToggle,
+        notebookButton,
+      ]) {
+        if (active) {
+          toolboxLessonControlState.set(control, {
+            ariaDisabled: control.getAttribute('aria-disabled'),
+            tabIndex: control.getAttribute('tabindex'),
+          });
+          control.setAttribute('aria-disabled', 'true');
+          control.tabIndex = -1;
+        } else {
+          const previous = toolboxLessonControlState.get(control);
+          if (previous?.ariaDisabled === null) control.removeAttribute('aria-disabled');
+          else if (previous) control.setAttribute('aria-disabled', previous.ariaDisabled);
+          if (previous?.tabIndex === null) control.removeAttribute('tabindex');
+          else if (previous) control.setAttribute('tabindex', previous.tabIndex);
+        }
+      }
+      if (!active) toolboxLessonControlState.clear();
     },
     prepareToolboxRevealLesson(tool) {
       return prepareToolboxRevealLesson(tool);

@@ -32,7 +32,7 @@ export interface OnboardingBeat {
   readonly body: string;
   readonly trigger: string;
   readonly action: string;
-  readonly pointerTarget: string;
+  readonly pointerTarget?: string;
   readonly kicker?: string;
   readonly step?: string;
 }
@@ -94,7 +94,6 @@ export const MOBILE_TOOLBOX_ONBOARDING_BEAT: OnboardingBeat = {
   step: 'New control',
   trigger: 'toolbox-scrolled',
   action: 'Drag tools left',
-  pointerTarget: 'rack:more',
 };
 
 function beat(

@@ -109,9 +109,14 @@ test('plays the five-Trial Case, records discovery cadence, and resumes an Open 
   await expect(trialThreeMethod).toBeFocused();
   await trialThreeMethod.press('Enter');
   startedAt = Date.now();
-  await expect(page.locator('#coach-title')).toHaveText('More tools are in the rack.');
-  await expect(page.locator('#toolbox-more')).toBeFocused();
-  await page.locator('#toolbox-more').click();
+  if (testInfo.project.name === 'desktop') {
+    await expect(page.locator('#coach')).toHaveAttribute('aria-hidden', 'true');
+    await expect(page.locator('#hud-director-title')).toHaveText('Carrier Medium');
+  } else {
+    await expect(page.locator('#coach-title')).toHaveText('More tools are in the rack.');
+    await expect(page.locator('#toolbox-more')).toBeFocused();
+    await page.locator('#toolbox-more').click();
+  }
   await expect(page.locator('[data-tool="water"]')).toBeInViewport({ ratio: 0.9 });
   await expect(page.locator('#coach')).toHaveAttribute('aria-hidden', 'true');
   await selectLifeform(page, 'bloom_mass');
@@ -155,7 +160,10 @@ test('plays the five-Trial Case, records discovery cadence, and resumes an Open 
   startedAt = await pickMethod(page);
   await expect(page.locator('#screen-objective')).toHaveClass(/visible/);
   const chosenObjective = (await page.locator('#objective-choices .objective-card .pick-card-name').first().textContent())?.trim() ?? '';
-  await page.locator('#objective-choices .objective-card').first().click();
+  await page.locator('#objective-choices .objective-card').first().evaluate((button: HTMLButtonElement) => {
+    button.click();
+    button.click();
+  });
   await expect(page.locator('#hud-fight')).toHaveText('1 / ∞');
   await selectToolAndApply(page, 'nutrient', false);
   timings.push({ trial: 6, objective: `Open Lab: ${chosenObjective}`, activeMs: Date.now() - startedAt });

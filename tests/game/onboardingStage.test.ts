@@ -116,7 +116,7 @@ describe('onboarding beats', () => {
         expect(beat.body.length).toBeGreaterThan(0);
         expect(beat.trigger.length).toBeGreaterThan(0);
         expect(beat.action.length).toBeGreaterThan(0);
-        expect(beat.pointerTarget.length).toBeGreaterThan(0);
+        expect(beat.pointerTarget?.length).toBeGreaterThan(0);
       }
     }
   });
@@ -131,10 +131,10 @@ describe('onboarding beats', () => {
     expect(MOBILE_TOOLBOX_ONBOARDING_BEAT).toMatchObject({
       title: 'More tools are in the rack.',
       trigger: 'toolbox-scrolled',
-      pointerTarget: 'rack:more',
       kicker: 'Dr. E · Instrument tip',
       step: 'New control',
     });
+    expect(MOBILE_TOOLBOX_ONBOARDING_BEAT.pointerTarget).toBeUndefined();
     expect(MOBILE_TOOLBOX_ONBOARDING_BEAT.body).toContain('reveal Water');
   });
 });

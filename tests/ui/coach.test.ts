@@ -149,7 +149,8 @@ describe('onboarding coach', () => {
     expect(elements.get('coach-title')?.textContent).toBe('More tools are in the rack.');
     expect(elements.get('coach-body')?.textContent).toContain('reveal Water');
     expect(elements.get('coach-step')?.textContent).toBe('New control');
-    expect(coach.getCurrentPointerTarget()).toBe('rack:more');
+    expect(coach.getExpectedTrigger()).toBe('toolbox-scrolled');
+    expect(coach.getCurrentPointerTarget()).toBeUndefined();
 
     coach.report('water-selected');
     expect(coach.isMobileToolboxLessonActive()).toBe(true);
@@ -158,6 +159,7 @@ describe('onboarding coach', () => {
     coach.report('toolbox-scrolled');
     expect(coach.isMobileToolboxLessonActive()).toBe(false);
     expect(coach.isActive()).toBe(false);
+    expect(coach.getExpectedTrigger()).toBeUndefined();
     expect(coach.hasSeenMobileToolboxLesson()).toBe(true);
     expect(completed).toHaveBeenCalledOnce();
     expect(coach.beginMobileToolboxLesson()).toBe(false);
@@ -173,6 +175,7 @@ describe('onboarding coach', () => {
     expect(elements.get('coach')?.classList.contains('coach-welcome')).toBe(true);
     expect(elements.get('coach-title')?.textContent).toBe('Welcome to my lab.');
     expect(elements.get('coach-body')?.textContent).toContain('show you the ropes');
+    expect(coach.getExpectedTrigger()).toBeUndefined();
     expect(elements.get('coach-skip')?.textContent).toBe('Tap to continue');
     expect(coach.getCurrentPointerTarget()).toBeUndefined();
 
@@ -190,6 +193,7 @@ describe('onboarding coach', () => {
     expect(elements.get('coach')?.classList.contains('coach-prompt')).toBe(true);
     expect(elements.get('coach-title')?.textContent).toBe('I’m Dr. E. Press Egg.');
     expect(elements.get('coach-action')?.textContent).toBe('Press Egg');
+    expect(coach.getExpectedTrigger()).toBe('egg-selected');
     expect(coach.getCurrentPointerTarget()).toBe('tool:egg');
   });
 
@@ -310,6 +314,8 @@ describe('onboarding coach', () => {
     expect(coach.isActive()).toBe(true);
     expect(coach.isPresentingSuccess()).toBe(true);
     expect(elements.get('coach')?.classList.contains('coach-exit')).toBe(true);
+    expect(elements.get('coach-title')?.textContent).toBe('Experiment complete.');
+    expect(elements.get('coach-step')?.textContent).toBe('Result ready');
 
     vi.advanceTimersByTime(520);
     expect(elements.get('coach')?.classList.contains('coach-show')).toBe(false);
