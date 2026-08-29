@@ -2,6 +2,7 @@ import type { StrainLibrary } from '../game/strainLibrary';
 
 export interface LoadoutScreenOptions {
   labelForStrain: (strain: string) => string;
+  descriptionForStrain: (strain: string) => string;
   colorForStrain: (strain: string) => string;
   artForStrain?: (strain: string) => { src: string; alt: string } | null;
 }
@@ -27,15 +28,15 @@ export function renderLoadoutScreen(
 
     const title = document.createElement('h2');
     title.className = 'screen-title';
-    title.textContent = 'Egg Loadout';
+    title.textContent = 'Archived Specimens';
 
     const subtitle = document.createElement('p');
     subtitle.className = 'loadout-subtitle';
-    subtitle.textContent = `Select up to ${slots} strains for this run`;
+    subtitle.textContent = `Bring up to ${slots} decoded specimens. Standard lab-stock eggs are always supplied.`;
 
     const count = document.createElement('p');
     count.className = 'loadout-count';
-    count.textContent = `${selected.size}/${slots} selected`;
+    count.textContent = `${selected.size}/${slots} archived`;
 
     const grid = document.createElement('div');
     grid.className = 'loadout-grid';
@@ -63,10 +64,15 @@ export function renderLoadoutScreen(
         marker.setAttribute('aria-hidden', 'true');
       }
 
-      const label = document.createElement('span');
+      const copy = document.createElement('span');
+      copy.className = 'loadout-strain-copy';
+      const label = document.createElement('strong');
       label.textContent = options.labelForStrain(strain);
+      const description = document.createElement('small');
+      description.textContent = options.descriptionForStrain(strain);
+      copy.append(label, description);
 
-      button.append(marker, label);
+      button.append(marker, copy);
       button.addEventListener('click', () => {
         if (selected.has(strain)) {
           selected.delete(strain);

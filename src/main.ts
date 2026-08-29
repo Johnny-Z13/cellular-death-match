@@ -12,7 +12,11 @@ import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/e
 import { BREED_DEFS, DISCOVERY_NOTES, type BreedId, type DiscoveryNoteId } from './content/catalysis';
 import { notebookViewForProgression, atlasViewForProgression } from './content/notebook';
 import { researchNotebookView, type ActiveStudySnapshot } from './game/researchNotebook';
-import { lifeformIdentityForSpawn, type LifeformIdentityId } from './content/lifeformIdentity';
+import {
+  LIFEFORM_IDENTITIES,
+  lifeformIdentityForSpawn,
+  type LifeformIdentityId,
+} from './content/lifeformIdentity';
 import { genomeArtFor, type GenomeArtIdentity } from './content/genomeArt';
 import { createEcologyAudio } from './audio/ecologyAudio';
 import { createUiAudio, DROP_SOUND_FOR_TOOL } from './audio/uiAudio';
@@ -397,6 +401,10 @@ screens.onLifeformSelect((id) => {
   if (!isSeedableLifeformId(id)) return;
   clearAbandonConfirmation();
   coach.report(`lifeform:${id}`);
+  // Choosing a specimen is also a semantic Egg selection. This keeps the
+  // first lesson synchronized when a curious player enters through Eggs
+  // instead of pressing the already-active Egg tool.
+  coach.report('egg-selected');
   setEggLifeformSelection(id);
   screens.setSelectedLifeform(id);
   // Picking any lifeform arms the egg tool so the player can drop it straight
@@ -479,6 +487,9 @@ function applySelectedToolAt(pos: [number, number]): boolean {
     uiAudio.play(DROP_SOUND_FOR_TOOL[selectedTool] ?? 'ui_tap');
     juice.ripple(pos, selectedTool);
     screens.updateToolCharges(arena.getToolStates());
+    // A successful placement proves that Egg was armed even if the player
+    // tapped the dish before explicitly pressing the already-selected tool.
+    if (selectedTool === 'egg') coach.report('egg-selected');
     coach.report(`${selectedTool}-used`);
     if (selectedTool === 'egg') {
       onboardingDishGuideTracksLastEgg = true;
@@ -632,9 +643,12 @@ screens.onEndEpoch(() => {
   const objectiveComplete = arena.getObjectiveProgress().complete;
   const equilibriumComplete = !isOnboardingEpoch(run.getState().fightIndex)
     && arena.getEquilibrium().achieved;
+  const taughtSequenceIncomplete = isOnboardingEpoch(run.getState().fightIndex)
+    && coach.isActive()
+    && !coach.isPresentingSuccess();
   // Trial 1 is the interaction tutorial. End cannot act as an accidental
   // escape hatch before the player has completed the taught sequence.
-  if (isOnboardingEpoch(run.getState().fightIndex) && !objectiveComplete) {
+  if (isOnboardingEpoch(run.getState().fightIndex) && (!objectiveComplete || taughtSequenceIncomplete)) {
     uiAudio.play('ui_tap');
     haptics.play('warning');
     return;
@@ -676,8 +690,11 @@ function updateDishExitAction(): void {
   const objectiveComplete = arena.getObjectiveProgress().complete;
   const equilibriumComplete = !isOnboardingEpoch(run.getState().fightIndex)
     && arena.getEquilibrium().achieved;
+  const taughtSequenceIncomplete = isOnboardingEpoch(run.getState().fightIndex)
+    && coach.isActive()
+    && !coach.isPresentingSuccess();
   screens.setDishExitState(dishExitState({
-    complete: objectiveComplete || equilibriumComplete,
+    complete: !taughtSequenceIncomplete && (objectiveComplete || equilibriumComplete),
     firstTrial: isOnboardingEpoch(run.getState().fightIndex),
     openLab: run.getState().fightIndex >= COMMON_COLD_CASE.trials.length,
     saveBlocked: pendingBankPlan !== null,
@@ -901,7 +918,7 @@ function showLoadoutPicker(): void {
       fx.playWipe();
       beginRunWithCurrentLoadout(loadout);
     },
-    { labelForStrain, colorForStrain, artForStrain },
+    { labelForStrain, descriptionForStrain, colorForStrain, artForStrain },
   ));
   screens.hide('title');
   screens.show('loadout');
@@ -1194,10 +1211,24 @@ function focusStudyStart(authoredTrial: (typeof COMMON_COLD_CASE.trials)[number]
   });
 }
 
+function blockingOverlayOpen(): boolean {
+  if (overlayState.menuOpen || overlayState.notebookOpen) return true;
+  if (!window.matchMedia('(max-width: 899px)').matches) return false;
+  return layout.dataset.mobileDrawer === 'lifeforms' || layout.dataset.mobileDrawer === 'log';
+}
+
+function setCulturePaused(paused: boolean): void {
+  layout.classList.toggle('simulation-paused', paused);
+  document.getElementById('simulation-paused-badge')?.setAttribute('aria-hidden', String(!paused));
+}
+
 function loop() {
   if (!arena || !renderer) return;
   const phase = run.getState().phase;
-  if (phase !== 'arena') return;            // stop the loop on any non-arena phase
+  if (phase !== 'arena') {
+    setCulturePaused(false);
+    return;            // stop the loop on any non-arena phase
+  }
 
   const now = performance.now();
   if (pendingBankPlan) {
@@ -1221,7 +1252,9 @@ function loop() {
     scheduleLoop();
     return;
   }
-  if (overlayState.menuOpen) {
+  const culturePaused = blockingOverlayOpen();
+  setCulturePaused(culturePaused);
+  if (culturePaused) {
     // Reset on every paused frame so closing Options never replays accumulated
     // wall-clock time as a burst of simulation ticks.
     simClock.reset(now);
@@ -1850,7 +1883,7 @@ function syncOnboardingPointer(): void {
       && window.matchMedia('(max-width: 899px)').matches
       && layout.dataset.mobileDrawer !== 'lifeforms';
     const selector = needsMobileDrawer
-      ? '[data-tool="egg"]'
+      ? '#mobile-lifeforms-toggle'
       : target === 'rack:more'
         ? '#toolbox-more'
       : target === 'end'
@@ -1962,14 +1995,19 @@ function announceUnlocks(
 // Capped per epoch and suppressed while the tutorial coach is active, so it
 // helps a stuck player without ever nagging an engaged one.
 const NUDGE_IDLE_TICKS = 60 * 22;
+const TAUGHT_RESULT_RECOVERY_TICKS = 60 * 10;
 const MAX_NUDGES_PER_EPOCH = 2;
 
 function maybeNudgeIdlePlayer(objectiveComplete: boolean, hint: string | undefined): void {
-  // Authored onboarding remains visible until its exact action. Never replace
-  // that persistent instruction/observation rail with a generic idle nudge.
-  if (coach.isActive()) return;
+  const awaitingTaughtResult = coach.isAwaitingObjective();
+  // Exact instructions remain authoritative while the player is still acting.
+  // Once all taught actions are complete, one bounded rescue is allowed if no
+  // result arrives; otherwise “Watch the culture” can look like a soft lock.
+  if (coach.isActive() && !awaitingTaughtResult) return;
   if (nudgeCountThisEpoch >= MAX_NUDGES_PER_EPOCH) return;
-  if (tickCount - lastActionTick < NUDGE_IDLE_TICKS) return;
+  if (awaitingTaughtResult && nudgeCountThisEpoch > 0) return;
+  const idleThreshold = awaitingTaughtResult ? TAUGHT_RESULT_RECOVERY_TICKS : NUDGE_IDLE_TICKS;
+  if (tickCount - lastActionTick < idleThreshold) return;
   const authoredTrial = COMMON_COLD_CASE.trials[run.getState().fightIndex];
   const nudge = onboardingIdleNudge({
     objectiveComplete,
@@ -2023,6 +2061,12 @@ function labelForStrain(strain: string): string {
     .filter(Boolean)
     .map((part) => capitalize(part))
     .join(' ');
+}
+
+function descriptionForStrain(strain: string): string {
+  if (!isProgressionLifeformId(strain)) return 'Archived experimental specimen.';
+  const identity = LIFEFORM_IDENTITIES[strain];
+  return `${identity.role} · ${identity.behavior}`;
 }
 
 function colorForStrain(strain: string): string {

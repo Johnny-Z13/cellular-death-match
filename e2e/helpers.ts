@@ -73,6 +73,16 @@ export async function completeOpeningActions(page: Page): Promise<void> {
   await clickDish(page, 0.55, 0.53);
 }
 
+export async function continueToMethodPicker(page: Page): Promise<void> {
+  const introduction = page.locator('#screen-method-intro');
+  const picker = page.locator('#screen-pick');
+  if (await picker.evaluate((element) => element.classList.contains('visible'))) return;
+  await expect(introduction).toHaveClass(/visible/);
+  await expect(page.locator('#method-intro-continue')).toBeFocused();
+  await page.locator('#method-intro-continue').click();
+  await expect(picker).toHaveClass(/visible/);
+}
+
 export async function toolCharge(page: Page, tool: 'egg' | 'nutrient' | 'toxin'): Promise<number> {
   const text = (await page.locator(`[data-tool="${tool}"] [data-tool-count]`).textContent()) ?? '';
   const match = /^(\d+)\//.exec(text.trim());

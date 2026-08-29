@@ -26,7 +26,7 @@ describe('equilibrium HUD state', () => {
   it('does not let onboarding equilibrium mark End ready or end the run', () => {
     expect(mainSource).toContain('const equilibriumCanEndRun = !isOnboardingEpoch(run.getState().fightIndex);');
     expect(mainSource).toContain('if (equilibriumCanEndRun && arena.getEquilibrium().achieved)');
-    expect(mainSource).toContain('complete: objectiveComplete || equilibriumComplete');
+    expect(mainSource).toContain('complete: !taughtSequenceIncomplete && (objectiveComplete || equilibriumComplete)');
     expect(mainSource).toContain('firstTrial: isOnboardingEpoch(run.getState().fightIndex)');
   });
 

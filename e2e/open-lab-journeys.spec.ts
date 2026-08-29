@@ -92,7 +92,7 @@ test('chooses a rare-genome loadout and resumes the same Open Lab study', async 
   await page.locator('#title-start').click();
   await expect(page.locator('.layout')).toHaveAttribute('data-screen', 'loadout');
 
-  await expect(page.locator('.loadout-count')).toHaveText('2/2 selected');
+  await expect(page.locator('.loadout-count')).toHaveText('2/2 archived');
   await page.locator('[data-strain="swarmlet"]').click();
   await page.locator('[data-strain="bloom_mass"]').click();
   await expect(page.locator('[data-strain="bloom_mass"]')).toHaveAttribute('aria-pressed', 'true');

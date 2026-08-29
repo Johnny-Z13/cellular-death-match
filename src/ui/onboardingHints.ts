@@ -22,6 +22,14 @@ export function onboardingIdleNudge(input: OnboardingIdleNudgeInput): Onboarding
     };
   }
 
+  if (input.guidanceTier === 'exact' && input.recoveryHints) {
+    return {
+      title: 'No reaction yet',
+      body: input.recoveryHints[1],
+      interruptTutorial: true,
+    };
+  }
+
   if (input.tutorialActive) {
     return {
       title: 'Make the first discovery',

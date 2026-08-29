@@ -183,6 +183,9 @@ const options: LoadoutScreenOptions = {
       glass_antibody: 'Glass Antibody',
     }[strain] ?? strain;
   },
+  descriptionForStrain(strain) {
+    return `${strain} behavior`;
+  },
   colorForStrain(strain) {
     return {
       swarmlet: 'rgb(72, 201, 255)',
@@ -224,11 +227,20 @@ describe('renderLoadoutScreen', () => {
     installFakeDocument();
     const root = render();
 
-    expect(root.querySelectorAll('.loadout-strain').map((button) => button.textContent)).toEqual([
-      'Starter Swarm',
-      'Needle Swarm',
-      'Glass Antibody',
-    ]);
+    const labels = root.querySelectorAll('.loadout-strain').map((button) => button.textContent);
+    expect(labels[0]).toContain('Starter Swarm');
+    expect(labels[1]).toContain('Needle Swarm');
+    expect(labels[2]).toContain('Glass Antibody');
+    expect(labels[1]).toContain('needle_swarm behavior');
+  });
+
+  it('truthfully frames archived specimens versus standard lab stock', () => {
+    installFakeDocument();
+    const root = render();
+
+    expect(root.textContent).toContain('Archived Specimens');
+    expect(root.textContent).toContain('Standard lab-stock eggs are always supplied.');
+    expect(root.textContent).toContain('1/2 archived');
   });
 
   it('uses color CSS variables for strain buttons', () => {

@@ -73,7 +73,7 @@ export const ONBOARDING_BEATS: readonly OnboardingBeat[] = [
 export const TRIAL_ONBOARDING_BEATS: readonly (readonly OnboardingBeat[])[] = [
   ONBOARDING_BEATS,
   [
-    beat('select-bloom', 'Press Bloom Mass.', 'Trial 2 — Bitter Medicine. Use the specimen we stabilized.', 'lifeform:bloom_mass', 'Press Bloom Mass', 'lifeform:bloom_mass'),
+    beat('select-bloom', 'Open Eggs. Choose Bloom Mass.', 'Trial 2 — Bitter Medicine. Use the specimen we stabilized.', 'lifeform:bloom_mass', 'Open Eggs · choose Bloom Mass', 'lifeform:bloom_mass'),
     beat('place-bloom', 'Place it here.', 'Tap the marked point.', 'egg-used', 'Tap the dish', 'dish'),
     beat('select-nutrient', 'Press Nutrient.', 'Feed first. Order matters.', 'nutrient-selected', 'Press Nutrient', 'tool:nutrient'),
     beat('feed-bloom', 'Feed the culture.', 'Tap beside the Bloom Mass.', 'nutrient-used', 'Tap the dish', 'dish'),

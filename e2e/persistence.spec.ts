@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import {
   clickDish,
   completeOpeningActions,
+  continueToMethodPicker,
   monitorRuntime,
   selectSwarmlet,
   startFirstTrial,
@@ -67,7 +68,7 @@ test.describe('reload-safe Case checkpoints', () => {
     await continueSavedCase(page);
     await expect(page.locator('#fx-genome-title')).toHaveText('Bloom Mass');
     await page.locator('#fx-genome').click();
-    await expect(page.locator('#screen-pick')).toHaveClass(/visible/);
+    await continueToMethodPicker(page);
 
     await page.reload();
     await continueSavedCase(page);
@@ -75,7 +76,7 @@ test.describe('reload-safe Case checkpoints', () => {
     await expect(page.locator('#pick-choices .pick-card')).toHaveCount(3);
     await page.locator('#pick-choices .pick-card').first().click();
     await expect(page.locator('#hud-fight')).toHaveText('2 / 5');
-    await expect(page.locator('#coach-title')).toHaveText('Press Bloom Mass.');
+    await expect(page.locator('#coach-title')).toHaveText('Open Eggs. Choose Bloom Mass.');
 
     await page.locator('#mobile-lifeforms-toggle').click();
     await page.locator('[data-lifeform-id="bloom_mass"]').click();
@@ -89,7 +90,7 @@ test.describe('reload-safe Case checkpoints', () => {
     await expect(page.locator('#title-trial-label')).toContainText('Trial 02');
     await continueSavedCase(page);
     await expect(page.locator('#hud-fight')).toHaveText('2 / 5');
-    await expect(page.locator('#coach-title')).toHaveText('Press Bloom Mass.');
+    await expect(page.locator('#coach-title')).toHaveText('Open Eggs. Choose Bloom Mass.');
     await page.screenshot({ path: testInfo.outputPath('trial-2-resumed-cleanly.png') });
 
     runtime.assertClean();
@@ -152,7 +153,7 @@ test.describe('reload-safe Case checkpoints', () => {
     if (await page.locator('#fx-genome').getAttribute('aria-hidden') === 'false') {
       await page.locator('#fx-genome').click();
     }
-    await expect(page.locator('#screen-pick')).toHaveClass(/visible/);
+    await continueToMethodPicker(page);
     await page.locator('#pick-choices .pick-card').first().click();
     await expect(page.locator('#hud-fight')).toHaveText('2 / 5');
 
@@ -180,7 +181,7 @@ test.describe('reload-safe Case checkpoints', () => {
     await expect(page.locator('.layout')).toHaveAttribute('data-screen', 'arena');
     await expect(page.locator('#hud-fight')).toHaveText('2 / 5');
     await expect(page.locator('#hud-director-title')).toHaveText('Bitter Medicine');
-    await expect(page.locator('#coach-title')).toHaveText('Press Bloom Mass.');
+    await expect(page.locator('#coach-title')).toHaveText('Open Eggs. Choose Bloom Mass.');
     runtime.assertClean();
   });
 });

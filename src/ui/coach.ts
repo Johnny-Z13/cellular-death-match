@@ -9,6 +9,7 @@ export type CoachEvent = string;
 export interface Coach {
   isActive(): boolean;
   isPresentingSuccess(): boolean;
+  isAwaitingObjective(): boolean;
   hasSeenTutorial(): boolean;
   beginRun(): void;
   beginTrial(trialIndex: number): void;
@@ -289,6 +290,9 @@ export function createCoach(): Coach {
     },
     isPresentingSuccess() {
       return presentingSuccess;
+    },
+    isAwaitingObjective() {
+      return active && awaitingObjective && !presentingSuccess;
     },
     hasSeenTutorial() {
       return seen();

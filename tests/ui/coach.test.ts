@@ -418,6 +418,24 @@ describe('onboarding coach', () => {
     expect(elements.get('coach-skip')?.hidden).toBe(true);
   });
 
+  it('reports when all taught actions are waiting on the authored result', () => {
+    vi.useFakeTimers();
+    const elements = installCoachDom();
+    const coach = createCoach();
+
+    coach.beginRun();
+    continueFromWelcome(elements);
+    coach.report('egg-selected');
+    coach.report('egg-used');
+    coach.report('nutrient-selected');
+    coach.report('nutrient-used');
+
+    expect(coach.isAwaitingObjective()).toBe(true);
+    coach.report('objective-complete');
+    expect(coach.isAwaitingObjective()).toBe(false);
+    expect(coach.isPresentingSuccess()).toBe(true);
+  });
+
   it('chooses onboarding idle nudges for the next concrete action', () => {
     expect(onboardingIdleNudge({
       objectiveComplete: true,
@@ -436,6 +454,22 @@ describe('onboarding coach', () => {
     })).toEqual({
       title: 'Make the first discovery',
       body: 'Place one Swarmlet egg, then feed the living cultures with Nutrient until Bloom appears.',
+      interruptTutorial: true,
+    });
+
+    const exactHints = [
+      'Feed budding tissue before applying pressure.',
+      'Place Bloom Mass, add Nutrient, then overlap the same field with Toxin.',
+    ] as const;
+    expect(onboardingIdleNudge({
+      objectiveComplete: false,
+      tutorialActive: true,
+      objectiveHint: 'unused',
+      guidanceTier: 'exact',
+      recoveryHints: exactHints,
+    })).toEqual({
+      title: 'No reaction yet',
+      body: exactHints[1],
       interruptTutorial: true,
     });
 
