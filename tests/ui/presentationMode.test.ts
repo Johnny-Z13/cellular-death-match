@@ -8,10 +8,12 @@ const screensSource = readFileSync('src/ui/screens.ts', 'utf8');
 const html = readFileSync('index.html', 'utf8');
 
 describe('full screen mode', () => {
-  it('exposes a compact main UI full screen button and uses full screen wording', () => {
+  it('exposes a compact top-level full screen icon with accessible wording', () => {
     expect(html).toContain('id="fullscreen-button"');
     expect(html).toContain('aria-label="Enter full screen"');
-    expect(html).toContain('>Full screen</button>');
+    expect(html).toContain('class="fullscreen-button__label">Full screen</span>');
+    expect(html).toContain('fullscreen-button__enter-icon');
+    expect(html).toContain('fullscreen-button__exit-icon');
     expect(html).toContain('id="dbg-fullscreen-mode"');
     expect(html).toContain('>full screen</button>');
     expect(html).not.toContain('presentation mode</button>');
@@ -27,15 +29,18 @@ describe('full screen mode', () => {
     expect(mainSource).toContain('setPresentationMode(!overlayState.presentationMode);');
   });
 
-  it('hides every UI layer except a clearly labelled exit button and lets the dish fill the viewport', () => {
+  it('hides every UI layer except one subtle, accessible exit icon and lets the dish fill the viewport', () => {
     expect(css).toContain('.presentation-mode .debug');
     expect(css).toContain('.presentation-mode .screen');
     expect(css).toContain('.presentation-mode .mobile-shell');
+    expect(css).toContain('.presentation-mode .toolbox-more');
     expect(css).toContain('.presentation-mode .fullscreen-button {');
-    expect(css).toContain('.presentation-mode .fullscreen-button::before');
-    expect(css).toContain('content: "←"');
+    expect(css).toContain('.presentation-mode .fullscreen-button__icon');
+    expect(css).toContain('width: 34px');
     expect(css).toContain('.layout[data-screen="arena"].presentation-mode .fullscreen-button');
-    expect(screensSource).toContain("fullscreenButton.textContent = active ? 'Exit full screen' : 'Full screen';");
+    expect(css).toContain('.fullscreen-button.is-active .fullscreen-button__exit-icon');
+    expect(screensSource).toContain("fullscreenButton.classList.toggle('is-active', active);");
+    expect(screensSource).toContain("fullscreenButtonLabel.textContent = active ? 'Exit full screen' : 'Full screen';");
     expect(css).toContain('width: min(100svw, 100svh)');
     expect(css).toContain('height: min(100svw, 100svh)');
     expect(css).not.toContain('width: min(96svw, 96svh, 900px)');

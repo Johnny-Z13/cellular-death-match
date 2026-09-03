@@ -17,6 +17,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/src/styles.css?v=20260828-atlas-first-1" />
+    <link rel="stylesheet" href="/src/arena-layout.css?v=20260903-director-pass-1" />
   </head>
   <body>
     <main class="layout" data-screen="title">
@@ -36,7 +37,7 @@
       </div>
       <span id="simulation-paused-badge" class="simulation-paused-badge" role="status" aria-live="polite" aria-hidden="true">Culture paused</span>
       <div id="onboarding-guide-pointer" class="onboarding-professor-pointer" aria-hidden="true">
-        <img src="/art/professor/professor-emergent-v1.png" width="633" height="760" alt="" />
+        <img src="/art/professor/professor-emergent-v2.png" width="1143" height="1376" alt="" />
         <span aria-hidden="true"></span>
       </div>
       <button id="options-button" class="chrome-button options-button" type="button" aria-label="Open options" title="Options" aria-haspopup="dialog" aria-expanded="false">
@@ -45,7 +46,15 @@
           <circle cx="12" cy="12" r="3" />
         </svg>
       </button>
-      <button id="fullscreen-button" class="chrome-button fullscreen-button" type="button" aria-label="Enter full screen">Full screen</button>
+      <button id="fullscreen-button" class="chrome-button fullscreen-button" type="button" aria-label="Enter full screen" title="Enter full screen">
+        <span class="fullscreen-button__label">Full screen</span>
+        <svg class="fullscreen-button__icon fullscreen-button__enter-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5" />
+        </svg>
+        <svg class="fullscreen-button__icon fullscreen-button__exit-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+        </svg>
+      </button>
       <div id="mobile-shell" class="mobile-shell" role="group" aria-label="Mobile dish controls">
         <button id="mobile-lifeforms-toggle" class="mobile-shell-button" type="button" aria-expanded="false" aria-controls="life-panel">Eggs</button>
         <div id="mobile-tool-readout" class="mobile-tool-readout" aria-live="polite">
@@ -214,7 +223,7 @@
         <div class="title-art" aria-hidden="true"></div>
         <div class="title-vignette" aria-hidden="true"></div>
         <figure class="title-professor">
-          <img src="/art/professor/professor-emergent-v1.png" width="633" height="760" alt="Dr. E. Mergent, wild-haired director of the cellular laboratory" />
+          <img src="/art/professor/professor-emergent-v2.png" width="1143" height="1376" alt="Dr. E. Mergent, wild-haired director of the cellular laboratory" />
           <figcaption>“A petri dish never lies. It does occasionally explode.”</figcaption>
         </figure>
         <div class="screen-card title-card">
@@ -262,7 +271,7 @@
 
       <div id="screen-method-intro" class="screen method-intro-screen" role="dialog" aria-modal="true" aria-labelledby="method-intro-title">
         <figure class="method-intro-professor" aria-hidden="true">
-          <img src="/art/professor/professor-emergent-v1.png" width="633" height="760" alt="" />
+          <img src="/art/professor/professor-emergent-v2.png" width="1143" height="1376" alt="" />
         </figure>
         <div class="method-intro-vignette" aria-hidden="true"></div>
         <section class="method-intro-copy">
@@ -340,7 +349,7 @@
         </div>
         <div id="hud-director" class="hud-director">
           <div class="hud-director-portrait" aria-hidden="true">
-            <img src="/art/professor/professor-emergent-v1.png" width="633" height="760" alt="" />
+            <img src="/art/professor/professor-emergent-v2.png" width="1143" height="1376" alt="" />
           </div>
           <div class="hud-director-copy">
             <div class="hud-director-head"><span id="hud-director-kicker">Dr. E</span><span id="hud-director-state">Live</span></div>
@@ -396,7 +405,7 @@
 
       <aside id="coach" class="coach" aria-hidden="true" aria-live="polite" aria-label="Dr. E. Mergent's guidance">
         <div class="coach-portrait" aria-hidden="true">
-          <img src="/art/professor/professor-emergent-v1.png" width="633" height="760" alt="" />
+          <img src="/art/professor/professor-emergent-v2.png" width="1143" height="1376" alt="" />
         </div>
         <div class="coach-copy">
           <div class="coach-head">

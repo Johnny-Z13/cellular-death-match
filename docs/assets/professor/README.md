@@ -62,3 +62,23 @@ from this accepted concept.
 
 The former “concept only” status above applies to the unshipped source file,
 not to this separately recorded production derivative.
+
+## High-resolution production master
+
+`public/art/professor/professor-emergent-v2.png` is the higher-resolution
+production portrait used by the title, full-screen introductions, HUD, and
+onboarding pointer.
+
+- Installed: 2026-09-03
+- Dimensions: 1143 × 1376 PNG
+- SHA-256: `81c3405ba8f7a47e2dcb670cbfd5c01e118c98cbb9c70c2a54d41920099ca3f8`
+- Generator/provider: OpenAI built-in image generation
+- Source reference: `public/art/professor/professor-emergent-v1.png`
+- Distribution status: provider-declared; named human approval is still required
+- Distribution evidence: `docs/publishing/evidence/crazygames-asset-attributions.json`
+
+The production edit requested increased clarity and fine detail while
+preserving Dr. E’s identity, expression, goggles, coat, glowing glove, petri
+dish, pose, cyan/amber lighting, and dark cellular-laboratory backdrop. It also
+explicitly excluded text, logos, watermarks, anatomy changes, new props, and
+artificial oversharpening.

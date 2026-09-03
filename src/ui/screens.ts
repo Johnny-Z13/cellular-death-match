@@ -173,6 +173,8 @@ export function createScreens(): Screens {
   const pickCaseProgress = get('pick-case-progress');
   const notebookButton = get('notebook-button') as HTMLButtonElement;
   const fullscreenButton = get('fullscreen-button') as HTMLButtonElement;
+  const fullscreenButtonLabel = fullscreenButton.querySelector<HTMLElement>('.fullscreen-button__label');
+  if (!fullscreenButtonLabel) throw new Error('screens: missing .fullscreen-button__label');
   const optionsButton = get('options-button') as HTMLButtonElement;
   const optionsClose = get('options-close') as HTMLButtonElement;
   const optionsScrim = get('options-scrim') as HTMLButtonElement;
@@ -1237,7 +1239,8 @@ export function createScreens(): Screens {
     setFullscreenActive(active) {
       fullscreenButton.setAttribute('aria-label', active ? 'Exit full screen' : 'Enter full screen');
       fullscreenButton.title = active ? 'Exit full screen' : 'Enter full screen';
-      fullscreenButton.textContent = active ? 'Exit full screen' : 'Full screen';
+      fullscreenButton.classList.toggle('is-active', active);
+      fullscreenButtonLabel.textContent = active ? 'Exit full screen' : 'Full screen';
     },
     onOptionsOpen(handler) {
       optionsButton.addEventListener('click', handler);

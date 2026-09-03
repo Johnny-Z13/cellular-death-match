@@ -115,6 +115,17 @@
       "evidence": "docs/assets/professor/README.md"
     },
     {
+      "path": "public/art/professor/professor-emergent-v2.png",
+      "kind": "image",
+      "sha256": "81c3405ba8f7a47e2dcb670cbfd5c01e118c98cbb9c70c2a54d41920099ca3f8",
+      "status": "provider-declared",
+      "creator": "Z13 Labs (AI-generated, identity-preserving high-resolution edit)",
+      "provider": "OpenAI Image Generation",
+      "credit": "Professor E. Mergent high-resolution character art by Z13 Labs, generated with OpenAI.",
+      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
+      "evidence": "docs/assets/professor/README.md"
+    },
+    {
       "path": "public/art/genomes/bloom_mass.png",
       "kind": "image",
       "sha256": "4d38c5a8d046d85b479231007f2e904d9cd9531930e6cd38f3394fde1f84b890",

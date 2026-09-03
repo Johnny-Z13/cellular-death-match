@@ -192,7 +192,8 @@ body::after {
   transform: translate(-50%, 0);
 }
 
-.layout.coach-welcome-active .options-button {
+.layout.coach-welcome-active .options-button,
+.layout.coach-welcome-active .fullscreen-button {
   z-index: calc(var(--z-dialog) + 1);
 }
 
@@ -294,10 +295,52 @@ canvas {
 
 .fullscreen-button {
   right: max(12px, env(safe-area-inset-right));
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.fullscreen-button__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.fullscreen-button__icon {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  stroke-width: 1.85;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 180ms ease, filter 180ms ease;
+}
+
+.fullscreen-button__exit-icon,
+.fullscreen-button.is-active .fullscreen-button__enter-icon {
+  display: none;
+}
+
+.fullscreen-button.is-active .fullscreen-button__exit-icon {
+  display: block;
+}
+
+.fullscreen-button:hover .fullscreen-button__icon,
+.fullscreen-button:focus-visible .fullscreen-button__icon {
+  transform: scale(1.08);
+  filter: drop-shadow(0 0 7px rgba(91, 233, 214, 0.72));
 }
 
 .options-button {
-  right: calc(106px + env(safe-area-inset-right));
+  right: calc(66px + env(safe-area-inset-right));
   display: grid;
   place-items: center;
   width: 44px;
@@ -2353,6 +2396,7 @@ canvas {
 .layout[data-screen="arena"].presentation-mode .life-panel,
 .layout[data-screen="arena"].presentation-mode .ticker,
 .layout[data-screen="arena"].presentation-mode .mobile-shell,
+.layout[data-screen="arena"].presentation-mode .toolbox-more,
 .layout[data-screen="arena"].presentation-mode .notebook-button,
 .layout[data-screen="arena"].presentation-mode .options-button,
 .layout[data-screen="arena"].presentation-mode .options-scrim,
@@ -2370,28 +2414,36 @@ canvas {
 }
 
 .layout[data-screen="arena"].presentation-mode .fullscreen-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
+  display: grid;
+  place-items: center;
   top: calc(10px + env(safe-area-inset-top));
   right: calc(10px + env(safe-area-inset-right));
-  width: auto;
-  min-width: 112px;
-  height: 44px;
-  padding: 0 12px;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  padding: 0;
   z-index: 20;
-  border-color: rgba(216, 248, 255, 0.5);
-  background: rgba(5, 10, 12, 0.72);
-  color: #d8f8ff;
-  font-size: 10px;
-  line-height: 1;
+  border-color: rgba(216, 248, 255, 0.18);
+  border-radius: 9px;
+  background: rgba(5, 10, 12, 0.34);
+  color: rgba(216, 248, 255, 0.64);
+  box-shadow: none;
+  opacity: 0.72;
 }
 
-.layout[data-screen="arena"].presentation-mode .fullscreen-button::before {
-  content: "←";
-  font-size: 16px;
-  font-weight: 800;
+.layout[data-screen="arena"].presentation-mode .fullscreen-button:hover,
+.layout[data-screen="arena"].presentation-mode .fullscreen-button:focus-visible {
+  border-color: rgba(216, 248, 255, 0.4);
+  background: rgba(5, 10, 12, 0.62);
+  color: #d8f8ff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  opacity: 1;
+}
+
+.layout[data-screen="arena"].presentation-mode .fullscreen-button__icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.6;
 }
 
 .layout[data-screen="arena"].presentation-mode canvas {
@@ -4291,8 +4343,7 @@ canvas {
 
   .fullscreen-button {
     top: max(8px, env(safe-area-inset-top));
-    padding: 8px 9px;
-    font-size: 10px;
+    padding: 0;
     right: max(10px, env(safe-area-inset-right));
     min-height: 44px;
   }
@@ -4301,7 +4352,7 @@ canvas {
     top: max(8px, env(safe-area-inset-top));
     padding: 8px 9px;
     font-size: 10px;
-    right: calc(92px + env(safe-area-inset-right));
+    right: calc(64px + env(safe-area-inset-right));
     min-height: 44px;
   }
 
@@ -6631,12 +6682,13 @@ canvas {
   }
 
   .layout[data-screen="arena"] .fullscreen-button {
-    display: none;
+    display: grid;
+    right: max(10px, calc(env(safe-area-inset-right) + 10px));
   }
 
   .layout[data-screen="arena"] .options-button {
     top: max(10px, calc(env(safe-area-inset-top) + 10px));
-    right: max(10px, calc(env(safe-area-inset-right) + 10px));
+    right: max(64px, calc(env(safe-area-inset-right) + 64px));
     width: 44px;
     min-width: 44px;
     min-height: 44px;
@@ -7807,10 +7859,10 @@ canvas {
   }
 }
 
-/* Arena phone CSS intentionally hides the entry control. Fullscreen state is
-   the exception: its explicit, safe-area-aware exit must always win. */
+/* Fullscreen stays in the top-level phone chrome, with the active-state exit
+   icon retaining the same safe-area-aware position. */
 .layout[data-screen="arena"].presentation-mode .fullscreen-button {
-  display: flex;
+  display: grid;
 }
 
 /* ---- Consistent Professor portrait grade ------------------------------ */
@@ -7879,7 +7931,7 @@ canvas {
     align-items: center;
     gap: 4px 10px;
     min-width: 0;
-    padding: 0 50px 3px 7px;
+    padding: 0 104px 3px 7px;
     border-bottom: 1px solid rgba(120, 196, 200, 0.14);
   }
 
@@ -7960,7 +8012,7 @@ canvas {
     align-content: center;
     min-width: 0;
     overflow: hidden;
-    padding: 4px 49px 4px 8px;
+    padding: 4px 103px 4px 8px;
   }
 
   .layout[data-screen="arena"] .hud-director-head {
@@ -8085,7 +8137,7 @@ canvas {
 
   .layout[data-screen="arena"] .options-button {
     top: calc(max(5px, env(safe-area-inset-top)) + 6px);
-    right: max(10px, calc(env(safe-area-inset-right) + 10px));
+    right: max(64px, calc(env(safe-area-inset-right) + 64px));
   }
 }
 

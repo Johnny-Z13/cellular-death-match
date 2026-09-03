@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
   "registry": "docs/publishing/evidence/crazygames-asset-attributions.json",
-  "registrySha256": "c24223d29a50ffce7f23cc05fec917663aac1acf48b71afb12e3daa99ba0ea88",
+  "registrySha256": "5f75050314202401d5db21c1bc3ee985262d24c7ed2901b52b1f6352d4a75e4a",
   "scanRoots": [
     "public"
   ],
   "summary": {
-    "registeredAssets": 50,
-    "observedAssets": 50,
+    "registeredAssets": 51,
+    "observedAssets": 51,
     "releaseClearedAssets": 0,
     "statusCounts": {
-      "provider-declared": 50
+      "provider-declared": 51
     },
     "integrityCounts": {
-      "matched": 50
+      "matched": 51
     },
     "releaseReady": false,
     "releaseBlockers": [
@@ -134,6 +134,11 @@
       },
       {
         "path": "public/art/professor/professor-emergent-v1.png",
+        "status": "provider-declared",
+        "reason": "Provider route declared; evidence and approval pending"
+      },
+      {
+        "path": "public/art/professor/professor-emergent-v2.png",
         "status": "provider-declared",
         "reason": "Provider route declared; evidence and approval pending"
       },
@@ -650,6 +655,22 @@
       "evidence": "docs/assets/professor/README.md",
       "bytes": 720845,
       "expectedSha256": "65db0f9ae845ae5066228f39469752c57200a1bfbbea0889c1fa30de9cbe5d7a",
+      "integrity": "matched",
+      "declaredStatus": "provider-declared",
+      "effectiveStatus": "provider-declared"
+    },
+    {
+      "path": "public/art/professor/professor-emergent-v2.png",
+      "kind": "image",
+      "sha256": "81c3405ba8f7a47e2dcb670cbfd5c01e118c98cbb9c70c2a54d41920099ca3f8",
+      "status": "provider-declared",
+      "creator": "Z13 Labs (AI-generated, identity-preserving high-resolution edit)",
+      "provider": "OpenAI Image Generation",
+      "credit": "Professor E. Mergent high-resolution character art by Z13 Labs, generated with OpenAI.",
+      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
+      "evidence": "docs/assets/professor/README.md",
+      "bytes": 2414301,
+      "expectedSha256": "81c3405ba8f7a47e2dcb670cbfd5c01e118c98cbb9c70c2a54d41920099ca3f8",
       "integrity": "matched",
       "declaredStatus": "provider-declared",
       "effectiveStatus": "provider-declared"

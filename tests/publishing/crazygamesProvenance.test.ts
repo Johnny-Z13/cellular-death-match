@@ -93,7 +93,7 @@ describe('CrazyGames asset provenance', () => {
     const credits = readFileSync(creditsPath, 'utf8')
     const observed = registry.scanRoots.flatMap(listMedia).sort()
 
-    expect(observed).toHaveLength(50)
+    expect(observed).toHaveLength(51)
     expect(report.summary.observedAssets).toBe(observed.length)
     expect(report.assets.filter((asset) => asset.integrity === 'matched')).toHaveLength(observed.length)
 
@@ -156,7 +156,8 @@ describe('CrazyGames asset provenance', () => {
 
     expect(report.summary.releaseReady).toBe(false)
     expect(report.summary.releaseBlockers).toHaveLength(nonCleared.length)
-    expect(registry.assets).toHaveLength(50)
+    expect(registry.assets).toHaveLength(51)
+    expect(registry.assets.some((asset) => asset.path === 'public/art/professor/professor-emergent-v2.png')).toBe(true)
     expect(registry.assets.some((asset) => asset.path === 'public/art/ui/onboarding-pointer.png')).toBe(false)
     expect(registry.assets.filter((asset) => asset.status === 'review-required')).toHaveLength(0)
   })

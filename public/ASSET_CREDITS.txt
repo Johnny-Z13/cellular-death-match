@@ -171,6 +171,13 @@ public/art/professor/professor-emergent-v1.png
   Release status: Provider route declared; evidence and approval pending
   SHA-256: 65db0f9ae845ae5066228f39469752c57200a1bfbbea0889c1fa30de9cbe5d7a
 
+public/art/professor/professor-emergent-v2.png
+  Credit: Professor E. Mergent high-resolution character art by Z13 Labs, generated with OpenAI.
+  Provider: OpenAI Image Generation
+  Terms/evidence: https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending. docs/assets/professor/README.md
+  Release status: Provider route declared; evidence and approval pending
+  SHA-256: 81c3405ba8f7a47e2dcb670cbfd5c01e118c98cbb9c70c2a54d41920099ca3f8
+
 public/art/title-keyart-1024.png
   Credit: Cellular Death Match title art by Z13 Labs, generated with Google Gemini.
   Provider: Google Gemini API / gemini-2.5-flash-image

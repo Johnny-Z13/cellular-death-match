@@ -8,10 +8,10 @@ const mainSource = readFileSync('src/main.ts', 'utf8');
 
 describe('Professor onboarding pointer', () => {
   it('uses the Professor portrait as one decorative global guide', () => {
-    expect(existsSync('public/art/professor/professor-emergent-v1.png')).toBe(true);
+    expect(existsSync('public/art/professor/professor-emergent-v2.png')).toBe(true);
     expect(html).toContain('id="onboarding-guide-pointer"');
     expect(html).toContain('class="onboarding-professor-pointer"');
-    expect(html).toContain('src="/art/professor/professor-emergent-v1.png"');
+    expect(html).toContain('src="/art/professor/professor-emergent-v2.png"');
     expect(html).toContain('alt=""');
   });
 
