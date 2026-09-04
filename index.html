@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/src/styles.css?v=20260828-atlas-first-1" />
+    <link rel="stylesheet" href="/src/styles.css?v=20260904-preview-1" />
     <link rel="stylesheet" href="/src/arena-layout.css?v=20260903-director-pass-1" />
   </head>
   <body>
@@ -34,6 +34,7 @@
         ></canvas>
         <div class="dish-glass" aria-hidden="true"></div>
         <button id="notebook-button" class="notebook-button notebook-tab" type="button" aria-label="Open Discoverer's Notebook">Notebook</button>
+        <button id="preview-exit" class="preview-exit" type="button" hidden aria-label="Exit temporary preview and return to your saved laboratory">Preview · Exit</button>
       </div>
       <span id="simulation-paused-badge" class="simulation-paused-badge" role="status" aria-live="polite" aria-hidden="true">Culture paused</span>
       <div id="onboarding-guide-pointer" class="onboarding-professor-pointer" aria-hidden="true">
@@ -185,13 +186,13 @@
           </label>
           <label class="debug-speed debug-only">
             <span>sim speed</span>
-            <input id="dbg-sim-speed" type="range" min="30" max="90" step="1" value="72" />
-            <b id="dbg-sim-speed-value">72 tick/s</b>
+            <input id="dbg-sim-speed" type="range" min="30" max="90" step="1" value="60" />
+            <b id="dbg-sim-speed-value">60 tick/s</b>
           </label>
           <div class="options-data-actions" aria-label="Experience controls">
             <button id="dbg-reveal-discoveries" class="debug-mini-button options-preview-button" type="button">
               <strong>Reveal all</strong>
-              <span>Open a fully stocked late-game trial</span>
+              <span>Try a fully stocked trial. Your save stays intact.</span>
             </button>
             <button id="dbg-clear-discoveries" class="debug-mini-button options-delete-button" type="button">
               <strong>Delete data</strong>

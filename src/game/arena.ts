@@ -41,7 +41,7 @@ import { swarmletStep } from './enemies/swarmlet';
 import { mirrorStep } from './enemies/mirror';
 import { bossStep, type BossState } from './enemies/boss';
 import { displacementVec } from './geometry';
-import { getBreedProfile, getReagentShift, type BreedProfileId } from '../sim/breedProfiles';
+import { clampReagentShift, getBreedProfile, getReagentShift, type BreedProfileId } from '../sim/breedProfiles';
 import { createHomeostasisTracker } from './homeostasis';
 import { getEscalation } from './escalation';
 import {
@@ -330,7 +330,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
   const trailEffects: ToolEffect[] = [];
   let lastEggCellId: CellId | null = null;
   let lastTrailStamp: [number, number] | null = null;
-  let pasteDrawnSinceCharge = 0;
+  let pastePathRemaining = 0;
   const dishEvents: DishEventMarker[] = [];
   let nextDishEventId = 1;
   const toolStates: Record<LabTool, ToolState> = toolLoadoutFor(opts.player);
@@ -607,6 +607,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       // opening charge) rather than continuing the previous line. The cooldown
       // runs per stroke, so it starts here rather than per stamp.
       lastTrailStamp = null;
+      pastePathRemaining = 0;
       if (pasteStrokeStamped) {
         pasteStrokeStamped = false;
         startToolCooldown('paste');
@@ -620,7 +621,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
     },
     applyTool(tool: LabTool, pos: [number, number], applyOpts: ApplyToolOpts = {}): boolean {
       const toolState = toolStates[tool];
-      if (toolState.charges <= 0) return false;
+      if (tool !== 'paste' && toolState.charges <= 0) return false;
       // Paste is gated per stroke (see endPasteStroke), not per stamp.
       if (tool !== 'paste' && toolIsCooling(tool)) return false;
       if (tool === 'egg') {
@@ -675,15 +676,18 @@ export function createArena(opts: CreateArenaOpts): Arena {
           const dy = pos[1] - lastTrailStamp[1];
           const moved = Math.hypot(dx, dy);
           if (moved < PASTE_TUNING.stampSpacing) return false;
-          pasteDrawnSinceCharge += moved;
-          if (pasteDrawnSinceCharge >= PASTE_TUNING.unitsPerCharge) {
-            pasteDrawnSinceCharge = 0;
-            toolState.charges -= 1;
-          }
+          const extraCharges = Math.max(0, Math.ceil(
+            (moved - pastePathRemaining) / PASTE_TUNING.unitsPerCharge,
+          ));
+          if (toolState.charges < extraCharges) return false;
+          toolState.charges -= extraCharges;
+          pastePathRemaining += extraCharges * PASTE_TUNING.unitsPerCharge - moved;
         } else {
           // First stamp of a stroke always costs the opening charge.
           if (toolState.charges <= 0) return false;
           if (toolIsCooling('paste')) return false;
+          toolState.charges -= 1;
+          pastePathRemaining = PASTE_TUNING.unitsPerCharge;
         }
         pasteStrokeStamped = true;
         lastTrailStamp = [pos[0], pos[1]];
@@ -878,6 +882,12 @@ export function createArena(opts: CreateArenaOpts): Arena {
         // Trail stamps pull + feed cells exactly like nutrient drops, so a drawn
         // line becomes a gentle gradient colonies drift along.
         applyToolEffects(state, trailEffects, archetypes);
+        for (const cell of state.cells.values()) {
+          if (!cell.energyShifts) continue;
+          cell.energyShifts.isingShift = clampReagentShift(cell.energyShifts.isingShift);
+          cell.energyShifts.volShift = clampReagentShift(cell.energyShifts.volShift);
+          cell.energyShifts.movShift = clampReagentShift(cell.energyShifts.movShift);
+        }
         if (agitationTicksRemaining > 0) {
           applyAgitation(state, agitationTicksRemaining / AGITATION_DURATION_TICKS);
           agitationTicksRemaining -= 1;

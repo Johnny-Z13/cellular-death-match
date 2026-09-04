@@ -120,7 +120,9 @@ off-screen reagent has a Professor beat that teaches both gestures.
 
 Options uses the laboratory cog as a persistent secondary action, including on
 the title screen. “Reveal all” is a reversible testing route into a fully
-stocked procedural Trial. “Delete data” is destructive and always requires an
+stocked procedural Trial. Preview progress lives only in memory; “Preview · Exit”
+or a reload returns to the saved laboratory, including its original checkpoint.
+“Delete data” is destructive and always requires an
 in-product confirmation that names the progress, specimens, settings, and
 tutorial state it will erase.
 

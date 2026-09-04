@@ -12,7 +12,8 @@ export const ARENA_TIMING = {
 } as const;
 
 export const SIM_SPEED_TUNING = {
-  defaultTicksPerSecond: 72,
+  // Gameplay durations and per-tick forces are authored at 60 ticks/second.
+  defaultTicksPerSecond: 60,
   minTicksPerSecond: 30,
   maxTicksPerSecond: 90,
   ticksPerSecondStep: 1,

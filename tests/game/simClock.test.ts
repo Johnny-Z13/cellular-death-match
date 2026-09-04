@@ -12,6 +12,14 @@ describe('normalizeSimTicksPerSecond', () => {
 });
 
 describe('createFixedStepClock', () => {
+  it.each([30, 60, 144])('runs a nominal 30-second interval in 30 seconds at %i Hz', (fps) => {
+    const clock = createFixedStepClock({ nowMs: 0 });
+    let ticks = 0;
+    for (let frame = 1; frame <= fps * 30; frame++) {
+      ticks += clock.consumeTicks(frame * 1000 / fps);
+    }
+    expect(ticks).toBe(60 * 30);
+  });
   it('clamps a 144Hz render loop to the configured sim speed', () => {
     const clock = createFixedStepClock({ ticksPerSecond: 72, nowMs: 0 });
     let ticks = 0;

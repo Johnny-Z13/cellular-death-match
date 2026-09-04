@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createArena, type Arena } from '../../src/game/arena';
-import { TOOL_TUNING, AGITATION_TUNING } from '../../src/content/ecologyTuning';
+import { TOOL_TUNING, AGITATION_TUNING, PASTE_TUNING } from '../../src/content/ecologyTuning';
 
 function makeArena(toolCooldownMult?: number): Arena {
   return createArena({
@@ -26,6 +26,47 @@ function tickPast(arena: Arena, ticks: number): void {
 }
 
 describe('reagent cooldowns', () => {
+  it('charges every short Paste stroke and stops when the stock is empty', () => {
+    const arena = makeArena(0);
+    for (let i = 0; i < TOOL_TUNING.paste.charges; i++) {
+      expect(arena.applyTool('paste', [10, 10])).toBe(true);
+      arena.endPasteStroke();
+      expect(arena.getToolStates().paste.charges).toBe(TOOL_TUNING.paste.charges - i - 1);
+    }
+    expect(arena.applyTool('paste', [10, 10])).toBe(false);
+  });
+
+  it('lets the last charge draw its full path and rejects excess distance without spending', () => {
+    const arena = makeArena(0);
+    for (let i = 1; i < TOOL_TUNING.paste.charges; i++) {
+      arena.applyTool('paste', [10, 10]);
+      arena.endPasteStroke();
+    }
+    expect(arena.applyTool('paste', [10, 10])).toBe(true);
+    expect(arena.getToolStates().paste.charges).toBe(0);
+    // Back and forth keeps all coordinates inside the dish.
+    for (let i = 0; i < PASTE_TUNING.unitsPerCharge / 8; i++) {
+      expect(arena.applyTool('paste', [i % 2 === 0 ? 18 : 10, 10])).toBe(true);
+    }
+    const stamps = arena.getToolEffects().length;
+    expect(arena.applyTool('paste', [18, 10])).toBe(false);
+    expect(arena.getToolEffects()).toHaveLength(stamps);
+    expect(arena.getToolStates().paste.charges).toBe(0);
+  });
+
+  it('resets paid path at stroke end and retains distance overshoot between charges', () => {
+    const arena = makeArena(0);
+    arena.applyTool('paste', [10, 10]);
+    arena.applyTool('paste', [40, 10]);
+    arena.endPasteStroke();
+    arena.applyTool('paste', [10, 10]);
+    for (const x of [40, 10, 20]) expect(arena.applyTool('paste', [x, 10])).toBe(true);
+    expect(arena.getToolStates().paste.charges).toBe(0);
+    // This stroke has used 70 of its 128 paid units, leaving 58.
+    for (const x of [40, 10, 18]) expect(arena.applyTool('paste', [x, 10])).toBe(true);
+    expect(arena.applyTool('paste', [26, 10])).toBe(false);
+  });
+
   it('rejects a same-tool reuse inside the cooldown window without spending a charge', () => {
     const arena = makeArena();
     expect(arena.applyTool('nutrient', [10, 10])).toBe(true);

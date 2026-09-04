@@ -42,6 +42,14 @@ export interface ReagentEnergyShift {
   readonly movShift: number;
 }
 
+// Combined fields may soften a force, but must never reverse it. Cap the
+// final sum, rather than each addition, so overlapping fields commute.
+export const REAGENT_SHIFT_LIMITS = { min: -0.9, max: 2 } as const;
+
+export function clampReagentShift(shift: number): number {
+  return Math.max(REAGENT_SHIFT_LIMITS.min, Math.min(REAGENT_SHIFT_LIMITS.max, shift));
+}
+
 export type ReagentShiftId = 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' | 'paste';
 
 const ZERO_SHIFT: ReagentEnergyShift = { isingShift: 0, volShift: 0, movShift: 0 };

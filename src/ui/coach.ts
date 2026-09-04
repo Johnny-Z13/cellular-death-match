@@ -40,7 +40,7 @@ const MOBILE_TOOLBOX_SEEN_KEY = 'cdm.coach.mobile-toolbox-seen.v1';
 const SUCCESS_OBSERVATION_MS = 2600;
 const SLIDE_OUT_MS = 520;
 
-export function createCoach(): Coach {
+export function createCoach(storage?: Pick<Storage, 'getItem' | 'setItem'>): Coach {
   const root = document.getElementById('coach');
   const layout = typeof document.querySelector === 'function'
     ? document.querySelector<HTMLElement>('.layout')
@@ -69,13 +69,13 @@ export function createCoach(): Coach {
 
   function seen(): boolean {
     return seenTrials().has(0) || (() => {
-      try { return window.localStorage.getItem(SEEN_KEY) === '1'; } catch { return false; }
+      try { return (storage ?? window.localStorage).getItem(SEEN_KEY) === '1'; } catch { return false; }
     })();
   }
 
   function seenTrials(): Set<number> {
     try {
-      const value = JSON.parse(window.localStorage.getItem(SEEN_TRIALS_KEY) ?? '[]');
+      const value = JSON.parse((storage ?? window.localStorage).getItem(SEEN_TRIALS_KEY) ?? '[]');
       return new Set(Array.isArray(value) ? value.filter(Number.isInteger) : []);
     } catch {
       return new Set();
@@ -86,17 +86,17 @@ export function createCoach(): Coach {
     try {
       const trials = seenTrials();
       trials.add(trialIndex);
-      window.localStorage.setItem(SEEN_TRIALS_KEY, JSON.stringify([...trials]));
-      if (trialIndex === 0) window.localStorage.setItem(SEEN_KEY, '1');
+      (storage ?? window.localStorage).setItem(SEEN_TRIALS_KEY, JSON.stringify([...trials]));
+      if (trialIndex === 0) (storage ?? window.localStorage).setItem(SEEN_KEY, '1');
     } catch { /* ignore */ }
   }
 
   function mobileToolboxLessonSeen(): boolean {
-    try { return window.localStorage.getItem(MOBILE_TOOLBOX_SEEN_KEY) === '1'; } catch { return false; }
+    try { return (storage ?? window.localStorage).getItem(MOBILE_TOOLBOX_SEEN_KEY) === '1'; } catch { return false; }
   }
 
   function markMobileToolboxLessonSeen(): void {
-    try { window.localStorage.setItem(MOBILE_TOOLBOX_SEEN_KEY, '1'); } catch { /* ignore */ }
+    try { (storage ?? window.localStorage).setItem(MOBILE_TOOLBOX_SEEN_KEY, '1'); } catch { /* ignore */ }
   }
 
   function clearPresentationTimers(): void {

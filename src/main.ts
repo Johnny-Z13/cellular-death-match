@@ -40,6 +40,7 @@ import {
   type RunCheckpoint,
 } from './game/runCheckpoint';
 import { createFixedStepClock, normalizeSimTicksPerSecond } from './game/simClock';
+import { createPreviewStorage } from './game/previewStorage';
 import { hash2 } from './game/hash';
 import { lifeformUnlocksForCurrentRun } from './game/lifeformLoadout';
 import {
@@ -143,7 +144,7 @@ if (commitDebug) {
   commitDebug.textContent = `build · ${gist}`;
 }
 
-const runtimeStorage = window.localStorage;
+const runtimeStorage = createPreviewStorage(window.localStorage);
 applyOnboardingStateReset(runtimeStorage);
 const startupBankReplay = replayPendingResearchBank(runtimeStorage);
 let persistenceUnavailable = startupBankReplay?.status === 'unavailable';
@@ -176,7 +177,7 @@ const ecologyAudio = createEcologyAudio();
 const uiAudio = createUiAudio();
 const haptics = createHaptics();
 const fx = createFx();
-const coach = createCoach();
+const coach = createCoach(runtimeStorage);
 createTitleAutomata();
 
 // Publish the HUD's live bottom edge so the Professor's transmission rail can
@@ -196,7 +197,9 @@ if (hudEl && typeof ResizeObserver === 'function') {
 }
 
 const simClock = createFixedStepClock({
-  ticksPerSecond: loadSimTicksPerSecond(runtimeStorage),
+  ticksPerSecond: layout.dataset.diagnostics === 'true'
+    ? loadSimTicksPerSecond(runtimeStorage)
+    : SIM_SPEED_TUNING.defaultTicksPerSecond,
   nowMs: performance.now(),
 });
 debug.setSimSpeedBounds(
@@ -214,6 +217,7 @@ document.addEventListener('visibilitychange', () => {
   simClock.reset(performance.now());
   lastRenderAt = Number.NEGATIVE_INFINITY;
   if (document.hidden) {
+    endPasteStroke();
     uiAudio.stopAmbience();
   } else if (!uiAudio.isMuted() && run.getState().phase === 'arena') {
     uiAudio.startAmbience();
@@ -348,6 +352,19 @@ document.getElementById('delete-data-confirm')?.addEventListener('click', () => 
   }
 });
 debug.onRevealDiscoveries(() => {
+  if (runtimeStorage.isPreview()) {
+    window.location.reload();
+    return;
+  }
+  runtimeStorage.beginPreview();
+  endPasteStroke();
+  const previewButton = document.getElementById('dbg-reveal-discoveries');
+  if (previewButton) {
+    previewButton.querySelector('strong')!.textContent = 'Exit preview';
+    previewButton.querySelector('span')!.textContent = 'Return to your saved laboratory';
+  }
+  document.getElementById('preview-exit')!.hidden = false;
+  document.getElementById('dbg-clear-discoveries')!.hidden = true;
   discoveryProgression = revealAllDiscoveryProgression(discoveryProgression);
   researchArchive = saveResearchArchive(
     discoveryStorage,
@@ -364,9 +381,10 @@ debug.onRevealDiscoveries(() => {
   debug.updateDiscoveries(discoveryDebugInfo());
   setOptionsMenuOpen(false);
   fx.playWipe();
-  fx.showToast('discovery', 'Genome Archive', 'All genomes decoded');
+  fx.showToast('discovery', 'Preview laboratory', 'Temporary progress — exit to return to your save');
   showPhase();
 });
+document.getElementById('preview-exit')?.addEventListener('click', () => window.location.reload());
 debug.onPresentationToggle(() => {
   setPresentationMode(!overlayState.presentationMode);
 });
@@ -635,6 +653,8 @@ function endPasteStroke(event?: PointerEvent): void {
 
 canvas.addEventListener('pointerup', endPasteStroke);
 canvas.addEventListener('pointercancel', endPasteStroke);
+canvas.addEventListener('lostpointercapture', endPasteStroke);
+window.addEventListener('blur', () => endPasteStroke());
 
 screens.onTitleStart(() => {
   ecologyAudio.unlock();
@@ -687,6 +707,7 @@ screens.onToolSelect((tool) => {
     return;
   }
   clearAbandonConfirmation();
+  endPasteStroke();
   coach.report(`${tool}-selected`);
   uiAudio.play('ui_select');
   selectedTool = tool;
@@ -1666,11 +1687,11 @@ function scheduleLoop(): void {
   }
 }
 
-function loadSimTicksPerSecond(storage: Storage): number {
+function loadSimTicksPerSecond(storage: Pick<Storage, 'getItem'>): number {
   return normalizeSimTicksPerSecond(storage.getItem(SIM_SPEED_TUNING.storageKey));
 }
 
-function saveSimTicksPerSecond(storage: Storage, ticksPerSecond: number): void {
+function saveSimTicksPerSecond(storage: Pick<Storage, 'setItem'>, ticksPerSecond: number): void {
   storage.setItem(SIM_SPEED_TUNING.storageKey, String(ticksPerSecond));
 }
 

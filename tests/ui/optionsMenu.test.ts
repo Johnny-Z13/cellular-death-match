@@ -21,7 +21,7 @@ describe('options menu', () => {
     expect(html).toContain('class="options-button__cog"');
     expect(html).toContain('M12.22 2h-.44');
     expect(html).toContain('id="dbg-reveal-discoveries"');
-    expect(html).toContain('Open a fully stocked late-game trial');
+    expect(html).toContain('Try a fully stocked trial. Your save stays intact.');
     expect(html).toContain('id="dbg-clear-discoveries"');
     expect(html).toContain('Return to the first-time Professor tutorial');
   });

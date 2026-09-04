@@ -53,7 +53,7 @@ describe('genome decode presentation', () => {
     const revealAllStart = mainSource.indexOf('debug.onRevealDiscoveries(() => {');
     const revealAllEnd = mainSource.indexOf('\n});', revealAllStart);
     const revealAllBody = mainSource.slice(revealAllStart, revealAllEnd);
-    expect(revealAllBody).toContain("fx.showToast('discovery', 'Genome Archive', 'All genomes decoded')");
+    expect(revealAllBody).toContain("fx.showToast('discovery', 'Preview laboratory', 'Temporary progress — exit to return to your save')");
     expect(revealAllBody).not.toContain('fx.showGenomeDecode');
   });
 
