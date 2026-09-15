@@ -12,6 +12,15 @@ async function openPasteStudy(page: Page): Promise<void> {
   await expect(page.locator('#game')).toBeVisible();
 }
 
+async function waitForPasteRecharge(page: Page): Promise<void> {
+  const remaining = () => page.locator('[data-tool="paste"]').evaluate((element) =>
+    Number(getComputedStyle(element).getPropertyValue('--cooldown')));
+  // Ending a stroke starts cooldown in the arena; the HUD publishes it on the
+  // next frame. Observe that transition before accepting the next ready state.
+  await expect.poll(remaining).toBeGreaterThan(0);
+  await expect.poll(remaining).toBe(0);
+}
+
 test('ignores secondary mouse buttons without spending a reagent', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'Mouse-button regression.');
   const runtime = monitorRuntime(page);
@@ -64,8 +73,7 @@ test('keeps a Paste stroke owned by its first finger', async ({ page }, testInfo
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ ...first, x: box.x + box.width * 0.8 }, second] });
   await expect(stock).toHaveText('1/3');
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
-  await expect.poll(() => page.locator('[data-tool="paste"]').evaluate((element) =>
-    getComputedStyle(element).getPropertyValue('--cooldown').trim())).toBe('0');
+  await waitForPasteRecharge(page);
   await page.touchscreen.tap(first.x, first.y);
   await expect(stock).toHaveText('0/3');
   await page.screenshot({ path: testInfo.outputPath('paste-multitouch.png') });
@@ -95,8 +103,7 @@ test('draws an uninterrupted native touch trail and recovers after cancellation'
   }
   await expect(stock).toHaveText('1/3');
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
-  await expect.poll(() => page.locator('[data-tool="paste"]').evaluate((element) =>
-    getComputedStyle(element).getPropertyValue('--cooldown').trim())).toBe('0');
+  await waitForPasteRecharge(page);
   await page.touchscreen.tap(point.x, point.y);
   await expect(stock).toHaveText('0/3');
   await page.screenshot({ path: testInfo.outputPath('native-paste-trail.png') });
@@ -111,8 +118,7 @@ test('requires a fresh keypress for each keyboard Paste stamp', async ({ page },
   await page.locator('#game').focus();
   await page.keyboard.down('Enter');
   await expect(stock).toHaveText('2/3');
-  await expect.poll(() => page.locator('[data-tool="paste"]').evaluate((element) =>
-    getComputedStyle(element).getPropertyValue('--cooldown').trim())).toBe('0');
+  await waitForPasteRecharge(page);
   await page.keyboard.down('Enter');
   await expect(stock).toHaveText('2/3');
   await page.keyboard.up('Enter');

@@ -54,6 +54,12 @@ confirmed browser gesture cancellation as the cause of interrupted phone drags.
   It remained an active Study; this is not a claim that an idle dish wins.
 - Representative title, gameplay, Trial 5, resumed Open Lab, touch-input and
   Notebook screenshots were inspected.
+- Production verification at `cellular-death-match.vercel.app` completed the
+  five-Trial journey and responsive checks. Rebuilt committed JS/CSS matched the
+  deployed assets byte for byte. Three repetitions of the phone, landscape and
+  desktop input paths passed all 18 applicable checks. This exposed and removed
+  a test timing race: recovery now waits to see cooldown start before waiting
+  for it to finish, rather than accepting the previous frame's ready state.
 
 ## Run and remaining checks
 
