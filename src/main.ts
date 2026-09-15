@@ -450,6 +450,7 @@ screens.onLifeformSelect((id) => {
     return false;
   }
   clearAbandonConfirmation();
+  endPasteStroke();
   coach.report(`lifeform:${id}`);
   // Choosing a specimen is also a semantic Egg selection. This keeps the
   // first lesson synchronized when a curious player enters through Eggs
@@ -505,7 +506,7 @@ canvas.addEventListener('animationend', () => {
   canvas.classList.remove('dish-shake', 'dish-shake-soft');
 });
 const juice = createJuice(canvas, LX, LY);
-let pasteStrokeActive = false;
+let pastePointerId: number | null = null;
 let lastPasteSoundAt = 0;
 let pasteCursor: [number, number] | null = null;
 
@@ -554,6 +555,9 @@ function applySelectedToolAt(pos: [number, number]): boolean {
     !arena
     || run.getState().phase !== 'arena'
     || pendingBankPlan
+    || document.hidden
+    || overlayState.menuOpen
+    || overlayState.notebookOpen
     || coach.isMobileToolboxLessonActive()
   ) return false;
   if (!exactLessonAllowsDishAction(selectedTool)) {
@@ -604,20 +608,23 @@ function applySelectedToolAt(pos: [number, number]): boolean {
 }
 
 canvas.addEventListener('pointerdown', (event) => {
-  if (!arena || run.getState().phase !== 'arena' || pendingBankPlan) return;
+  // A resting second finger or a context-menu click must never spend stock
+  // or join two unrelated positions into a single painted trail.
+  if (!event.isPrimary || event.button !== 0 || pastePointerId !== null) return;
   const pos = canvasEventToGridPos(event);
+  if (!applySelectedToolAt(pos)) return;
   if (selectedTool === 'paste') {
     // Begin a drawn stroke; subsequent pointermove events lay the trail.
-    pasteStrokeActive = true;
+    pastePointerId = event.pointerId;
     pasteCursor = pos;
     canvas.setPointerCapture(event.pointerId);
   }
-  applySelectedToolAt(pos);
 });
 
 canvas.addEventListener('keydown', (event) => {
   if (event.key !== 'Enter' && event.key !== ' ') return;
   event.preventDefault();
+  if (event.repeat || pastePointerId !== null) return;
   if (!applySelectedToolAt([LX / 2, LY / 2])) return;
   // Keyboard Paste places one deliberate stamp rather than entering a drag
   // state that cannot be completed without a pointer.
@@ -625,7 +632,11 @@ canvas.addEventListener('keydown', (event) => {
 });
 
 canvas.addEventListener('pointermove', (event) => {
-  if (!pasteStrokeActive || !arena || run.getState().phase !== 'arena' || pendingBankPlan) return;
+  if (event.pointerId !== pastePointerId || !arena) return;
+  if (run.getState().phase !== 'arena' || pendingBankPlan || document.hidden || blockingOverlayOpen()) {
+    endPasteStroke();
+    return;
+  }
   const pos = canvasEventToGridPos(event);
   pasteCursor = pos;
   if (arena.applyTool('paste', pos)) {
@@ -642,13 +653,12 @@ canvas.addEventListener('pointermove', (event) => {
 });
 
 function endPasteStroke(event?: PointerEvent): void {
-  if (!pasteStrokeActive) return;
-  pasteStrokeActive = false;
+  if (pastePointerId === null || (event && event.pointerId !== pastePointerId)) return;
+  const pointerId = pastePointerId;
+  pastePointerId = null;
   pasteCursor = null;
   arena?.endPasteStroke();
-  if (event) {
-    try { canvas.releasePointerCapture(event.pointerId); } catch { /* already released */ }
-  }
+  if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
 }
 
 canvas.addEventListener('pointerup', endPasteStroke);
@@ -864,6 +874,7 @@ screens.setSelectedLifeform(selectedEggArchetype);
 showPhase();
 
 function showPhase() {
+  endPasteStroke();
   // Hide every overlay; show the one for the current phase.
   screens.hide('title');
   screens.hide('loadout');
@@ -1206,6 +1217,7 @@ function totalStrainsAvailableForReport(): number {
 }
 
 function startNewFight() {
+  endPasteStroke();
   screens.setToolboxLessonActive(false);
   screens.clearStudyStartAnnouncement();
   const playerCfg = run.getPlayerConfig();
@@ -1405,6 +1417,7 @@ function loop() {
   const culturePaused = blockingOverlayOpen();
   setCulturePaused(culturePaused);
   if (culturePaused) {
+    endPasteStroke();
     // Reset on every paused frame so closing Options never replays accumulated
     // wall-clock time as a burst of simulation ticks.
     simClock.reset(now);
@@ -2296,6 +2309,7 @@ function setOptionsMenuOpen(open: boolean): void {
   const optionsPanel = document.getElementById('debug');
   const optionsButton = document.getElementById('options-button');
   if (open) {
+    endPasteStroke();
     clearAbandonConfirmation();
     const activeElement = document.activeElement;
     optionsReturnFocus = activeElement instanceof HTMLElement && activeElement !== document.body
@@ -2382,6 +2396,7 @@ function activeStudySnapshot(): ActiveStudySnapshot | null {
 }
 
 function openNotebook(): void {
+  endPasteStroke();
   clearAbandonConfirmation();
   // Render with fresh-discovery badges first, then acknowledge them so the
   // NEW markers show this open and clear (persistently) for the next one.

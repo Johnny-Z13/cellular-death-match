@@ -212,6 +212,12 @@ canvas {
   max-height: 100%;
 }
 
+#game {
+  /* Dish drags paint reagent trails; browser panning would cancel the stroke.
+     Keep native scrolling available on the reagent rack and reading panels. */
+  touch-action: none;
+}
+
 #game:focus-visible {
   outline: 2px solid var(--bio-bright);
   outline-offset: 4px;
@@ -4949,6 +4955,37 @@ canvas {
     min-width: 68px;
     min-height: 62px;
     padding: 5px;
+  }
+
+  /* The full reagent rack must keep the same height as the opening two tools.
+     Desktop's icon/copy/count columns squeeze long labels into the dish. */
+  .toolbox .tool-button {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 22px auto auto;
+    justify-items: center;
+    gap: 2px;
+    height: 62px;
+    text-align: center;
+  }
+
+  .toolbox .tool-button .tool-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .toolbox .tool-button small {
+    display: none;
+  }
+
+  .toolbox .tool-button strong {
+    font-size: 8px;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .toolbox .tool-button b {
+    font-size: 9px;
+    line-height: 1;
   }
 
   .life-panel,
