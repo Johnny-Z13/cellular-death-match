@@ -9,6 +9,8 @@ export interface ObjectiveProgress {
   def: ObjectiveDef;
   status: ObjectiveStatus;
   summary: string;
+  /** 0..1 measurable progress toward the goal; null for yes/no objectives until met. */
+  fraction: number | null;
   urgency: 'safe' | 'warning' | 'critical';
   met: boolean;
   latches: boolean;
@@ -120,7 +122,7 @@ export function evaluateObjective(
         ? `${name} alive · specimen ready to bank`
         : discoveredTick !== undefined
           ? `${name} observed · keep it alive`
-          : `${name} not yet observed`);
+          : `${name} not yet observed`, discoveredTick !== undefined ? 0.5 : 0);
     }
     case 'understand_recipe': {
       const recipeId = objective.recipeId;
@@ -163,20 +165,22 @@ export function evaluateObjective(
       const summary = observationTicks > 0 && !observed
         ? `${metrics.protectedCultureCount} / ${minCount} protected · hold ${secondsRemaining}s`
         : `${metrics.protectedCultureCount} / ${minCount} protected cultures`;
-      return progress(objective, ok && observed, false, deadline && !ok, urgency, summary);
+      return progress(objective, ok && observed, false, deadline && !ok, urgency, summary,
+        ratio(metrics.protectedCultureCount, minCount));
     }
     case 'breed_archetype': {
       const archetype = objective.archetype ?? 'swarmlet';
       const targetCount = objective.targetCount ?? OBJECTIVE_TUNING.breedTargetCount;
       const count = metrics.archetypeCounts.get(archetype) ?? 0;
       const ok = count >= targetCount;
-      return progress(objective, ok, true, deadline && !ok, urgency, `${count} / ${targetCount} ${archetype} cultures`);
+      return progress(objective, ok, true, deadline && !ok, urgency, `${count} / ${targetCount} ${archetype} cultures`, ratio(count, targetCount));
     }
     case 'controlled_reaction': {
       const targetCount = objective.targetCount ?? OBJECTIVE_TUNING.controlledReactionMinCount;
       const minCoverage = objective.minCoverage ?? OBJECTIVE_TUNING.controlledReactionMinCoverage;
       const ok = context.reactions >= targetCount && metrics.coverage >= minCoverage;
-      return progress(objective, ok, true, deadline && !ok, urgency, `${context.reactions} / ${targetCount} reactions, ${Math.round(metrics.coverage * 100)}% living coverage`);
+      return progress(objective, ok, true, deadline && !ok, urgency, `${context.reactions} / ${targetCount} reactions, ${Math.round(metrics.coverage * 100)}% living coverage`,
+        (ratio(context.reactions, targetCount) + ratio(metrics.coverage, minCoverage)) / 2);
     }
     case 'balanced_ecology': {
       const maxDominance = objective.maxDominance ?? OBJECTIVE_TUNING.balanceMaxDominance;
@@ -197,19 +201,20 @@ export function evaluateObjective(
     case 'mega_culture': {
       const target = objective.volumeTarget ?? MEGA_CULTURE_VOLUME;
       const ok = metrics.maxLifeformVolume > target;
-      return progress(objective, ok, true, deadline && !ok, urgency, `${Math.round(metrics.maxLifeformVolume)} / >${target} culture volume`);
+      return progress(objective, ok, true, deadline && !ok, urgency, `${Math.round(metrics.maxLifeformVolume)} / >${target} culture volume`, ratio(metrics.maxLifeformVolume, target));
     }
     case 'reaction_chain': {
       const targetCount = objective.targetCount ?? REACTION_CHAIN_COUNT;
       const ok = context.reactions >= targetCount;
-      return progress(objective, ok, true, deadline && !ok, urgency, `${context.reactions} / ${targetCount} reactions`);
+      return progress(objective, ok, true, deadline && !ok, urgency, `${context.reactions} / ${targetCount} reactions`, ratio(context.reactions, targetCount));
     }
     case 'balance_keeper': {
       const maxDominance = objective.maxDominance ?? BALANCE_KEEPER_MAX_DOMINANCE;
       const sustainTicks = objective.sustainTicks ?? SUSTAIN_30_SECONDS;
       const ok = context.runtime.balanceTicks >= sustainTicks;
       const seconds = Math.min(Math.floor(context.runtime.balanceTicks / 60), Math.ceil(sustainTicks / 60));
-      return progress(objective, ok, true, deadline && !ok, urgency, `${seconds}s / ${Math.ceil(sustainTicks / 60)}s balanced, ${Math.round(metrics.maxBreedDominance * 100)}% / ${Math.round(maxDominance * 100)}% dominance`);
+      return progress(objective, ok, true, deadline && !ok, urgency, `${seconds}s / ${Math.ceil(sustainTicks / 60)}s balanced, ${Math.round(metrics.maxBreedDominance * 100)}% / ${Math.round(maxDominance * 100)}% dominance`,
+        ratio(context.runtime.balanceTicks, sustainTicks));
     }
     case 'crisis_survivor': {
       const minCount = objective.minCount ?? CRISIS_SURVIVOR_MIN_CULTURES;
@@ -237,20 +242,22 @@ export function evaluateObjective(
         }
       }
       const ok = maxCount >= targetCount;
-      return progress(objective, ok, true, deadline && !ok, urgency, `${maxCount} / ${targetCount} ${maxArchetype ?? 'matching'} cultures`);
+      return progress(objective, ok, true, deadline && !ok, urgency, `${maxCount} / ${targetCount} ${maxArchetype ?? 'matching'} cultures`, ratio(maxCount, targetCount));
     }
     case 'symbiosis': {
       const sustainTicks = objective.sustainTicks ?? SUSTAIN_30_SECONDS;
       const ok = context.runtime.symbiosisTicks >= sustainTicks;
       const seconds = Math.min(Math.floor(context.runtime.symbiosisTicks / 60), Math.ceil(sustainTicks / 60));
-      return progress(objective, ok, true, deadline && !ok, urgency, `${seconds}s / ${Math.ceil(sustainTicks / 60)}s nearby coexistence`);
+      return progress(objective, ok, true, deadline && !ok, urgency, `${seconds}s / ${Math.ceil(sustainTicks / 60)}s nearby coexistence`,
+        ratio(context.runtime.symbiosisTicks, sustainTicks));
     }
     case 'extinction_reversal': {
       const targetCount = objective.targetCount ?? EXTINCTION_RECOVERY_COUNT;
       const ok = context.runtime.sawExtinctionLow && metrics.livingLifeforms >= targetCount;
       return progress(objective, ok, true, deadline && !ok, urgency, context.runtime.sawExtinctionLow
         ? `${metrics.livingLifeforms} / ${targetCount} recovered cultures`
-        : 'Dish has not dropped to extinction threshold');
+        : 'Dish has not dropped to extinction threshold',
+        context.runtime.sawExtinctionLow ? 0.5 + ratio(metrics.livingLifeforms, targetCount) / 2 : 0);
     }
     default:
       return assertNever(objective.kind);
@@ -264,16 +271,23 @@ function progress(
   failed: boolean,
   urgency: ObjectiveProgress['urgency'],
   summary: string,
+  fraction: number | null = null,
 ): ObjectiveProgress {
   return {
     def,
     status: met ? 'satisfied' : failed ? 'failed' : 'running',
     summary,
+    fraction: met ? 1 : fraction === null ? null : ratio(fraction, 1),
     urgency,
     met,
     latches,
     complete: met,
   };
+}
+
+function ratio(value: number, target: number): number {
+  if (!(target > 0)) return 0;
+  return Math.max(0, Math.min(1, value / target));
 }
 
 function objectiveUrgency(tickNo: number, epochTicks: number): ObjectiveProgress['urgency'] {

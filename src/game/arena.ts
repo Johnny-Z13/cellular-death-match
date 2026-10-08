@@ -566,7 +566,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       const progress = currentObjectiveProgress();
       if (progress.met && progress.latches) objectiveAchieved = true;
       const complete = progress.latches ? objectiveAchieved : progress.met;
-      return { ...progress, complete };
+      return { ...progress, complete, fraction: complete ? 1 : progress.fraction };
     },
     getToolStates(): Record<LabTool, ToolState> {
       const snapshot = (tool: LabTool): ToolState => ({
