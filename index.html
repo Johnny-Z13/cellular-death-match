@@ -17,7 +17,8 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/src/styles.css?v=20260915-touch-polish-1" />
-    <link rel="stylesheet" href="/src/arena-layout.css?v=20260903-director-pass-1" />
+    <link rel="stylesheet" href="/src/arena-layout.css?v=20261009-legibility-1" />
+    <link rel="stylesheet" href="/src/legibility.css?v=20261009-legibility-1" />
   </head>
   <body>
     <main class="layout" data-screen="title">
@@ -346,7 +347,16 @@
         <div class="hud-summary" aria-label="Trial telemetry">
           <div class="hud-row"><span id="hud-fight-key" class="hud-key">Trial</span><span id="hud-fight" class="hud-val">1 / 5</span></div>
           <div class="hud-row hud-window-row"><span id="hud-time-key" class="hud-key">Window</span><span id="hud-progress" class="hud-val">Open</span></div>
-          <div class="hud-row hud-equilibrium-row"><span class="hud-key">Equilibrium</span><span id="hud-equilibrium" class="hud-val">0%</span></div>
+          <div class="hud-row hud-equilibrium-row" title="Balance: keep 3 or more strains steady for 20 seconds and you may finish the trial."><span class="hud-key">Balance</span><span id="hud-equilibrium" class="hud-val">0%</span></div>
+          <div id="hud-goal" class="hud-goal" role="group" aria-label="Current goal">
+            <span class="hud-goal-mark" aria-hidden="true"></span>
+            <span class="hud-goal-copy">
+              <span class="hud-goal-key">Goal</span>
+              <strong id="hud-goal-line" class="hud-goal-line">—</strong>
+            </span>
+            <span id="hud-goal-value" class="hud-goal-value"></span>
+            <span class="hud-goal-meter" aria-hidden="true"><span id="hud-goal-fill" class="hud-goal-fill"></span></span>
+          </div>
         </div>
         <div id="hud-director" class="hud-director">
           <div class="hud-director-portrait" aria-hidden="true">

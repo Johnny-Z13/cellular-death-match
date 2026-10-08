@@ -176,11 +176,6 @@
     display: none;
   }
 
-  .layout[data-screen="arena"].coach-active .hud {
-    opacity: 0;
-    visibility: hidden;
-  }
-
   .layout[data-screen="arena"] .coach:not(.coach-welcome),
   .layout[data-screen="arena"] .coach.coach-prompt:not(.coach-welcome),
   .layout[data-screen="arena"] .coach.coach-intro:not(.coach-welcome),

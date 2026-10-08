@@ -6,6 +6,7 @@ import { createScreens, type ToolId } from './ui/screens';
 import { AGITATION_TUNING, SIM_SPEED_TUNING, TOOL_TUNING } from './content/ecologyTuning';
 import { renderLoadoutScreen } from './ui/loadoutScreen';
 import { getUpgradeDef } from './content/upgrades';
+import { goalLineFor } from './content/goalCopy';
 import { COMMON_COLD_CASE, trialForIndex } from './content/researchCases';
 import { loadCaseRecord, recordCompletedTrial } from './game/caseRecord';
 import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/enemies';
@@ -184,10 +185,22 @@ createTitleAutomata();
 // use the quiet band above the dish without colliding with wrapped status copy.
 const hudEl = document.getElementById('hud');
 if (hudEl && typeof ResizeObserver === 'function') {
+  const hudDirectorEl = document.getElementById('hud-director');
   const publishHudBottom = () => {
     const r = hudEl.getBoundingClientRect();
     const bottom = hudEl.classList.contains('visible') ? r.bottom : 0;
     layout.style.setProperty('--hud-bottom', `${Math.round(bottom)}px`);
+    // Dr. E's transmission docks over the director slot so the goal strip
+    // above it stays readable while he speaks.
+    const slot = hudDirectorEl?.getBoundingClientRect();
+    const docked = Boolean(slot && slot.height > 0 && slot.width > 0 && bottom > 0);
+    layout.classList.toggle('hud-slot-docked', docked);
+    if (slot && docked) {
+      layout.style.setProperty('--hud-slot-top', `${Math.round(slot.top)}px`);
+      layout.style.setProperty('--hud-slot-left', `${Math.round(slot.left)}px`);
+      layout.style.setProperty('--hud-slot-width', `${Math.round(slot.width)}px`);
+      layout.style.setProperty('--hud-slot-height', `${Math.round(slot.height)}px`);
+    }
   };
   new ResizeObserver(publishHudBottom).observe(hudEl);
   window.addEventListener('resize', publishHudBottom);
@@ -1509,6 +1522,8 @@ function loop() {
     dominant: ecology.dominant,
     crisis: ecology.crisis,
     objectiveName: objective.def.name,
+    goalLine: goalLineFor(objective.def),
+    goalFraction: objective.fraction,
     objectiveSummary: objective.summary,
     objectiveHint: objective.def.hint ?? '',
     objectiveComplete: objective.complete,

@@ -41,6 +41,10 @@ export interface HudInfo {
   dominant: string;
   crisis: string;
   objectiveName: string;
+  /** Imperative headline for the goal bar (see content/goalCopy). */
+  goalLine: string;
+  /** 0..1 measurable progress, or null for yes/no goals not yet met. */
+  goalFraction: number | null;
   objectiveSummary: string;
   objectiveHint: string;
   objectiveComplete: boolean;
@@ -211,6 +215,10 @@ export function createScreens(): Screens {
   const hudDirectorState = get('hud-director-state');
   const hudHint      = get('hud-hint');
   const hudUpgrades  = get('hud-upgrades');
+  const hudGoal      = get('hud-goal');
+  const hudGoalLine  = get('hud-goal-line');
+  const hudGoalValue = get('hud-goal-value');
+  const hudGoalFill  = get('hud-goal-fill');
   const toolSummary  = get('tool-summary');
   const mobileLifeformsToggle = get('mobile-lifeforms-toggle') as HTMLButtonElement;
   const mobileLogToggle = get('mobile-log-toggle') as HTMLButtonElement;
@@ -786,6 +794,17 @@ export function createScreens(): Screens {
       hudObjective.textContent = info.objectiveComplete
         ? `${info.objectiveName}: complete — bank when ready`
         : `${info.objectiveName}: ${info.objectiveSummary}`;
+      setTextIfChanged(hudGoalLine, info.goalLine);
+      const goalValue = info.objectiveComplete
+        ? 'Done'
+        : info.goalFraction === null ? '' : `${Math.round(info.goalFraction * 100)}%`;
+      setTextIfChanged(hudGoalValue, goalValue);
+      hudGoalFill.style.width = `${Math.round((info.objectiveComplete ? 1 : info.goalFraction ?? 0) * 100)}%`;
+      hudGoal.classList.toggle('is-complete', info.objectiveComplete);
+      hudGoal.classList.toggle('is-unmeasured', !info.objectiveComplete && info.goalFraction === null);
+      hudGoal.setAttribute('aria-label', info.objectiveComplete
+        ? `Goal complete: ${info.goalLine}. Finish the trial when ready.`
+        : `Goal: ${info.goalLine}. ${info.objectiveSummary}`);
       hudDirectorTitle.textContent = info.objectiveName;
       hudDirectorProgress.textContent = info.objectiveComplete
         ? 'Bank when ready — or keep cultivating.'
@@ -1361,6 +1380,10 @@ export function createScreens(): Screens {
       return isToolVisibleInToolbox(tool);
     },
   };
+}
+
+function setTextIfChanged(element: HTMLElement, text: string): void {
+  if (element.textContent !== text) element.textContent = text;
 }
 
 function rgb(color: [number, number, number]): string {

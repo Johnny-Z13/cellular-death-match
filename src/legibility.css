@@ -1,0 +1,346 @@
+/* Legibility layer (2026-10-09).
+   Loaded last. Owns the type-scale tokens, the persistent goal strip, and the
+   dish label overlay. Earlier layers still own the dish, the racks and the
+   coach's look; this file only changes what must stay readable at a glance:
+   the goal is always on screen, and Dr. E docks beneath it instead of
+   replacing it. */
+
+:root {
+  /* Type scale. Nothing rendered goes below --fs-min. */
+  --fs-min: 11px;
+  --fs-small: 12px;
+  --fs-body: 13px;
+  --fs-lead: 15px;
+  --fs-goal: 16px;
+
+  --goal-ok: #84f5a8;
+  --goal-track: rgba(120, 196, 200, 0.16);
+}
+
+/* ---- Goal strip ---------------------------------------------------------
+   Header line (trial · window · balance) over one imperative goal sentence
+   and its meter. Same structure on every viewport. */
+.layout[data-screen="arena"] .hud .hud-summary {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "trial window . balance"
+    "goal goal goal goal";
+  align-items: center;
+  gap: 6px 12px;
+  min-width: 0;
+  height: auto;
+  padding: 0 2px 6px;
+  border-bottom: 1px solid rgba(120, 196, 200, 0.14);
+}
+
+.layout[data-screen="arena"] .hud .hud-summary > .hud-row:first-child { grid-area: trial; }
+.layout[data-screen="arena"] .hud .hud-summary > .hud-window-row { grid-area: window; }
+.layout[data-screen="arena"] .hud .hud-summary > .hud-equilibrium-row { grid-area: balance; justify-self: end; }
+
+.layout[data-screen="arena"] .hud .hud-summary .hud-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+}
+
+.layout[data-screen="arena"] .hud:not(.hud-objective-timed) .hud-summary > .hud-window-row {
+  display: none;
+}
+
+.layout[data-screen="arena"] .hud .hud-summary .hud-key {
+  font-size: var(--fs-min);
+  letter-spacing: 0.12em;
+}
+
+.layout[data-screen="arena"] .hud .hud-summary .hud-val {
+  overflow: visible;
+  white-space: nowrap;
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.layout[data-screen="arena"] .hud-goal {
+  grid-area: goal;
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "mark copy value"
+    "meter meter meter";
+  align-items: center;
+  gap: 5px 8px;
+  min-width: 0;
+}
+
+.hud-goal-mark {
+  grid-area: mark;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--bio-bright, #8ff7e6);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px rgba(3, 10, 12, 0.95), inset 0 0 0 6px var(--bio-bright, #8ff7e6);
+}
+
+.hud-goal-copy {
+  grid-area: copy;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.hud-goal-key {
+  color: rgba(216, 246, 242, 0.6);
+  font-family: var(--font-display);
+  font-size: var(--fs-min);
+  letter-spacing: 0.14em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.hud-goal-line {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #f2ffff;
+  font-family: var(--font-serif);
+  font-size: var(--fs-goal);
+  font-weight: 400;
+  line-height: 1.15;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.hud-goal-value {
+  grid-area: value;
+  align-self: end;
+  color: var(--bio-bright, #8ff7e6);
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-goal-meter {
+  grid-area: meter;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--goal-track);
+}
+
+.hud-goal-fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--bio, #5be9d6), #c6fff6);
+  transition: width 320ms ease;
+}
+
+.hud-goal.is-unmeasured .hud-goal-meter {
+  opacity: 0.4;
+}
+
+.hud-goal.is-complete .hud-goal-mark {
+  border-color: var(--goal-ok);
+  background: var(--goal-ok);
+  box-shadow: none;
+}
+
+.hud-goal.is-complete .hud-goal-value,
+.hud-goal.is-complete .hud-goal-key {
+  color: var(--goal-ok);
+}
+
+.hud-goal.is-complete .hud-goal-fill {
+  background: var(--goal-ok);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-goal-fill { transition: none; }
+}
+
+/* ---- Dr. E docks under the goal ----------------------------------------
+   The director slot keeps its box while he speaks; his transmission card is
+   pinned over that slot (main.ts publishes --hud-slot-*). The goal strip
+   above it never hides. */
+.layout[data-screen="arena"].hud-slot-docked.coach-active .hud-director {
+  visibility: hidden;
+}
+
+.layout[data-screen="arena"].hud-slot-docked.coach-active .coach:not(.coach-welcome):not(.coach-intro) {
+  inset: auto;
+  top: var(--hud-slot-top, 120px);
+  left: var(--hud-slot-left, 8px);
+  right: auto;
+  bottom: auto;
+  width: var(--hud-slot-width, calc(100vw - 16px));
+  height: var(--hud-slot-height, 70px);
+  min-height: 0;
+  transform: none;
+}
+
+.layout[data-screen="arena"].hud-slot-docked.coach-active .coach:not(.coach-welcome):not(.coach-intro) .coach-portrait,
+.layout[data-screen="arena"].hud-slot-docked.coach-active .coach:not(.coach-welcome):not(.coach-intro) .coach-copy {
+  height: 100%;
+  min-height: 0;
+}
+
+.layout[data-screen="arena"].hud-slot-docked.coach-active .coach:not(.coach-welcome):not(.coach-intro) .coach-body {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+/* ---- Phones: goal strip sits left of the chrome buttons ---------------- */
+@media (max-width: 899px) and (orientation: portrait), (max-width: 899px) and (min-height: 521px) {
+  .layout[data-screen="arena"] .hud,
+  .layout[data-screen="arena"] .hud.visible {
+    height: auto;
+    min-height: 0;
+    grid-template-rows: auto auto;
+    padding: 6px;
+    overflow: visible;
+  }
+
+  .layout[data-screen="arena"] .hud .hud-summary {
+    /* The options and full-screen buttons own the top-right corner. */
+    margin-right: 104px;
+    padding: 2px 2px 6px 4px;
+    border-bottom: 0;
+  }
+
+  .layout[data-screen="arena"] .hud-director {
+    height: auto;
+    min-height: 70px;
+    border-top: 1px solid rgba(120, 196, 200, 0.14);
+  }
+
+  /* The dish starts below the measured rail instead of a fixed offset, so a
+     two-line goal can never slide under it. 140px is the shell + tool rack. */
+  .layout[data-screen="arena"] {
+    --mobile-bottom-chrome: calc(140px + env(safe-area-inset-bottom));
+    --mobile-dish-size: min(100vw, calc(100dvh - var(--hud-bottom, 150px) - 12px - var(--mobile-bottom-chrome)), 800px);
+    padding-top: calc(var(--hud-bottom, 150px) + 8px);
+  }
+}
+
+/* Wide phones, small tablets and compact windows: goal and Dr. E sit side by
+   side, and the rail stops short of the chrome buttons. */
+@media (min-width: 600px) and (max-width: 899px) and (orientation: portrait),
+  (min-width: 600px) and (max-width: 899px) and (min-height: 521px) {
+  .layout[data-screen="arena"] .hud,
+  .layout[data-screen="arena"] .hud.visible {
+    right: 112px;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    grid-template-rows: auto;
+    gap: 0 10px;
+  }
+
+  .layout[data-screen="arena"] .hud .hud-summary {
+    margin-right: 0;
+    align-content: center;
+  }
+
+  .layout[data-screen="arena"] .hud-director {
+    border-top: 0;
+    border-left: 1px solid rgba(120, 196, 200, 0.14);
+  }
+}
+
+/* ---- Desktop: goal and Dr. E side by side in one band above the dish -- */
+@media (min-width: 900px) {
+  .layout[data-screen="arena"] .hud,
+  .layout[data-screen="arena"] .hud.visible {
+    width: min(1040px, calc(100vw - 260px));
+    height: auto;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    grid-template-rows: auto;
+    align-items: stretch;
+    gap: 0 12px;
+    padding: 8px 10px;
+    overflow: visible;
+  }
+
+  .layout[data-screen="arena"] .hud .hud-summary {
+    align-content: center;
+    padding: 0 4px;
+    border-bottom: 0;
+  }
+
+  .layout[data-screen="arena"] .hud-director {
+    height: auto;
+    min-height: 70px;
+    border-left: 1px solid rgba(120, 196, 200, 0.14);
+  }
+
+  .hud-goal-line {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .layout[data-screen="arena"].hud-slot-docked.coach-active .coach:not(.coach-welcome):not(.coach-intro).coach-show {
+    animation: legible-coach-in 260ms cubic-bezier(0.18, 0.9, 0.22, 1) both;
+  }
+
+  .layout[data-screen="arena"].hud-slot-docked.coach-active .coach:not(.coach-welcome):not(.coach-intro).coach-exit {
+    animation: legible-coach-out 300ms cubic-bezier(0.55, 0.04, 0.85, 0.42) both;
+  }
+}
+
+/* Wide desktop: the dish fills the height left between the goal band and the
+   dish log, and the racks track it. */
+@media (min-width: 1181px) {
+  :root {
+    --desktop-top-band: 112px;
+    --desktop-bottom-band: 52px;
+    --desktop-dish-size: min(
+      calc(100svh - var(--desktop-top-band) - var(--desktop-bottom-band)),
+      calc(100svw - (2 * var(--desktop-rack-width)) - (4 * var(--desktop-gap))),
+      820px
+    );
+    --desktop-dish-top: calc(var(--desktop-top-band) + (100svh - var(--desktop-top-band) - var(--desktop-bottom-band) - var(--desktop-dish-size)) / 2);
+  }
+
+  .layout[data-screen="arena"] > .dish-stage {
+    align-self: start;
+    margin-top: var(--desktop-dish-top);
+  }
+
+  .layout[data-screen="arena"] .toolbox,
+  .layout[data-screen="arena"] .life-panel {
+    top: var(--desktop-dish-top);
+  }
+
+  .layout[data-screen="arena"] .ticker {
+    top: calc(var(--desktop-dish-top) + var(--desktop-dish-size) + 8px);
+    max-height: calc(100svh - var(--desktop-dish-top) - var(--desktop-dish-size) - 12px);
+  }
+}
+
+@keyframes legible-coach-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes legible-coach-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(-10px); }
+}
+
+/* Short phones: the strain drawer must leave the dish centre tappable even
+   when a rejected pick keeps it open. Cards tighten; the repeated selected-
+   strain blurb (already on each card) is dropped. */
+@media (max-width: 899px) and (max-height: 720px) and (orientation: portrait) {
+  .layout[data-screen="arena"] .life-panel .life-item.tool-button {
+    min-height: 52px;
+  }
+
+  .layout[data-screen="arena"] .life-panel .life-summary {
+    display: none;
+  }
+}
