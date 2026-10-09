@@ -38,6 +38,72 @@ To play as a first-time player, open Options → "Delete all laboratory data". T
 | **First minute** | Nothing said what the game was. | A title pitch, Dr. E's welcome names the mutation hook, and the Trial 1 goal names the mutation. |
 | **Smaller aids** | | A desktop ghost ring for a tool's reach, upgrade cards that say when their tool isn't in your rack yet, a solid phone Log sheet, and an agar plate behind the dish. |
 
+## Polish pass 2 (branch `ux/polish-pass-2`)
+
+After playing the merged build, Johnny reported three problems:
+
+- the swarmlet name tags flash on and off;
+- parts of the UI are still misaligned;
+- some things still overlap.
+
+He asked for a full review of the game flow.
+
+**Tags.** These no longer flash. In a 12s capture of a busy phone dish, the tags used to flip about 28 times; now they make no spurious changes. The fixes:
+
+- hysteresis on the culture each tag sits on;
+- a 1.5s minimum dwell for each tag;
+- a tag keeps its side once placed;
+- tags glide and fade instead of jumping.
+
+They also step around the Notebook tab and the Preview badge (planner `obstacles`).
+
+**Flow audit.** `scripts/ux-flow-audit.mjs` walks 25 scripted states (title → Trial 1 → reveal → upgrade → Trial 2 → Notebook tabs → Options → Open Lab), and this pass ran it at nine viewports. At each state it records:
+
+- overlaps between surfaces that must not overlap;
+- clipped text;
+- controls placed off screen.
+
+Before and after:
+
+- [Phone HUD](compare/polish-2-phone-hud.jpg)
+- [Small phone, Open Lab](compare/polish-2-small-phone.jpg)
+- [Tablet](compare/polish-2-tablet.jpg)
+- [Landscape](compare/polish-2-landscape.jpg)
+- [Desktop](compare/polish-2-desktop.jpg)
+- [Menus and paused badge](compare/polish-2-menus.jpg)
+- [Notebook "Found"](compare/polish-2-notebook.jpg)
+- [Strain reveal](compare/polish-2-reveal.jpg)
+
+To re-run it, start the dev server on 5199, then:
+
+```bash
+node scripts/ux-flow-audit.mjs 390x844,375x667,844x390,768x1024,1280x720
+```
+
+The findings that remain are deliberate one-line teasers: the phone strain cards, the tool-tile blurbs hidden on phones, and the drawer summary.
+
+| Fixed | Where |
+|---|---|
+| The gear and full-screen buttons sat inside the HUD, 3px out of line with each other, and squeezed the goal to ~260px. The HUD's first row is now the buttons' 44px line. Trial, time and balance stack label-over-value beside them. The goal and its meter run the full width, with the % at the end of the meter. | Phones, landscape |
+| "Trial 1" and "TIME 68s" collided on a 375px phone. | Small phone |
+| The dish bezel was a circle around a square dish, so stray arcs showed above, below and beside it. It is now a concentric rounded square, 8px proud. | All |
+| The tablet canvas was capped at 78vw inside a full-width stage, leaving a dead band all round. It now fills the stage. | 600–899px |
+| Dr. E's copy kept a 103px gutter left over from an old button position. His kicker wrapped ("DR. E · NEW / TRIAL"), and on tablet a sliver of a clipped third line showed. | Phones, tablet |
+| "Culture paused" covered Notebook and Options content. Menus now leave it a lane along the bottom edge. | Phones, landscape |
+| The strain reveal overflowed its box and sat off-centre on phones, and the HUD read through its scrim. | Phones |
+| The Notebook changed height when switching tabs, and "Found" cards clipped their recipe line. | All |
+| The desktop dish log overlapped the bezel and clipped its second line at 1366×768 and 1440×900. The log band is now sized from what it holds. | ≥1181px |
+| At 900–1180px wide and ≤780px tall, the bezel ran under the HUD. | Small desktop |
+| Egg-list descriptions were cut to one line mid-word. They now get two lines. | Desktop |
+| Rendered tags were 3–4px wider than the planner's estimate, so neighbouring tags could touch (`chromePx` 28 → 32). | All |
+
+Still open (your call):
+
+- **Tall phones.** On a 390×844 phone the dish is width-bound, leaving about 60px of empty band above and below it. The Notebook tab and Preview badge could move out of the dish into that band.
+- **Open Lab start.** The "Preview laboratory" banner fades out over the middle of the dish, on top of the tags.
+- **Small phones.** In Open Lab the eight tools wrap to two rows, which shrinks the dish to about 290px. 5+3 is deliberate: the Finish tile fills the gap.
+- **Desktop dish log.** At the start of each trial its first line repeats Dr. E's card.
+
 ## Adversarial review
 
 An independent game-design reviewer played the build twice: Playwright with touch emulation, 26 guided Trial 2 runs, and every viewport.

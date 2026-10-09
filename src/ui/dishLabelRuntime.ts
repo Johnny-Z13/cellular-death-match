@@ -11,8 +11,12 @@ import { lifeformIdentityForSpawn } from '../content/lifeformIdentity';
 import { displayColorForSpawn } from './render';
 import {
   DISH_LABEL_TUNING,
+  applyLabelDwell,
+  createLabelDwell,
+  labelHoldKeys,
   planDishLabels,
-  type DishLabelPlacement,
+  type DishLabelRect,
+  type PreviousLabel,
   type LabelCulture,
 } from './dishLabels';
 import type { DishInspectInfo, DishLabelOverlay } from './dishLabelOverlay';
@@ -28,6 +32,8 @@ export interface DishLabelRuntimeOptions {
   controlId: number;
   gridSize: number;
   isCompact: () => boolean;
+  /** Fixed controls that sit over the dish; tags keep clear of them. */
+  obstacles?: readonly HTMLElement[];
 }
 
 export interface DishLabelRuntime {
@@ -53,7 +59,20 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
   let goalIds: ReadonlySet<number> = new Set();
   let hoverPos: readonly [number, number] | null = null;
   let hoverLocal: [number, number] = [0, 0];
-  let previous = new Map<string, DishLabelPlacement>();
+  let previous = new Map<string, PreviousLabel>();
+  let dwell = createLabelDwell();
+
+  // Fixed controls over the dish, in dish pixels, with a small breathing gap.
+  function obstacleRects(box: DOMRect): DishLabelRect[] {
+    const gap = 4;
+    const rects: DishLabelRect[] = [];
+    for (const el of options.obstacles ?? []) {
+      const r = el.getBoundingClientRect();
+      if (r.width < 1 || r.height < 1) continue;
+      rects.push({ x: r.left - box.left - gap, y: r.top - box.top - gap, w: r.width + gap * 2, h: r.height + gap * 2 });
+    }
+    return rects;
+  }
   const eventFirstSeen = new Map<number, number>();
   const freshStrains = new Map<string, number>();
   const volHistory = new Map<number, Array<[number, number]>>();
@@ -159,6 +178,7 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
       goalIds = new Set();
       hoverPos = null;
       previous = new Map();
+      dwell = createLabelDwell();
       eventFirstSeen.clear();
       freshStrains.clear();
       volHistory.clear();
@@ -212,6 +232,7 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
 
       if (enabled) {
         overlay.fitTo(canvas);
+        const box = canvas.getBoundingClientRect();
         const goalWords = goalWordsFor(objective);
         const plan = planDishLabels({
           cultures,
@@ -225,13 +246,16 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
             isGoal: goalWords.some((word) => marker.label.includes(word)),
           })),
           gridSize,
-          dishPx: canvas.getBoundingClientRect().width || 400,
+          dishPx: box.width || 400,
           pingId,
           compact: options.isCompact(),
           previous,
+          hold: labelHoldKeys(dwell, nowMs),
+          obstacles: obstacleRects(box),
         });
-        previous = new Map(plan.map((label) => [label.key, label.placement]));
-        overlay.render(plan);
+        const shown = applyLabelDwell(plan, dwell, nowMs);
+        previous = new Map(shown.map((label) => [label.key, { placement: label.placement, cultureId: label.cultureId }]));
+        overlay.render(shown);
         refreshHover(arena, nowMs);
       }
       return goalIds;

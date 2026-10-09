@@ -27,8 +27,14 @@ test('keeps objective status in Dr. E’s rail when authored coaching is inactiv
   const dishBox = await page.locator('#game').boundingBox();
   expect(hudBox).not.toBeNull();
   expect(dishBox).not.toBeNull();
-  // Goal strip + Dr. E channel. The budget grew with the always-visible goal.
-  expect(hudBox!.height).toBeLessThanOrEqual(180);
+  // Goal strip + Dr. E channel. The budget grew with the always-visible goal,
+  // then with the header row that shares the chrome buttons' 44px line.
+  expect(hudBox!.height).toBeLessThanOrEqual(200);
+  const optionsBox = (await page.locator('#options-button').boundingBox())!;
+  const fullscreenBox = (await page.locator('#fullscreen-button').boundingBox())!;
+  const goalBox = (await page.locator('#hud-goal').boundingBox())!;
+  expect(Math.abs(optionsBox.y - fullscreenBox.y)).toBeLessThanOrEqual(1);
+  expect(goalBox.y).toBeGreaterThanOrEqual(optionsBox.y + optionsBox.height);
   await expect(page.locator('#hud-goal-line')).toHaveText('Feed a Swarmlet until it becomes Bloom Mass');
   expect(hudBox!.y + hudBox!.height).toBeLessThan(dishBox!.y);
   await page.screenshot({ path: testInfo.outputPath('persistent-director-status.png') });
@@ -76,7 +82,7 @@ test('keeps objective status in Dr. E’s rail when authored coaching is inactiv
   await expect(page.locator('#hud-hint')).toBeHidden();
   expect(textFit.viewport.scrollWidth).toBeLessThanOrEqual(textFit.viewport.clientWidth);
   const longHudBox = await page.locator('#hud').boundingBox();
-  expect(longHudBox!.height).toBeLessThanOrEqual(180);
+  expect(longHudBox!.height).toBeLessThanOrEqual(200);
   await page.screenshot({ path: testInfo.outputPath('long-director-status.png') });
 
   runtime.assertClean();
