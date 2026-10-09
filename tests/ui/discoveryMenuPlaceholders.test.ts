@@ -145,7 +145,7 @@ describe('discovery menu placeholders', () => {
 
   it('keeps research achievement feedback in the notebook instead of a second reward panel', () => {
     expect(html).not.toContain('id="pick-research-brief"');
-    expect(screensSource).toContain("sealTitle.textContent = 'Research seals';");
+    expect(screensSource).toContain("sealTitle.textContent = 'Lab badges';");
     expect(screensSource).toContain("card.className = `research-seal${seal.earned ? ' research-seal-earned' : ' research-seal-locked'}`;");
     expect(css).toContain('.research-seal-grid');
     expect(css).toContain('.research-seal-earned');
@@ -156,7 +156,7 @@ describe('discovery menu placeholders', () => {
     expect(screensSource).toContain("line.classList.add(specialClass);");
     expect(screensSource).toContain('function tickerSpecialClassFor(message: string): string | null {');
     expect(screensSource).toContain("message.startsWith('New catalyst discovered')");
-    expect(screensSource).toContain("message.startsWith('CATALYTIC')");
+    expect(screensSource).toContain("message.startsWith('REACTION')");
     expect(screensSource).toContain("message.startsWith('FOLDING FAULT')");
     expect(screensSource).toContain("return 'ticker-line-catalyst';");
     expect(css).toContain('.ticker-line-catalyst');
@@ -164,7 +164,7 @@ describe('discovery menu placeholders', () => {
   });
 
   it('gives new lifeform discoveries their own dish log treatment', () => {
-    expect(screensSource).toContain("message.startsWith('NEW LIFEFORM CREATED')");
+    expect(screensSource).toContain("message.startsWith('NEW STRAIN CREATED')");
     expect(screensSource).toContain("message.startsWith('New lifeform discovered')");
     expect(screensSource).toContain("message.startsWith('New lifeform catalogued')");
     expect(screensSource).toContain("return 'ticker-line-rare-lifeform';");

@@ -235,8 +235,8 @@ export function discoveryAnnouncementsForProgressionChange(
     if (previousBreeds.has(breedId) && stageRank(previousStage) >= stageRank(stage)) continue;
     announcements.push({
       message: stage === 'stabilized'
-        ? `Specimen stabilized: ${BREED_DEFS[breedId].name}. Added to the Atlas.`
-        : `New lifeform observed: ${BREED_DEFS[breedId].name}. Stabilize it alive to bank the egg.`,
+        ? `Strain stabilized: ${BREED_DEFS[breedId].name}. Added to the Notebook.`
+        : `New strain spotted: ${BREED_DEFS[breedId].name}. Keep it alive to save its egg.`,
       tone: toneForCaution(DISCOVERY_NOTES[`breed_${breedId}`].caution),
     });
   }
@@ -248,8 +248,8 @@ export function discoveryAnnouncementsForProgressionChange(
     const note = DISCOVERY_NOTES[noteId];
     announcements.push({
       message: stage === 'observed'
-        ? `Reaction observed: ${note.title}. Reproduce it to understand the protocol.`
-        : `${noteId.startsWith('recipe_') ? 'Protocol understood' : 'Lab note understood'}: ${note.title}.`,
+        ? `Reaction observed: ${note.title}. Reproduce it to understand it.`
+        : `${noteId.startsWith('recipe_') ? 'Reaction understood' : 'Lab note understood'}: ${note.title}.`,
       tone: toneForCaution(note.caution),
     });
   }

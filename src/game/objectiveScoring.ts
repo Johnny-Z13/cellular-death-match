@@ -119,7 +119,7 @@ export function evaluateObjective(
       const name = BREED_DEFS[breedId]?.name ?? breedId;
       const stabilized = discoveredTick !== undefined && alive;
       return progress(objective, stabilized, true, deadline && !stabilized, urgency, stabilized
-        ? `${name} alive · specimen ready to bank`
+        ? `${name} alive · ready to finish`
         : discoveredTick !== undefined
           ? `${name} observed · keep it alive`
           : `${name} not yet observed`, discoveredTick !== undefined ? 0.5 : 0);
@@ -129,7 +129,7 @@ export function evaluateObjective(
       const triggered = recipeId ? context.triggeredRecipeIds.has(recipeId) : false;
       const name = REACTION_RECIPES.find((recipe) => recipe.id === recipeId)?.name ?? 'Target reaction';
       return progress(objective, triggered, true, deadline && !triggered, urgency, triggered
-        ? `${name} reproduced · protocol understood`
+        ? `${name} reproduced · reaction understood`
         : `${name} not yet reproduced`);
     }
     case 'apply_recipe': {
@@ -196,7 +196,7 @@ export function evaluateObjective(
     }
     case 'cross_breed': {
       const ok = context.runtime.hybridDiscovered;
-      return progress(objective, ok, true, deadline && !ok, urgency, ok ? 'Hybrid breed created' : 'No hybrid breed created yet');
+      return progress(objective, ok, true, deadline && !ok, urgency, ok ? 'Hybrid strain created' : 'No hybrid strain created yet');
     }
     case 'mega_culture': {
       const target = objective.volumeTarget ?? MEGA_CULTURE_VOLUME;

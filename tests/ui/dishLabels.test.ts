@@ -157,7 +157,7 @@ describe('planDishLabels', () => {
       events: [
         { id: 7, kind: 'critical', label: 'PREDATOR OUTBREAK', pos: [80, 80], ageMs: 400 },
         { id: 8, kind: 'mutation', label: 'VISIBLE MUTATION', pos: [20, 140], ageMs: 100 },
-        { id: 9, kind: 'caution', label: 'ROGUE REAGENT', pos: [140, 20], ageMs: 900 },
+        { id: 9, kind: 'caution', label: 'ROGUE CHEMICAL', pos: [140, 20], ageMs: 900 },
         { id: 10, kind: 'critical', label: 'PREDATOR OUTBREAK FLASH', pos: [80, 80], ageMs: 0 },
         { id: 11, kind: 'stabilize', label: 'AGAR BLOOM', pos: [40, 40], ageMs: DISH_LABEL_TUNING.eventMs + 1 },
       ],
@@ -176,9 +176,10 @@ describe('humanEventLabel', () => {
   it('turns shouted marker labels into short sentence-case callouts', () => {
     expect(humanEventLabel('PREDATOR OUTBREAK')).toBe('Predator outbreak');
     expect(humanEventLabel('VISIBLE MUTATION')).toBe('Mutation');
-    expect(humanEventLabel('ROGUE REAGENT')).toBe('Rogue chemical');
-    expect(humanEventLabel('NEW LIFEFORM: Bloom Mass')).toBe('New strain: Bloom Mass');
-    expect(humanEventLabel('CATALYTIC FLARE: Bitter Bloom discovered.')).toBe('Reaction: Bitter Bloom');
+    expect(humanEventLabel('ROGUE CHEMICAL')).toBe('Rogue chemical');
+    expect(humanEventLabel('NEW STRAIN: Bloom Mass')).toBe('New strain: Bloom Mass');
+    expect(humanEventLabel('REACTION FLARE: Bitter Bloom discovered.')).toBe('Reaction: Bitter Bloom');
+    expect(humanEventLabel('REACTION: Brine Channel discovered.')).toBe('Reaction: Brine Channel');
     expect(humanEventLabel('FOLDING FAULT: Folding Fault discovered.')).toBe('Folding fault');
     expect(humanEventLabel('FOLDING FAULT: Velvet Prison discovered.')).toBe('Folding fault: Velvet Prison');
     expect(humanEventLabel('WATER DILUTED ACID')).toBe('Water diluted acid');
@@ -186,6 +187,6 @@ describe('humanEventLabel', () => {
 
   it('suppresses the duplicate flash and spark markers', () => {
     expect(humanEventLabel('PREDATOR OUTBREAK FLASH')).toBeNull();
-    expect(humanEventLabel('CATALYTIC FOAM: Foam Lightning discovered. SPARK')).toBeNull();
+    expect(humanEventLabel('REACTION FOAM: Foam Lightning discovered. SPARK')).toBeNull();
   });
 });

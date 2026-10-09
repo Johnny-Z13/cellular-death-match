@@ -239,14 +239,14 @@ function clamp(value: number, min: number, max: number): number {
 export function humanEventLabel(raw: string): string | null {
   const text = raw.trim();
   if (/\s(FLASH|SPARK)$/.test(text)) return null;
-  const strain = /^NEW LIFEFORM:\s*(.+)$/.exec(text);
+  const strain = /^NEW STRAIN:\s*(.+)$/.exec(text);
   if (strain) return `New strain: ${strain[1]}`;
   const fault = /^FOLDING FAULT:\s*(.+?) discovered\.?$/.exec(text);
   if (fault) return fault[1]!.toLowerCase() === 'folding fault' ? 'Folding fault' : `Folding fault: ${fault[1]}`;
-  const reaction = /^CATALYTIC [A-Z]+:\s*(.+?) discovered\.?$/.exec(text);
+  const reaction = /^REACTION(?: [A-Z]+)?:\s*(.+?) discovered\.?$/.exec(text);
   if (reaction) return `Reaction: ${reaction[1]}`;
   if (text === 'VISIBLE MUTATION') return 'Mutation';
-  if (text === 'ROGUE REAGENT') return 'Rogue chemical';
+  if (text === 'ROGUE CHEMICAL') return 'Rogue chemical';
   if (text === text.toUpperCase()) return text.charAt(0) + text.slice(1).toLowerCase();
   return text;
 }

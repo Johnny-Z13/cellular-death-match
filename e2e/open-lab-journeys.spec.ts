@@ -55,7 +55,7 @@ async function seedSealedCase(page: Page): Promise<void> {
   }, { trials: CASE_TRIALS, notes: CASE_NOTES });
   await page.reload();
   await expect(page.locator('#title-start-label')).toHaveText('Enter Open Lab');
-  await expect(page.locator('#title-genome-progress')).toHaveText('5 / 14 genomes decoded');
+  await expect(page.locator('#title-genome-progress')).toHaveText('5 / 14 strains');
 }
 
 async function enterOpenLab(page: Page): Promise<string> {
@@ -66,7 +66,7 @@ async function enterOpenLab(page: Page): Promise<string> {
   const firstCard = page.locator('#objective-choices .objective-card').first();
   const objective = (await firstCard.locator('.pick-card-name').textContent())?.trim() ?? '';
   await firstCard.click();
-  await expect(page.locator('#hud-fight')).toHaveText('1 / ∞');
+  await expect(page.locator('#hud-fight')).toHaveText('Trial 1');
   return objective;
 }
 
@@ -92,7 +92,7 @@ test('chooses a rare-genome loadout and resumes the same Open Lab study', async 
   await page.locator('#title-start').click();
   await expect(page.locator('.layout')).toHaveAttribute('data-screen', 'loadout');
 
-  await expect(page.locator('.loadout-count')).toHaveText('2/2 archived');
+  await expect(page.locator('.loadout-count')).toHaveText('2/2 chosen');
   await page.locator('[data-strain="swarmlet"]').click();
   await page.locator('[data-strain="bloom_mass"]').click();
   await expect(page.locator('[data-strain="bloom_mass"]')).toHaveAttribute('aria-pressed', 'true');
@@ -102,8 +102,8 @@ test('chooses a rare-genome loadout and resumes the same Open Lab study', async 
   const objective = (await firstCard.locator('.pick-card-name').textContent())?.trim() ?? '';
   await firstCard.click();
   await expect(page.locator('#hud-director-title')).toHaveText(objective);
-  await expect(page.locator('#study-start-announcer')).toContainText(`New Study: ${objective}`);
-  await expect(page.locator('#hud-director-kicker')).toHaveText('Dr. E · New study');
+  await expect(page.locator('#study-start-announcer')).toContainText(`New trial: ${objective}`);
+  await expect(page.locator('#hud-director-kicker')).toHaveText('Dr. E · New trial');
   await expect(page.locator('#fx-banner')).toHaveAttribute('aria-hidden', 'true');
   await expect(page.locator('#game')).toBeFocused();
   await expect(page.locator('#study-start-announcer')).toBeEmpty({ timeout: 4_000 });
@@ -116,7 +116,7 @@ test('chooses a rare-genome loadout and resumes the same Open Lab study', async 
   expect(saved.loadout).toEqual(['bruiser', 'bloom_mass']);
 
   await page.reload();
-  await expect(page.locator('#title-start-label')).toHaveText('Restart Study');
+  await expect(page.locator('#title-start-label')).toHaveText('Restart Trial');
   await page.locator('#title-start').click();
   await expect(page.locator('#hud-director-title')).toHaveText(objective);
   await chooseLifeform(page, 'bloom_mass');
@@ -150,12 +150,12 @@ test('discovers Salt-Water Crystal experimentally and persists the new protocol'
   await page.locator('#notebook-button').click();
   await page.locator('#notebook-tab-log').click();
   const observedCard = page.locator('.notebook-entry', { hasText: 'Salt-Water Crystal' });
-  await expect(observedCard).toContainText('Signal observed');
-  await expect(observedCard).toContainText('fresh later dish');
+  await expect(observedCard).toContainText('Reaction seen');
+  await expect(observedCard).toContainText('later trial');
   await page.locator('#notebook-close').click();
 
   await page.reload();
-  await expect(page.locator('#title-start-label')).toHaveText('Restart Study');
+  await expect(page.locator('#title-start-label')).toHaveText('Restart Trial');
   await page.locator('#title-start').click();
   await chooseLifeform(page, 'bruiser');
   await clickDish(page, 0.52, 0.52);
@@ -172,7 +172,7 @@ test('discovers Salt-Water Crystal experimentally and persists the new protocol'
   await page.locator('#notebook-button').click();
   await page.locator('#notebook-tab-log').click();
   await expect(page.locator('.notebook-entry', { hasText: 'Salt-Water Crystal' }))
-    .toContainText('Protocol understood');
+    .toContainText('Reaction understood');
   await page.screenshot({ path: testInfo.outputPath('crystal-protocol-persisted.png') });
   runtime.assertClean();
 });

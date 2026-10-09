@@ -56,18 +56,18 @@ const no = (uses: string, reason: string): ObjectiveAvailability => ({ available
 export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
   {
     kind: 'cross_breed',
-    name: 'Cross-Breed',
-    description: 'Bring two equipped parent genomes together under a nutrient field to produce a hybrid offspring.',
-    target: '1 hybrid breed created',
+    name: 'Cross Strains',
+    description: 'Bring two parent strains together under a Nutrient field to grow a hybrid.',
+    target: '1 hybrid strain created',
     hint: 'Overlap both parent cultures inside a nutrient field and hold until hybridisation triggers.',
     availability: (ctx) => {
       const route = unmadeSeedableHybrid(ctx);
       const uses = route
         ? `${BREED_DEFS[route.parents![0]].name} + ${BREED_DEFS[route.parents![1]].name} + Nutrient`
-        : 'Two equipped parent genomes + Nutrient';
+        : 'Two parent strains + Nutrient';
       if (!route) return no(uses, 'No undecoded hybrid has both parents equipped.');
       if (!hasCharges(ctx, 'egg', 2) || !hasCharges(ctx, 'nutrient', 1)) {
-        return no(uses, 'The current Method does not provide enough Eggs and Nutrient.');
+        return no(uses, 'Your upgrades do not provide enough Eggs and Nutrient.');
       }
       return ok(uses);
     },
@@ -86,9 +86,9 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
   {
     kind: 'reaction_chain',
     name: 'Reaction Chain',
-    description: 'Trigger 3 separate reagent reactions in a single dish run.',
+    description: 'Trigger 3 separate reactions in one trial.',
     target: '3 reactions triggered',
-    hint: 'Repeat a compatible reagent route in separate areas of the dish.',
+    hint: 'Repeat a working tool combo in separate areas of the dish.',
     targetCount: 3,
     availability: (ctx) => {
       const route = reachableDirectReaction(ctx, 3);
@@ -100,8 +100,8 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
   {
     kind: 'balance_keeper',
     name: 'Balance Keeper',
-    description: 'Keep the dish balanced with no single breed above 40% dominance for 30 seconds.',
-    target: 'No breed > 40% for 30s',
+    description: 'Keep the dish balanced, with no strain above 40% of living matter, for 30 seconds.',
+    target: 'No strain > 40% for 30s',
     hint: 'Use Toxin to check the leader and Nutrient to support the trailing culture.',
     maxDominance: 0.4,
     sustainTicks: 60 * 30,
@@ -109,8 +109,8 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
       && hasCharges(ctx, 'egg', 2)
       && hasCharges(ctx, 'nutrient', 1)
       && hasCharges(ctx, 'toxin', 1)
-      ? ok('2 seedable lineages + Nutrient + Toxin')
-      : no('2 seedable lineages + Nutrient + Toxin', 'The loadout or Method cannot support two-way balancing.'),
+      ? ok('2 strains + Nutrient + Toxin')
+      : no('2 strains + Nutrient + Toxin', 'Your strains or upgrades cannot support two-way balancing.'),
   },
   {
     kind: 'crisis_survivor',
@@ -122,11 +122,11 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
     timed: true,
     availability: (ctx) => {
       if (!crisisSurvivorResolvableForEpoch(ctx.epochIndex)) {
-        return no('3 Eggs + Nutrient', 'A full crisis cannot resolve inside this Study window.');
+        return no('3 Eggs + Nutrient', 'A full crisis cannot resolve inside this trial window.');
       }
       return hasCharges(ctx, 'egg', 3) && hasCharges(ctx, 'nutrient', 1)
         ? ok('3 Eggs + Nutrient')
-        : no('3 Eggs + Nutrient', 'The current Method cannot seed and support three cultures.');
+        : no('3 Eggs + Nutrient', 'Your upgrades cannot seed and support three cultures.');
     },
   },
   {
@@ -143,37 +143,37 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
     name: 'Acid Sculptor',
     description: 'Use acid to precisely carve living matter into a configuration that triggers a reaction.',
     target: '1 reaction triggered via acid shaping',
-    hint: 'Drop Acid in a thin stroke, then overlap its compatible reagent near living tissue.',
+    hint: 'Drop Acid in a thin stroke, then overlap a compatible tool near living tissue.',
     availability: (ctx) => {
       const route = reachableDirectReaction(ctx, 1, 'acid');
       return route
         ? ok(`${route.name}: ${displayInputs(route.inputs)}`)
-        : no('Acid + a compatible reagent and culture', 'No acid-led route is possible with this loadout and Method.');
+        : no('Acid + a compatible tool and culture', 'No acid-led route is possible with these strains and upgrades.');
     },
   },
   {
     kind: 'colony_founder',
     name: 'Colony Founder',
-    description: 'Establish 5 or more living cultures of the same archetype at once.',
+    description: 'Keep 5 or more living cultures of the same strain at once.',
     target: '5+ matching living cultures',
-    hint: 'Seed five Eggs of one lineage in separate fertile sites before the dish fills.',
+    hint: 'Plant five Eggs of one strain in separate fertile spots before the dish fills.',
     targetCount: 5,
     availability: (ctx) => hasCharges(ctx, 'egg', 5) && hasCharges(ctx, 'nutrient', 1)
-      ? ok('5 Eggs of one lineage + Nutrient')
-      : no('5 Eggs of one lineage + Nutrient', 'The current Method cannot seed five cultures.'),
+      ? ok('5 Eggs of one strain + Nutrient')
+      : no('5 Eggs of one strain + Nutrient', 'Your upgrades cannot seed five cultures.'),
   },
   {
     kind: 'symbiosis',
     name: 'Symbiosis',
-    description: 'Keep 2 different lineages near each other for 30 seconds.',
-    target: '2 lineages nearby for 30s',
-    hint: 'Seed one of each lineage with a stable border and correct either side with Nutrient.',
+    description: 'Keep 2 different strains near each other for 30 seconds.',
+    target: '2 strains nearby for 30s',
+    hint: 'Plant one of each strain with a stable border and support either side with Nutrient.',
     sustainTicks: 60 * 30,
     availability: (ctx) => distinctSeedables(ctx) >= 2
       && hasCharges(ctx, 'egg', 2)
       && hasCharges(ctx, 'nutrient', 1)
-      ? ok('2 different seedable lineages + Nutrient')
-      : no('2 different seedable lineages + Nutrient', 'Two distinct equipped lineages are required.'),
+      ? ok('2 different strains + Nutrient')
+      : no('2 different strains + Nutrient', 'Two different strains are required.'),
   },
   {
     kind: 'extinction_reversal',
@@ -186,7 +186,7 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
       && hasCharges(ctx, 'egg', 4)
       && hasCharges(ctx, 'nutrient', 1)
       ? ok('4 Eggs held in reserve + Nutrient')
-      : no('4 Eggs held in reserve + Nutrient', 'This Study needs four Egg charges and later-lab pressure.'),
+      : no('4 Eggs held in reserve + Nutrient', 'This trial needs four Egg charges and later-lab pressure.'),
   },
 ];
 

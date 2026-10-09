@@ -151,7 +151,7 @@ describe('drawObjectives', () => {
       toolBudget: { ...baseCtx.toolBudget, nutrient: 0 },
     });
     expect(result?.available).toBe(false);
-    expect(result?.reason).toMatch(/Method/i);
+    expect(result?.reason).toMatch(/upgrades/i);
   });
 
   it('requires a compatible culture and enough repeat charges for Reaction Chain', () => {

@@ -749,7 +749,7 @@ screens.onTitleStart(() => {
     if (replay?.status === 'unavailable') {
       persistenceUnavailable = true;
       haptics.play('warning');
-      fx.showToast('catalyst', 'Save unavailable', 'Your result is still waiting to be banked');
+      fx.showToast('catalyst', 'Save unavailable', 'Your result is still waiting to be saved');
       return;
     }
     pendingResearchBank = loadPendingResearchBank(runtimeStorage);
@@ -823,7 +823,7 @@ screens.onAgitate(() => {
   registerPlayerAction();
   screens.closeMobileDrawers();
   screens.updateAgitation(arena.getAgitationState());
-  screens.addTicker('Dish agitated: lifeforms are mixing.');
+  screens.addTicker('Dish agitated: cultures are mixing.');
   canvas.classList.remove('dish-shake');
   void canvas.offsetWidth;
   canvas.classList.add('dish-shake');
@@ -1115,7 +1115,7 @@ function genomeRevealInfo(genome: GenomeArtIdentity) {
     asset: genome.asset,
     alt: genome.alt,
     primary: genome.primary,
-    archivePosition: `${archive.decodedGenomes} / ${archive.totalGenomes} GENOMES DECODED`,
+    archivePosition: `${archive.decodedGenomes} / ${archive.totalGenomes} STRAINS FOUND`,
   };
 }
 
@@ -1187,7 +1187,7 @@ function resumeRunFromCheckpoint(): void {
       chosenObjective: undefined,
     });
     saveActiveRunCheckpoint();
-    fx.showToast('catalyst', 'Study refreshed', 'The saved Method could not reproduce that Study');
+    fx.showToast('catalyst', 'Trial refreshed', 'The saved upgrade could not recreate that trial');
     showPhase();
     return;
   }
@@ -1369,7 +1369,7 @@ function startNewFight() {
     ? {
         key: `${runState.seed}:${runState.fightIndex}:${objective.name}`,
         kind: introduction.kind,
-        message: `Dr. E. New ${introduction.kind === 'study' ? 'Study' : 'Trial'}: ${objective.name}. ${objective.description}`,
+        message: `Dr. E. New trial: ${objective.name}. ${objective.description}`,
       }
     : null;
   const deferDirectorForMobileToolboxLesson = directorIntroduction !== null
@@ -1381,7 +1381,7 @@ function startNewFight() {
   }
   if (introduction.showCentralBanner) {
     fx.showEpochBanner(
-      `Case 01 · Trial ${runState.fightIndex + 1}`,
+      `Trial ${runState.fightIndex + 1}`,
       objective.name,
       objective.description,
     );
@@ -1743,8 +1743,8 @@ function completeResearchBankBoundary(plan: PlannedResearchBank): boolean {
   announceUnlocks(previousAvailability, currentUnlockAvailability());
   for (const sealId of plan.newSealIds) {
     const seal = researchSealById(sealId);
-    fx.showToast('discovery', 'Research Seal', seal.title);
-    screens.addTicker(`Dr. E: Research seal stamped — ${seal.title}.`, 'discovery');
+    fx.showToast('discovery', 'Badge earned', seal.title);
+    screens.addTicker(`Dr. E: Badge earned — ${seal.title}.`, 'discovery');
   }
   debug.updateDiscoveries(discoveryDebugInfo());
   refreshNotebook();
@@ -1898,8 +1898,8 @@ function syncResearchArchive(biomeName?: string | null): void {
   }
   for (const sealId of result.newSealIds) {
     const seal = researchSealById(sealId);
-    fx.showToast('discovery', 'Research Seal', seal.title);
-    screens.addTicker(`Dr. E: Research seal stamped — ${seal.title}.`, 'discovery');
+    fx.showToast('discovery', 'Badge earned', seal.title);
+    screens.addTicker(`Dr. E: Badge earned — ${seal.title}.`, 'discovery');
   }
   if (result.newSealIds.length > 0 || result.newBiome) refreshNotebook();
 }
@@ -2255,17 +2255,17 @@ function announceUnlocks(
     if (previous.tools.includes(tool)) continue;
     didUnlock = true;
     screens.showcaseToolUnlock(tool);
-    screens.addTicker(`Research unlocked: ${capitalize(tool)} reagent available.`, 'discovery');
-    fx.showToast('catalyst', 'Reagent Unlocked', `${capitalize(tool)} now available`);
+    screens.addTicker(`New tool: ${capitalize(tool)}.`, 'discovery');
+    fx.showToast('catalyst', 'Tool unlocked', `${capitalize(tool)} now available`);
   }
   for (const lifeform of next.lifeforms) {
     if (previous.lifeforms.includes(lifeform)) continue;
     didUnlock = true;
     screens.showcaseLifeformUnlock(lifeform);
     if (isBaseArchetype(lifeform)) {
-      screens.addTicker(`Genome decoded: ${ARCHETYPE_INFO[lifeform].name}. Egg synthesis available.`, 'discovery');
+      screens.addTicker(`New strain: ${ARCHETYPE_INFO[lifeform].name}. Now available as an egg.`, 'discovery');
     } else if (lifeform in BREED_DEFS) {
-      screens.addTicker(`Genome decoded: ${BREED_DEFS[lifeform].name}. Egg synthesis available.`, 'discovery');
+      screens.addTicker(`New strain: ${BREED_DEFS[lifeform].name}. Now available as an egg.`, 'discovery');
     }
   }
   if (didUnlock) haptics.play('discovery');
@@ -2318,7 +2318,7 @@ function announceEpochCompletion(complete: boolean): void {
     didAnnounceCompletion = true;
     uiAudio.play('experiment_ready');
     haptics.play('success');
-    screens.addTicker('Dr. E: Goal complete. Bank the result when you are ready, or keep cultivating.', 'discovery');
+    screens.addTicker('Dr. E: Goal complete. Finish the trial when you are ready, or keep cultivating.', 'discovery');
     coach.report('objective-complete');
     updateButtonHint();
   } else if (!complete && didAnnounceCompletion) {
@@ -2331,8 +2331,8 @@ function announceEquilibrium(info: { achieved: boolean; progress: number; biomeN
   didAnnounceEquilibrium = true;
   uiAudio.play('epoch_win');
   haptics.play('success');
-  fx.showToast('discovery', 'Stable Ecosystem', info.biomeName ?? 'Equilibrium');
-  screens.addTicker('Equilibrium reached: pressure paused. Bank when ready, or keep observing.', 'discovery');
+  fx.showToast('discovery', 'Stable Ecosystem', info.biomeName ?? 'Balance');
+  screens.addTicker('Balance reached: pressure paused. Finish when ready, or keep watching.', 'discovery');
 }
 
 function labelForStrain(strain: string): string {
@@ -2346,7 +2346,7 @@ function labelForStrain(strain: string): string {
 }
 
 function descriptionForStrain(strain: string): string {
-  if (!isProgressionLifeformId(strain)) return 'Archived experimental specimen.';
+  if (!isProgressionLifeformId(strain)) return 'Experimental strain.';
   const identity = LIFEFORM_IDENTITIES[strain];
   return `${identity.role} · ${identity.behavior}`;
 }
@@ -2695,9 +2695,9 @@ function updateTicker(ar: Arena): void {
   const lifeformBand = livingLifeforms === 0 ? 'extinct' : livingLifeforms < 3 ? 'thin' : livingLifeforms >= 7 ? 'blooming' : 'stable';
   if (lifeformBand !== tickerState.lastLifeformBand) {
     tickerState.lastLifeformBand = lifeformBand;
-    if (lifeformBand === 'extinct') screens.addTicker('Lifeforms have vanished from the dish.', 'critical');
-    else if (lifeformBand === 'thin') screens.addTicker('Lifeform diversity is under threat.', 'caution');
-    else if (lifeformBand === 'blooming') screens.addTicker('Lifeforms are blooming.', 'discovery');
+    if (lifeformBand === 'extinct') screens.addTicker('Every culture has died.', 'critical');
+    else if (lifeformBand === 'thin') screens.addTicker('Only a few cultures are left.', 'caution');
+    else if (lifeformBand === 'blooming') screens.addTicker('Cultures are blooming.', 'discovery');
   }
 
   const coverageBand = coverage <= 0.08 ? 'sterile' : coverage >= 0.42 ? 'bloom' : 'normal';
@@ -2722,12 +2722,12 @@ function updateTicker(ar: Arena): void {
 
   if (ecology.reactions > tickerState.lastReactionCount) {
     tickerState.lastReactionCount = ecology.reactions;
-    screens.addTicker('Reagent reaction: unstable chemistry is blooming.', 'caution');
+    screens.addTicker('Reaction: unstable chemistry is blooming.', 'caution');
   }
 
   if (ecology.accidents > tickerState.lastAccidentCount) {
     tickerState.lastAccidentCount = ecology.accidents;
-    screens.addTicker('Lab accident: rogue reagent entered the dish.', 'caution');
+    screens.addTicker('Lab accident: a rogue chemical hit the dish.', 'caution');
   }
 
   if (ecology.outbreaks > tickerState.lastOutbreakCount) {
@@ -2754,12 +2754,12 @@ function updateTicker(ar: Arena): void {
 }
 
 function toneForTickerSignal(signal: string): 'normal' | 'discovery' | 'caution' | 'critical' {
-  if (signal.startsWith('NEW LIFEFORM CREATED')) return 'discovery';
+  if (signal.startsWith('NEW STRAIN CREATED')) return 'discovery';
   if (signal.startsWith('NEW BREED DISCOVERED')) return 'discovery';
-  if (signal.startsWith('CATALYTIC FLARE') || signal.startsWith('FOLDING FAULT') || signal.startsWith('Crisis')) {
+  if (signal.startsWith('REACTION FLARE') || signal.startsWith('FOLDING FAULT') || signal.startsWith('Crisis')) {
     return 'critical';
   }
-  if (signal.startsWith('CATALYTIC') || signal.startsWith('Lab accident') || signal.startsWith('CAUTION')) {
+  if (signal.startsWith('REACTION') || signal.startsWith('Lab accident') || signal.startsWith('CAUTION')) {
     return 'caution';
   }
   if (signal.startsWith('Lab note') || signal.includes('mutation') || signal.includes('cultured')) return 'discovery';

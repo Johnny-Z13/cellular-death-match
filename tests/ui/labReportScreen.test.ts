@@ -96,7 +96,7 @@ describe('renderLabReport', () => {
     expect(text).toContain('9 reactions triggered');
     expect(text).toContain('Glass Antibody');
     expect(text).toContain('12');
-    expect(text).toContain('2 new strains banked');
+    expect(text).toContain('2 new strains saved');
     expect(text).toContain('Collection: 5/14');
     expect(text).toContain('3 new entries');
     expect(text).toContain('Completion: 38%');

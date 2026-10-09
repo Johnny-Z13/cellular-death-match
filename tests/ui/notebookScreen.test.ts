@@ -14,7 +14,7 @@ describe('discoverer notebook UI wiring', () => {
     expect(html).toContain('id="notebook-close"');
     expect(html).toContain('id="notebook-progress"');
     expect(html).toContain('id="notebook-list"');
-    expect(html).toContain('Discoverer');
+    expect(html).toContain('aria-label="Open Notebook"');
   });
 
   it('docks the notebook tab onto the dish stage and styles it as a lab tablet', () => {
@@ -94,10 +94,10 @@ describe('discoverer notebook UI wiring', () => {
 
   it('keeps hypotheses and optional field studies available under Study', () => {
     expect(html).toContain('id="notebook-study" class="notebook-study notebook-page"');
-    expect(html).toContain('>Study</button>');
+    expect(html).toContain('>This trial</button>');
     expect(screensSource).toContain('updateResearchNotebook(view: ResearchNotebookView): void;');
     expect(screensSource).toContain("label.textContent = 'Active hypothesis'");
-    expect(screensSource).toContain("'Open field studies'");
+    expect(screensSource).toContain("'Open questions'");
     expect(css).toContain('.research-hypothesis');
     expect(css).toContain('.field-study-list');
   });

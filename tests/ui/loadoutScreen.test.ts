@@ -238,9 +238,9 @@ describe('renderLoadoutScreen', () => {
     installFakeDocument();
     const root = render();
 
-    expect(root.textContent).toContain('Archived Specimens');
-    expect(root.textContent).toContain('Standard lab-stock eggs are always supplied.');
-    expect(root.textContent).toContain('1/2 archived');
+    expect(root.textContent).toContain('Choose your strains');
+    expect(root.textContent).toContain('Standard eggs are always supplied.');
+    expect(root.textContent).toContain('1/2 chosen');
   });
 
   it('uses color CSS variables for strain buttons', () => {

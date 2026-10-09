@@ -1,7 +1,7 @@
 {
   "name": "Cellular Death Match",
   "short_name": "CDM",
-  "description": "Breed strange organisms and survive Professor Gene Poole's volatile petri-dish trials.",
+  "description": "Grow strange cultures, discover new strains and keep Dr. E. Mergent's volatile Petri dish in balance.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#04080a",

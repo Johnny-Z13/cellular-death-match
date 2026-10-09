@@ -385,10 +385,10 @@ export function createArena(opts: CreateArenaOpts): Arena {
     discoveredBreedIds.add(id);
     discoveredBreedTicks.set(id, tickNo);
     if (BREED_DEFS[id].parents && !knownBreedIds.has(id)) objectiveRuntime.hybridDiscovered = true;
-    discoverNote(`breed_${id}`, `NEW LIFEFORM CREATED: ${BREED_DEFS[id].name}.`);
+    discoverNote(`breed_${id}`, `NEW STRAIN CREATED: ${BREED_DEFS[id].name}.`);
     if (sourceCell) {
       const marker = breedDiscoveryMarkerFor(id);
-      addDishEvent(marker.kind, `NEW LIFEFORM: ${BREED_DEFS[id].name}`, sourceCell.center, marker.radius, marker.color);
+      addDishEvent(marker.kind, `NEW STRAIN: ${BREED_DEFS[id].name}`, sourceCell.center, marker.radius, marker.color);
     }
     if (!sourceCell || sourceCell.vol <= 0 || archetypes.size >= ECOSYSTEM_MAX_POPULATION) return;
     // A discovery is born beside its source, never on top of it. `addCell`
@@ -787,8 +787,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
         pulseToolEffect(state, trailReaction.effect, archetypes);
         toolEffects.push(trailReaction.effect);
         addDishEventForEffect(trailReaction.effect, addDishEvent);
-        discoverNote('paste_catalysed', 'Lab note: reagents react along a nutrient paste trail.');
-        pushSignal('Paste trail catalysed by reagent.');
+        discoverNote('paste_catalysed', 'Lab note: tools react along a Paste trail.');
+        pushSignal('A tool reacted along the Paste trail.');
         while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
       }
       if (catalyticReaction) {
@@ -991,7 +991,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           const accident = randomAccidentEffect(state);
           pulseToolEffect(state, accident, archetypes);
           toolEffects.push(accident);
-          addDishEvent('caution', 'ROGUE REAGENT', accident.pos, accident.radius, 'amber');
+          addDishEvent('caution', 'ROGUE CHEMICAL', accident.pos, accident.radius, 'amber');
           accidentCount += 1;
           while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
         }
@@ -1300,11 +1300,11 @@ function reactionContextFor(
 }
 
 function reactionMessageFor(type: CatalysisEffectType, recipeName: string): string {
-  if (type === 'flare') return `CATALYTIC FLARE: ${recipeName} discovered.`;
-  if (type === 'crystal') return `CATALYTIC CRYSTAL: ${recipeName} discovered.`;
-  if (type === 'foam') return `CATALYTIC FOAM: ${recipeName} discovered.`;
+  if (type === 'flare') return `REACTION FLARE: ${recipeName} discovered.`;
+  if (type === 'crystal') return `REACTION CRYSTAL: ${recipeName} discovered.`;
+  if (type === 'foam') return `REACTION FOAM: ${recipeName} discovered.`;
   if (type === 'fold_fault') return `FOLDING FAULT: ${recipeName} discovered.`;
-  return `CATALYTIC REACTION: ${recipeName} discovered.`;
+  return `REACTION: ${recipeName} discovered.`;
 }
 
 function catalysisEffectTypeFor(type: ToolEffectType): CatalysisEffectType | null {

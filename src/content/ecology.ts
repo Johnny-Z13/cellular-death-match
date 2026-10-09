@@ -89,7 +89,7 @@ export const CRISES: Record<CrisisId, CrisisDef> = {
   heat_spike: {
     id: 'heat_spike',
     name: 'Heat Spike',
-    summary: 'All active lifeforms surge and collide more aggressively.',
+    summary: 'All active cultures surge and collide more aggressively.',
     durationTicks: 60 * 9,
   },
   oxygen_crash: {

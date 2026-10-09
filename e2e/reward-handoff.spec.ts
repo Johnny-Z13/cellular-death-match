@@ -77,7 +77,7 @@ test('uses one meaningful Dr. E graduation without repeating it after every resu
   await page.screenshot({ path: testInfo.outputPath('trial-2-autonomy-handoff.png') });
 
   await page.reload();
-  await expect(page.locator('#title-start-label')).toHaveText('Continue Case');
+  await expect(page.locator('#title-start-label')).toHaveText('Continue Trial');
   await page.locator('#title-start').click();
   await expect(page.locator('#method-intro-title')).toHaveText('Right. You’re on your own now.');
   await expect(page.locator('#method-intro-continue')).toBeFocused();
@@ -88,7 +88,7 @@ test('uses one meaningful Dr. E graduation without repeating it after every resu
   ))).toBe('1');
 
   await page.reload();
-  await expect(page.locator('#title-start-label')).toHaveText('Continue Case');
+  await expect(page.locator('#title-start-label')).toHaveText('Continue Trial');
   await page.locator('#title-start').click();
   await expect(page.locator('#screen-method-intro')).not.toHaveClass(/visible/);
   await expect(page.locator('#screen-pick')).toHaveClass(/visible/);

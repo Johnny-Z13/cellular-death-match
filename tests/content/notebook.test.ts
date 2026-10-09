@@ -64,7 +64,7 @@ describe('notebook catalogue content', () => {
     expect(catalyst?.isFresh).toBe(true);
     expect(catalyst?.discoveredAtLabel).toBe('Discovered on Jun 7, 2026');
     expect(catalyst?.displayNotes).toContain(DISCOVERY_NOTES.recipe_nutrient_conduit.body);
-    expect(catalyst?.displayRecipe).toBe('Protocol: Nutrient + Water → Conduit');
+    expect(catalyst?.displayRecipe).toBe('Recipe: Nutrient + Water → Conduit');
     expect(view.entries.find((entry) => entry.id === 'lab_note_water_carries')?.discovered).toBe(true);
     expect(view.entries.find((entry) => entry.id === 'lifeform_splitter')?.discovered).toBe(true);
     expect(view.entries.find((entry) => entry.id === 'lifeform_bruiser')).toBeUndefined();
@@ -94,10 +94,10 @@ describe('notebook catalogue content', () => {
     );
 
     expect(entry?.researchStage).toBe('observed');
-    expect(entry?.researchStateLabel).toBe('Signal observed');
-    expect(entry?.researchNextAction).toContain('fresh later dish');
-    expect(entry?.displayRecipe).toBe('Protocol: unresolved');
-    expect(entry?.displayNotes).toContain('reaction signature');
+    expect(entry?.researchStateLabel).toBe('Reaction seen');
+    expect(entry?.researchNextAction).toContain('later trial');
+    expect(entry?.displayRecipe).toBe('Recipe: unknown');
+    expect(entry?.displayNotes).toContain('A reaction was recorded');
   });
 
   it('reveals every entry in reveal-all mode and returns to starters after clear', () => {
@@ -140,7 +140,7 @@ describe('notebook catalogue content', () => {
   it('derives the global Genome Archive north star from canonical content', () => {
     const fresh = notebookViewForProgression(createDiscoveryProgression()).archive;
     expect(fresh).toMatchObject({ decodedGenomes: 1, observedGenomes: 0, totalGenomes: 14 });
-    expect(fresh.nextLead).toMatchObject({ state: 'locked', label: 'Unknown genome signal' });
+    expect(fresh.nextLead).toMatchObject({ state: 'locked', label: 'Unknown strain' });
 
     const observed = updateDiscoveryProgression(
       createDiscoveryProgression(),
@@ -221,11 +221,11 @@ describe('chimera reframe', () => {
       (entry) => entry.id === 'lifeform_bloom_mass',
     );
     expect(observedEntry?.researchStage).toBe('observed');
-    expect(observedEntry?.researchStateLabel).toBe('Phenotype observed');
-    expect(observedEntry?.researchNextAction).toContain('completed result');
+    expect(observedEntry?.researchStateLabel).toBe('Strain spotted');
+    expect(observedEntry?.researchNextAction).toContain('finish a trial');
     expect(observedEntry?.genomePortrait).toBe('/art/genomes/bloom_mass.png');
     expect(observedEntry?.eggSynthesisAvailable).toBe(false);
-    expect(observedEntry?.displayRecipe).toBe('Genome sequence: unresolved · Egg synthesis: unavailable');
+    expect(observedEntry?.displayRecipe).toBe('Egg: not available yet');
   });
 });
 
@@ -236,7 +236,7 @@ describe('notebook atlas (progression map)', () => {
     expect(atlas.totalCount).toBe(NOTEBOOK_ENTRIES.length);
     // The onboarding specimen is discovered; the rest are locked but visible.
     expect(atlas.discoveredCount).toBe(1);
-    expect(atlas.groups.find((group) => group.key === 'lifeform')?.label).toBe('Genome Archive');
+    expect(atlas.groups.find((group) => group.key === 'lifeform')?.label).toBe('Strains');
     expect(atlas.groups.find((group) => group.key === 'lifeform')?.decoded).toBe(1);
     const allNodes = atlas.groups.flatMap((g) => g.nodes);
     expect(allNodes).toHaveLength(NOTEBOOK_ENTRIES.length);

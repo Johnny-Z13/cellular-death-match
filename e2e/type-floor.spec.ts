@@ -1,12 +1,16 @@
 import { expect, test, type Page } from '@playwright/test';
 import { completeOpeningActions, openFreshApp, startFirstTrial } from './helpers';
+import { RETIRED_PLAYER_WORDS } from '../src/content/glossary';
 
-// Nothing a player reads may render below 11px, on any viewport, in any of
-// the main states. Decorative glyphs with no letters are ignored.
+// Nothing a player reads may render below 11px, or use a retired noun (see
+// src/content/glossary.ts), on any viewport, in any of the main states.
+// Decorative glyphs with no letters are ignored.
 const FLOOR_PX = 11;
+const RETIRED = RETIRED_PLAYER_WORDS.map((pattern) => ({ source: pattern.source, flags: pattern.flags }));
 
 async function smallText(page: Page, state: string): Promise<string[]> {
-  return page.evaluate(({ floor, state }) => {
+  return page.evaluate(({ floor, state, retired }) => {
+    const patterns = retired.map(({ source, flags }) => new RegExp(source, flags));
     const offenders: string[] = [];
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     const seen = new Set<Element>();
@@ -30,17 +34,19 @@ async function smallText(page: Page, state: string): Promise<string[]> {
         }
       }
       if (!visible) continue;
+      const id = element.id ? `#${element.id}` : `.${[...element.classList].join('.')}`;
       const size = parseFloat(getComputedStyle(element).fontSize);
       if (size < floor - 0.01) {
-        const id = element.id ? `#${element.id}` : `.${[...element.classList].join('.')}`;
         offenders.push(`${state}: ${element.tagName.toLowerCase()}${id} ${size}px "${text.slice(0, 40)}"`);
       }
+      const retiredWord = patterns.map((pattern) => pattern.exec(text)?.[0]).find(Boolean);
+      if (retiredWord) offenders.push(`${state}: ${element.tagName.toLowerCase()}${id} retired word "${retiredWord}" in "${text.slice(0, 60)}"`);
     }
     return offenders;
-  }, { floor: FLOOR_PX, state });
+  }, { floor: FLOOR_PX, state, retired: RETIRED });
 }
 
-test('no rendered text falls below the 11px floor', async ({ page }, testInfo) => {
+test('rendered text stays above 11px and uses one vocabulary', async ({ page }, testInfo) => {
   test.setTimeout(90_000);
   const offenders: string[] = [];
   await openFreshApp(page);

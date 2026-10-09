@@ -17,7 +17,7 @@ export function onboardingIdleNudge(input: OnboardingIdleNudgeInput): Onboarding
   if (input.objectiveComplete) {
     return {
       title: 'Experiment ready',
-      body: 'Bank this result to preserve the evidence and unlock the next research step.',
+      body: 'Finish the trial to save this result and unlock the next step.',
       interruptTutorial: false,
     };
   }
@@ -41,7 +41,7 @@ export function onboardingIdleNudge(input: OnboardingIdleNudgeInput): Onboarding
   if (input.guidanceTier === 'hypothesis' && input.recoveryHints) {
     const exact = (input.nudgeIndex ?? 0) > 0;
     return {
-      title: exact ? 'Exact method' : 'A principle to test',
+      title: exact ? 'Exact steps' : 'A principle to test',
       body: exact ? input.recoveryHints[1] : input.recoveryHints[0],
       interruptTutorial: false,
     };

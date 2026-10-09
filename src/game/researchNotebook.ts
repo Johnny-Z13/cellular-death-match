@@ -64,7 +64,7 @@ export interface ResearchRecordsView {
 
 const QUESTIONS: Record<ObjectiveKind, string> = {
   discover_breed: 'What new form appears when two compatible cultures share the same conditions?',
-  stabilize_breed: 'Can a newly changed culture survive long enough to become a reliable specimen?',
+  stabilize_breed: 'Can a newly changed culture survive long enough to become a reliable strain?',
   understand_recipe: 'Which order of pressures makes this reaction repeatable?',
   apply_recipe: 'Can a known reaction support a diverse living dish instead of overwhelming it?',
   preserve_grazers: 'Can the grazers remain viable while the rest of the ecosystem changes?',
@@ -74,7 +74,7 @@ const QUESTIONS: Record<ObjectiveKind, string> = {
   dominant_archetype: 'How far can one lineage expand before the ecology becomes brittle?',
   cross_breed: 'What emerges when two discovered lineages meet under a fertile field?',
   mega_culture: 'How large can one culture grow while the surrounding ecology remains alive?',
-  reaction_chain: 'Can separate reagent events be linked into one living sequence?',
+  reaction_chain: 'Can separate reactions be linked into one living sequence?',
   balance_keeper: 'Can intervention keep any one culture from owning the dish?',
   crisis_survivor: 'Which arrangement lets three cultures survive a sudden toxic crisis?',
   protector: 'Can a fragile culture be sheltered through a full outbreak?',
@@ -91,14 +91,14 @@ const OBSERVATION_NOTES: Record<ObjectiveKind, string> = {
   apply_recipe: 'Watch what the reaction does to its neighbours after the flash fades.',
   preserve_grazers: 'Leave refuge between the strongest pressure fields.',
   breed_archetype: 'Feed the edge that is losing ground and thin only where necessary.',
-  controlled_reaction: 'Separate the test field from the rest of the dish before combining reagents.',
+  controlled_reaction: 'Separate the test field from the rest of the dish before combining tools.',
   balanced_ecology: 'Intervene at the borders; the centre usually tells you too late.',
   dominant_archetype: 'Dominance is useful evidence. Total collapse is not.',
   cross_breed: 'Shared food makes an informative meeting place.',
   mega_culture: 'Support the largest boundary while preserving some breathing room around it.',
   reaction_chain: 'Use distinct regions so each event leaves readable evidence.',
   balance_keeper: 'Correct the fastest-growing edge before it becomes irreversible.',
-  crisis_survivor: 'Spatial separation is often a better shield than more reagent.',
+  crisis_survivor: 'Spatial separation is often a better shield than more chemicals.',
   protector: 'Build the refuge before the outbreak arrives.',
   acid_sculptor: 'Small cuts reveal more than one large burn.',
   colony_founder: 'Several small fertile sites are safer than one crowded site.',
@@ -161,15 +161,15 @@ function progressionFieldStudies(
   return [
     study('atlas', 'Map the unknown', 'Record unfamiliar life and reactions.', notebook.discoveredCount, notebook.totalCount),
     study('cultures', 'Build a living library', 'Stabilise distinct cultures so they can seed future dishes.', stableLifeforms, byCategory.lifeform.total),
-    study('catalysts', 'Resolve the reaction web', 'Reproduce observed catalyst signatures until their method is understood.', resolvedCatalysts, byCategory.catalyst.total),
+    study('catalysts', 'Resolve the reaction web', 'Repeat the reactions you have seen until you understand them.', resolvedCatalysts, byCategory.catalyst.total),
   ];
 }
 
 function openEndedFieldStudies(active: ActiveStudySnapshot | null): FieldStudyView[] {
   return [
     study('wild-diversity', 'Crowded coexistence', 'Keep five living cultures in the same dish.', active?.livingCultures ?? 0, 5),
-    study('wild-reactions', 'Chain reaction', 'Trigger three reactions before banking the dish.', active?.reactions ?? 0, 3),
-    study('wild-equilibrium', 'Self-sustaining biome', 'Let the ecosystem settle into visible equilibrium.', Math.round((active?.equilibriumProgress ?? 0) * 100), 100, '%'),
+    study('wild-reactions', 'Chain reaction', 'Trigger three reactions before finishing the trial.', active?.reactions ?? 0, 3),
+    study('wild-equilibrium', 'Self-sustaining biome', 'Let the dish settle into balance.', Math.round((active?.equilibriumProgress ?? 0) * 100), 100, '%'),
   ];
 }
 

@@ -266,7 +266,7 @@ export function createCoach(storage?: Pick<Storage, 'getItem' | 'setItem'>): Coa
     titleEl.textContent = success.title;
     bodyEl.textContent = success.body;
     stepEl.textContent = 'Result ready';
-    if (actionEl) actionEl.textContent = 'Bank result when ready';
+    if (actionEl) actionEl.textContent = 'Finish trial when ready';
     if (skipBtn) {
       skipBtn.textContent = '';
       skipBtn.hidden = true;
@@ -473,23 +473,23 @@ function trialSuccessCopy(trialIndex: number): { title: string; body: string } {
   const copy = [
     {
       title: 'Bloom Mass stabilized.',
-      body: 'Bank this culture when ready, or keep observing.',
+      body: 'Finish the trial when ready, or keep watching.',
     },
     {
       title: 'Bitter Bloom. Logged.',
-      body: 'Bank this culture when ready, or keep observing.',
+      body: 'Finish the trial when ready, or keep watching.',
     },
     {
       title: 'Nutrient Conduit. Logged.',
-      body: 'Water carried food through living tissue. Bank it whenever you’re ready, or keep observing.',
+      body: 'Water carried food through living tissue. Finish whenever you’re ready, or keep watching.',
     },
     {
       title: 'Foam Lightning. Logged.',
-      body: 'A second Water pulse discharged the Foam. Bank it whenever you’re ready, or keep observing.',
+      body: 'A second Water pulse discharged the Foam. Finish whenever you’re ready, or keep watching.',
     },
     {
       title: 'Brine Channel. Logged.',
-      body: 'The wider ecosystem held. Bank it whenever you’re ready, or keep observing.',
+      body: 'The wider ecosystem held. Finish whenever you’re ready, or keep watching.',
     },
   ];
   return copy[trialIndex] ?? { title: 'Good work.', body: 'The result is logged.' };

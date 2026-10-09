@@ -119,7 +119,7 @@ describe('discovery progression', () => {
     }, '2026-06-07T13:20:00.000Z', { note: 'observed' });
 
     expect(discoveryAnnouncementsForProgressionChange(previous, next)).toEqual([{
-      message: 'Reaction observed: Pressure Bloom. Reproduce it to understand the protocol.',
+      message: 'Reaction observed: Pressure Bloom. Reproduce it to understand it.',
       tone: 'critical',
     }]);
   });

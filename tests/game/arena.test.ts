@@ -1831,10 +1831,10 @@ describe('arena ecosystem mode', () => {
     expect(arena.applyTool('toxin', cell.center)).toBe(true);
 
     expect(arena.getToolEffects().some((effect) => effect.type === 'flare')).toBe(true);
-    expect(arena.getEcology().signals.some((signal) => signal.includes('CATALYTIC FLARE'))).toBe(true);
+    expect(arena.getEcology().signals.some((signal) => signal.includes('REACTION FLARE'))).toBe(true);
     expect(arena.getEcology().discoveries.noteIds).toContain('recipe_acid_toxin_flare');
     expect(arena.getDishEvents().filter((event) => (
-      event.kind === 'critical' && event.label.includes('CATALYTIC FLARE')
+      event.kind === 'critical' && event.label.includes('REACTION FLARE')
     ))).toHaveLength(2);
   });
 
@@ -1869,7 +1869,7 @@ describe('arena ecosystem mode', () => {
     expect(arena.applyTool('toxin', [cell.center[0] + 2, cell.center[1]])).toBe(true);
 
     const flareDiscoveries = arena.getEcology().discoveries.latest.filter((message) =>
-      message.includes('CATALYTIC FLARE: Acid-Toxin Flare discovered.'),
+      message.includes('REACTION FLARE: Acid-Toxin Flare discovered.'),
     );
     expect(flareDiscoveries).toHaveLength(1);
     expect(arena.getEcology().reactions).toBeGreaterThanOrEqual(2);
@@ -2042,7 +2042,7 @@ describe('arena ecosystem mode', () => {
     arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
 
     expect(arena.getEcology().discoveries.breedIds).toContain('bloom_mass');
-    expect(arena.getEcology().discoveries.latest[0]).toContain('NEW LIFEFORM CREATED: Bloom Mass');
+    expect(arena.getEcology().discoveries.latest[0]).toContain('NEW STRAIN CREATED: Bloom Mass');
     expect(arena.getDishEvents().some((event) =>
       event.label.includes('Bloom Mass') && event.kind === 'discovery' && event.color === 'cyan',
     )).toBe(true);
@@ -2586,7 +2586,7 @@ describe('arena ecosystem mode', () => {
     expect(arena.getDishEvents().some((event) =>
       event.kind === 'critical'
       && event.color === 'red'
-      && event.label.includes('CATALYTIC'),
+      && event.label.includes('REACTION'),
     )).toBe(true);
   });
 
