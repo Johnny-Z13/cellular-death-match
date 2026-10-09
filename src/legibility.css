@@ -678,6 +678,12 @@
     width: 20px;
     height: 20px;
   }
+
+  /* Dr. E's title carries the instruction; his supporting line gets one. */
+  .layout[data-screen="arena"].hud-slot-docked.coach-active .coach:not(.coach-welcome):not(.coach-intro) .coach-body {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+  }
 }
 
 /* Labels ride the dish shake so tags stay on their cultures. */

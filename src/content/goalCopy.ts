@@ -49,7 +49,7 @@ export function goalLineFor(def: ObjectiveDef): string {
     case 'reaction_chain':
       return `Cause ${def.targetCount ?? 3} reactions`;
     case 'balance_keeper':
-      return `Keep the dish balanced for ${seconds(def.sustainTicks, 30)}s`;
+      return `Keep every strain under ${Math.round((def.maxDominance ?? 0.4) * 100)}% for ${seconds(def.sustainTicks, 30)}s`;
     case 'crisis_survivor':
       return `Keep ${def.minCount ?? 3}+ cultures alive through a crisis`;
     case 'protector':

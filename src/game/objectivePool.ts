@@ -99,7 +99,7 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
   },
   {
     kind: 'balance_keeper',
-    name: 'Balance Keeper',
+    name: 'Even Spread',
     description: 'Keep the dish balanced, with no strain above 40% of living matter, for 30 seconds.',
     target: 'No strain > 40% for 30s',
     hint: 'Use Toxin to check the leader and Nutrient to support the trailing culture.',
