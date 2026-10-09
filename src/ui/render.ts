@@ -160,8 +160,7 @@ export function createRenderer(
       // luminosity without shifting hues. The blur runs on the GPU via the
       // canvas filter; without ctx.filter the bilinear upscale of the low-res
       // grid still softens the halo.
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(agarFor(canvas.width, canvas.height), 0, 0);
       ctx.save();
       ctx.imageSmoothingEnabled = true;
       if (supportsCanvasFilter) ctx.filter = `blur(${Math.max(3, canvas.width / 90)}px)`;
@@ -219,6 +218,62 @@ export function createRenderer(
   };
 }
 
+
+// Agar substrate behind the cultures: a dark medium with a faint centre
+// glow, fine grain and a meniscus at the rim, so an empty dish reads as a
+// living plate rather than a void. Static and cached per canvas size; it must
+// stay dark enough that nothing in it could be mistaken for a culture.
+const AGAR = {
+  centre: [10, 22, 24] as const,
+  rim: [2, 6, 7] as const,
+  grainAlpha: 0.035,
+  grainCell: 3,
+  meniscusAlpha: 0.08,
+  seed: 0x5eed,
+};
+
+let agarCache: { width: number; height: number; canvas: HTMLCanvasElement } | null = null;
+
+function agarFor(width: number, height: number): HTMLCanvasElement {
+  if (agarCache && agarCache.width === width && agarCache.height === height) return agarCache.canvas;
+  const plate = document.createElement('canvas');
+  plate.width = width;
+  plate.height = height;
+  const ctx = plate.getContext('2d')!;
+  const cx = width / 2;
+  const cy = height / 2;
+  const reach = Math.hypot(cx, cy);
+  const glow = ctx.createRadialGradient(cx, cy * 0.92, 0, cx, cy, reach);
+  glow.addColorStop(0, `rgb(${AGAR.centre.join(',')})`);
+  glow.addColorStop(1, `rgb(${AGAR.rim.join(',')})`);
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, width, height);
+
+  // Deterministic grain (LCG) so every dish shows the same plate.
+  let state = AGAR.seed;
+  const next = () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+  for (let y = 0; y < height; y += AGAR.grainCell) {
+    for (let x = 0; x < width; x += AGAR.grainCell) {
+      const light = next();
+      if (light < 0.55) continue;
+      ctx.fillStyle = `rgba(150, 220, 210, ${(AGAR.grainAlpha * (light - 0.55)) / 0.45})`;
+      ctx.fillRect(x, y, AGAR.grainCell, AGAR.grainCell);
+    }
+  }
+
+  const meniscus = ctx.createRadialGradient(cx, cy, Math.min(cx, cy) * 0.82, cx, cy, reach);
+  meniscus.addColorStop(0, 'rgba(120, 196, 200, 0)');
+  meniscus.addColorStop(0.35, `rgba(120, 196, 200, ${AGAR.meniscusAlpha})`);
+  meniscus.addColorStop(1, 'rgba(0, 0, 0, 0.35)');
+  ctx.fillStyle = meniscus;
+  ctx.fillRect(0, 0, width, height);
+
+  agarCache = { width, height, canvas: plate };
+  return plate;
+}
 
 // A dashed ring around every culture that counts toward the current goal.
 // Shape, not colour, carries the meaning: a dark underlay keeps the light
