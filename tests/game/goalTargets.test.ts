@@ -38,6 +38,11 @@ describe('goalCultureIds', () => {
     expect([...goalCultureIds(def, cultures)]).toEqual([4]);
   });
 
+  it('marks the leading strain\'s cultures for founder goals', () => {
+    const def: ObjectiveDef = { ...base, kind: 'colony_founder', targetCount: 5 };
+    expect([...goalCultureIds(def, cultures)].sort()).toEqual([3, 5]);
+  });
+
   it('marks nothing for goals about the whole dish or about reactions', () => {
     for (const kind of ['reaction_chain', 'balanced_ecology', 'cross_breed', 'understand_recipe'] as const) {
       expect(goalCultureIds({ ...base, kind }, cultures).size, kind).toBe(0);

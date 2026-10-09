@@ -3,7 +3,7 @@ import { createSim, tick as simTick, addCell } from '../sim/sim';
 import { removePixel } from '../sim/cell';
 import { getCell, setCell, updateBoundaryAround } from '../sim/grid';
 import { type PlayerConfig } from '../content/upgrades';
-import { type EnemyArchetype, type EnemySpawn, ARCHETYPE_DEFAULTS } from '../content/enemies';
+import { type EnemyArchetype, type EnemySpawn, ARCHETYPE_DEFAULTS, ARCHETYPE_INFO } from '../content/enemies';
 import {
   ARCHETYPE_ECOLOGY,
   ARCHETYPE_REACTION_TRAITS,
@@ -542,7 +542,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           const spawn = archetypes.get(id);
           const trait = spawn?.traits?.at(-1);
           dominant = spawn
-            ? trait ? `${MUTATION_TRAITS[trait].name} ${spawn.archetype}` : spawn.archetype
+            ? trait ? `${MUTATION_TRAITS[trait].name} ${ARCHETYPE_INFO[spawn.archetype].name}` : ARCHETYPE_INFO[spawn.archetype].name
             : `cell ${id}`;
         }
       }

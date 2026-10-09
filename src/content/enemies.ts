@@ -35,7 +35,7 @@ export const EGG_ARCHETYPES: EnemyArchetype[] = [
 export const ARCHETYPE_INFO: Record<EnemyArchetype, ArchetypeInfo> = {
   swarmlet: {
     name: 'Swarmlet',
-    summary: 'Small, quick colonies that spread fast and die fast.',
+    summary: 'Small, quick cultures that spread fast and die fast.',
     color: [72, 201, 255],
   },
   bruiser: {

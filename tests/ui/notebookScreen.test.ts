@@ -70,7 +70,7 @@ describe('discoverer notebook UI wiring', () => {
     expect(mainSource).toContain('atlasViewForProgression');
     expect(css).toContain('.atlas-node-locked');
     expect(css).toContain('.atlas-node-genome.is-silhouette');
-    expect(screensSource).toContain("`${group.decoded} / ${group.total} decoded`");
+    expect(screensSource).toContain("`${group.decoded} / ${group.total} found`");
     expect(css).toContain('.notebook-tab-button.is-active');
   });
 
@@ -94,7 +94,7 @@ describe('discoverer notebook UI wiring', () => {
 
   it('keeps hypotheses and optional field studies available under Study', () => {
     expect(html).toContain('id="notebook-study" class="notebook-study notebook-page"');
-    expect(html).toContain('>This trial</button>');
+    expect(html).toContain('>Trial</button>');
     expect(screensSource).toContain('updateResearchNotebook(view: ResearchNotebookView): void;');
     expect(screensSource).toContain("label.textContent = 'Active hypothesis'");
     expect(screensSource).toContain("'Open questions'");

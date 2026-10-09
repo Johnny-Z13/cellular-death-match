@@ -9,6 +9,7 @@ import { getUpgradeDef, upgradeToolNote } from './content/upgrades';
 import { goalLineFor } from './content/goalCopy';
 import { createDishLabelOverlay } from './ui/dishLabelOverlay';
 import { createDishLabelRuntime } from './ui/dishLabelRuntime';
+import { checkLessonCulture, createLessonWatch, watchLessonCulture } from './game/lessonRecovery';
 import { COMMON_COLD_CASE, trialForIndex } from './content/researchCases';
 import { loadCaseRecord, recordCompletedTrial } from './game/caseRecord';
 import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/enemies';
@@ -547,14 +548,18 @@ const dishLabels = createDishLabelRuntime({
   isCompact: () => window.matchMedia('(max-width: 599px)').matches,
 });
 let dishGoalCellIds: ReadonlySet<number> = new Set();
+// The culture a guided lesson is built around (Trials 2-5, first time).
+const lessonWatch = createLessonWatch();
 // Desktop: where a dropped field would land, shown as a ghost ring.
 let toolPreviewPos: [number, number] | null = null;
 const labelsButton = document.getElementById('labels-button');
 function applyDishLabelsPreference(enabled: boolean): void {
   dishLabels.setEnabled(enabled);
   if (!labelsButton) return;
+  // Same semantics as Sound: the button's action is "hide", pressed = hidden.
   labelsButton.textContent = `Dish labels — ${enabled ? 'On' : 'Off'}`;
-  labelsButton.setAttribute('aria-pressed', String(enabled));
+  labelsButton.setAttribute('aria-label', enabled ? 'Hide dish labels' : 'Show dish labels');
+  labelsButton.setAttribute('aria-pressed', String(!enabled));
 }
 applyDishLabelsPreference((() => {
   try { return window.localStorage.getItem(DISH_LABELS_KEY) !== '0'; } catch { return true; }
@@ -652,7 +657,11 @@ function applySelectedToolAt(pos: [number, number]): boolean {
       onboardingDishGuideTracksLastEgg = true;
       setOnboardingDishPointerTarget(arena.getLastEggCellPos() ?? pos, true);
       // Name the culture the player just planted while it is still a speck.
-      dishLabels.ping(arena, arena.getLastEggCellPos() ?? pos, performance.now(), 2500);
+      const eggPos = arena.getLastEggCellPos() ?? pos;
+      dishLabels.ping(arena, eggPos, performance.now(), 2500);
+      if (coach.isActive() && !isOnboardingEpoch(run.getState().fightIndex)) {
+        watchLessonCulture(lessonWatch, cellIdAt(arena, eggPos));
+      }
     } else {
       // Once the first reagent lands, subsequent "same spot" instructions
       // follow that field rather than chasing a moving organism.
@@ -1344,6 +1353,7 @@ function startNewFight() {
   lastRenderAt = Number.NEGATIVE_INFINITY;
   dishLabels.reset(performance.now());
   dishGoalCellIds = new Set();
+  watchLessonCulture(lessonWatch, null);
   tickCount = 0;
   tickerState = createTickerState();
   cellFxTracker = createCellFxTracker();
@@ -1554,6 +1564,7 @@ function loop() {
   if (ticksToRun > 0) ecologyAudio.update(readAudioFrame(arena));
 
   updateJuiceEvents(arena);
+  recoverLostLessonCulture(arena, now);
   dishGoalCellIds = dishLabels.update(arena, run.getObjective(), now);
   if (shouldRenderFrame(lastRenderAt, now, visualProfile.targetRenderFps)) {
     renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds);
@@ -2722,7 +2733,8 @@ function updateTicker(ar: Arena): void {
     else if (coverageBand === 'bloom') screens.addTicker('Living matter is filling the dish.');
   }
 
-  if (ecology.dominant !== tickerState.lastDominant && ecology.dominant !== 'none') {
+  // Give the player a moment before narrating who leads the dish.
+  if (tickCount > 60 * 8 && ecology.dominant !== tickerState.lastDominant && ecology.dominant !== 'none') {
     tickerState.lastDominant = ecology.dominant;
     screens.addTicker(`${capitalize(ecology.dominant)} has become dominant.`);
   }
@@ -2835,6 +2847,29 @@ function readAudioFrame(ar: Arena): {
     if (sound) events.push(sound);
   }
   return { eating, fighting, reactions, mutations, hatches, events };
+}
+
+function cellIdAt(ar: Arena, pos: readonly [number, number]): number | null {
+  const x = Math.round(pos[0]);
+  const y = Math.round(pos[1]);
+  const id = ar.state.grid.cells[x * LY + y] ?? 0;
+  return id === 0 ? null : id;
+}
+
+// If the culture a guided lesson depends on dies before the result lands,
+// waiting is a dead end: say so and restart the lesson from its first step.
+function recoverLostLessonCulture(ar: Arena, nowMs: number): void {
+  const verdict = checkLessonCulture(lessonWatch, {
+    lessonActive: coach.isActive() && !coach.isPresentingSuccess(),
+    resultReached: ar.getObjectiveProgress().complete,
+    cultureAlive: (ar.state.cells.get(lessonWatch.cellId ?? -1)?.vol ?? 0) > 0,
+    nowMs,
+  });
+  if (verdict !== 'rewind') return;
+  fx.showToast('catalyst', 'It didn’t take', 'That culture died. Plant another and run the steps again.');
+  screens.addTicker('Dr. E: The culture died before the result. Let’s run it again.', 'caution');
+  coach.beginTrial(run.getState().fightIndex);
+  updateButtonHint();
 }
 
 function isFieldTool(tool: ToolId): tool is 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' {

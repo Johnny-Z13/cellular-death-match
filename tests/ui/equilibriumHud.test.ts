@@ -11,7 +11,8 @@ describe('equilibrium HUD state', () => {
   it('adds a HUD row and createScreens API for equilibrium progress', () => {
     expect(html).toContain('id="hud-equilibrium"');
     expect(screensSource).toContain('setEquilibrium(info: EquilibriumInfo): void;');
-    expect(screensSource).toContain("info.biomeName ?? 'Stable'");
+    expect(screensSource).toContain("? 'Balanced'");
+    expect(screensSource).toContain('Biome: ${info.biomeName}');
     expect(screensSource).toContain('`${Math.round(Math.max(0, Math.min(1, info.progress)) * 100)}%`');
     expect(screensSource).toContain("hud.classList.toggle('hud-equilibrium-achieved'");
   });

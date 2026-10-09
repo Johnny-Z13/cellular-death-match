@@ -150,7 +150,7 @@ export const BREED_DEFS: Record<BreedId, BreedDef> = {
     engulfMultiplier: 1.08,
     instabilityMultiplier: 0.95,
     tint: [190, 255, 76],
-    discoveryTrigger: 'Nutrient conduit overfeeds a budding propagator',
+    discoveryTrigger: 'A well-fed Swarmlet mutates, or a nutrient conduit overfeeds a budding culture',
   },
   static_lattice: {
     id: 'static_lattice',

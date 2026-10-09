@@ -1,4 +1,4 @@
-import type { EnemyArchetype } from '../content/enemies';
+import { ARCHETYPE_INFO, type EnemyArchetype } from '../content/enemies';
 import { BREED_DEFS, REACTION_RECIPES, type BreedId, type ReactionRecipeId } from '../content/catalysis';
 import { OBJECTIVE_TUNING } from '../content/ecologyTuning';
 import type { ObjectiveDef } from '../content/objectives';
@@ -173,7 +173,7 @@ export function evaluateObjective(
       const targetCount = objective.targetCount ?? OBJECTIVE_TUNING.breedTargetCount;
       const count = metrics.archetypeCounts.get(archetype) ?? 0;
       const ok = count >= targetCount;
-      return progress(objective, ok, true, deadline && !ok, urgency, `${count} / ${targetCount} ${archetype} cultures`, ratio(count, targetCount));
+      return progress(objective, ok, true, deadline && !ok, urgency, `${count} / ${targetCount} ${ARCHETYPE_INFO[archetype].name} cultures`, ratio(count, targetCount));
     }
     case 'controlled_reaction': {
       const targetCount = objective.targetCount ?? OBJECTIVE_TUNING.controlledReactionMinCount;
@@ -192,7 +192,7 @@ export function evaluateObjective(
       const archetype = objective.archetype ?? 'boss';
       const minCoverage = objective.minCoverage ?? OBJECTIVE_TUNING.dominantMinCoverage;
       const ok = metrics.dominantArchetype === archetype && metrics.coverage >= minCoverage;
-      return progress(objective, ok, false, deadline && !ok, urgency, `${metrics.dominantArchetype ?? 'none'} dominant, ${Math.round(metrics.coverage * 100)}% living coverage`);
+      return progress(objective, ok, false, deadline && !ok, urgency, `${metrics.dominantArchetype ? ARCHETYPE_INFO[metrics.dominantArchetype].name : 'No strain'} dominant, ${Math.round(metrics.coverage * 100)}% living coverage`);
     }
     case 'cross_breed': {
       const ok = context.runtime.hybridDiscovered;
@@ -242,7 +242,7 @@ export function evaluateObjective(
         }
       }
       const ok = maxCount >= targetCount;
-      return progress(objective, ok, true, deadline && !ok, urgency, `${maxCount} / ${targetCount} ${maxArchetype ?? 'matching'} cultures`, ratio(maxCount, targetCount));
+      return progress(objective, ok, true, deadline && !ok, urgency, `${maxCount} / ${targetCount} ${maxArchetype ? ARCHETYPE_INFO[maxArchetype].name : 'matching'} cultures`, ratio(maxCount, targetCount));
     }
     case 'symbiosis': {
       const sustainTicks = objective.sustainTicks ?? SUSTAIN_30_SECONDS;

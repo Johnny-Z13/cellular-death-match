@@ -7,14 +7,17 @@ test('the dish names its cultures and the labels can be switched off', async ({ 
   await startFirstTrial(page);
   await completeOpeningActions(page);
 
-  const swarmletTag = page.locator('.dish-label', { hasText: 'Swarmlet' }).first();
-  await expect(swarmletTag).toBeVisible();
+  // Tags re-key as a tap ping hands over to a strain tag, so measure the
+  // Swarmlet tag and the dish in one step, retrying until one is on screen.
+  await expect.poll(() => page.evaluate(() => {
+    const tag = [...document.querySelectorAll('.dish-label')].find((node) => node.textContent?.includes('Swarmlet'));
+    if (!tag) return 'missing';
+    const t = tag.getBoundingClientRect();
+    const d = document.getElementById('game')!.getBoundingClientRect();
+    const inside = t.left >= d.left - 1 && t.right <= d.right + 1 && t.top >= d.top - 1 && t.bottom <= d.bottom + 1;
+    return inside ? 'inside' : `outside ${JSON.stringify([t.left, t.top, t.right, t.bottom, d.left, d.top, d.right, d.bottom])}`;
+  })).toBe('inside');
   const dish = (await page.locator('#game').boundingBox())!;
-  const tag = (await swarmletTag.boundingBox())!;
-  expect(tag.x).toBeGreaterThanOrEqual(dish.x - 1);
-  expect(tag.x + tag.width).toBeLessThanOrEqual(dish.x + dish.width + 1);
-  expect(tag.y).toBeGreaterThanOrEqual(dish.y - 1);
-  expect(tag.y + tag.height).toBeLessThanOrEqual(dish.y + dish.height + 1);
 
   // The goal strain gets the goal marker once it exists.
   await expect(page.locator('.dish-label--goal', { hasText: 'Bloom Mass' })).toBeVisible({ timeout: 20_000 });
@@ -34,8 +37,9 @@ test('the dish names its cultures and the labels can be switched off', async ({ 
 
   await page.locator('#options-button').click();
   const toggle = page.locator('#labels-button');
-  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
   await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
   await expect(toggle).toHaveText('Dish labels — Off');
   await page.locator('#options-close').click();
   await expect(page.locator('#dish-labels')).toHaveClass(/is-off/);

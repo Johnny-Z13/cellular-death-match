@@ -23,7 +23,7 @@ describe('options menu', () => {
     expect(html).toContain('id="dbg-reveal-discoveries"');
     expect(html).toContain('Try a fully stocked trial. Your save stays intact.');
     expect(html).toContain('id="dbg-clear-discoveries"');
-    expect(html).toContain('Return to the first-time Professor tutorial');
+    expect(html).toContain('Return to Dr. E’s first-time tutorial');
   });
 
   it('confirms destructive data deletion in-product and reloads first-time state', () => {

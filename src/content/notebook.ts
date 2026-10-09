@@ -159,7 +159,7 @@ export function notebookViewForProgression(
       displayTitle: entry.title,
       displayNotes: researchStage === 'observed'
         ? `Evidence: ${entry.category === 'lifeform' ? 'A new strain appeared.' : 'A reaction was recorded.'}`
-        : `Notes: ${chimera ? `${chimera.lore} ` : ''}${entry.body}${genome ? ` Portrait notes: ${genome.reconstructionNote}` : ''}`,
+        : `Notes: ${chimera ? `${chimera.lore} ` : ''}${entry.body}`,
       displayRecipe: researchStage === 'observed'
         ? entry.category === 'lifeform'
           ? 'Egg: not available yet'
@@ -203,7 +203,7 @@ function researchStateCopy(
   }
   return stage === 'observed'
     ? { label: 'Reaction seen', nextAction: 'Reproduce it in a later trial to understand it.' }
-    : { label: 'Reaction understood', nextAction: 'Added to your Discoveries.' };
+    : { label: 'Reaction understood', nextAction: 'Recipe saved to your Notebook.' };
 }
 
 export function genomeArchiveProgress(

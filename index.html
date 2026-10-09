@@ -185,7 +185,7 @@
           <h3 class="debug-subtitle">laboratory</h3>
           <button id="audio-button" class="debug-option-button" type="button" aria-label="Mute audio" aria-pressed="false">Sound — On</button>
           <button id="haptics-button" class="debug-option-button" type="button" aria-label="Disable haptics" aria-pressed="false" hidden>Haptics — On</button>
-          <button id="labels-button" class="debug-option-button" type="button" aria-pressed="true">Dish labels — On</button>
+          <button id="labels-button" class="debug-option-button" type="button" aria-label="Hide dish labels" aria-pressed="false">Dish labels — On</button>
           <div class="debug-help debug-only">select a lab tool</div>
           <div class="debug-help debug-only">click dish: apply tool</div>
           <div class="debug-help debug-only">repeat evidence: understand protocol</div>
@@ -206,7 +206,7 @@
             </button>
             <button id="dbg-clear-discoveries" class="debug-mini-button options-delete-button" type="button">
               <strong>Delete data</strong>
-              <span>Return to the first-time Professor tutorial</span>
+              <span>Return to Dr. E’s first-time tutorial</span>
             </button>
           </div>
           <button id="dbg-fullscreen-mode" class="debug-mini-button" type="button">full screen</button>
@@ -240,6 +240,7 @@
         <div class="screen-card title-card">
           <p class="title-eyebrow">Dr. E. Mergent’s Cellular Laboratory</p>
           <h1 class="screen-title title-wordmark">Cellular<br /><span>Death Match</span></h1>
+          <p class="title-pitch">Feed a culture and it mutates. Find all 14 strains — and keep the dish alive.</p>
           <section class="case-docket" aria-labelledby="case-docket-title">
             <div class="case-docket-head">
               <span>Trials 1–5 · Persistent Sniffles</span>
@@ -271,7 +272,7 @@
             <span class="screen-button-glyph" aria-hidden="true"></span>
             <span id="title-start-label">Run Trial</span>
           </button>
-          <p id="title-save-note" class="title-save-note">Research saves automatically between boundaries.</p>
+          <p id="title-save-note" class="title-save-note">Progress saves after each trial.</p>
           <p id="commit-debug" class="commit-debug">build · …</p>
         </div>
       </div>
@@ -341,9 +342,9 @@
               <button id="notebook-close" class="notebook-close" type="button" aria-label="Close notebook">Close</button>
             </header>
             <div class="notebook-tabs" role="tablist" aria-label="Notebook sections">
-              <button id="notebook-tab-atlas" class="notebook-tab-button is-active" type="button" role="tab" aria-selected="true" aria-controls="notebook-atlas">Collection</button>
-              <button id="notebook-tab-study" class="notebook-tab-button" type="button" role="tab" aria-selected="false" aria-controls="notebook-study">This trial</button>
-              <button id="notebook-tab-log" class="notebook-tab-button" type="button" role="tab" aria-selected="false" aria-controls="notebook-list">Discoveries</button>
+              <button id="notebook-tab-atlas" class="notebook-tab-button is-active" type="button" role="tab" aria-selected="true" aria-controls="notebook-atlas">Library</button>
+              <button id="notebook-tab-study" class="notebook-tab-button" type="button" role="tab" aria-selected="false" aria-controls="notebook-study">Trial</button>
+              <button id="notebook-tab-log" class="notebook-tab-button" type="button" role="tab" aria-selected="false" aria-controls="notebook-list">Found</button>
             </div>
             <div id="notebook-atlas" class="notebook-atlas notebook-page is-active" role="tabpanel" aria-labelledby="notebook-tab-atlas"></div>
             <div id="notebook-study" class="notebook-study notebook-page" role="tabpanel" aria-labelledby="notebook-tab-study"></div>

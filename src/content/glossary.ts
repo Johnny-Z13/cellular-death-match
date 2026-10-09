@@ -37,6 +37,7 @@ export const RETIRED_PLAYER_WORDS: readonly RegExp[] = [
   /\bfreezer\b/i,
   /\bphenotypes?\b/i,
   /\barchetypes?\b/i,
+  /\bcolon(?:y|ies)\b/i,
   /\blineages?\b/i,
   // Capitalised UI nouns only; lower-case English uses are fine.
   /\bMethods?\b/,

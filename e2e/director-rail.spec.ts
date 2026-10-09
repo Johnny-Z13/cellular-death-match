@@ -29,7 +29,7 @@ test('keeps objective status in Dr. E’s rail when authored coaching is inactiv
   expect(dishBox).not.toBeNull();
   // Goal strip + Dr. E channel. The budget grew with the always-visible goal.
   expect(hudBox!.height).toBeLessThanOrEqual(180);
-  await expect(page.locator('#hud-goal-line')).toHaveText('Grow Bloom Mass and keep it alive');
+  await expect(page.locator('#hud-goal-line')).toHaveText('Feed a Swarmlet until it becomes Bloom Mass');
   expect(hudBox!.y + hudBox!.height).toBeLessThan(dishBox!.y);
   await page.screenshot({ path: testInfo.outputPath('persistent-director-status.png') });
 

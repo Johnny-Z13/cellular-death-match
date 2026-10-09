@@ -31,6 +31,15 @@ export function goalCultureIds(
         if (role === 'grazer' || role === 'propagator') ids.add(id);
       }
       break;
+    case 'colony_founder': {
+      // The strain with the most living cultures is the one being counted.
+      const counts = new Map<string, number>();
+      for (const [, { spawn }] of living) counts.set(spawn.archetype, (counts.get(spawn.archetype) ?? 0) + 1);
+      let leader: string | null = null;
+      for (const [archetype, count] of counts) if (!leader || count > counts.get(leader)!) leader = archetype;
+      for (const [id, { spawn }] of living) if (spawn.archetype === leader) ids.add(id);
+      break;
+    }
     case 'mega_culture': {
       let best: [number, number] | null = null;
       for (const [id, { vol }] of living) if (!best || vol > best[1]) best = [id, vol];

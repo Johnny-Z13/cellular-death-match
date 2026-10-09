@@ -188,7 +188,7 @@ export function createCoach(storage?: Pick<Storage, 'getItem' | 'setItem'>): Coa
     layout?.classList.add('coach-welcome-active');
     kickerEl.textContent = 'Dr. E. Mergent · Trial director';
     titleEl.textContent = 'Welcome to my lab.';
-    bodyEl.textContent = 'Let me show you the ropes. We’ll start with one egg and one feed.';
+    bodyEl.textContent = 'Feed a culture and it mutates into something new — there are 14 strains to find. Let me show you the ropes: one egg, one feed.';
     stepEl.textContent = '';
     if (actionEl) actionEl.textContent = '';
     if (skipBtn) {
@@ -212,7 +212,7 @@ export function createCoach(storage?: Pick<Storage, 'getItem' | 'setItem'>): Coa
     else root.classList.remove('coach-toolbox-lesson');
     layout?.classList.add('coach-prompt-active');
     kickerEl.textContent = beat.kicker
-      ?? (isFirstInstruction ? 'Dr. E · First instruction' : 'Dr. E · Next instruction');
+      ?? (isFirstInstruction ? 'Dr. E · Do this' : 'Dr. E · Next');
     titleEl.textContent = beat.title;
     bodyEl.textContent = beat.body;
     stepEl.textContent = beat.step ?? `${beatIndex + 1} / ${currentBeats.length}`;
@@ -261,7 +261,7 @@ export function createCoach(storage?: Pick<Storage, 'getItem' | 'setItem'>): Coa
 
   function writeSuccessCopy(): void {
     if (!kickerEl || !titleEl || !bodyEl || !stepEl) return;
-    kickerEl.textContent = `Trial ${String(currentTrialIndex + 1).padStart(2, '0')} · Goal complete`;
+    kickerEl.textContent = 'Goal complete';
     const success = trialSuccessCopy(currentTrialIndex);
     titleEl.textContent = success.title;
     bodyEl.textContent = success.body;
@@ -441,7 +441,7 @@ export function createCoach(storage?: Pick<Storage, 'getItem' | 'setItem'>): Coa
       mode = 'nudge';
       clearPresentationTimers();
       clearPresentationClasses();
-      kickerEl.textContent = 'Professor’s note';
+      kickerEl.textContent = 'Dr. E’s note';
       titleEl.textContent = title;
       bodyEl.textContent = body;
       stepEl.textContent = '';

@@ -410,7 +410,7 @@ export function createScreens(): Screens {
       return;
     }
     const identity = LIFEFORM_IDENTITIES[id as LifeformIdentityId];
-    lifeSummary.textContent = `${identity.name} - ${identity.role}. ${identity.behavior} ${identity.origin} Sound: ${identity.soundId}.`;
+    lifeSummary.textContent = `${identity.name} - ${identity.role}. ${identity.behavior} ${identity.origin}`;
     eggTool?.style.setProperty('--egg-color', rgb(identity.colors.primary));
     syncToolReadouts();
   }
@@ -775,6 +775,8 @@ export function createScreens(): Screens {
       setSelectedLifeform(id);
     },
     updateHud(info) {
+      // Trial 1 is the guided first dish; Balance is introduced later.
+      hud.classList.toggle('hud-first-trial', info.totalFights > 0 && info.fightIndex === 0);
       hudFightKey.textContent = info.totalFights > 0 ? 'Trial' : 'Open Lab';
       hudFight.textContent = info.totalFights > 0
         ? `${info.fightIndex + 1} / ${info.totalFights}`
@@ -815,9 +817,10 @@ export function createScreens(): Screens {
         ? `Goal complete: ${info.goalLine}. Finish the trial when ready.`
         : `Goal: ${info.goalLine}. ${info.objectiveSummary}`);
       hudDirectorTitle.textContent = info.objectiveName;
+      // The goal strip carries the goal and its progress; Dr. E's line says how.
       hudDirectorProgress.textContent = info.objectiveComplete
         ? 'Finish when ready — or keep cultivating.'
-        : info.objectiveSummary;
+        : info.objectiveHint || info.objectiveSummary;
       hudHint.textContent = info.objectiveComplete
         ? 'That is the result. Finish now, or keep cultivating.'
         : info.objectiveHint;
@@ -832,8 +835,9 @@ export function createScreens(): Screens {
     },
     setEquilibrium(info) {
       hudEquilibrium.textContent = info.achieved
-        ? info.biomeName ?? 'Stable'
+        ? 'Balanced'
         : `${Math.round(Math.max(0, Math.min(1, info.progress)) * 100)}%`;
+      hudEquilibrium.title = info.achieved && info.biomeName ? `Biome: ${info.biomeName}` : '';
       hud.classList.toggle('hud-equilibrium-achieved', info.achieved);
     },
     updateNotebook(view) {
@@ -941,7 +945,7 @@ export function createScreens(): Screens {
         evidence.textContent = `Observed: ${view.hypothesis.evidence}`;
         const note = document.createElement('p');
         note.className = 'research-professor-note';
-        note.textContent = `Professor’s margin note — ${view.hypothesis.professorNote}`;
+        note.textContent = `Dr. E’s margin note — ${view.hypothesis.professorNote}`;
         const time = document.createElement('span');
         time.className = 'research-time';
         time.textContent = view.hypothesis.timeLabel;
@@ -1050,7 +1054,7 @@ export function createScreens(): Screens {
         const count = document.createElement('span');
         count.className = 'atlas-group-count';
         count.textContent = group.key === 'lifeform'
-          ? `${group.decoded} / ${group.total} decoded`
+          ? `${group.decoded} / ${group.total} found`
           : `${group.discovered} / ${group.total}`;
         head.append(label, count);
 
@@ -1169,7 +1173,7 @@ export function createScreens(): Screens {
       if (info.totalFights === 0) {
         fightStr = info.outcome === 'won'
           ? `Balance reached after trial ${info.fightReached}; ${info.objectivesCompleted} ${objectiveLabel} saved.`
-          : `Colony collapsed during trial ${info.fightReached}; ${info.objectivesCompleted} ${objectiveLabel} saved.`;
+          : `Dish collapsed during trial ${info.fightReached}; ${info.objectivesCompleted} ${objectiveLabel} saved.`;
       } else if (info.outcome === 'won') {
         fightStr = info.objectivesCompleted >= info.totalFights
           ? `All ${info.totalFights} objectives achieved — a flawless trial.`
@@ -1209,13 +1213,13 @@ export function createScreens(): Screens {
       } else if (!info.saveAvailable) {
         titleSaveNote.textContent = 'Saving unavailable in this browser. You can still experiment.';
       } else if (info.resumePhase === 'dish-restart') {
-        titleSaveNote.textContent = 'Assignment saved; active cultures restart cleanly.';
+        titleSaveNote.textContent = 'Progress saved. Unfinished dishes restart fresh.';
       } else if (info.resumePhase === 'method-choice') {
         titleSaveNote.textContent = 'Result saved. Choose an upgrade to continue.';
       } else if (info.resumePhase === 'study-choice') {
         titleSaveNote.textContent = 'Upgrade saved. Choose the next trial to continue.';
       } else {
-        titleSaveNote.textContent = 'Research saves automatically between boundaries.';
+        titleSaveNote.textContent = 'Progress saves after each trial.';
       }
       pickCaseProgress.textContent = info.openLabUnlocked
         ? 'All 5 trials done · Open Lab unlocked'
@@ -1472,7 +1476,7 @@ function updateToolSummary(
     water: 'Water - dilutes pressure, spreads reactions, and pushes cultures outward.',
     salt: 'Salt - slows local movement and dries cultures into brittle patterns.',
     acid: 'Acid - burns tissue quickly and can trigger volatile reactions.',
-    paste: 'Paste - drag to draw a nutrient trail; colonies drift along the line you paint.',
+    paste: 'Paste - drag to draw a nutrient trail; cultures drift along the line you paint.',
   };
   el.textContent = summaries[tool];
 }

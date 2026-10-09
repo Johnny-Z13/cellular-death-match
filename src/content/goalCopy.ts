@@ -22,6 +22,7 @@ function seconds(ticks: number | undefined, fallback: number): number {
 }
 
 export function goalLineFor(def: ObjectiveDef): string {
+  if (def.goal) return def.goal;
   switch (def.kind) {
     case 'discover_breed':
       return `Create ${strainName(def, 'a new strain')}`;

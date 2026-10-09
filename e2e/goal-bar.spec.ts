@@ -17,7 +17,7 @@ test('the goal stays readable while Dr. E speaks and reports completion', async 
   const goal = page.locator('#hud-goal');
   await expect(page.locator('#coach-title')).toContainText('Press Egg.');
   await expect(goal).toBeVisible();
-  await expect(page.locator('#hud-goal-line')).toHaveText('Grow Bloom Mass and keep it alive');
+  await expect(page.locator('#hud-goal-line')).toHaveText('Feed a Swarmlet until it becomes Bloom Mass');
 
   const goalBox = await goal.boundingBox();
   const coachBox = await page.locator('#coach').boundingBox();

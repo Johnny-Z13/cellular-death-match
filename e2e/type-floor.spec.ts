@@ -76,6 +76,10 @@ test('rendered text stays above 11px and uses one vocabulary', async ({ page }, 
   await page.locator('#notebook-button').click();
   await page.waitForTimeout(500);
   offenders.push(...await smallText(page, 'notebook'));
+  await page.locator('#notebook-tab-study').click();
+  offenders.push(...await smallText(page, 'notebook-trial'));
+  await page.locator('#notebook-tab-log').click();
+  offenders.push(...await smallText(page, 'notebook-found'));
 
   expect(offenders, `${testInfo.project.name}\n${offenders.join('\n')}`).toEqual([]);
 });

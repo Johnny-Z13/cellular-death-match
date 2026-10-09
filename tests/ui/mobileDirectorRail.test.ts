@@ -35,7 +35,8 @@ describe('unified mobile Director rail', () => {
     expect(screens).toContain("info.objectiveComplete ? 'Dr. E · Result' : 'Dr. E'");
     expect(screens).toContain("hud.classList.toggle('hud-objective-timed', info.objectiveTimed)");
     expect(screens).toContain("if (info.objectiveComplete && hudDirector.classList.contains('hud-director-intro'))");
-    expect(screens).toContain("info.biomeName ?? 'Stable'");
+    expect(screens).toContain("? 'Balanced'");
+    expect(screens).toContain('info.objectiveHint || info.objectiveSummary');
   });
 
   it('clears one-shot accessible assignment copy after its timer or a screen boundary', () => {

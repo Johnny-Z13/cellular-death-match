@@ -153,7 +153,7 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
   },
   {
     kind: 'colony_founder',
-    name: 'Colony Founder',
+    name: 'Founder Strain',
     description: 'Keep 5 or more living cultures of the same strain at once.',
     target: '5+ matching living cultures',
     hint: 'Plant five Eggs of one strain in separate fertile spots before the dish fills.',

@@ -35,7 +35,7 @@ const GENOME_COPY: Record<LifeformIdentityId, GenomeArtCopy> = {
   swarmlet: {
     complexityBand: 'reference',
     alt: 'Cyan pixel-cell Swarmlet reconstruction, shaped like a quick tadpole glider with loose colony cells.',
-    reconstructionNote: 'A starter strain drawn as a skittering glider colony.',
+    reconstructionNote: 'A starter strain drawn as a skittering glider swarm.',
   },
   bruiser: {
     complexityBand: 'foundational',

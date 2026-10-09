@@ -525,8 +525,10 @@
   }
 
   .layout[data-screen="arena"].mobile-log-open .ticker-lines {
-    justify-items: stretch;
+    display: flex;
+    flex-direction: column;
     gap: 2px;
+    min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
   }
@@ -534,6 +536,7 @@
   .layout[data-screen="arena"].mobile-log-open .ticker-line,
   .layout[data-screen="arena"].mobile-log-open .ticker-line:nth-child(n) {
     display: block;
+    flex: none;
     min-height: 0;
     padding: 5px 0 5px 10px;
     border-width: 0 0 0 2px;
@@ -735,7 +738,126 @@
   visibility: hidden;
 }
 
+/* Menus keep the paused badge (the onboarding contract wants pause state
+   visible) but move it to the bottom edge, clear of their headings. */
 .layout.menu-open .simulation-paused-badge,
 .layout:has(#screen-notebook.visible) .simulation-paused-badge {
+  top: auto;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+}
+
+/* Wrapped rack tiles: icon, name, count — the same compact tile at every
+   portrait width, so tablets never inherit the desktop name + blurb row. */
+@media (max-width: 899px) and (orientation: portrait), (max-width: 899px) and (min-height: 521px) {
+  .layout[data-screen="arena"] .toolbox .tool-button {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    justify-items: center;
+    align-content: center;
+    gap: 2px;
+    padding: 5px 4px;
+    text-align: center;
+  }
+
+  .layout[data-screen="arena"] .toolbox .tool-button > span:not(.tool-icon) {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .layout[data-screen="arena"] .toolbox .tool-button strong {
+    display: block;
+    overflow: hidden;
+    font-size: var(--fs-small);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .layout[data-screen="arena"] .toolbox .tool-button small {
+    display: none;
+  }
+
+  .layout[data-screen="arena"] .toolbox .tool-button > b {
+    position: static;
+    font-size: var(--fs-min);
+  }
+
+  /* The finish tile keeps its state word visible. */
+  .layout[data-screen="arena"] .toolbox .end-action > b {
+    color: var(--bio);
+  }
+}
+
+@media (max-width: 599px) {
+  /* Five tiles a row on phones: the narrow mono face fits "Nutrient". */
+  .layout[data-screen="arena"] .toolbox .tool-button strong {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+}
+
+/* Landscape phones: Dr. E docks in the empty right column under the shell
+   buttons, so he never covers the tool rack he is pointing at. */
+@media (max-width: 899px) and (orientation: landscape) and (max-height: 520px) {
+  .layout[data-screen="arena"].coach-active .coach:not(.coach-welcome):not(.coach-intro) {
+    inset: auto;
+    top: calc(108px + env(safe-area-inset-top));
+    right: max(10px, env(safe-area-inset-right));
+    left: auto;
+    bottom: auto;
+    width: min(250px, calc(100vw - 600px));
+    min-width: 200px;
+    height: auto;
+    max-height: calc(100vh - 108px - 84px);
+    transform: none;
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+
+  .layout[data-screen="arena"].coach-active .coach:not(.coach-welcome):not(.coach-intro) .coach-portrait {
+    min-height: 0;
+  }
+
+  /* The goal strip already carries the objective; drop the duplicate row. */
+  .layout[data-screen="arena"] .hud .hud-objective-row {
+    display: none;
+  }
+
+  .layout[data-screen="arena"] .hud .hud-summary .hud-key {
+    font-family: var(--font-mono);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  .layout[data-screen="arena"] .hud .hud-summary {
+    column-gap: 8px;
+  }
+}
+
+/* Balance is introduced after the guided first trial. */
+.layout[data-screen="arena"] .hud.hud-first-trial .hud-equilibrium-row {
   display: none;
+}
+
+/* Dr. E's live line is a how-to hint: give it two lines. */
+.layout[data-screen="arena"] .hud-director-progress {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+/* Title pitch: the one-line promise a cold player reads before Run Trial. */
+.title-pitch {
+  max-width: 34ch;
+  margin: 6px auto 12px;
+  color: rgba(226, 250, 247, 0.86);
+  font-family: var(--font-serif);
+  font-size: var(--fs-lead);
+  line-height: 1.3;
+  text-align: center;
+  text-wrap: balance;
 }

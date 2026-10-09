@@ -56,3 +56,9 @@ describe('goalLineFor', () => {
     }
   });
 });
+
+describe('authored goal lines', () => {
+  it('uses an authored goal when the objective provides one', () => {
+    expect(goalLineFor(OBJECTIVES[0]!)).toBe('Feed a Swarmlet until it becomes Bloom Mass');
+  });
+});
