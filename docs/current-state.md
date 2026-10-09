@@ -111,15 +111,15 @@ Hybrid breeds (cross-bred from two discovered base breeds under a nutrient field
 
 ## Verification Baseline
 
-As of this update (2026-07-27):
+As of 2026-10-09 (branch `ux/legibility-overhaul`):
 
 ```bash
-npm test          # 77 files, 642 tests passing
-npm run build     # clean production build
-npm run qa:mobile # 5 responsive layouts, no overflow/browser errors
+npm test               # 105 files, 805 tests passing
+npm run build          # clean production build (includes CrazyGames credits check)
+npx playwright test    # all applicable checks across phone, small-phone, landscape, tablet, desktop
 ```
 
-Both commands are expected to pass.
+All three are expected to pass.
 
 ## Release Naming
 
