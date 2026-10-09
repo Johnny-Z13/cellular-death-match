@@ -112,15 +112,6 @@
           </span>
           <b id="agitate-count">2/2</b>
         </button>
-        <button id="end-epoch-button" class="tool-button action-button end-action" type="button">
-          <span class="tool-icon end-icon"></span>
-          <span>
-            <strong>End</strong>
-            <small>bank or leave</small>
-          </span>
-          <b>now</b>
-        </button>
-        <p id="end-action-explanation" class="sr-only" aria-live="polite"></p>
         <button class="tool-button" type="button" data-tool="water">
           <span class="tool-icon water-icon"></span>
           <span>
@@ -145,6 +136,15 @@
           </span>
           <b data-tool-count>3/3</b>
         </button>
+        <button id="end-epoch-button" class="tool-button action-button end-action" type="button">
+          <span class="tool-icon end-icon"></span>
+          <span>
+            <strong>Finish trial</strong>
+            <small>save this result</small>
+          </span>
+          <b>ready</b>
+        </button>
+        <p id="end-action-explanation" class="sr-only" aria-live="polite"></p>
       </aside>
       <button id="toolbox-more" class="toolbox-more" type="button" aria-label="Show more reagents" hidden>
         <span aria-hidden="true">›</span>
@@ -155,6 +155,11 @@
           <h2 id="options-title" class="debug-title">OPTIONS</h2>
           <button id="options-close" class="options-close" type="button" aria-label="Close options">Close</button>
         </header>
+        <section id="options-trial" class="debug-block options-trial" hidden>
+          <h3 class="debug-subtitle">this trial</h3>
+          <button id="options-leave-trial" class="debug-option-button options-leave-trial" type="button">Leave trial</button>
+          <p id="options-leave-detail" class="options-leave-detail">Leave this trial without a result. Notebook entries stay.</p>
+        </section>
         <section class="debug-block debug-only">
           <div class="debug-row"><span class="debug-key">FPS</span><span id="dbg-fps" class="debug-val">—</span></div>
           <div class="debug-row"><span class="debug-key">tick</span><span id="dbg-tick" class="debug-val">0</span></div>

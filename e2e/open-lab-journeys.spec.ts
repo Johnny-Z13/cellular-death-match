@@ -131,7 +131,6 @@ test('discovers Salt-Water Crystal experimentally and persists the new protocol'
 
   await chooseLifeform(page, 'bruiser');
   await clickDish(page, 0.52, 0.52);
-  await page.locator('#toolbox-more').click();
   await useToolAtCentre(page, 'salt');
   await useToolAtCentre(page, 'water');
 
@@ -158,10 +157,8 @@ test('discovers Salt-Water Crystal experimentally and persists the new protocol'
   await page.reload();
   await expect(page.locator('#title-start-label')).toHaveText('Restart Study');
   await page.locator('#title-start').click();
-  await page.locator('#toolbox-more').click();
   await chooseLifeform(page, 'bruiser');
   await clickDish(page, 0.52, 0.52);
-  await page.locator('#toolbox-more').click();
   await useToolAtCentre(page, 'salt');
   await useToolAtCentre(page, 'water');
 

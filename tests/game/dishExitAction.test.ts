@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { dishExitState } from '../../src/game/dishExitAction';
+import { dishExitState, isRackExitVisible } from '../../src/game/dishExitAction';
 
 const base = {
   complete: false,
   firstTrial: false,
-  openLab: true,
   saveBlocked: false,
   armedUntilMs: 0,
   nowMs: 100,
@@ -17,24 +16,26 @@ describe('dish exit action', () => {
     });
   });
 
-  it('requires an armed second activation to abandon', () => {
-    expect(dishExitState(base)).toMatchObject({ mode: 'abandon', label: 'Abandon study' });
+  it('requires an armed second activation to leave', () => {
+    expect(dishExitState(base)).toMatchObject({ mode: 'abandon', label: 'Leave trial' });
     expect(dishExitState({ ...base, armedUntilMs: 4_000 })).toMatchObject({
-      mode: 'confirm-abandon', detail: 'tap again',
+      mode: 'confirm-abandon', label: 'Leave trial?', detail: 'tap again',
     });
     expect(dishExitState({ ...base, armedUntilMs: 99 })).toMatchObject({ mode: 'abandon' });
   });
 
-  it('prioritizes bank and save retry semantics', () => {
-    expect(dishExitState({ ...base, complete: true })).toMatchObject({ mode: 'bank', label: 'Bank result' });
+  it('prioritizes finish and save retry semantics', () => {
+    expect(dishExitState({ ...base, complete: true })).toMatchObject({ mode: 'bank', label: 'Finish trial' });
     expect(dishExitState({ ...base, complete: true, saveBlocked: true })).toMatchObject({
       mode: 'retry-save', label: 'Retry save',
     });
   });
 
-  it('names an authored abandon as an unsealed Trial', () => {
-    expect(dishExitState({ ...base, openLab: false })).toMatchObject({
-      label: 'Abandon trial', detail: 'unsealed',
-    });
+  it('shows the rack exit only when it finishes or retries; leaving lives in Options', () => {
+    expect(isRackExitVisible('bank')).toBe(true);
+    expect(isRackExitVisible('retry-save')).toBe(true);
+    expect(isRackExitVisible('locked')).toBe(false);
+    expect(isRackExitVisible('abandon')).toBe(false);
+    expect(isRackExitVisible('confirm-abandon')).toBe(false);
   });
 });

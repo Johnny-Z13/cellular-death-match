@@ -44,105 +44,24 @@ async function openAtTrialThree(page: Page): Promise<void> {
   await expect(page.locator('.layout')).toHaveAttribute('data-screen', 'arena');
 }
 
-async function expectMobileRackLesson(page: Page, animated = true): Promise<void> {
-  await expect(page.locator('#coach-title')).toHaveText('More tools are in the rack.');
-  await expect(page.locator('#coach-body')).toContainText('Drag tools left to reveal Water');
-  await expect(page.locator('#coach-step')).toHaveText('New control');
-  await expect(page.locator('#onboarding-guide-pointer')).not.toHaveClass(/is-visible/);
-  await expect(page.locator('.layout')).toHaveClass(/mobile-toolbox-lesson-active/);
-  await expect(page.locator('#toolbox-more')).toBeFocused();
-  await expect(page.locator('#toolbox-more')).toHaveCSS(
-    'animation-name',
-    animated ? 'mobile-toolbox-lesson-pulse' : 'none',
-  );
-  await expect(page.locator('[data-tool="toxin"]')).toHaveAttribute('aria-disabled', 'true');
-  await expect(page.locator('[data-tool="egg"]')).toHaveClass(/selected/);
-  await expect(page.locator('[data-tool="water"]')).not.toBeInViewport({ ratio: 0.9 });
-
-  // Even synthetic activation cannot spend a charge or carry Trial 2's Toxin
-  // selection into the new dish while the rack lesson owns input.
-  const eggCharge = await page.locator('[data-tool="egg"] [data-tool-count]').textContent();
-  await page.locator('[data-tool="toxin"]').evaluate((button: HTMLButtonElement) => button.click());
-  await page.locator('#game').dispatchEvent('pointerdown', { clientX: 190, clientY: 420, pointerId: 1 });
-  await expect(page.locator('[data-tool="egg"]')).toHaveClass(/selected/);
-  await expect(page.locator('[data-tool="toxin"]')).not.toHaveClass(/selected/);
-  await expect(page.locator('[data-tool="egg"] [data-tool-count]')).toHaveText(eggCharge ?? '');
-}
-
-test('teaches a native mobile rack drag and persists the demonstrated gesture', async ({ page }, testInfo: TestInfo) => {
-  test.skip(testInfo.project.name !== 'phone', 'Touch-drag path is exercised once at the primary phone viewport.');
+// 2026-10-09 legibility pass: the phone rack wraps so every unlocked tool is
+// on screen. The drag-to-reveal lesson (coach MOBILE_TOOLBOX_ONBOARDING_BEAT)
+// remains as a fallback for a rack that overflows, but phones no longer need it.
+test('shows a newly unlocked tool in the phone rack without a reveal lesson', async ({ page }, testInfo: TestInfo) => {
+  test.skip(!['phone', 'small-phone'].includes(testInfo.project.name), 'Phone rack only.');
   const runtime = monitorRuntime(page);
   await openAtTrialThree(page);
-  await expectMobileRackLesson(page);
-  await page.screenshot({ path: testInfo.outputPath('trial-3-rack-lesson-touch.png') });
 
-  const rack = page.locator('#toolbox');
-  const box = await rack.boundingBox();
-  expect(box).not.toBeNull();
-  const y = box!.y + box!.height * 0.55;
-  const cdp = await page.context().newCDPSession(page);
-  await cdp.send('Input.dispatchTouchEvent', {
-    type: 'touchStart',
-    touchPoints: [{ x: box!.x + box!.width - 72, y }],
-  });
-  for (const progress of [0.25, 0.5, 0.75, 1]) {
-    await cdp.send('Input.dispatchTouchEvent', {
-      type: 'touchMove',
-      touchPoints: [{ x: box!.x + box!.width - 72 - (box!.width - 132) * progress, y }],
-    });
-  }
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-
-  await expect(page.locator('[data-tool="water"]')).toBeInViewport({ ratio: 0.9 });
-  await expect(page.locator('#coach')).toHaveAttribute('aria-hidden', 'true');
   await expect(page.locator('.layout')).not.toHaveClass(/mobile-toolbox-lesson-active/);
-  await expect(page.locator('[data-tool="water"]')).not.toHaveAttribute('aria-disabled');
-  await expect(page.locator('[data-tool="salt"]')).toHaveAttribute('aria-disabled', 'true');
-  await expect(page.locator('#hud-director-kicker')).toHaveText(/Dr\. E(?: · New trial)?/);
-  await expect.poll(() => page.evaluate(() => (
-    window.localStorage.getItem('cdm.coach.mobile-toolbox-seen.v1')
-  ))).toBe('1');
-  await page.screenshot({ path: testInfo.outputPath('trial-3-rack-dragged.png') });
-
-  await page.reload();
-  await page.locator('#title-start').click();
-  await expect(page.locator('#coach')).toHaveAttribute('aria-hidden', 'true');
-  await expect(page.locator('#game')).toBeFocused();
-  runtime.assertClean();
-});
-
-test('accepts the mobile overflow control as the accessible rack-lesson equivalent', async ({ page }, testInfo: TestInfo) => {
-  test.skip(testInfo.project.name !== 'small-phone', 'Overflow-button equivalent is exercised at the minimum phone viewport.');
-  const runtime = monitorRuntime(page);
-  await openAtTrialThree(page);
-  await expectMobileRackLesson(page);
-  await page.screenshot({ path: testInfo.outputPath('trial-3-rack-lesson-button.png') });
-
-  await page.locator('#toolbox-more').click();
+  await expect(page.locator('#toolbox-more')).toBeHidden();
   await expect(page.locator('[data-tool="water"]')).toBeInViewport({ ratio: 0.9 });
-  await expect(page.locator('#coach')).toHaveAttribute('aria-hidden', 'true');
-  await expect(page.locator('.layout')).not.toHaveClass(/mobile-toolbox-lesson-active/);
   await expect(page.locator('[data-tool="water"]')).not.toHaveAttribute('aria-disabled');
-  await expect(page.locator('[data-tool="salt"]')).toHaveAttribute('aria-disabled', 'true');
-  await expect(page.locator('[data-tool="water"]')).toBeFocused();
-  await expect.poll(() => page.evaluate(() => (
-    window.localStorage.getItem('cdm.coach.mobile-toolbox-seen.v1')
-  ))).toBe('1');
-  await page.screenshot({ path: testInfo.outputPath('trial-3-rack-button.png') });
-  runtime.assertClean();
-});
-
-test('keeps the rack lesson explicit and operable with reduced motion', async ({ page }, testInfo: TestInfo) => {
-  test.skip(testInfo.project.name !== 'small-phone', 'Reduced-motion rack behavior is exercised at the tightest portrait viewport.');
-  const runtime = monitorRuntime(page);
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await openAtTrialThree(page);
-  await expectMobileRackLesson(page, false);
-
-  await page.locator('#toolbox-more').press('Enter');
-  await expect(page.locator('[data-tool="water"]')).toBeInViewport({ ratio: 0.9 });
-  await expect(page.locator('#coach')).toHaveAttribute('aria-hidden', 'true');
-  await expect(page.locator('[data-tool="water"]')).toBeFocused();
+  const rack = await page.locator('#toolbox').evaluate((element) => ({
+    scrollWidth: element.scrollWidth,
+    clientWidth: element.clientWidth,
+  }));
+  expect(rack.scrollWidth).toBeLessThanOrEqual(rack.clientWidth + 1);
+  await page.screenshot({ path: testInfo.outputPath('trial-3-full-rack.png') });
   runtime.assertClean();
 });
 
@@ -157,5 +76,46 @@ test('keeps the mobile-only rack lesson off desktop', async ({ page }, testInfo:
   expect(await page.evaluate(() => (
     window.localStorage.getItem('cdm.coach.mobile-toolbox-seen.v1')
   ))).toBeNull();
+  runtime.assertClean();
+});
+
+test('fits the fully unlocked rack on screen with no sideways scroll', async ({ page }, testInfo: TestInfo) => {
+  test.skip(!['phone', 'small-phone', 'tablet-portrait'].includes(testInfo.project.name), 'Portrait racks only.');
+  const runtime = monitorRuntime(page);
+  await page.addInitScript(() => {
+    if (!window.sessionStorage.getItem('rack-cleared')) {
+      window.localStorage.clear();
+      window.sessionStorage.setItem('rack-cleared', '1');
+    }
+  });
+  await page.goto('/');
+  await page.locator('#title-start').click();
+  await page.locator('#coach-skip').click();
+  await page.locator('#options-button').click();
+  await page.locator('#dbg-reveal-discoveries').click();
+  await page.locator('#objective-choices .objective-card').first().click();
+  await expect(page.locator('.layout')).toHaveAttribute('data-screen', 'arena');
+
+  for (const tool of ['egg', 'nutrient', 'paste', 'toxin', 'water', 'salt', 'acid']) {
+    await expect(page.locator(`[data-tool="${tool}"]`)).toBeInViewport({ ratio: 0.95 });
+  }
+  await expect(page.locator('#agitate-button')).toBeInViewport({ ratio: 0.95 });
+  const geometry = await page.evaluate(() => {
+    const rack = document.getElementById('toolbox')!;
+    const shell = document.getElementById('mobile-shell')!.getBoundingClientRect();
+    const dish = document.getElementById('game')!.getBoundingClientRect();
+    return {
+      scrollWidth: rack.scrollWidth,
+      clientWidth: rack.clientWidth,
+      rackTop: rack.getBoundingClientRect().top,
+      shellBottom: shell.bottom,
+      dishBottom: dish.bottom,
+      shellTop: shell.top,
+    };
+  });
+  expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
+  expect(geometry.shellBottom).toBeLessThanOrEqual(geometry.rackTop + 1);
+  expect(geometry.dishBottom).toBeLessThanOrEqual(geometry.shellTop + 1);
+  await page.screenshot({ path: testInfo.outputPath('full-rack.png') });
   runtime.assertClean();
 });

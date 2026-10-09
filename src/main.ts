@@ -211,6 +211,18 @@ if (hudEl && typeof ResizeObserver === 'function') {
   publishHudBottom();
 }
 
+// Publish the tool rack's live height so the phone shell, drawers and dish
+// stack above it even when the rack wraps onto a second row.
+const toolboxEl = document.getElementById('toolbox');
+if (toolboxEl && typeof ResizeObserver === 'function') {
+  const publishRackHeight = () => {
+    layout.style.setProperty('--rack-height', `${Math.round(toolboxEl.getBoundingClientRect().height)}px`);
+  };
+  new ResizeObserver(publishRackHeight).observe(toolboxEl);
+  window.addEventListener('resize', publishRackHeight);
+  publishRackHeight();
+}
+
 const simClock = createFixedStepClock({
   ticksPerSecond: layout.dataset.diagnostics === 'true'
     ? loadSimTicksPerSecond(runtimeStorage)
@@ -838,19 +850,7 @@ screens.onEndEpoch(() => {
     return;
   }
   if (!objectiveComplete && !equilibriumComplete) {
-    const nowMs = performance.now();
-    if (abandonArmedUntilMs <= nowMs) {
-      abandonArmedUntilMs = nowMs + 4_000;
-      window.clearTimeout(abandonConfirmationTimer);
-      abandonConfirmationTimer = window.setTimeout(() => {
-        abandonArmedUntilMs = 0;
-        updateDishExitAction();
-      }, 4_050);
-      haptics.play('warning');
-      updateDishExitAction();
-      return;
-    }
-    abandonCurrentDish();
+    requestLeaveTrial();
     return;
   }
   uiAudio.play('ui_tap');
@@ -868,6 +868,31 @@ screens.onEndEpoch(() => {
   resolveArenaStatus(status);
 });
 
+// Leaving an unfinished trial takes two deliberate activations within four
+// seconds. It lives in Options (the pause menu), not the tool rack.
+function requestLeaveTrial(): void {
+  if (!arena || run.getState().phase !== 'arena' || isOnboardingEpoch(run.getState().fightIndex)) return;
+  const nowMs = performance.now();
+  if (abandonArmedUntilMs <= nowMs) {
+    abandonArmedUntilMs = nowMs + 4_000;
+    window.clearTimeout(abandonConfirmationTimer);
+    abandonConfirmationTimer = window.setTimeout(() => {
+      abandonArmedUntilMs = 0;
+      updateDishExitAction();
+    }, 4_050);
+    haptics.play('warning');
+    updateDishExitAction();
+    return;
+  }
+  if (overlayState.menuOpen) setOptionsMenuOpen(false);
+  abandonCurrentDish();
+}
+
+screens.onLeaveTrial(() => {
+  uiAudio.play('ui_tap');
+  requestLeaveTrial();
+});
+
 function updateDishExitAction(): void {
   if (!arena || run.getState().phase !== 'arena') return;
   const objectiveComplete = arena.getObjectiveProgress().complete;
@@ -879,7 +904,6 @@ function updateDishExitAction(): void {
   screens.setDishExitState(dishExitState({
     complete: !taughtSequenceIncomplete && (objectiveComplete || equilibriumComplete),
     firstTrial: isOnboardingEpoch(run.getState().fightIndex),
-    openLab: run.getState().fightIndex >= COMMON_COLD_CASE.trials.length,
     saveBlocked: pendingBankPlan !== null,
     armedUntilMs: abandonArmedUntilMs,
     nowMs: performance.now(),

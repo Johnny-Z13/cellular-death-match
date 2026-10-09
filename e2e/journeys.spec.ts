@@ -124,9 +124,8 @@ test('plays the five-Trial Case, records discovery cadence, and resumes an Open 
     await expect(page.locator('#coach')).toHaveAttribute('aria-hidden', 'true');
     await expect(page.locator('#hud-director-title')).toHaveText('Carrier Medium');
   } else {
-    await expect(page.locator('#coach-title')).toHaveText('More tools are in the rack.');
-    await expect(page.locator('#toolbox-more')).toBeFocused();
-    await page.locator('#toolbox-more').click();
+    // The phone rack shows every unlocked tool; no reveal lesson is needed.
+    await expect(page.locator('#toolbox-more')).toBeHidden();
   }
   await expect(page.locator('[data-tool="water"]')).toBeInViewport({ ratio: 0.9 });
   await expect(page.locator('#coach')).toHaveAttribute('aria-hidden', 'true');

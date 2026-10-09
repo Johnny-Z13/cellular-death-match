@@ -13,7 +13,7 @@ import { renderLabReport } from './labReportScreen';
 import type { ResearchCaseDef, ResearchTrialDef } from '../content/researchCases';
 import type { ResearchNotebookView } from '../game/researchNotebook';
 import type { StudyChoice } from '../game/objectivePool';
-import type { DishExitState } from '../game/dishExitAction';
+import { isRackExitVisible, type DishExitState } from '../game/dishExitAction';
 
 type ScreenName = 'title' | 'method-intro' | 'pick' | 'end' | 'hud' | 'notebook';
 type AppScreenName = ScreenName | 'loadout' | 'objective';
@@ -100,6 +100,7 @@ export interface Screens {
   onToolSelect(handler: (tool: ToolId) => void): void;
   onAgitate(handler: () => void): void;
   onEndEpoch(handler: () => void): void;
+  onLeaveTrial(handler: () => void): void;
   setEggOptions(options: EggOption[]): void;
   setEggArchetype(archetype: EnemyArchetype): void;
   setLifeformUnlocks(ids: readonly string[]): void;
@@ -234,6 +235,9 @@ export function createScreens(): Screens {
   const agitateButton = get('agitate-button') as HTMLButtonElement;
   const agitateCount = get('agitate-count');
   const endEpochButton = get('end-epoch-button') as HTMLButtonElement;
+  const optionsTrial = get('options-trial');
+  const optionsLeaveTrial = get('options-leave-trial') as HTMLButtonElement;
+  const optionsLeaveDetail = get('options-leave-detail');
   const endActionExplanation = get('end-action-explanation');
   const studyStartAnnouncer = get('study-start-announcer');
   let lastStudyStartKey = '';
@@ -671,6 +675,9 @@ export function createScreens(): Screens {
       endEpochButton.addEventListener('click', () => {
         if (!toolboxLessonActive) handler();
       });
+    },
+    onLeaveTrial(handler) {
+      optionsLeaveTrial.addEventListener('click', () => handler());
     },
     setEggOptions(options) {
       iconCells.reset();
@@ -1288,6 +1295,13 @@ export function createScreens(): Screens {
       hapticsButton.textContent = enabled ? 'Haptics — On' : 'Haptics — Off';
     },
     setDishExitState(state) {
+      const leaving = state.mode === 'abandon' || state.mode === 'confirm-abandon';
+      endEpochButton.classList.toggle('is-offstage', !isRackExitVisible(state.mode));
+      optionsTrial.hidden = !leaving;
+      optionsLeaveTrial.dataset.exitMode = state.mode;
+      optionsLeaveTrial.classList.toggle('is-armed', state.mode === 'confirm-abandon');
+      if (leaving && optionsLeaveTrial.textContent !== state.label) optionsLeaveTrial.textContent = state.label;
+      if (leaving && optionsLeaveDetail.textContent !== state.explanation) optionsLeaveDetail.textContent = state.explanation;
       endEpochButton.dataset.exitMode = state.mode;
       endEpochButton.disabled = state.disabled;
       endEpochButton.classList.toggle('end-action-ready', state.mode === 'bank');
