@@ -244,7 +244,7 @@ describe('onboarding coach', () => {
   it('nudges idle players with the objective hint, capped and dismissible', () => {
     expect(coachSource).toContain('showNudge(title: string, body: string, opts?: { interruptTutorial?: boolean }): void;');
     expect(coachSource).toContain("if (mode === 'nudge') hideNudgeNow();");
-    expect(coachSource).toContain("kickerEl.textContent = 'Professor’s note';");
+    expect(coachSource).toContain("kickerEl.textContent = 'Dr. E’s note';");
     expect(mainSource).toContain('const NUDGE_IDLE_TICKS = 60 * 22;');
     expect(mainSource).toContain('const MAX_NUDGES_PER_EPOCH = 2;');
     expect(mainSource).toContain('function maybeNudgeIdlePlayer(');
@@ -330,7 +330,7 @@ describe('onboarding coach', () => {
     expect(elements.get('coach')?.classList.contains('coach-prompt')).toBe(true);
     expect(elements.get('coach')?.classList.contains('coach-welcome')).toBe(false);
     expect(elements.get('coach-title')?.textContent).toBe('Bloom Mass stabilized.');
-    expect(elements.get('coach-body')?.textContent).toContain('keep observing');
+    expect(elements.get('coach-body')?.textContent).toContain('keep watching');
     expect(coach.getCurrentPointerTarget()).toBe('end');
 
     vi.advanceTimersByTime(3600);
@@ -476,7 +476,7 @@ describe('onboarding coach', () => {
       objectiveHint: 'unused',
     })).toEqual({
       title: 'Experiment ready',
-      body: 'Bank this result to preserve the evidence and unlock the next research step.',
+      body: 'Finish the trial to save this result and unlock the next step.',
       interruptTutorial: false,
     });
 
@@ -525,6 +525,6 @@ describe('onboarding coach', () => {
       guidanceTier: 'hypothesis',
       nudgeIndex: 1,
       recoveryHints,
-    })).toMatchObject({ title: 'Exact method', body: recoveryHints[1] });
+    })).toMatchObject({ title: 'Exact steps', body: recoveryHints[1] });
   });
 });

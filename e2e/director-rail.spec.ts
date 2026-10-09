@@ -27,7 +27,9 @@ test('keeps objective status in Dr. E’s rail when authored coaching is inactiv
   const dishBox = await page.locator('#game').boundingBox();
   expect(hudBox).not.toBeNull();
   expect(dishBox).not.toBeNull();
-  expect(hudBox!.height).toBeLessThanOrEqual(106);
+  // Goal strip + Dr. E channel. The budget grew with the always-visible goal.
+  expect(hudBox!.height).toBeLessThanOrEqual(180);
+  await expect(page.locator('#hud-goal-line')).toHaveText('Feed a Swarmlet until it becomes Bloom Mass');
   expect(hudBox!.y + hudBox!.height).toBeLessThan(dishBox!.y);
   await page.screenshot({ path: testInfo.outputPath('persistent-director-status.png') });
 
@@ -74,7 +76,7 @@ test('keeps objective status in Dr. E’s rail when authored coaching is inactiv
   await expect(page.locator('#hud-hint')).toBeHidden();
   expect(textFit.viewport.scrollWidth).toBeLessThanOrEqual(textFit.viewport.clientWidth);
   const longHudBox = await page.locator('#hud').boundingBox();
-  expect(longHudBox!.height).toBeLessThanOrEqual(106);
+  expect(longHudBox!.height).toBeLessThanOrEqual(180);
   await page.screenshot({ path: testInfo.outputPath('long-director-status.png') });
 
   runtime.assertClean();

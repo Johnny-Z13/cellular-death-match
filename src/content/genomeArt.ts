@@ -35,7 +35,7 @@ const GENOME_COPY: Record<LifeformIdentityId, GenomeArtCopy> = {
   swarmlet: {
     complexityBand: 'reference',
     alt: 'Cyan pixel-cell Swarmlet reconstruction, shaped like a quick tadpole glider with loose colony cells.',
-    reconstructionNote: 'A minimal reference genome expressed as a skittering glider colony.',
+    reconstructionNote: 'A starter strain drawn as a skittering glider swarm.',
   },
   bruiser: {
     complexityBand: 'foundational',
@@ -45,7 +45,7 @@ const GENOME_COPY: Record<LifeformIdentityId, GenomeArtCopy> = {
   splitter: {
     complexityBand: 'foundational',
     alt: 'Green pixel-cell Splitter reconstruction with a rounded body and a daughter lobe budding from its side.',
-    reconstructionNote: 'A propagator genome caught in the moment one body becomes two.',
+    reconstructionNote: 'A propagator strain caught in the moment one body becomes two.',
   },
   sniper: {
     complexityBand: 'foundational',
@@ -65,7 +65,7 @@ const GENOME_COPY: Record<LifeformIdentityId, GenomeArtCopy> = {
   needle_swarm: {
     complexityBand: 'specialized',
     alt: 'Yellow pixel-cell Needle Swarm reconstruction, a compact wasp-like colony covered in long integrated quills.',
-    reconstructionNote: 'A volatile suppressor genome that turns fragile growth into a crown of firing quills.',
+    reconstructionNote: 'A volatile suppressor strain that turns fragile growth into a crown of firing quills.',
   },
   folded_anchor: {
     complexityBand: 'specialized',
@@ -85,7 +85,7 @@ const GENOME_COPY: Record<LifeformIdentityId, GenomeArtCopy> = {
   static_lattice: {
     complexityBand: 'specialized',
     alt: 'Teal pixel-cell Static Lattice reconstruction made from checker patterns, looped tendrils, and paired pale eyes.',
-    reconstructionNote: 'A mimic genome that prefers recurring geometry to ordinary outward growth.',
+    reconstructionNote: 'A mimic strain that prefers recurring geometry to ordinary outward growth.',
   },
   quill_bloom: {
     complexityBand: 'recombinant',

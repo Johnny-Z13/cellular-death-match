@@ -9,15 +9,16 @@
     <meta name="apple-mobile-web-app-title" content="Cellular Death Match" />
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon.png?v=3" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=3" />
-    <link rel="manifest" href="/manifest.json?v=3" />
+    <link rel="manifest" href="/manifest.json?v=4" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/src/styles.css?v=20260915-touch-polish-1" />
-    <link rel="stylesheet" href="/src/arena-layout.css?v=20260903-director-pass-1" />
+    <link rel="stylesheet" href="/src/styles.css?v=20261009-legibility-1" />
+    <link rel="stylesheet" href="/src/arena-layout.css?v=20261009-legibility-1" />
+    <link rel="stylesheet" href="/src/legibility.css?v=20261009-legibility-1" />
   </head>
   <body>
     <main class="layout" data-screen="title">
@@ -33,7 +34,10 @@
           aria-label="Interactive Petri dish. Select a lab tool, then tap the dish. Keyboard players can press Enter or Space to apply the selected tool at the center."
         ></canvas>
         <div class="dish-glass" aria-hidden="true"></div>
-        <button id="notebook-button" class="notebook-button notebook-tab" type="button" aria-label="Open Discoverer's Notebook">Notebook</button>
+        <div id="dish-labels" class="dish-labels" aria-hidden="true">
+          <div id="dish-inspect" class="dish-inspect" role="tooltip" hidden></div>
+        </div>
+        <button id="notebook-button" class="notebook-button notebook-tab" type="button" aria-label="Open Notebook">Notebook</button>
         <button id="preview-exit" class="preview-exit" type="button" hidden aria-label="Exit temporary preview and return to your saved laboratory">Preview · Exit</button>
       </div>
       <span id="simulation-paused-badge" class="simulation-paused-badge" role="status" aria-live="polite" aria-hidden="true">Culture paused</span>
@@ -60,14 +64,14 @@
         <button id="mobile-lifeforms-toggle" class="mobile-shell-button" type="button" aria-expanded="false" aria-controls="life-panel">Eggs</button>
         <div id="mobile-tool-readout" class="mobile-tool-readout" aria-live="polite">
           <strong id="mobile-tool-name">Egg</strong>
-          <span id="mobile-tool-summary">plants the selected lifeform strain</span>
+          <span id="mobile-tool-summary">plants the selected strain</span>
         </div>
         <button id="mobile-log-toggle" class="mobile-shell-button" type="button" aria-expanded="false" aria-controls="ticker">Log</button>
       </div>
       <aside id="toolbox" class="toolbox" aria-label="Petri dish tools">
         <div class="toolbox-head">
-          <h2 class="toolbox-title">Reagents</h2>
-          <p id="tool-summary" class="tool-summary">Egg - plants the selected lifeform strain in open dish space.</p>
+          <h2 class="toolbox-title">Tools</h2>
+          <p id="tool-summary" class="tool-summary">Egg - plants the selected strain in open dish space.</p>
         </div>
         <button class="tool-button selected" type="button" data-tool="egg" aria-haspopup="true" aria-expanded="false" aria-controls="life-panel">
           <span class="tool-icon egg-icon"></span>
@@ -109,15 +113,6 @@
           </span>
           <b id="agitate-count">2/2</b>
         </button>
-        <button id="end-epoch-button" class="tool-button action-button end-action" type="button">
-          <span class="tool-icon end-icon"></span>
-          <span>
-            <strong>End</strong>
-            <small>bank or leave</small>
-          </span>
-          <b>now</b>
-        </button>
-        <p id="end-action-explanation" class="sr-only" aria-live="polite"></p>
         <button class="tool-button" type="button" data-tool="water">
           <span class="tool-icon water-icon"></span>
           <span>
@@ -142,8 +137,17 @@
           </span>
           <b data-tool-count>3/3</b>
         </button>
+        <button id="end-epoch-button" class="tool-button action-button end-action" type="button">
+          <span class="tool-icon end-icon"></span>
+          <span>
+            <strong>Finish trial</strong>
+            <small>save this result</small>
+          </span>
+          <b>ready</b>
+        </button>
+        <p id="end-action-explanation" class="sr-only" aria-live="polite"></p>
       </aside>
-      <button id="toolbox-more" class="toolbox-more" type="button" aria-label="Show more reagents" hidden>
+      <button id="toolbox-more" class="toolbox-more" type="button" aria-label="Show more tools" hidden>
         <span aria-hidden="true">›</span>
       </button>
       <button id="options-scrim" class="options-scrim" type="button" aria-label="Close options"></button>
@@ -152,6 +156,11 @@
           <h2 id="options-title" class="debug-title">OPTIONS</h2>
           <button id="options-close" class="options-close" type="button" aria-label="Close options">Close</button>
         </header>
+        <section id="options-trial" class="debug-block options-trial" hidden>
+          <h3 class="debug-subtitle">this trial</h3>
+          <button id="options-leave-trial" class="debug-option-button options-leave-trial" type="button">Leave trial</button>
+          <p id="options-leave-detail" class="options-leave-detail">Leave this trial without a result. Notebook entries stay.</p>
+        </section>
         <section class="debug-block debug-only">
           <div class="debug-row"><span class="debug-key">FPS</span><span id="dbg-fps" class="debug-val">—</span></div>
           <div class="debug-row"><span class="debug-key">tick</span><span id="dbg-tick" class="debug-val">0</span></div>
@@ -176,6 +185,7 @@
           <h3 class="debug-subtitle">laboratory</h3>
           <button id="audio-button" class="debug-option-button" type="button" aria-label="Mute audio" aria-pressed="false">Sound — On</button>
           <button id="haptics-button" class="debug-option-button" type="button" aria-label="Disable haptics" aria-pressed="false" hidden>Haptics — On</button>
+          <button id="labels-button" class="debug-option-button" type="button" aria-label="Hide dish labels" aria-pressed="false">Dish labels — On</button>
           <div class="debug-help debug-only">select a lab tool</div>
           <div class="debug-help debug-only">click dish: apply tool</div>
           <div class="debug-help debug-only">repeat evidence: understand protocol</div>
@@ -196,7 +206,7 @@
             </button>
             <button id="dbg-clear-discoveries" class="debug-mini-button options-delete-button" type="button">
               <strong>Delete data</strong>
-              <span>Return to the first-time Professor tutorial</span>
+              <span>Return to Dr. E’s first-time tutorial</span>
             </button>
           </div>
           <button id="dbg-fullscreen-mode" class="debug-mini-button" type="button">full screen</button>
@@ -210,7 +220,7 @@
         <form method="dialog" class="delete-data-card">
           <p class="delete-data-kicker">Dr. E. Mergent · Archive control</p>
           <h2 id="delete-data-title">Delete all laboratory data?</h2>
-          <p id="delete-data-copy">This erases specimens, case progress, settings, and every tutorial marker stored on this device. The laboratory will restart as a first-time visit.</p>
+          <p id="delete-data-copy">This erases strains, trial progress, settings, and every tutorial marker stored on this device. The laboratory will restart as a first-time visit.</p>
           <div class="delete-data-actions">
             <button id="delete-data-cancel" class="delete-data-cancel" type="submit" value="cancel">Keep my data</button>
             <button id="delete-data-confirm" class="delete-data-confirm" type="button">Delete all data</button>
@@ -230,14 +240,15 @@
         <div class="screen-card title-card">
           <p class="title-eyebrow">Dr. E. Mergent’s Cellular Laboratory</p>
           <h1 class="screen-title title-wordmark">Cellular<br /><span>Death Match</span></h1>
+          <p class="title-pitch">Feed a culture and it mutates. Find all 14 strains — and keep the dish alive.</p>
           <section class="case-docket" aria-labelledby="case-docket-title">
             <div class="case-docket-head">
-              <span>Case 01 · Persistent Sniffles</span>
-              <b id="title-case-progress">0 / 5 sealed</b>
+              <span>Trials 1–5 · Persistent Sniffles</span>
+              <b id="title-case-progress">0 / 5 done</b>
             </div>
-            <h2 id="case-docket-title">The Common Cold Case</h2>
-            <p>Cultivate a stable response without breeding something worse.</p>
-            <ol class="case-trial-rail" aria-label="Case trial progress">
+            <h2 id="case-docket-title">The Common Cold</h2>
+            <p>Cultivate a stable cure without growing something worse.</p>
+            <ol class="case-trial-rail" aria-label="Trial progress">
               <li class="is-active" data-case-trial="0"><b>01</b><span>Seed</span></li>
               <li data-case-trial="1"><b>02</b><span>Control</span></li>
               <li data-case-trial="2"><b>03</b><span>Dilute</span></li>
@@ -249,24 +260,24 @@
               <strong id="title-trial-hypothesis">A fed Swarmlet culture may produce a useful new mass.</strong>
             </div>
           </section>
-          <div class="title-archive-strip" aria-label="Genome Archive progress">
+          <div class="title-archive-strip" aria-label="Strains found">
             <div class="title-archive-head">
-              <span>Genome Archive</span>
-              <b id="title-genome-progress">1 / 14 genomes decoded</b>
+              <span>Strains found</span>
+              <b id="title-genome-progress">1 / 14 strains</b>
             </div>
             <div id="title-genome-track" class="title-genome-track" aria-hidden="true"></div>
-            <p id="title-genome-lead">Next lead · Unknown genome signal</p>
+            <p id="title-genome-lead">Next lead · Unknown strain</p>
           </div>
           <button id="title-start" class="screen-button title-start-button">
             <span class="screen-button-glyph" aria-hidden="true"></span>
             <span id="title-start-label">Run Trial</span>
           </button>
-          <p id="title-save-note" class="title-save-note">Research saves automatically between boundaries.</p>
+          <p id="title-save-note" class="title-save-note">Progress saves after each trial.</p>
           <p id="commit-debug" class="commit-debug">build · …</p>
         </div>
       </div>
 
-      <div id="screen-loadout" class="screen" role="dialog" aria-modal="true" aria-label="Choose archived specimens">
+      <div id="screen-loadout" class="screen" role="dialog" aria-modal="true" aria-label="Choose your strains">
         <div id="loadout-mount" class="screen-card"></div>
       </div>
 
@@ -279,7 +290,7 @@
           <p class="method-intro-kicker">Dr. E. Mergent · Briefing complete</p>
           <h2 id="method-intro-title">Right. You’re on your own now.</h2>
           <p>Run the next trials your way. I’ll check in from time to time.</p>
-          <button id="method-intro-continue" class="screen-button method-intro-continue" type="button">Choose a Method ›</button>
+          <button id="method-intro-continue" class="screen-button method-intro-continue" type="button">Choose an upgrade ›</button>
         </section>
       </div>
 
@@ -291,7 +302,7 @@
               <i data-case-dot="0"></i><i data-case-dot="1"></i><i data-case-dot="2"></i><i data-case-dot="3"></i><i data-case-dot="4"></i>
             </div>
           </div>
-          <h2 id="pick-title" class="screen-title">Choose a Method</h2>
+          <h2 id="pick-title" class="screen-title">Choose an upgrade</h2>
           <p class="method-sub">Pick one lasting adjustment.</p>
           <div id="pick-choices" class="pick-choices">
             <!-- 3 buttons inserted at runtime -->
@@ -301,7 +312,7 @@
 
       <div id="screen-objective" class="screen" role="dialog" aria-modal="true" aria-labelledby="objective-title">
         <div class="screen-card">
-          <h2 id="objective-title" class="screen-title">Choose the next study</h2>
+          <h2 id="objective-title" class="screen-title">Choose the next trial</h2>
           <div id="objective-choices" class="pick-choices"></div>
         </div>
       </div>
@@ -325,15 +336,15 @@
           <div class="tablet-screen">
             <header class="notebook-head">
               <div>
-                <h2 id="notebook-title" class="screen-title notebook-title">Research Notebook</h2>
+                <h2 id="notebook-title" class="screen-title notebook-title">Notebook</h2>
                 <p id="notebook-progress" class="notebook-progress">0 / 0 entries logged</p>
               </div>
               <button id="notebook-close" class="notebook-close" type="button" aria-label="Close notebook">Close</button>
             </header>
-            <div class="notebook-tabs" role="tablist" aria-label="Research notebook sections">
-              <button id="notebook-tab-atlas" class="notebook-tab-button is-active" type="button" role="tab" aria-selected="true" aria-controls="notebook-atlas">Atlas</button>
-              <button id="notebook-tab-study" class="notebook-tab-button" type="button" role="tab" aria-selected="false" aria-controls="notebook-study">Study</button>
-              <button id="notebook-tab-log" class="notebook-tab-button" type="button" role="tab" aria-selected="false" aria-controls="notebook-list">Findings</button>
+            <div class="notebook-tabs" role="tablist" aria-label="Notebook sections">
+              <button id="notebook-tab-atlas" class="notebook-tab-button is-active" type="button" role="tab" aria-selected="true" aria-controls="notebook-atlas">Library</button>
+              <button id="notebook-tab-study" class="notebook-tab-button" type="button" role="tab" aria-selected="false" aria-controls="notebook-study">Trial</button>
+              <button id="notebook-tab-log" class="notebook-tab-button" type="button" role="tab" aria-selected="false" aria-controls="notebook-list">Found</button>
             </div>
             <div id="notebook-atlas" class="notebook-atlas notebook-page is-active" role="tabpanel" aria-labelledby="notebook-tab-atlas"></div>
             <div id="notebook-study" class="notebook-study notebook-page" role="tabpanel" aria-labelledby="notebook-tab-study"></div>
@@ -345,8 +356,17 @@
       <div id="hud" class="hud" aria-label="Dr. E trial status">
         <div class="hud-summary" aria-label="Trial telemetry">
           <div class="hud-row"><span id="hud-fight-key" class="hud-key">Trial</span><span id="hud-fight" class="hud-val">1 / 5</span></div>
-          <div class="hud-row hud-window-row"><span id="hud-time-key" class="hud-key">Window</span><span id="hud-progress" class="hud-val">Open</span></div>
-          <div class="hud-row hud-equilibrium-row"><span class="hud-key">Equilibrium</span><span id="hud-equilibrium" class="hud-val">0%</span></div>
+          <div class="hud-row hud-window-row"><span id="hud-time-key" class="hud-key">Time</span><span id="hud-progress" class="hud-val">Open</span></div>
+          <div class="hud-row hud-equilibrium-row" title="Balance: keep 3 or more strains steady for 20 seconds and you may finish the trial."><span class="hud-key">Balance</span><span id="hud-equilibrium" class="hud-val">0%</span></div>
+          <div id="hud-goal" class="hud-goal" role="group" aria-label="Current goal">
+            <span class="hud-goal-mark" aria-hidden="true"></span>
+            <span class="hud-goal-copy">
+              <span class="hud-goal-key">Goal</span>
+              <strong id="hud-goal-line" class="hud-goal-line">—</strong>
+            </span>
+            <span id="hud-goal-value" class="hud-goal-value"></span>
+            <span class="hud-goal-meter" aria-hidden="true"><span id="hud-goal-fill" class="hud-goal-fill"></span></span>
+          </div>
         </div>
         <div id="hud-director" class="hud-director">
           <div class="hud-director-portrait" aria-hidden="true">
@@ -365,16 +385,16 @@
         <div class="hud-row" id="hud-upgrades-row"><span class="hud-key">Build</span><span id="hud-upgrades" class="hud-val">none</span></div>
       </div>
 
-      <aside id="life-panel" class="life-panel" aria-label="Lifeform guide">
+      <aside id="life-panel" class="life-panel" aria-label="Eggs">
         <div class="life-panel-head">
           <div class="life-panel-title-row">
-            <h2 class="life-panel-title">Specimen freezer</h2>
-            <span id="life-count" class="life-count">1 specimen available in this Study</span>
-            <button id="life-panel-close" class="life-panel-close" type="button" aria-label="Close specimen freezer">Close</button>
+            <h2 class="life-panel-title">Eggs</h2>
+            <span id="life-count" class="life-count">1 strain ready</span>
+            <button id="life-panel-close" class="life-panel-close" type="button" aria-label="Close eggs">Close</button>
           </div>
-          <p id="life-summary" class="life-summary">Pick an egg strain to seed the dish.</p>
+          <p id="life-summary" class="life-summary">Pick a strain to plant.</p>
         </div>
-        <div id="egg-options" class="egg-options" aria-label="Egg strains"></div>
+        <div id="egg-options" class="egg-options" aria-label="Strains"></div>
         <div id="life-list" class="life-list"></div>
       </aside>
 
@@ -386,7 +406,7 @@
 
       <div id="fx-banner" class="fx-banner" aria-hidden="true" aria-live="polite" aria-atomic="true">
         <div class="fx-banner-inner">
-          <span id="fx-banner-eyebrow" class="fx-banner-eyebrow">Case 01 · Trial 1</span>
+          <span id="fx-banner-eyebrow" class="fx-banner-eyebrow">Trial 1</span>
           <strong id="fx-banner-title" class="fx-banner-title">Objective</strong>
           <span id="fx-banner-sub" class="fx-banner-sub"></span>
         </div>
@@ -395,10 +415,10 @@
       <button id="fx-genome" class="fx-genome" type="button" aria-hidden="true" tabindex="-1">
         <span class="fx-genome-scan" aria-hidden="true"></span>
         <span class="fx-genome-inner">
-          <span id="fx-genome-eyebrow" class="fx-genome-eyebrow">GENOME DECODED</span>
+          <span id="fx-genome-eyebrow" class="fx-genome-eyebrow">NEW STRAIN</span>
           <span id="fx-genome-art" class="fx-genome-art"></span>
           <strong id="fx-genome-title" class="fx-genome-title">SPLITTER</strong>
-          <span id="fx-genome-sub" class="fx-genome-sub">EGG SYNTHESIS UNLOCKED</span>
+          <span id="fx-genome-sub" class="fx-genome-sub">NOW AVAILABLE AS AN EGG</span>
           <span class="fx-genome-skip">Tap or press to continue</span>
         </span>
       </button>

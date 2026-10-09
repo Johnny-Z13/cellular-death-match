@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { UPGRADES, applyUpgrades, type PlayerConfig } from '../../src/content/upgrades';
+import { UPGRADES, UPGRADE_TOOLS, applyUpgrades, upgradeToolNote, type PlayerConfig } from '../../src/content/upgrades';
 
 const BASE: PlayerConfig = {
   targetVol: 300,
@@ -105,5 +105,23 @@ describe('applyUpgrades', () => {
   it('unknown upgrade ids are silently ignored', () => {
     const result = applyUpgrades(BASE, [{ id: 'does_not_exist', stacks: 99 }]);
     expect(result).toEqual(BASE);
+  });
+});
+
+describe('upgrade tool notes', () => {
+  it('names the tool an upgrade needs when it is not in the rack yet', () => {
+    expect(upgradeToolNote('toxin_radius_1', ['egg', 'nutrient'])).toBe('For Toxin · not in your rack yet');
+    expect(upgradeToolNote('volatile_reagents_1', ['egg', 'nutrient', 'toxin'])).toBe('For Water, Salt and Acid · not in your rack yet');
+  });
+
+  it('stays quiet when the tool is already available or the upgrade needs none', () => {
+    expect(upgradeToolNote('toxin_radius_1', ['egg', 'nutrient', 'toxin'])).toBeNull();
+    expect(upgradeToolNote('volatile_reagents_1', ['water'])).toBeNull();
+    expect(upgradeToolNote('red_buffer_1', [])).toBeNull();
+    expect(upgradeToolNote('unknown_upgrade', [])).toBeNull();
+  });
+
+  it('maps every upgrade in the catalogue', () => {
+    for (const upgrade of UPGRADES) expect(UPGRADE_TOOLS[upgrade.id], upgrade.id).toBeDefined();
   });
 });

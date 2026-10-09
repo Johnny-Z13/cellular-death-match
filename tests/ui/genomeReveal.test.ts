@@ -11,8 +11,8 @@ describe('genome decode presentation', () => {
   it('uses the agreed three-line copy and a native explicit-continue control', () => {
     expect(html).toContain('id="fx-genome"');
     expect(html).toContain('type="button"');
-    expect(html).toContain('GENOME DECODED');
-    expect(html).toContain('EGG SYNTHESIS UNLOCKED');
+    expect(html).toContain('NEW STRAIN');
+    expect(html).toContain('NOW AVAILABLE AS AN EGG');
     expect(html).toContain('Tap or press to continue');
     expect(fxSource).toContain("genomeReveal?.addEventListener('click'");
     expect(fxSource).toContain('genomeReveal.focus({ preventScroll: true });');
@@ -48,8 +48,8 @@ describe('genome decode presentation', () => {
   it('serializes above ordinary mobile feedback and collapses bulk unlocks to one summary', () => {
     expect(fxSource).toContain("enqueueMobile({ kind: 'genome', items, onComplete }, 4)");
     expect(fxSource).toContain('const batch = items.length > 2;');
-    expect(fxSource).toContain("'GENOME ARCHIVE EXPANDED'");
-    expect(fxSource).toContain('`${items.length} GENOMES DECODED`');
+    expect(fxSource).toContain("'NEW STRAINS'");
+    expect(fxSource).toContain('`${items.length} STRAINS FOUND`');
     const revealAllStart = mainSource.indexOf('debug.onRevealDiscoveries(() => {');
     const revealAllEnd = mainSource.indexOf('\n});', revealAllStart);
     const revealAllBody = mainSource.slice(revealAllStart, revealAllEnd);

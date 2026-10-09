@@ -1,11 +1,21 @@
 ﻿import { createRun } from './game/run';
-import { createArena, type Arena, type ArenaStatus } from './game/arena';
+import { createArena, toolRadiusFor, type Arena, type ArenaStatus } from './game/arena';
 import { createRenderer, type Renderer } from './ui/render';
 import { createDebugPanel } from './ui/debug';
 import { createScreens, type ToolId } from './ui/screens';
 import { AGITATION_TUNING, SIM_SPEED_TUNING, TOOL_TUNING } from './content/ecologyTuning';
 import { renderLoadoutScreen } from './ui/loadoutScreen';
-import { getUpgradeDef } from './content/upgrades';
+import { getUpgradeDef, upgradeToolNote } from './content/upgrades';
+import { goalLineFor } from './content/goalCopy';
+import { createDishLabelOverlay } from './ui/dishLabelOverlay';
+import { createDishLabelRuntime } from './ui/dishLabelRuntime';
+import {
+  checkLessonCulture,
+  checkLessonStall,
+  createLessonWatch,
+  createObserveWatch,
+  watchLessonCulture,
+} from './game/lessonRecovery';
 import { COMMON_COLD_CASE, trialForIndex } from './content/researchCases';
 import { loadCaseRecord, recordCompletedTrial } from './game/caseRecord';
 import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/enemies';
@@ -184,16 +194,40 @@ createTitleAutomata();
 // use the quiet band above the dish without colliding with wrapped status copy.
 const hudEl = document.getElementById('hud');
 if (hudEl && typeof ResizeObserver === 'function') {
+  const hudDirectorEl = document.getElementById('hud-director');
   const publishHudBottom = () => {
     const r = hudEl.getBoundingClientRect();
     const bottom = hudEl.classList.contains('visible') ? r.bottom : 0;
     layout.style.setProperty('--hud-bottom', `${Math.round(bottom)}px`);
+    // Dr. E's transmission docks over the director slot so the goal strip
+    // above it stays readable while he speaks.
+    const slot = hudDirectorEl?.getBoundingClientRect();
+    const docked = Boolean(slot && slot.height > 0 && slot.width > 0 && bottom > 0);
+    layout.classList.toggle('hud-slot-docked', docked);
+    if (slot && docked) {
+      layout.style.setProperty('--hud-slot-top', `${Math.round(slot.top)}px`);
+      layout.style.setProperty('--hud-slot-left', `${Math.round(slot.left)}px`);
+      layout.style.setProperty('--hud-slot-width', `${Math.round(slot.width)}px`);
+      layout.style.setProperty('--hud-slot-height', `${Math.round(slot.height)}px`);
+    }
   };
   new ResizeObserver(publishHudBottom).observe(hudEl);
   window.addEventListener('resize', publishHudBottom);
   // Class flips (show/hide) don't trigger ResizeObserver; catch them too.
   new MutationObserver(publishHudBottom).observe(hudEl, { attributes: true, attributeFilter: ['class'] });
   publishHudBottom();
+}
+
+// Publish the tool rack's live height so the phone shell, drawers and dish
+// stack above it even when the rack wraps onto a second row.
+const toolboxEl = document.getElementById('toolbox');
+if (toolboxEl && typeof ResizeObserver === 'function') {
+  const publishRackHeight = () => {
+    layout.style.setProperty('--rack-height', `${Math.round(toolboxEl.getBoundingClientRect().height)}px`);
+  };
+  new ResizeObserver(publishRackHeight).observe(toolboxEl);
+  window.addEventListener('resize', publishRackHeight);
+  publishRackHeight();
 }
 
 const simClock = createFixedStepClock({
@@ -506,6 +540,43 @@ canvas.addEventListener('animationend', () => {
   canvas.classList.remove('dish-shake', 'dish-shake-soft');
 });
 const juice = createJuice(canvas, LX, LY);
+const DISH_LABELS_KEY = 'cdm.dish-labels.v1';
+const dishLabelOverlay = createDishLabelOverlay(
+  document.getElementById('dish-labels')!,
+  document.getElementById('dish-inspect')!,
+);
+const dishLabels = createDishLabelRuntime({
+  overlay: dishLabelOverlay,
+  canvas,
+  controlId: PLAYER_ID,
+  gridSize: LX,
+  // Phones get the shorter tag budget; tablets and wider get the full one.
+  isCompact: () => window.matchMedia('(max-width: 599px)').matches,
+});
+let dishGoalCellIds: ReadonlySet<number> = new Set();
+// The culture a guided lesson is built around (Trials 2-5, first time).
+const lessonWatch = createLessonWatch();
+const lessonObserveWatch = createObserveWatch();
+// Desktop: where a dropped field would land, shown as a ghost ring.
+let toolPreviewPos: [number, number] | null = null;
+const labelsButton = document.getElementById('labels-button');
+function applyDishLabelsPreference(enabled: boolean): void {
+  dishLabels.setEnabled(enabled);
+  if (!labelsButton) return;
+  // Same semantics as Sound: the button's action is "hide", pressed = hidden.
+  labelsButton.textContent = `Dish labels — ${enabled ? 'On' : 'Off'}`;
+  labelsButton.setAttribute('aria-label', enabled ? 'Hide dish labels' : 'Show dish labels');
+  labelsButton.setAttribute('aria-pressed', String(!enabled));
+}
+applyDishLabelsPreference((() => {
+  try { return window.localStorage.getItem(DISH_LABELS_KEY) !== '0'; } catch { return true; }
+})());
+labelsButton?.addEventListener('click', () => {
+  uiAudio.play('ui_tap');
+  const next = !dishLabels.isEnabled();
+  try { window.localStorage.setItem(DISH_LABELS_KEY, next ? '1' : '0'); } catch { /* preference is optional */ }
+  applyDishLabelsPreference(next);
+});
 let pastePointerId: number | null = null;
 let lastPasteSoundAt = 0;
 let pasteCursor: [number, number] | null = null;
@@ -592,6 +663,12 @@ function applySelectedToolAt(pos: [number, number]): boolean {
     if (selectedTool === 'egg') {
       onboardingDishGuideTracksLastEgg = true;
       setOnboardingDishPointerTarget(arena.getLastEggCellPos() ?? pos, true);
+      // Name the culture the player just planted while it is still a speck.
+      const eggPos = arena.getLastEggCellPos() ?? pos;
+      dishLabels.ping(arena, eggPos, performance.now(), 2500);
+      if (coach.isActive() && !isOnboardingEpoch(run.getState().fightIndex)) {
+        watchLessonCulture(lessonWatch, cellIdAt(arena, eggPos));
+      }
     } else {
       // Once the first reagent lands, subsequent "same spot" instructions
       // follow that field rather than chasing a moving organism.
@@ -612,12 +689,15 @@ canvas.addEventListener('pointerdown', (event) => {
   // or join two unrelated positions into a single painted trail.
   if (!event.isPrimary || event.button !== 0 || pastePointerId !== null) return;
   const pos = canvasEventToGridPos(event);
+  // Name whatever was under the finger, whether or not the tool lands.
+  if (arena && run.getState().phase === 'arena') dishLabels.ping(arena, pos, performance.now());
   if (!applySelectedToolAt(pos)) return;
   if (selectedTool === 'paste') {
     // Begin a drawn stroke; subsequent pointermove events lay the trail.
     pastePointerId = event.pointerId;
     pasteCursor = pos;
     canvas.setPointerCapture(event.pointerId);
+    dishLabelOverlay.setDrawing(true);
   }
 });
 
@@ -657,9 +737,29 @@ function endPasteStroke(event?: PointerEvent): void {
   const pointerId = pastePointerId;
   pastePointerId = null;
   pasteCursor = null;
+  dishLabelOverlay.setDrawing(false);
   arena?.endPasteStroke();
   if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
 }
+
+// Desktop hover inspect: a mouse resting on a culture explains it. Touch
+// never triggers this; phones get the tap ping instead.
+canvas.addEventListener('pointermove', (event) => {
+  if (event.pointerType !== 'mouse' || event.buttons !== 0) return;
+  if (!arena || run.getState().phase !== 'arena' || blockingOverlayOpen()) {
+    dishLabels.hover(null, null);
+    return;
+  }
+  const rect = canvas.getBoundingClientRect();
+  const pos = canvasEventToGridPos(event);
+  toolPreviewPos = pos;
+  dishLabels.hover(arena, pos, event.clientX - rect.left, event.clientY - rect.top);
+});
+canvas.addEventListener('pointerleave', () => {
+  toolPreviewPos = null;
+  dishLabels.hover(null, null);
+});
+canvas.addEventListener('pointerdown', () => dishLabels.hover(null, null));
 
 canvas.addEventListener('pointerup', endPasteStroke);
 canvas.addEventListener('pointercancel', endPasteStroke);
@@ -675,7 +775,7 @@ screens.onTitleStart(() => {
     if (replay?.status === 'unavailable') {
       persistenceUnavailable = true;
       haptics.play('warning');
-      fx.showToast('catalyst', 'Save unavailable', 'Your result is still waiting to be banked');
+      fx.showToast('catalyst', 'Save unavailable', 'Your result is still waiting to be saved');
       return;
     }
     pendingResearchBank = loadPendingResearchBank(runtimeStorage);
@@ -749,7 +849,7 @@ screens.onAgitate(() => {
   registerPlayerAction();
   screens.closeMobileDrawers();
   screens.updateAgitation(arena.getAgitationState());
-  screens.addTicker('Dish agitated: lifeforms are mixing.');
+  screens.addTicker('Dish agitated: cultures are mixing.');
   canvas.classList.remove('dish-shake');
   void canvas.offsetWidth;
   canvas.classList.add('dish-shake');
@@ -776,19 +876,7 @@ screens.onEndEpoch(() => {
     return;
   }
   if (!objectiveComplete && !equilibriumComplete) {
-    const nowMs = performance.now();
-    if (abandonArmedUntilMs <= nowMs) {
-      abandonArmedUntilMs = nowMs + 4_000;
-      window.clearTimeout(abandonConfirmationTimer);
-      abandonConfirmationTimer = window.setTimeout(() => {
-        abandonArmedUntilMs = 0;
-        updateDishExitAction();
-      }, 4_050);
-      haptics.play('warning');
-      updateDishExitAction();
-      return;
-    }
-    abandonCurrentDish();
+    requestLeaveTrial();
     return;
   }
   uiAudio.play('ui_tap');
@@ -806,6 +894,31 @@ screens.onEndEpoch(() => {
   resolveArenaStatus(status);
 });
 
+// Leaving an unfinished trial takes two deliberate activations within four
+// seconds. It lives in Options (the pause menu), not the tool rack.
+function requestLeaveTrial(): void {
+  if (!arena || run.getState().phase !== 'arena' || isOnboardingEpoch(run.getState().fightIndex)) return;
+  const nowMs = performance.now();
+  if (abandonArmedUntilMs <= nowMs) {
+    abandonArmedUntilMs = nowMs + 4_000;
+    window.clearTimeout(abandonConfirmationTimer);
+    abandonConfirmationTimer = window.setTimeout(() => {
+      abandonArmedUntilMs = 0;
+      updateDishExitAction();
+    }, 4_050);
+    haptics.play('warning');
+    updateDishExitAction();
+    return;
+  }
+  if (overlayState.menuOpen) setOptionsMenuOpen(false);
+  abandonCurrentDish();
+}
+
+screens.onLeaveTrial(() => {
+  uiAudio.play('ui_tap');
+  requestLeaveTrial();
+});
+
 function updateDishExitAction(): void {
   if (!arena || run.getState().phase !== 'arena') return;
   const objectiveComplete = arena.getObjectiveProgress().complete;
@@ -817,7 +930,6 @@ function updateDishExitAction(): void {
   screens.setDishExitState(dishExitState({
     complete: !taughtSequenceIncomplete && (objectiveComplete || equilibriumComplete),
     firstTrial: isOnboardingEpoch(run.getState().fightIndex),
-    openLab: run.getState().fightIndex >= COMMON_COLD_CASE.trials.length,
     saveBlocked: pendingBankPlan !== null,
     armedUntilMs: abandonArmedUntilMs,
     nowMs: performance.now(),
@@ -936,7 +1048,12 @@ function showPhase() {
     // arena was started by startNewFight(); HUD updates in loop.
   } else if (state.phase === 'upgrade_pick') {
     updateButtonHint();
-    const choices = state.pendingPickChoices.map((id) => ({ id, def: getUpgradeDef(id)! }));
+    const unlocked = currentCapabilityUnlocks();
+    const choices = state.pendingPickChoices.map((id) => ({
+      id,
+      def: getUpgradeDef(id)!,
+      note: upgradeToolNote(id, unlocked),
+    }));
     screens.setPickChoices(choices, (id) => {
       uiAudio.play('ui_select');
       fx.playWipe();
@@ -1029,7 +1146,7 @@ function genomeRevealInfo(genome: GenomeArtIdentity) {
     asset: genome.asset,
     alt: genome.alt,
     primary: genome.primary,
-    archivePosition: `${archive.decodedGenomes} / ${archive.totalGenomes} GENOMES DECODED`,
+    archivePosition: `${archive.decodedGenomes} / ${archive.totalGenomes} STRAINS FOUND`,
   };
 }
 
@@ -1101,7 +1218,7 @@ function resumeRunFromCheckpoint(): void {
       chosenObjective: undefined,
     });
     saveActiveRunCheckpoint();
-    fx.showToast('catalyst', 'Study refreshed', 'The saved Method could not reproduce that Study');
+    fx.showToast('catalyst', 'Trial refreshed', 'The saved upgrade could not recreate that trial');
     showPhase();
     return;
   }
@@ -1241,6 +1358,10 @@ function startNewFight() {
     additiveBloom: visualProfile.additiveBloom,
   });
   lastRenderAt = Number.NEGATIVE_INFINITY;
+  dishLabels.reset(performance.now());
+  dishGoalCellIds = new Set();
+  watchLessonCulture(lessonWatch, null);
+  lessonObserveWatch.awaitingSinceMs = null;
   tickCount = 0;
   tickerState = createTickerState();
   cellFxTracker = createCellFxTracker();
@@ -1281,7 +1402,7 @@ function startNewFight() {
     ? {
         key: `${runState.seed}:${runState.fightIndex}:${objective.name}`,
         kind: introduction.kind,
-        message: `Dr. E. New ${introduction.kind === 'study' ? 'Study' : 'Trial'}: ${objective.name}. ${objective.description}`,
+        message: `Dr. E. New trial: ${objective.name}. ${objective.description}`,
       }
     : null;
   const deferDirectorForMobileToolboxLesson = directorIntroduction !== null
@@ -1293,7 +1414,7 @@ function startNewFight() {
   }
   if (introduction.showCentralBanner) {
     fx.showEpochBanner(
-      `Case 01 · Trial ${runState.fightIndex + 1}`,
+      `Trial ${runState.fightIndex + 1}`,
       objective.name,
       objective.description,
     );
@@ -1398,7 +1519,7 @@ function loop() {
     // storage is unavailable so Retry cannot overwrite later dish activity.
     simClock.reset(now);
     if (shouldRenderFrame(lastRenderAt, now, visualProfile.targetRenderFps)) {
-      renderer.render(arena.state, arena.archetypes, arena.getDishEvents());
+      renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds);
       renderToolEffects(arena);
       juice.draw();
       lastRenderAt = now;
@@ -1435,6 +1556,9 @@ function loop() {
   const holdingForFirstInstruction = coach.isActive() && coach.getBeatIndex() === 0;
   if (holdingForFirstInstruction) simClock.reset(now);
   const ticksToRun = holdingForFirstInstruction ? 0 : simClock.consumeTicks(now);
+  // Teach first, then pressure: no crisis, outbreak or accident lands while
+  // Dr. E is running a lesson in this dish.
+  arena.setHazardsHeld(coach.isActive());
   const player = arena.state.cells.get(PLAYER_ID);
 
   for (let i = 0; i < ticksToRun; i++) {
@@ -1448,8 +1572,10 @@ function loop() {
   if (ticksToRun > 0) ecologyAudio.update(readAudioFrame(arena));
 
   updateJuiceEvents(arena);
+  recoverLostLessonCulture(arena, now);
+  dishGoalCellIds = dishLabels.update(arena, run.getObjective(), now);
   if (shouldRenderFrame(lastRenderAt, now, visualProfile.targetRenderFps)) {
-    renderer.render(arena.state, arena.archetypes, arena.getDishEvents());
+    renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds);
     renderToolEffects(arena);
     juice.draw();
     lastRenderAt = now;
@@ -1509,6 +1635,8 @@ function loop() {
     dominant: ecology.dominant,
     crisis: ecology.crisis,
     objectiveName: objective.def.name,
+    goalLine: goalLineFor(objective.def),
+    goalFraction: objective.fraction,
     objectiveSummary: objective.summary,
     objectiveHint: objective.def.hint ?? '',
     objectiveComplete: objective.complete,
@@ -1649,8 +1777,8 @@ function completeResearchBankBoundary(plan: PlannedResearchBank): boolean {
   announceUnlocks(previousAvailability, currentUnlockAvailability());
   for (const sealId of plan.newSealIds) {
     const seal = researchSealById(sealId);
-    fx.showToast('discovery', 'Research Seal', seal.title);
-    screens.addTicker(`Dr. E: Research seal stamped — ${seal.title}.`, 'discovery');
+    fx.showToast('discovery', 'Badge earned', seal.title);
+    screens.addTicker(`Dr. E: Badge earned — ${seal.title}.`, 'discovery');
   }
   debug.updateDiscoveries(discoveryDebugInfo());
   refreshNotebook();
@@ -1804,8 +1932,8 @@ function syncResearchArchive(biomeName?: string | null): void {
   }
   for (const sealId of result.newSealIds) {
     const seal = researchSealById(sealId);
-    fx.showToast('discovery', 'Research Seal', seal.title);
-    screens.addTicker(`Dr. E: Research seal stamped — ${seal.title}.`, 'discovery');
+    fx.showToast('discovery', 'Badge earned', seal.title);
+    screens.addTicker(`Dr. E: Badge earned — ${seal.title}.`, 'discovery');
   }
   if (result.newSealIds.length > 0 || result.newBiome) refreshNotebook();
 }
@@ -2161,17 +2289,17 @@ function announceUnlocks(
     if (previous.tools.includes(tool)) continue;
     didUnlock = true;
     screens.showcaseToolUnlock(tool);
-    screens.addTicker(`Research unlocked: ${capitalize(tool)} reagent available.`, 'discovery');
-    fx.showToast('catalyst', 'Reagent Unlocked', `${capitalize(tool)} now available`);
+    screens.addTicker(`New tool: ${capitalize(tool)}.`, 'discovery');
+    fx.showToast('catalyst', 'Tool unlocked', `${capitalize(tool)} now available`);
   }
   for (const lifeform of next.lifeforms) {
     if (previous.lifeforms.includes(lifeform)) continue;
     didUnlock = true;
     screens.showcaseLifeformUnlock(lifeform);
     if (isBaseArchetype(lifeform)) {
-      screens.addTicker(`Genome decoded: ${ARCHETYPE_INFO[lifeform].name}. Egg synthesis available.`, 'discovery');
+      screens.addTicker(`New strain: ${ARCHETYPE_INFO[lifeform].name}. Now available as an egg.`, 'discovery');
     } else if (lifeform in BREED_DEFS) {
-      screens.addTicker(`Genome decoded: ${BREED_DEFS[lifeform].name}. Egg synthesis available.`, 'discovery');
+      screens.addTicker(`New strain: ${BREED_DEFS[lifeform].name}. Now available as an egg.`, 'discovery');
     }
   }
   if (didUnlock) haptics.play('discovery');
@@ -2224,7 +2352,7 @@ function announceEpochCompletion(complete: boolean): void {
     didAnnounceCompletion = true;
     uiAudio.play('experiment_ready');
     haptics.play('success');
-    screens.addTicker('Dr. E: Goal complete. Bank the result when you are ready, or keep cultivating.', 'discovery');
+    screens.addTicker('Dr. E: Goal complete. Finish the trial when you are ready, or keep cultivating.', 'discovery');
     coach.report('objective-complete');
     updateButtonHint();
   } else if (!complete && didAnnounceCompletion) {
@@ -2237,8 +2365,8 @@ function announceEquilibrium(info: { achieved: boolean; progress: number; biomeN
   didAnnounceEquilibrium = true;
   uiAudio.play('epoch_win');
   haptics.play('success');
-  fx.showToast('discovery', 'Stable Ecosystem', info.biomeName ?? 'Equilibrium');
-  screens.addTicker('Equilibrium reached: pressure paused. Bank when ready, or keep observing.', 'discovery');
+  fx.showToast('discovery', 'Stable Ecosystem', info.biomeName ?? 'Balance');
+  screens.addTicker('Balance reached: pressure paused. Finish when ready, or keep watching.', 'discovery');
 }
 
 function labelForStrain(strain: string): string {
@@ -2252,7 +2380,7 @@ function labelForStrain(strain: string): string {
 }
 
 function descriptionForStrain(strain: string): string {
-  if (!isProgressionLifeformId(strain)) return 'Archived experimental specimen.';
+  if (!isProgressionLifeformId(strain)) return 'Experimental strain.';
   const identity = LIFEFORM_IDENTITIES[strain];
   return `${identity.role} · ${identity.behavior}`;
 }
@@ -2466,8 +2594,6 @@ interface TickerState {
   lastAccidentCount: number;
   lastOutbreakCount: number;
   lastMutationCount: number;
-  lastObjectiveSummary: string;
-  lastObjectiveSummaryTick: number;
   seenSignals: string[];
   didWarnDeadline: boolean;
   didWarnCritical: boolean;
@@ -2566,8 +2692,6 @@ function createTickerState(): TickerState {
     lastAccidentCount: 0,
     lastOutbreakCount: 0,
     lastMutationCount: 0,
-    lastObjectiveSummary: '',
-    lastObjectiveSummaryTick: -180,
     seenSignals: [],
     didWarnDeadline: false,
     didWarnCritical: false,
@@ -2594,7 +2718,11 @@ function updateTicker(ar: Arena): void {
     screens.addTicker(signal, toneForTickerSignal(signal));
   }
 
+  // The first seconds of a dish are its starting state, not news: record
+  // the bands silently so the log never opens on an alarm.
+  const settling = tickCount <= 60 * 8;
   const controlSampleBand = controlSampleVol <= 35 ? 'critical' : controlSampleVol <= 140 ? 'thin' : controlSampleVol >= 650 ? 'surging' : 'stable';
+  if (settling) tickerState.lastControlSampleBand = controlSampleBand;
   if (controlSampleBand !== tickerState.lastControlSampleBand) {
     tickerState.lastControlSampleBand = controlSampleBand;
     if (controlSampleBand === 'critical') screens.addTicker('Control sample is near collapse.', 'critical');
@@ -2603,21 +2731,24 @@ function updateTicker(ar: Arena): void {
   }
 
   const lifeformBand = livingLifeforms === 0 ? 'extinct' : livingLifeforms < 3 ? 'thin' : livingLifeforms >= 7 ? 'blooming' : 'stable';
+  if (settling) tickerState.lastLifeformBand = lifeformBand;
   if (lifeformBand !== tickerState.lastLifeformBand) {
     tickerState.lastLifeformBand = lifeformBand;
-    if (lifeformBand === 'extinct') screens.addTicker('Lifeforms have vanished from the dish.', 'critical');
-    else if (lifeformBand === 'thin') screens.addTicker('Lifeform diversity is under threat.', 'caution');
-    else if (lifeformBand === 'blooming') screens.addTicker('Lifeforms are blooming.', 'discovery');
+    if (lifeformBand === 'extinct') screens.addTicker('Every culture has died.', 'critical');
+    else if (lifeformBand === 'thin') screens.addTicker('Only a few cultures are left.', 'caution');
+    else if (lifeformBand === 'blooming') screens.addTicker('Cultures are blooming.', 'discovery');
   }
 
   const coverageBand = coverage <= 0.08 ? 'sterile' : coverage >= 0.42 ? 'bloom' : 'normal';
+  if (settling) tickerState.lastCoverageBand = coverageBand;
   if (coverageBand !== tickerState.lastCoverageBand) {
     tickerState.lastCoverageBand = coverageBand;
     if (coverageBand === 'sterile') screens.addTicker('Dish is approaching sterility.', 'critical');
     else if (coverageBand === 'bloom') screens.addTicker('Living matter is filling the dish.');
   }
 
-  if (ecology.dominant !== tickerState.lastDominant && ecology.dominant !== 'none') {
+  // Give the player a moment before narrating who leads the dish.
+  if (tickCount > 60 * 8 && ecology.dominant !== tickerState.lastDominant && ecology.dominant !== 'none') {
     tickerState.lastDominant = ecology.dominant;
     screens.addTicker(`${capitalize(ecology.dominant)} has become dominant.`);
   }
@@ -2632,12 +2763,12 @@ function updateTicker(ar: Arena): void {
 
   if (ecology.reactions > tickerState.lastReactionCount) {
     tickerState.lastReactionCount = ecology.reactions;
-    screens.addTicker('Reagent reaction: unstable chemistry is blooming.', 'caution');
+    screens.addTicker('Reaction: unstable chemistry is blooming.', 'caution');
   }
 
   if (ecology.accidents > tickerState.lastAccidentCount) {
     tickerState.lastAccidentCount = ecology.accidents;
-    screens.addTicker('Lab accident: rogue reagent entered the dish.', 'caution');
+    screens.addTicker('Lab accident: a rogue chemical hit the dish.', 'caution');
   }
 
   if (ecology.outbreaks > tickerState.lastOutbreakCount) {
@@ -2652,15 +2783,7 @@ function updateTicker(ar: Arena): void {
     screens.addTicker('Visible mutation: a culture expressed a new trait.', 'discovery');
   }
 
-  if (
-    objective.summary !== tickerState.lastObjectiveSummary
-    && tickCount - tickerState.lastObjectiveSummaryTick >= 180
-  ) {
-    tickerState.lastObjectiveSummary = objective.summary;
-    tickerState.lastObjectiveSummaryTick = tickCount;
-    screens.addTicker(`Objective update: ${objective.summary}.`);
-  }
-
+  // Live goal progress lives in the goal strip; the log keeps events only.
   if (objective.def.timed && !tickerState.didWarnDeadline && objective.urgency === 'warning') {
     tickerState.didWarnDeadline = true;
     screens.addTicker('Deadline pressure is rising.', 'caution');
@@ -2672,12 +2795,12 @@ function updateTicker(ar: Arena): void {
 }
 
 function toneForTickerSignal(signal: string): 'normal' | 'discovery' | 'caution' | 'critical' {
-  if (signal.startsWith('NEW LIFEFORM CREATED')) return 'discovery';
+  if (signal.startsWith('New strain created')) return 'discovery';
   if (signal.startsWith('NEW BREED DISCOVERED')) return 'discovery';
-  if (signal.startsWith('CATALYTIC FLARE') || signal.startsWith('FOLDING FAULT') || signal.startsWith('Crisis')) {
+  if (signal.startsWith('Flare reaction') || signal.startsWith('FOLDING FAULT') || signal.startsWith('Crisis')) {
     return 'critical';
   }
-  if (signal.startsWith('CATALYTIC') || signal.startsWith('Lab accident') || signal.startsWith('CAUTION')) {
+  if (/^(?:[A-Z][a-z]+ reaction|Reaction): .+ discovered\.$/.test(signal) || signal.startsWith('Lab accident') || signal.startsWith('CAUTION')) {
     return 'caution';
   }
   if (signal.startsWith('Lab note') || signal.includes('mutation') || signal.includes('cultured')) return 'discovery';
@@ -2740,6 +2863,49 @@ function readAudioFrame(ar: Arena): {
   return { eating, fighting, reactions, mutations, hatches, events };
 }
 
+function cellIdAt(ar: Arena, pos: readonly [number, number]): number | null {
+  const x = Math.round(pos[0]);
+  const y = Math.round(pos[1]);
+  const id = ar.state.grid.cells[x * LY + y] ?? 0;
+  return id === 0 ? null : id;
+}
+
+// If the culture a guided lesson depends on dies before the result lands,
+// waiting is a dead end: say so and restart the lesson from its first step.
+function recoverLostLessonCulture(ar: Arena, nowMs: number): void {
+  const verdict = checkLessonCulture(lessonWatch, {
+    lessonActive: coach.isActive() && !coach.isPresentingSuccess(),
+    resultReached: ar.getObjectiveProgress().complete,
+    cultureAlive: (ar.state.cells.get(lessonWatch.cellId ?? -1)?.vol ?? 0) > 0,
+    nowMs,
+  });
+  if (verdict === 'rewind') {
+    restartLesson('It didn’t take', 'That culture died. Plant another and run the steps again.');
+    return;
+  }
+  // The culture lived but the result never came (it drifted off the field,
+  // or the timing missed): don't leave the player watching forever.
+  const stalled = checkLessonStall(lessonObserveWatch, {
+    awaitingResult: coach.isAwaitingObjective() && !isOnboardingEpoch(run.getState().fightIndex),
+    resultReached: ar.getObjectiveProgress().complete,
+    nowMs,
+  });
+  if (stalled) restartLesson('No reaction yet', 'Let’s run the steps again — keep each drop right on the culture.');
+}
+
+function restartLesson(title: string, body: string): void {
+  watchLessonCulture(lessonWatch, null);
+  lessonObserveWatch.awaitingSinceMs = null;
+  fx.showToast('catalyst', title, body);
+  screens.addTicker(`Dr. E: ${title}. ${body}`, 'caution');
+  coach.beginTrial(run.getState().fightIndex);
+  updateButtonHint();
+}
+
+function isFieldTool(tool: ToolId): tool is 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' {
+  return tool === 'nutrient' || tool === 'toxin' || tool === 'water' || tool === 'salt' || tool === 'acid';
+}
+
 function canvasEventToGridPos(event: PointerEvent): [number, number] {
   const rect = canvas.getBoundingClientRect();
   const x = ((event.clientX - rect.left) / rect.width) * LX;
@@ -2772,6 +2938,22 @@ function renderToolEffects(ar: Arena): void {
         Math.ceil(sy),
       );
     }
+    ctx.restore();
+  }
+
+  // Ghost ring: the area the selected field tool will cover if dropped here.
+  if (toolPreviewPos && !pasteCursor && isFieldTool(selectedTool)) {
+    const radius = toolRadiusFor(selectedTool, run.getPlayerConfig()) * ((sx + sy) / 2);
+    const [r, g, b] = colorForEffect(selectedTool).core;
+    ctx.save();
+    ctx.setLineDash([6, 5]);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.75)`;
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.06)`;
+    ctx.beginPath();
+    ctx.arc((toolPreviewPos[0] + 0.5) * sx, (toolPreviewPos[1] + 0.5) * sy, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
     ctx.restore();
   }
 

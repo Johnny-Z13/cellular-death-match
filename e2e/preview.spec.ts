@@ -29,8 +29,12 @@ test('preview play leaves real progress intact and exits to the saved Trial', as
   await page.locator('#game').focus();
   await page.keyboard.press('Enter');
   await expect(paste.locator('[data-tool-count]')).toHaveText('2/3');
-  await expect.poll(() => paste.evaluate((element) =>
-    getComputedStyle(element).getPropertyValue('--cooldown').trim())).toBe('0');
+  // Wait for the cooldown to start before waiting for it to finish, or the
+  // previous frame's ready state can let the second press land mid-cooldown.
+  const cooldown = () => paste.evaluate((element) =>
+    getComputedStyle(element).getPropertyValue('--cooldown').trim());
+  await expect.poll(cooldown).not.toBe('0');
+  await expect.poll(cooldown).toBe('0');
   await page.keyboard.press('Enter');
   await expect(paste.locator('[data-tool-count]')).toHaveText('1/3');
   await page.screenshot({ path: testInfo.outputPath('preview-gameplay.png') });

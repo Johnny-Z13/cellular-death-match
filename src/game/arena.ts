@@ -3,7 +3,7 @@ import { createSim, tick as simTick, addCell } from '../sim/sim';
 import { removePixel } from '../sim/cell';
 import { getCell, setCell, updateBoundaryAround } from '../sim/grid';
 import { type PlayerConfig } from '../content/upgrades';
-import { type EnemyArchetype, type EnemySpawn, ARCHETYPE_DEFAULTS } from '../content/enemies';
+import { type EnemyArchetype, type EnemySpawn, ARCHETYPE_DEFAULTS, ARCHETYPE_INFO } from '../content/enemies';
 import {
   ARCHETYPE_ECOLOGY,
   ARCHETYPE_REACTION_TRAITS,
@@ -100,6 +100,8 @@ export interface Arena {
   getHomeostasisProgress(): number;
   isHomeostasisAchieved(): boolean;
   isEcosystemCollapsed(): boolean;
+  /** Hold crises, outbreaks and accidents while a guided lesson instructs. */
+  setHazardsHeld(held: boolean): void;
 }
 
 export interface EquilibriumInfo {
@@ -289,6 +291,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
   // onboarding dish (Swarmlet + Nutrient only, tutorial owns its ending).
   const isOnboardingDish = fightIndex === 0 && !includeControlSample;
   const worldEventIntensity = clamp(opts.worldEventIntensity ?? WORLD_EVENT_TUNING.defaultIntensity, 0, 1);
+  // Set by the shell while Dr. E is mid-instruction: a lesson should never be
+  // interrupted by an unexplained disaster. Benign drift and mutation still run.
+  let hazardsHeld = false;
   const nEnemies = opts.enemies.length;
   const state = createSim({
     LX: opts.LX,
@@ -380,10 +385,13 @@ export function createArena(opts: CreateArenaOpts): Arena {
     discoveredBreedIds.add(id);
     discoveredBreedTicks.set(id, tickNo);
     if (BREED_DEFS[id].parents && !knownBreedIds.has(id)) objectiveRuntime.hybridDiscovered = true;
-    discoverNote(`breed_${id}`, `NEW LIFEFORM CREATED: ${BREED_DEFS[id].name}.`);
-    if (sourceCell) {
+    // Only a strain new to the player is announced. A known strain appearing
+    // in this dish still counts for objectives but is not "new".
+    const announce = !knownBreedIds.has(id);
+    if (announce) discoverNote(`breed_${id}`, `New strain created: ${BREED_DEFS[id].name}.`);
+    if (sourceCell && announce) {
       const marker = breedDiscoveryMarkerFor(id);
-      addDishEvent(marker.kind, `NEW LIFEFORM: ${BREED_DEFS[id].name}`, sourceCell.center, marker.radius, marker.color);
+      addDishEvent(marker.kind, `NEW STRAIN: ${BREED_DEFS[id].name}`, sourceCell.center, marker.radius, marker.color);
     }
     if (!sourceCell || sourceCell.vol <= 0 || archetypes.size >= ECOSYSTEM_MAX_POPULATION) return;
     // A discovery is born beside its source, never on top of it. `addCell`
@@ -534,7 +542,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           const spawn = archetypes.get(id);
           const trait = spawn?.traits?.at(-1);
           dominant = spawn
-            ? trait ? `${MUTATION_TRAITS[trait].name} ${spawn.archetype}` : spawn.archetype
+            ? trait ? `${MUTATION_TRAITS[trait].name} ${ARCHETYPE_INFO[spawn.archetype].name}` : ARCHETYPE_INFO[spawn.archetype].name
             : `cell ${id}`;
         }
       }
@@ -562,11 +570,14 @@ export function createArena(opts: CreateArenaOpts): Arena {
         },
       };
     },
+    setHazardsHeld(held: boolean): void {
+      hazardsHeld = held;
+    },
     getObjectiveProgress(): ObjectiveProgress {
       const progress = currentObjectiveProgress();
       if (progress.met && progress.latches) objectiveAchieved = true;
       const complete = progress.latches ? objectiveAchieved : progress.met;
-      return { ...progress, complete };
+      return { ...progress, complete, fraction: complete ? 1 : progress.fraction };
     },
     getToolStates(): Record<LabTool, ToolState> {
       const snapshot = (tool: LabTool): ToolState => ({
@@ -779,8 +790,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
         pulseToolEffect(state, trailReaction.effect, archetypes);
         toolEffects.push(trailReaction.effect);
         addDishEventForEffect(trailReaction.effect, addDishEvent);
-        discoverNote('paste_catalysed', 'Lab note: reagents react along a nutrient paste trail.');
-        pushSignal('Paste trail catalysed by reagent.');
+        discoverNote('paste_catalysed', 'Lab note: tools react along a Paste trail.');
+        pushSignal('A tool reacted along the Paste trail.');
         while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
       }
       if (catalyticReaction) {
@@ -878,6 +889,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
 
       if (mode === 'ecosystem') {
         const pressurePaused = homeostasisTracker.isAchieved();
+        const hazardsPaused = pressurePaused || hazardsHeld;
         applyToolEffects(state, toolEffects, archetypes);
         // Trail stamps pull + feed cells exactly like nutrient drops, so a drawn
         // line becomes a gentle gradient colonies drift along.
@@ -898,7 +910,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           }
           activeCrisis = null;
         }
-        if (!pressurePaused && !activeCrisis && tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveCrisisInterval === 0) {
+        if (!hazardsPaused && !activeCrisis && tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveCrisisInterval === 0) {
           const result = activateCrisis(this, state, archetypes);
           activeCrisis = { id: result.id, ttl: CRISES[result.id].durationTicks };
           birthCount += result.births;
@@ -963,7 +975,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           supplyDropCount += refillEggIfQuiet(toolStates, state);
           if (toolStates.egg.charges > 0) lastEmergencyEggTick = tickNo;
         }
-        if (!pressurePaused && tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveOutbreakInterval === 0) {
+        if (!hazardsPaused && tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveOutbreakInterval === 0) {
           const outbreak = triggerPredatorOutbreak(this, state, archetypes, effectiveOutbreakCount);
           if (outbreak) {
             outbreakCount += 1;
@@ -978,11 +990,11 @@ export function createArena(opts: CreateArenaOpts): Arena {
         if (tickNo % RESUPPLY_INTERVAL_TICKS === 0) {
           supplyDropCount += resupplyLab(toolStates, objective);
         }
-        if (!pressurePaused && tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveAccidentInterval === 0) {
+        if (!hazardsPaused && tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveAccidentInterval === 0) {
           const accident = randomAccidentEffect(state);
           pulseToolEffect(state, accident, archetypes);
           toolEffects.push(accident);
-          addDishEvent('caution', 'ROGUE REAGENT', accident.pos, accident.radius, 'amber');
+          addDishEvent('caution', 'ROGUE CHEMICAL', accident.pos, accident.radius, 'amber');
           accidentCount += 1;
           while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
         }
@@ -1121,18 +1133,22 @@ function toolLoadoutFor(player: PlayerConfig): Record<LabTool, ToolState> {
   };
 }
 
+/** Field radius (grid units) a dropped tool will cover, upgrades included. */
+export function toolRadiusFor(tool: Exclude<LabTool, 'egg' | 'paste'>, player: PlayerConfig): number {
+  return tool === 'nutrient' ? player.nutrientRadius ?? TOOL_TUNING.nutrient.radius :
+    tool === 'toxin' ? player.toxinRadius ?? TOOL_TUNING.toxin.radius :
+    tool === 'water' ? player.waterRadius ?? TOOL_TUNING.water.radius :
+    tool === 'salt' ? player.saltRadius ?? TOOL_TUNING.salt.radius :
+    player.acidRadius ?? TOOL_TUNING.acid.radius;
+}
+
 function toolEffectFor(
   tool: Exclude<LabTool, 'egg' | 'paste'>,
   pos: [number, number],
   player: PlayerConfig,
   seed: number,
 ): ToolEffect {
-  const radius =
-    tool === 'nutrient' ? player.nutrientRadius ?? TOOL_TUNING.nutrient.radius :
-    tool === 'toxin' ? player.toxinRadius ?? TOOL_TUNING.toxin.radius :
-    tool === 'water' ? player.waterRadius ?? TOOL_TUNING.water.radius :
-    tool === 'salt' ? player.saltRadius ?? TOOL_TUNING.salt.radius :
-    player.acidRadius ?? TOOL_TUNING.acid.radius;
+  const radius = toolRadiusFor(tool, player);
   const maxTtl = TOOL_TUNING[tool].ttl;
   return {
     type: tool,
@@ -1291,11 +1307,11 @@ function reactionContextFor(
 }
 
 function reactionMessageFor(type: CatalysisEffectType, recipeName: string): string {
-  if (type === 'flare') return `CATALYTIC FLARE: ${recipeName} discovered.`;
-  if (type === 'crystal') return `CATALYTIC CRYSTAL: ${recipeName} discovered.`;
-  if (type === 'foam') return `CATALYTIC FOAM: ${recipeName} discovered.`;
+  if (type === 'flare') return `Flare reaction: ${recipeName} discovered.`;
+  if (type === 'crystal') return `Crystal reaction: ${recipeName} discovered.`;
+  if (type === 'foam') return `Foam reaction: ${recipeName} discovered.`;
   if (type === 'fold_fault') return `FOLDING FAULT: ${recipeName} discovered.`;
-  return `CATALYTIC REACTION: ${recipeName} discovered.`;
+  return `Reaction: ${recipeName} discovered.`;
 }
 
 function catalysisEffectTypeFor(type: ToolEffectType): CatalysisEffectType | null {

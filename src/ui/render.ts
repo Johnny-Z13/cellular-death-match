@@ -9,6 +9,7 @@ export interface Renderer {
     state: SimState,
     archetypes?: ReadonlyMap<CellId, EnemySpawn>,
     dishEvents?: readonly DishEventMarker[],
+    goalCellIds?: ReadonlySet<CellId>,
   ): void;
 }
 
@@ -64,14 +65,29 @@ function mixColor(
   ]);
 }
 
+// Mutation tints show a culture's newest trait. Amounts are kept low enough
+// that a mutated culture still reads as its strain's hue (a budding Swarmlet
+// stays cyan rather than turning Splitter green).
+const TRAIT_TINT: Partial<Record<TraitId, { rgb: [number, number, number]; amount: number }>> = {
+  fleet: { rgb: [212, 255, 72], amount: 0.24 },
+  gelatinous: { rgb: [224, 88, 255], amount: 0.2 },
+  toxin_resistant: { rgb: [225, 255, 255], amount: 0.26 },
+  fragile: { rgb: [255, 174, 64], amount: 0.22 },
+  budding: { rgb: [91, 255, 154], amount: 0.22 },
+};
+
 function traitColor(base: Uint8ClampedArray, traits: readonly TraitId[] | undefined): Uint8ClampedArray {
   const trait = traits?.at(-1);
-  if (trait === 'fleet') return mixColor(base, [212, 255, 72], 0.42);
-  if (trait === 'gelatinous') return mixColor(base, [224, 88, 255], 0.34);
-  if (trait === 'toxin_resistant') return mixColor(base, [225, 255, 255], 0.44);
-  if (trait === 'fragile') return mixColor(base, [255, 174, 64], 0.38);
-  if (trait === 'budding') return mixColor(base, [91, 255, 154], 0.4);
-  return base;
+  const tint = trait ? TRAIT_TINT[trait] : undefined;
+  return tint ? mixColor(base, tint.rgb, tint.amount) : base;
+}
+
+/** The colour a culture of this spawn is drawn in, mutation tint included.
+ *  Name tags use it so the dot matches the pixels. */
+export function displayColorForSpawn(spawn: EnemySpawn): [number, number, number] {
+  const base = rgba(lifeformIdentityForSpawn(spawn).colors.primary);
+  const color = spawn.breedId ? base : traitColor(base, spawn.traits);
+  return [color[0]!, color[1]!, color[2]!];
 }
 
 // Lighten an RGB color by `factor` toward white (0..1).
@@ -111,6 +127,7 @@ export function createRenderer(
       state: SimState,
       archetypes?: ReadonlyMap<CellId, EnemySpawn>,
       dishEvents: readonly DishEventMarker[] = [],
+      goalCellIds?: ReadonlySet<CellId>,
     ) {
       frame += 1;
       const { LX, LY, cells, boundary } = state.grid;
@@ -158,8 +175,7 @@ export function createRenderer(
       // luminosity without shifting hues. The blur runs on the GPU via the
       // canvas filter; without ctx.filter the bilinear upscale of the low-res
       // grid still softens the halo.
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(agarFor(canvas.width, canvas.height), 0, 0);
       ctx.save();
       ctx.imageSmoothingEnabled = true;
       if (supportsCanvasFilter) ctx.filter = `blur(${Math.max(3, canvas.width / 90)}px)`;
@@ -195,6 +211,9 @@ export function createRenderer(
       for (const event of dishEvents) {
         drawDishEventMarker(ctx, event, sx, sy, frame, reduceMotion);
       }
+      if (goalCellIds && goalCellIds.size > 0) {
+        drawGoalRings(ctx, state, goalCellIds, sx, sy, frame, reduceMotion);
+      }
       for (const b of state.bullets) {
         const palette = base[b.ownerId] ?? base[0]!;
         // Lighten by 0.5 for the bullet color (slightly brighter than boundary).
@@ -214,6 +233,109 @@ export function createRenderer(
   };
 }
 
+
+// Agar substrate behind the cultures: a dark medium with a faint centre
+// glow, fine grain and a meniscus at the rim, so an empty dish reads as a
+// living plate rather than a void. Static and cached per canvas size; it must
+// stay dark enough that nothing in it could be mistaken for a culture.
+const AGAR = {
+  centre: [10, 22, 24] as const,
+  rim: [2, 6, 7] as const,
+  grainAlpha: 0.035,
+  grainCell: 3,
+  meniscusAlpha: 0.08,
+  seed: 0x5eed,
+};
+
+let agarCache: { width: number; height: number; canvas: HTMLCanvasElement } | null = null;
+
+function agarFor(width: number, height: number): HTMLCanvasElement {
+  if (agarCache && agarCache.width === width && agarCache.height === height) return agarCache.canvas;
+  const plate = document.createElement('canvas');
+  plate.width = width;
+  plate.height = height;
+  const ctx = plate.getContext('2d')!;
+  const cx = width / 2;
+  const cy = height / 2;
+  const reach = Math.hypot(cx, cy);
+  const glow = ctx.createRadialGradient(cx, cy * 0.92, 0, cx, cy, reach);
+  glow.addColorStop(0, `rgb(${AGAR.centre.join(',')})`);
+  glow.addColorStop(1, `rgb(${AGAR.rim.join(',')})`);
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, width, height);
+
+  // Deterministic grain (LCG) so every dish shows the same plate.
+  let state = AGAR.seed;
+  const next = () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+  for (let y = 0; y < height; y += AGAR.grainCell) {
+    for (let x = 0; x < width; x += AGAR.grainCell) {
+      const light = next();
+      if (light < 0.55) continue;
+      ctx.fillStyle = `rgba(150, 220, 210, ${(AGAR.grainAlpha * (light - 0.55)) / 0.45})`;
+      ctx.fillRect(x, y, AGAR.grainCell, AGAR.grainCell);
+    }
+  }
+
+  const meniscus = ctx.createRadialGradient(cx, cy, Math.min(cx, cy) * 0.82, cx, cy, reach);
+  meniscus.addColorStop(0, 'rgba(120, 196, 200, 0)');
+  meniscus.addColorStop(0.35, `rgba(120, 196, 200, ${AGAR.meniscusAlpha})`);
+  meniscus.addColorStop(1, 'rgba(0, 0, 0, 0.35)');
+  ctx.fillStyle = meniscus;
+  ctx.fillRect(0, 0, width, height);
+
+  agarCache = { width, height, canvas: plate };
+  return plate;
+}
+
+// A dashed ring around every culture that counts toward the current goal.
+// Shape, not colour, carries the meaning: a dark underlay keeps the light
+// dashes readable over any culture hue, and the radius is padded past the
+// equal-area circle so it clears irregular CPM outlines.
+const GOAL_RING = {
+  radiusScale: 1.25,
+  radiusPadGrid: 3,
+  dash: [2.4, 1.6] as const,
+  color: 'rgba(214, 255, 249, 0.95)',
+  underlay: 'rgba(0, 0, 0, 0.7)',
+};
+
+function drawGoalRings(
+  ctx: CanvasRenderingContext2D,
+  state: SimState,
+  goalCellIds: ReadonlySet<CellId>,
+  sx: number,
+  sy: number,
+  frame: number,
+  reduceMotion: boolean,
+): void {
+  const scale = (sx + sy) * 0.5;
+  const width = Math.max(2, scale * 0.6);
+  ctx.save();
+  for (const id of goalCellIds) {
+    const cell = state.cells.get(id);
+    if (!cell || cell.vol <= 0) continue;
+    const radius = (Math.sqrt(cell.vol / Math.PI) * GOAL_RING.radiusScale + GOAL_RING.radiusPadGrid) * scale;
+    const cx = (cell.center[0] + 0.5) * sx;
+    const cy = (cell.center[1] + 0.5) * sy;
+    ctx.setLineDash([]);
+    ctx.strokeStyle = GOAL_RING.underlay;
+    ctx.lineWidth = width + 3;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([scale * GOAL_RING.dash[0], scale * GOAL_RING.dash[1]]);
+    ctx.lineDashOffset = reduceMotion ? 0 : -frame * 0.4;
+    ctx.strokeStyle = GOAL_RING.color;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
 
 function drawDishEventMarker(
   ctx: CanvasRenderingContext2D,

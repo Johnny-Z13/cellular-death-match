@@ -124,9 +124,8 @@ test('plays the five-Trial Case, records discovery cadence, and resumes an Open 
     await expect(page.locator('#coach')).toHaveAttribute('aria-hidden', 'true');
     await expect(page.locator('#hud-director-title')).toHaveText('Carrier Medium');
   } else {
-    await expect(page.locator('#coach-title')).toHaveText('More tools are in the rack.');
-    await expect(page.locator('#toolbox-more')).toBeFocused();
-    await page.locator('#toolbox-more').click();
+    // The phone rack shows every unlocked tool; no reveal lesson is needed.
+    await expect(page.locator('#toolbox-more')).toBeHidden();
   }
   await expect(page.locator('[data-tool="water"]')).toBeInViewport({ ratio: 0.9 });
   await expect(page.locator('#coach')).toHaveAttribute('aria-hidden', 'true');
@@ -175,14 +174,14 @@ test('plays the five-Trial Case, records discovery cadence, and resumes an Open 
     button.click();
     button.click();
   });
-  await expect(page.locator('#hud-fight')).toHaveText('1 / ∞');
+  await expect(page.locator('#hud-fight')).toHaveText('Trial 1');
   await selectToolAndApply(page, 'nutrient', false);
   timings.push({ trial: 6, objective: `Open Lab: ${chosenObjective}`, activeMs: Date.now() - startedAt });
 
   await page.reload();
-  await expect(page.locator('#title-start-label')).toHaveText('Restart Study');
+  await expect(page.locator('#title-start-label')).toHaveText('Restart Trial');
   await page.locator('#title-start').click();
-  await expect(page.locator('#hud-fight')).toHaveText('1 / ∞');
+  await expect(page.locator('#hud-fight')).toHaveText('Trial 1');
   await expect(page.locator('#hud-director-title')).toHaveText(chosenObjective);
   await selectLifeform(page, 'bloom_mass');
   await clickDish(page, 0.68, 0.42);

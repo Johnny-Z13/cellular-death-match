@@ -28,15 +28,15 @@ export function renderLoadoutScreen(
 
     const title = document.createElement('h2');
     title.className = 'screen-title';
-    title.textContent = 'Archived Specimens';
+    title.textContent = 'Choose your strains';
 
     const subtitle = document.createElement('p');
     subtitle.className = 'loadout-subtitle';
-    subtitle.textContent = `Bring up to ${slots} decoded specimens. Standard lab-stock eggs are always supplied.`;
+    subtitle.textContent = `Bring up to ${slots} strains you have found. Standard eggs are always supplied.`;
 
     const count = document.createElement('p');
     count.className = 'loadout-count';
-    count.textContent = `${selected.size}/${slots} archived`;
+    count.textContent = `${selected.size}/${slots} chosen`;
 
     const grid = document.createElement('div');
     grid.className = 'loadout-grid';

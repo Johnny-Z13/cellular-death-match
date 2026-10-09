@@ -39,7 +39,7 @@ test.describe('first discovery progression', () => {
 
     const reveal = page.locator('#fx-genome');
     await expect(reveal).toHaveAttribute('aria-hidden', 'false');
-    await expect(page.locator('#fx-genome-eyebrow')).toHaveText('GENOME DECODED');
+    await expect(page.locator('#fx-genome-eyebrow')).toHaveText('NEW STRAIN');
     await expect(page.locator('#fx-genome-title')).toHaveText('Bloom Mass');
     await expect(reveal).not.toHaveClass(/fx-genome-batch/);
     await expect(page.locator('#fx-genome-art img')).toHaveCount(1);
@@ -58,7 +58,7 @@ test.describe('first discovery progression', () => {
     await expect(page.locator('#mobile-lifeforms-toggle')).toBeFocused();
 
     await page.locator('#mobile-lifeforms-toggle').click();
-    await expect(page.locator('#life-count')).toHaveText('2 specimens available in this Study');
+    await expect(page.locator('#life-count')).toHaveText('2 strains ready');
     const bloom = page.locator('[data-lifeform-id="bloom_mass"]');
     await expect(bloom).toBeVisible();
     await expect(bloom).toBeEnabled();

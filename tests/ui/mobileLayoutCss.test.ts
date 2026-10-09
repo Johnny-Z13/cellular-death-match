@@ -49,7 +49,9 @@ describe('mobile layout CSS', () => {
     // The HUD drops below the top chrome buttons (Sound / Full screen) so they
     // never sit on top of the deadline / equilibrium values.
     expect(mobile).toContain('top: calc(58px + env(safe-area-inset-top))');
-    expect(mobile).toContain('font-size: 10px');
+    // Type floor (2026-10-09): nothing renders below 11px.
+    expect(mobile).toContain('font-size: var(--fs-min)');
+    expect(mobile).not.toMatch(/font-size:\s*(?:[0-9]|10)(?:\.\d+)?px/);
     expect(mobile).toContain('.hud-hint-row,');
     expect(mobile).toContain('.hud-volume-row');
     expect(mobile).toContain('display: none');

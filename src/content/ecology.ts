@@ -78,7 +78,7 @@ export const MUTATION_TRAITS: Record<TraitId, TraitDef> = {
   budding: {
     id: 'budding',
     name: 'Budding',
-    summary: 'Recovers volume quickly and tends to found daughter colonies.',
+    summary: 'Recovers volume quickly and tends to found daughter cultures.',
     speedMultiplier: 0.96,
     targetVolMultiplier: 1.16,
     toxinMultiplier: 0.95,
@@ -89,19 +89,19 @@ export const CRISES: Record<CrisisId, CrisisDef> = {
   heat_spike: {
     id: 'heat_spike',
     name: 'Heat Spike',
-    summary: 'All active lifeforms surge and collide more aggressively.',
+    summary: 'All active cultures surge and collide more aggressively.',
     durationTicks: 60 * 9,
   },
   oxygen_crash: {
     id: 'oxygen_crash',
     name: 'Oxygen Crash',
-    summary: 'Large colonies lose carrying capacity until the dish recovers.',
+    summary: 'Large cultures lose carrying capacity until the dish recovers.',
     durationTicks: 60 * 8,
   },
   contamination_bloom: {
     id: 'contamination_bloom',
     name: 'Contamination Bloom',
-    summary: 'A stray colony seeds new competition into sparse dishes.',
+    summary: 'A stray culture seeds new competition into sparse dishes.',
     durationTicks: 60 * 7,
   },
 };
@@ -117,13 +117,13 @@ export const ARCHETYPE_ECOLOGY: Record<EnemyArchetype, ArchetypeEcology> = {
     role: 'predator',
     prefers: ['swarmlet', 'splitter'],
     avoids: ['boss'],
-    summary: 'A heavy feeder that hunts small colonies and pressures diversity.',
+    summary: 'A heavy feeder that hunts small cultures and pressures diversity.',
   },
   splitter: {
     role: 'propagator',
     prefers: ['swarmlet', 'mirror'],
     avoids: ['bruiser'],
-    summary: 'A midweight propagator that clusters with small colonies and fragments when stressed.',
+    summary: 'A midweight propagator that clusters with small cultures and fragments when stressed.',
   },
   sniper: {
     role: 'suppressor',
@@ -141,7 +141,7 @@ export const ARCHETYPE_ECOLOGY: Record<EnemyArchetype, ArchetypeEcology> = {
     role: 'anchor',
     prefers: ['bruiser', 'splitter', 'mirror'],
     avoids: ['sniper'],
-    summary: 'A dish anchor that pulls heavy colonies into a stable but dangerous center of mass.',
+    summary: 'A dish anchor that pulls heavy cultures into a stable but dangerous center of mass.',
   },
 };
 

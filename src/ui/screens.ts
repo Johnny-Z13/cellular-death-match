@@ -3,7 +3,7 @@ import type { LabReport } from '../game/labReport';
 import type { UpgradeDef } from '../content/upgrades';
 import type { EnemyArchetype } from '../content/enemies';
 import type { ObjectiveDef } from '../content/objectives';
-import type { NotebookView, AtlasView, GenomeArchiveProgress } from '../content/notebook';
+import type { NotebookView, AtlasView, GenomeArchiveProgress, NotebookCategory } from '../content/notebook';
 import {
   LIFEFORM_IDENTITIES,
   type LifeformIdentityId,
@@ -13,7 +13,7 @@ import { renderLabReport } from './labReportScreen';
 import type { ResearchCaseDef, ResearchTrialDef } from '../content/researchCases';
 import type { ResearchNotebookView } from '../game/researchNotebook';
 import type { StudyChoice } from '../game/objectivePool';
-import type { DishExitState } from '../game/dishExitAction';
+import { isRackExitVisible, type DishExitState } from '../game/dishExitAction';
 
 type ScreenName = 'title' | 'method-intro' | 'pick' | 'end' | 'hud' | 'notebook';
 type AppScreenName = ScreenName | 'loadout' | 'objective';
@@ -41,6 +41,10 @@ export interface HudInfo {
   dominant: string;
   crisis: string;
   objectiveName: string;
+  /** Imperative headline for the goal bar (see content/goalCopy). */
+  goalLine: string;
+  /** 0..1 measurable progress, or null for yes/no goals not yet met. */
+  goalFraction: number | null;
   objectiveSummary: string;
   objectiveHint: string;
   objectiveComplete: boolean;
@@ -59,6 +63,8 @@ export interface EndInfo {
 export interface PickChoice {
   id: string;
   def: UpgradeDef;
+  /** Set when the upgrade improves a tool the player has not unlocked yet. */
+  note?: string | null;
 }
 
 export interface EggOption {
@@ -96,6 +102,7 @@ export interface Screens {
   onToolSelect(handler: (tool: ToolId) => void): void;
   onAgitate(handler: () => void): void;
   onEndEpoch(handler: () => void): void;
+  onLeaveTrial(handler: () => void): void;
   setEggOptions(options: EggOption[]): void;
   setEggArchetype(archetype: EnemyArchetype): void;
   setLifeformUnlocks(ids: readonly string[]): void;
@@ -211,6 +218,10 @@ export function createScreens(): Screens {
   const hudDirectorState = get('hud-director-state');
   const hudHint      = get('hud-hint');
   const hudUpgrades  = get('hud-upgrades');
+  const hudGoal      = get('hud-goal');
+  const hudGoalLine  = get('hud-goal-line');
+  const hudGoalValue = get('hud-goal-value');
+  const hudGoalFill  = get('hud-goal-fill');
   const toolSummary  = get('tool-summary');
   const mobileLifeformsToggle = get('mobile-lifeforms-toggle') as HTMLButtonElement;
   const mobileLogToggle = get('mobile-log-toggle') as HTMLButtonElement;
@@ -226,6 +237,9 @@ export function createScreens(): Screens {
   const agitateButton = get('agitate-button') as HTMLButtonElement;
   const agitateCount = get('agitate-count');
   const endEpochButton = get('end-epoch-button') as HTMLButtonElement;
+  const optionsTrial = get('options-trial');
+  const optionsLeaveTrial = get('options-leave-trial') as HTMLButtonElement;
+  const optionsLeaveDetail = get('options-leave-detail');
   const endActionExplanation = get('end-action-explanation');
   const studyStartAnnouncer = get('study-start-announcer');
   let lastStudyStartKey = '';
@@ -339,11 +353,11 @@ export function createScreens(): Screens {
       const locked = !unlockedLifeformIds.has(id);
       if (!locked) readyCount += 1;
       button.hidden = locked;
-      setUnknownState(button, locked, 'Unknown lifeform');
+      setUnknownState(button, locked, 'Locked strain');
       const selected = !locked && id === selectedLifeformId;
       setSelectedButtonState(button, selected);
     }
-    lifeCount.textContent = `${readyCount} ${readyCount === 1 ? 'specimen' : 'specimens'} available in this Study`;
+    lifeCount.textContent = `${readyCount} ${readyCount === 1 ? 'strain' : 'strains'} ready`;
     sortLifeList();
   }
 
@@ -391,12 +405,12 @@ export function createScreens(): Screens {
       setSelectedButtonState(button, buttonId === id);
     }
     if (!id || !(id in LIFEFORM_IDENTITIES)) {
-      lifeSummary.textContent = 'Pick an egg strain to seed the dish.';
+      lifeSummary.textContent = 'Pick a strain to plant.';
       syncToolReadouts();
       return;
     }
     const identity = LIFEFORM_IDENTITIES[id as LifeformIdentityId];
-    lifeSummary.textContent = `${identity.name} - ${identity.role}. ${identity.behavior} ${identity.origin} Sound: ${identity.soundId}.`;
+    lifeSummary.textContent = `${identity.name} - ${identity.role}. ${identity.behavior} ${identity.origin}`;
     eggTool?.style.setProperty('--egg-color', rgb(identity.colors.primary));
     syncToolReadouts();
   }
@@ -462,7 +476,7 @@ export function createScreens(): Screens {
     const atEnd = toolbox.scrollLeft + toolbox.clientWidth >= toolbox.scrollWidth - 6;
     toolboxMore.hidden = !overflow;
     toolboxMore.dataset.direction = atEnd ? 'back' : 'more';
-    toolboxMore.setAttribute('aria-label', atEnd ? 'Show earlier reagents' : 'Show more reagents');
+    toolboxMore.setAttribute('aria-label', atEnd ? 'Show earlier tools' : 'Show more tools');
     const glyph = toolboxMore.querySelector('span');
     if (glyph) glyph.textContent = atEnd ? '‹' : '›';
   }
@@ -580,7 +594,7 @@ export function createScreens(): Screens {
       if (specialClass) line.classList.add(specialClass);
       line.textContent = message;
       tickerLines.prepend(line);
-      while (tickerLines.children.length > 6) {
+      while (tickerLines.children.length > 12) {
         tickerLines.lastElementChild?.remove();
       }
     },
@@ -604,7 +618,7 @@ export function createScreens(): Screens {
         if (!isToolId(tool)) continue;
         const locked = !unlockedToolIds.has(tool);
         btn.hidden = locked;
-        setUnknownState(btn, locked, 'Unknown reagent');
+        setUnknownState(btn, locked, 'Locked tool');
         if (locked) btn.classList.remove('button-hint-pulse', 'button-ready-pulse');
       }
       window.requestAnimationFrame(syncToolboxOverflow);
@@ -663,6 +677,9 @@ export function createScreens(): Screens {
       endEpochButton.addEventListener('click', () => {
         if (!toolboxLessonActive) handler();
       });
+    },
+    onLeaveTrial(handler) {
+      optionsLeaveTrial.addEventListener('click', () => handler());
     },
     setEggOptions(options) {
       iconCells.reset();
@@ -758,12 +775,14 @@ export function createScreens(): Screens {
       setSelectedLifeform(id);
     },
     updateHud(info) {
-      hudFightKey.textContent = info.totalFights > 0 ? 'Trial' : 'Study';
+      // Trial 1 is the guided first dish; Balance is introduced later.
+      hud.classList.toggle('hud-first-trial', info.totalFights > 0 && info.fightIndex === 0);
+      hudFightKey.textContent = info.totalFights > 0 ? 'Trial' : 'Open Lab';
       hudFight.textContent = info.totalFights > 0
         ? `${info.fightIndex + 1} / ${info.totalFights}`
-        : `${Math.max(1, info.fightIndex - info.caseTrialCount + 1)} / ∞`;
+        : `Trial ${Math.max(1, info.fightIndex - info.caseTrialCount + 1)}`;
       hudVol.textContent = `${info.vol} / ${Math.round(info.targetVol)}`;
-      hudTimeKey.textContent = info.objectiveTimed ? 'Window' : 'Dish';
+      hudTimeKey.textContent = info.objectiveTimed ? 'Time' : 'Dish';
       hudProgress.textContent = info.objectiveTimed ? `${info.secondsRemaining}s` : 'Open';
       hud.classList.toggle('hud-objective-timed', info.objectiveTimed);
       const urgent = info.objectiveTimed && !info.objectiveComplete;
@@ -782,16 +801,28 @@ export function createScreens(): Screens {
       }
       lastDeadlineSeconds = info.secondsRemaining;
       const crisis = info.crisis === 'none' ? '' : `, ${info.crisis} active`;
-      hudEco.textContent = `${info.livingEnemies} lifeforms, ${info.worldEvents} fertile events, ${info.outbreaks} outbreaks, ${info.reactions} reactions, ${info.accidents} accidents, ${info.mutations} mutations, ${info.births} births, ${info.supplyDrops} drops, ${info.dominant} dominant${crisis}`;
+      hudEco.textContent = `${info.livingEnemies} cultures, ${info.worldEvents} fertile events, ${info.outbreaks} outbreaks, ${info.reactions} reactions, ${info.accidents} accidents, ${info.mutations} mutations, ${info.births} births, ${info.supplyDrops} drops, ${info.dominant} dominant${crisis}`;
       hudObjective.textContent = info.objectiveComplete
-        ? `${info.objectiveName}: complete — bank when ready`
+        ? `${info.objectiveName}: complete — finish when ready`
         : `${info.objectiveName}: ${info.objectiveSummary}`;
+      setTextIfChanged(hudGoalLine, info.goalLine);
+      const goalValue = info.objectiveComplete
+        ? 'Done'
+        : info.goalFraction === null ? '' : `${Math.round(info.goalFraction * 100)}%`;
+      setTextIfChanged(hudGoalValue, goalValue);
+      hudGoalFill.style.width = `${Math.round((info.objectiveComplete ? 1 : info.goalFraction ?? 0) * 100)}%`;
+      hudGoal.classList.toggle('is-complete', info.objectiveComplete);
+      hudGoal.classList.toggle('is-unmeasured', !info.objectiveComplete && info.goalFraction === null);
+      hudGoal.setAttribute('aria-label', info.objectiveComplete
+        ? `Goal complete: ${info.goalLine}. Finish the trial when ready.`
+        : `Goal: ${info.goalLine}. ${info.objectiveSummary}`);
       hudDirectorTitle.textContent = info.objectiveName;
+      // The goal strip carries the goal and its progress; Dr. E's line says how.
       hudDirectorProgress.textContent = info.objectiveComplete
-        ? 'Bank when ready — or keep cultivating.'
-        : info.objectiveSummary;
+        ? 'Finish when ready — or keep cultivating.'
+        : info.objectiveHint || info.objectiveSummary;
       hudHint.textContent = info.objectiveComplete
-        ? 'That is the result. Bank it now, or keep cultivating.'
+        ? 'That is the result. Finish now, or keep cultivating.'
         : info.objectiveHint;
       if (info.objectiveComplete && hudDirector.classList.contains('hud-director-intro')) {
         clearStudyStartAnnouncement();
@@ -804,12 +835,13 @@ export function createScreens(): Screens {
     },
     setEquilibrium(info) {
       hudEquilibrium.textContent = info.achieved
-        ? info.biomeName ?? 'Stable'
+        ? 'Balanced'
         : `${Math.round(Math.max(0, Math.min(1, info.progress)) * 100)}%`;
+      hudEquilibrium.title = info.achieved && info.biomeName ? `Biome: ${info.biomeName}` : '';
       hud.classList.toggle('hud-equilibrium-achieved', info.achieved);
     },
     updateNotebook(view) {
-      notebookProgress.textContent = `${view.archive.decodedGenomes} / ${view.archive.totalGenomes} genomes decoded · ${view.archive.understoodProtocols} / ${view.archive.totalProtocols} protocols understood`;
+      notebookProgress.textContent = `${view.archive.decodedGenomes} / ${view.archive.totalGenomes} strains found · ${view.archive.understoodProtocols} / ${view.archive.totalProtocols} reactions understood`;
       notebookList.replaceChildren();
       for (const entry of view.entries) {
         if (!entry.discovered) continue;
@@ -856,12 +888,12 @@ export function createScreens(): Screens {
         const meta = document.createElement('div');
         meta.className = 'notebook-meta';
         meta.textContent = entry.isReferenceGenome
-          ? `REFERENCE GENOME · ${entry.caution}`
+          ? `STARTER STRAIN · ${entry.caution}`
           : entry.genomeLineage
             ? `Parents: ${entry.genomeLineage} · ${entry.caution}`
             : entry.chimeraSplice
               ? `DNA splice: ${entry.chimeraSplice} · ${entry.caution}`
-              : `${entry.category.replace('_', ' ')} / ${entry.caution}`;
+              : `${NOTEBOOK_CATEGORY_WORDS[entry.category]} / ${entry.caution}`;
 
         const discoveredAt = document.createElement('div');
         discoveredAt.className = 'notebook-discovered-at';
@@ -913,7 +945,7 @@ export function createScreens(): Screens {
         evidence.textContent = `Observed: ${view.hypothesis.evidence}`;
         const note = document.createElement('p');
         note.className = 'research-professor-note';
-        note.textContent = `Professor’s margin note — ${view.hypothesis.professorNote}`;
+        note.textContent = `Dr. E’s margin note — ${view.hypothesis.professorNote}`;
         const time = document.createElement('span');
         time.className = 'research-time';
         time.textContent = view.hypothesis.timeLabel;
@@ -926,7 +958,7 @@ export function createScreens(): Screens {
       const fieldHead = document.createElement('div');
       fieldHead.className = 'field-studies-head';
       const fieldTitle = document.createElement('h3');
-      fieldTitle.textContent = view.allDiscoveriesRevealed ? 'Open field studies' : 'Long-form field studies';
+      fieldTitle.textContent = view.allDiscoveriesRevealed ? 'Open questions' : 'Long-running questions';
       const fieldCopy = document.createElement('p');
       fieldCopy.textContent = view.allDiscoveriesRevealed
         ? 'No score. No deadline. These are reasons to look again.'
@@ -966,7 +998,7 @@ export function createScreens(): Screens {
       const sealHead = document.createElement('div');
       sealHead.className = 'research-seals-head';
       const sealTitle = document.createElement('h3');
-      sealTitle.textContent = 'Research seals';
+      sealTitle.textContent = 'Lab badges';
       const sealCount = document.createElement('span');
       sealCount.textContent = `${view.seals.filter((seal) => seal.earned).length} / ${view.seals.length} stamped`;
       sealHead.append(sealTitle, sealCount);
@@ -984,11 +1016,11 @@ export function createScreens(): Screens {
         marker.setAttribute('aria-hidden', 'true');
         const copy = document.createElement('div');
         const name = document.createElement('strong');
-        name.textContent = seal.earned ? seal.title : 'Unstamped seal';
+        name.textContent = seal.earned ? seal.title : 'Locked badge';
         const description = document.createElement('p');
         description.textContent = seal.description;
         const note = document.createElement('small');
-        note.textContent = seal.earned ? `Dr. E: “${seal.professorNote}”` : 'Complete the field condition to stamp this seal.';
+        note.textContent = seal.earned ? `Dr. E: “${seal.professorNote}”` : 'Meet the condition to earn this badge.';
         copy.append(name, description, note);
         card.append(marker, copy);
         sealGrid.append(card);
@@ -1022,7 +1054,7 @@ export function createScreens(): Screens {
         const count = document.createElement('span');
         count.className = 'atlas-group-count';
         count.textContent = group.key === 'lifeform'
-          ? `${group.decoded} / ${group.total} decoded`
+          ? `${group.decoded} / ${group.total} found`
           : `${group.discovered} / ${group.total}`;
         head.append(label, count);
 
@@ -1078,7 +1110,14 @@ export function createScreens(): Screens {
         const action = document.createElement('span');
         action.className = 'pick-card-action';
         action.textContent = 'Choose';
-        btn.append(name, desc, action);
+        btn.append(name, desc);
+        if (c.note) {
+          const note = document.createElement('div');
+          note.className = 'pick-card-note';
+          note.textContent = c.note;
+          btn.append(note);
+        }
+        btn.append(action);
         btn.addEventListener('click', () => {
           if (picked) return;
           picked = true;
@@ -1133,8 +1172,8 @@ export function createScreens(): Screens {
       let fightStr: string;
       if (info.totalFights === 0) {
         fightStr = info.outcome === 'won'
-          ? `Homeostasis reached after trial ${info.fightReached}; ${info.objectivesCompleted} ${objectiveLabel} banked.`
-          : `Colony collapsed during trial ${info.fightReached}; ${info.objectivesCompleted} ${objectiveLabel} banked.`;
+          ? `Balance reached after trial ${info.fightReached}; ${info.objectivesCompleted} ${objectiveLabel} saved.`
+          : `Dish collapsed during trial ${info.fightReached}; ${info.objectivesCompleted} ${objectiveLabel} saved.`;
       } else if (info.outcome === 'won') {
         fightStr = info.objectivesCompleted >= info.totalFights
           ? `All ${info.totalFights} objectives achieved — a flawless trial.`
@@ -1155,37 +1194,37 @@ export function createScreens(): Screens {
     updateCaseProgress(info) {
       const completed = info.completedResults.filter((result) => result === 'completed').length;
       titleCaseProgress.textContent = info.openLabUnlocked
-        ? 'Case 01 sealed · Open Lab ready'
-        : `${completed} / ${info.caseDef.trials.length} sealed`;
+        ? 'All 5 trials done · Open Lab ready'
+        : `${completed} / ${info.caseDef.trials.length} done`;
       titleTrialLabel.textContent = info.openLabUnlocked
         ? 'Open Lab · Continuing research'
         : `Trial ${String(info.activeTrial.number).padStart(2, '0')} · ${info.activeTrial.name}`;
       titleTrialHypothesis.textContent = info.openLabUnlocked
-        ? 'Choose a field study, cultivate freely, and bank whatever the dish teaches you.'
+        ? 'Pick a trial, grow freely, and save whatever the dish teaches you.'
         : info.activeTrial.hypothesis;
       titleStartLabel.textContent = info.resumeAvailable
         ? info.resumePhase === 'dish-restart'
-          ? info.openLabUnlocked ? 'Restart Study' : 'Restart Trial'
-          : info.openLabUnlocked ? 'Continue Study' : 'Continue Case'
+          ? 'Restart Trial'
+          : 'Continue Trial'
         : info.openLabUnlocked ? 'Enter Open Lab' : 'Run Trial';
       if (info.pendingBank) {
         titleStartLabel.textContent = 'Retry save';
-        titleSaveNote.textContent = 'A completed result is waiting to be banked.';
+        titleSaveNote.textContent = 'A finished result is waiting to be saved.';
       } else if (!info.saveAvailable) {
         titleSaveNote.textContent = 'Saving unavailable in this browser. You can still experiment.';
       } else if (info.resumePhase === 'dish-restart') {
-        titleSaveNote.textContent = 'Assignment saved; active cultures restart cleanly.';
+        titleSaveNote.textContent = 'Progress saved. Unfinished dishes restart fresh.';
       } else if (info.resumePhase === 'method-choice') {
-        titleSaveNote.textContent = 'Result saved; choose the next Method to continue.';
+        titleSaveNote.textContent = 'Result saved. Choose an upgrade to continue.';
       } else if (info.resumePhase === 'study-choice') {
-        titleSaveNote.textContent = 'Method saved; choose the next Study to continue.';
+        titleSaveNote.textContent = 'Upgrade saved. Choose the next trial to continue.';
       } else {
-        titleSaveNote.textContent = 'Research saves automatically between boundaries.';
+        titleSaveNote.textContent = 'Progress saves after each trial.';
       }
       pickCaseProgress.textContent = info.openLabUnlocked
-        ? 'Case 01 sealed · Open Lab unlocked'
-        : `Trial logged · ${completed} / ${info.caseDef.trials.length} sealed`;
-      titleGenomeProgress.textContent = `${info.archive.decodedGenomes} / ${info.archive.totalGenomes} genomes decoded`;
+        ? 'All 5 trials done · Open Lab unlocked'
+        : `Trial done · ${completed} / ${info.caseDef.trials.length} complete`;
+      titleGenomeProgress.textContent = `${info.archive.decodedGenomes} / ${info.archive.totalGenomes} strains`;
       titleGenomeTrack.style.setProperty('--genome-total', String(info.archive.totalGenomes));
       titleGenomeTrack.replaceChildren(...Array.from({ length: info.archive.totalGenomes }, (_, index) => {
         const cell = document.createElement('i');
@@ -1269,6 +1308,13 @@ export function createScreens(): Screens {
       hapticsButton.textContent = enabled ? 'Haptics — On' : 'Haptics — Off';
     },
     setDishExitState(state) {
+      const leaving = state.mode === 'abandon' || state.mode === 'confirm-abandon';
+      endEpochButton.classList.toggle('is-offstage', !isRackExitVisible(state.mode));
+      optionsTrial.hidden = !leaving;
+      optionsLeaveTrial.dataset.exitMode = state.mode;
+      optionsLeaveTrial.classList.toggle('is-armed', state.mode === 'confirm-abandon');
+      if (leaving && optionsLeaveTrial.textContent !== state.label) optionsLeaveTrial.textContent = state.label;
+      if (leaving && optionsLeaveDetail.textContent !== state.explanation) optionsLeaveDetail.textContent = state.explanation;
       endEpochButton.dataset.exitMode = state.mode;
       endEpochButton.disabled = state.disabled;
       endEpochButton.classList.toggle('end-action-ready', state.mode === 'bank');
@@ -1294,7 +1340,7 @@ export function createScreens(): Screens {
       if (info.key === lastStudyStartKey) return;
       lastStudyStartKey = info.key;
       window.clearTimeout(studyStartTimer);
-      hudDirectorKicker.textContent = `Dr. E · New ${info.kind}`;
+      hudDirectorKicker.textContent = 'Dr. E · New trial';
       hudDirectorState.textContent = 'Assigned';
       hudDirector.classList.remove('hud-director-intro');
       void hudDirector.offsetWidth;
@@ -1363,6 +1409,17 @@ export function createScreens(): Screens {
   };
 }
 
+function setTextIfChanged(element: HTMLElement, text: string): void {
+  if (element.textContent !== text) element.textContent = text;
+}
+
+const NOTEBOOK_CATEGORY_WORDS: Record<NotebookCategory, string> = {
+  lifeform: 'strain',
+  catalyst: 'reaction',
+  lab_note: 'lab note',
+  event: 'lab event',
+};
+
 function rgb(color: [number, number, number]): string {
   return `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
 }
@@ -1419,7 +1476,7 @@ function updateToolSummary(
     water: 'Water - dilutes pressure, spreads reactions, and pushes cultures outward.',
     salt: 'Salt - slows local movement and dries cultures into brittle patterns.',
     acid: 'Acid - burns tissue quickly and can trigger volatile reactions.',
-    paste: 'Paste - drag to draw a nutrient trail; colonies drift along the line you paint.',
+    paste: 'Paste - drag to draw a nutrient trail; cultures drift along the line you paint.',
   };
   el.textContent = summaries[tool];
 }
@@ -1516,9 +1573,11 @@ function setSelectedButtonState(button: HTMLButtonElement, selected: boolean): v
   button.setAttribute('aria-selected', String(selected));
 }
 
+const REACTION_MESSAGE = /^(?:[A-Z][a-z]+ reaction|Reaction): .+ discovered\.$/;
+
 function tickerSpecialClassFor(message: string): string | null {
   if (
-    message.startsWith('NEW LIFEFORM CREATED')
+    message.startsWith('New strain created')
     || message.startsWith('New lifeform discovered')
     || message.startsWith('New lifeform catalogued')
   ) {
@@ -1526,7 +1585,7 @@ function tickerSpecialClassFor(message: string): string | null {
   }
   if (
     message.startsWith('New catalyst discovered')
-    || message.startsWith('CATALYTIC')
+    || REACTION_MESSAGE.test(message)
     || message.startsWith('FOLDING FAULT')
   ) {
     return 'ticker-line-catalyst';

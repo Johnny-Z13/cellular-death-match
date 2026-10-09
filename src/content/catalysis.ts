@@ -150,7 +150,7 @@ export const BREED_DEFS: Record<BreedId, BreedDef> = {
     engulfMultiplier: 1.08,
     instabilityMultiplier: 0.95,
     tint: [190, 255, 76],
-    discoveryTrigger: 'Nutrient conduit overfeeds a budding propagator',
+    discoveryTrigger: 'A well-fed Swarmlet mutates, or a nutrient conduit overfeeds a budding culture',
   },
   static_lattice: {
     id: 'static_lattice',
@@ -174,7 +174,7 @@ export const BREED_DEFS: Record<BreedId, BreedDef> = {
     engulfMultiplier: 1.0,
     instabilityMultiplier: 1.2,
     tint: [210, 255, 30],
-    discoveryTrigger: 'A Needle Swarm and a Bloom Mass bred together in a nutrient field',
+    discoveryTrigger: 'A Needle Swarm and a Bloom Mass crossed in a nutrient field',
     parents: ['needle_swarm', 'bloom_mass'],
   },
   vitric_anchor: {
@@ -187,7 +187,7 @@ export const BREED_DEFS: Record<BreedId, BreedDef> = {
     engulfMultiplier: 1.22,
     instabilityMultiplier: 0.7,
     tint: [170, 150, 255],
-    discoveryTrigger: 'A Glass Antibody and a Folded Anchor bred together in a nutrient field',
+    discoveryTrigger: 'A Glass Antibody and a Folded Anchor crossed in a nutrient field',
     parents: ['glass_antibody', 'folded_anchor'],
   },
   mire_lattice: {
@@ -200,7 +200,7 @@ export const BREED_DEFS: Record<BreedId, BreedDef> = {
     engulfMultiplier: 1.04,
     instabilityMultiplier: 0.8,
     tint: [150, 235, 120],
-    discoveryTrigger: 'A Static Lattice and a Bloom Mass bred together in a nutrient field',
+    discoveryTrigger: 'A Static Lattice and a Bloom Mass crossed in a nutrient field',
     parents: ['static_lattice', 'bloom_mass'],
   },
 };
@@ -530,61 +530,61 @@ export const DISCOVERY_NOTES: Record<DiscoveryNoteId, DiscoveryNote> = {
   recipe_brine_channel: {
     id: 'recipe_brine_channel',
     title: 'Brine Channel',
-    body: 'Salt, water, and food can open a long feeding conduit through budding cultures — ideal for coaxing two breeds together.',
+    body: 'Salt, water, and food can open a long feeding conduit through budding cultures — ideal for coaxing two strains together.',
     caution: 'stable',
   },
   breed_needle_swarm: {
     id: 'breed_needle_swarm',
-    title: 'New Breed: Needle Swarm',
+    title: 'New Strain: Needle Swarm',
     body: 'A fast glassy shooter strain that survives by staying thin and mean.',
     caution: 'critical',
   },
   breed_folded_anchor: {
     id: 'breed_folded_anchor',
-    title: 'New Breed: Folded Anchor',
+    title: 'New Strain: Folded Anchor',
     body: 'A heavy culture that locks nearby motion into slow repeating folds.',
     caution: 'volatile',
   },
   breed_glass_antibody: {
     id: 'breed_glass_antibody',
-    title: 'New Breed: Glass Antibody',
+    title: 'New Strain: Glass Antibody',
     body: 'A brittle feeder with sharp resistance and a habit of cracking lanes open.',
     caution: 'volatile',
   },
   breed_bloom_mass: {
     id: 'breed_bloom_mass',
-    title: 'New Breed: Bloom Mass',
+    title: 'New Strain: Bloom Mass',
     body: 'A soft propagator that swells fast and sheds pressure into daughter cultures.',
     caution: 'stable',
   },
   breed_static_lattice: {
     id: 'breed_static_lattice',
-    title: 'New Breed: Static Lattice',
+    title: 'New Strain: Static Lattice',
     body: 'A flickering pattern culture that prefers loops over direct growth.',
     caution: 'volatile',
   },
   breed_quill_bloom: {
     id: 'breed_quill_bloom',
-    title: 'Hybrid Breed: Quill Bloom',
+    title: 'Hybrid Strain: Quill Bloom',
     body: 'Needle Swarm crossed with Bloom Mass: a swelling propagator that keeps a fast, prickly edge as it spreads.',
     caution: 'critical',
   },
   breed_vitric_anchor: {
     id: 'breed_vitric_anchor',
-    title: 'Hybrid Breed: Vitric Anchor',
+    title: 'Hybrid Strain: Vitric Anchor',
     body: 'Glass Antibody crossed with Folded Anchor: a brittle, toxin-proof fortress that drags local motion to a crawl.',
     caution: 'volatile',
   },
   breed_mire_lattice: {
     id: 'breed_mire_lattice',
-    title: 'Hybrid Breed: Mire Lattice',
+    title: 'Hybrid Strain: Mire Lattice',
     body: 'Static Lattice crossed with Bloom Mass: a self-copying pattern mass that keeps budding new tiles of itself.',
     caution: 'volatile',
   },
   water_carries: {
     id: 'water_carries',
     title: 'Water Carries',
-    body: 'Water can move useful reagents farther than the drop zone suggests.',
+    body: 'Water can carry other chemicals farther than the drop zone suggests.',
     caution: 'stable',
   },
   water_dilutes: {
@@ -595,8 +595,8 @@ export const DISCOVERY_NOTES: Record<DiscoveryNoteId, DiscoveryNote> = {
   },
   paste_catalysed: {
     id: 'paste_catalysed',
-    title: 'Catalysed Trail',
-    body: 'Drop a reagent onto a drawn nutrient-paste trail and the reaction runs along the painted line — steer life, then spark the path.',
+    title: 'Reactive Trail',
+    body: 'Drop a tool onto a drawn Paste trail and the reaction runs along the painted line — steer life, then spark the path.',
     caution: 'volatile',
   },
 };

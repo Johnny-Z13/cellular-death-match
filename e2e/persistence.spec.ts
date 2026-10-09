@@ -19,7 +19,7 @@ async function openWithFreshStorageOnce(page: import('@playwright/test').Page): 
 
 async function continueSavedCase(page: import('@playwright/test').Page): Promise<void> {
   await expect(page.locator('.layout')).toHaveAttribute('data-screen', 'title');
-  await expect(page.locator('#title-start-label')).toHaveText(/^(Restart Trial|Continue Case)$/);
+  await expect(page.locator('#title-start-label')).toHaveText(/^(Restart Trial|Continue Trial)$/);
   await page.locator('#title-start').click();
 }
 
@@ -86,7 +86,7 @@ test.describe('reload-safe Case checkpoints', () => {
     await expect.poll(() => toolCharge(page, 'egg')).toBe(eggsBefore - 1);
 
     await page.reload();
-    await expect(page.locator('#title-case-progress')).toHaveText('1 / 5 sealed');
+    await expect(page.locator('#title-case-progress')).toHaveText('1 / 5 done');
     await expect(page.locator('#title-trial-label')).toContainText('Trial 02');
     await continueSavedCase(page);
     await expect(page.locator('#hud-fight')).toHaveText('2 / 5');
@@ -143,7 +143,7 @@ test.describe('reload-safe Case checkpoints', () => {
     runtime.assertClean();
   });
 
-  test('requires two deliberate activations to abandon and resumes the same unsealed Trial', async ({ page }) => {
+  test('requires two deliberate activations to leave from Options and resumes the same unfinished Trial', async ({ page }) => {
     const runtime = monitorRuntime(page);
     await openWithFreshStorageOnce(page);
     await startFirstTrial(page);
@@ -157,24 +157,25 @@ test.describe('reload-safe Case checkpoints', () => {
     await page.locator('#pick-choices .pick-card').first().click();
     await expect(page.locator('#hud-fight')).toHaveText('2 / 5');
 
-    const end = page.locator('#end-epoch-button');
-    await expect(end).toHaveAttribute('data-exit-mode', 'abandon');
-    await end.click();
-    await expect(end).toHaveAttribute('data-exit-mode', 'confirm-abandon');
-    await page.locator('#notebook-button').click();
-    await expect(page.locator('#screen-notebook')).toHaveClass(/visible/);
-    await page.locator('#notebook-close').click();
-    await expect(end).toHaveAttribute('data-exit-mode', 'abandon');
-    await end.click();
-    await expect(end).toHaveAttribute('data-exit-mode', 'confirm-abandon');
-    await page.locator('[data-tool="egg"]').click();
-    await expect(end).toHaveAttribute('data-exit-mode', 'abandon');
-    await end.click();
-    await expect(end).toHaveAttribute('data-exit-mode', 'confirm-abandon');
-    await end.click();
+    // An unfinished trial has no exit among the tools; leaving is in Options.
+    await expect(page.locator('#end-epoch-button')).toBeHidden();
+    await page.locator('#options-button').click();
+    const leave = page.locator('#options-leave-trial');
+    await expect(leave).toHaveAttribute('data-exit-mode', 'abandon');
+    await expect(leave).toHaveText('Leave trial');
+    await leave.click();
+    await expect(leave).toHaveAttribute('data-exit-mode', 'confirm-abandon');
+    await expect(leave).toHaveText('Leave trial?');
+    // Closing Options cancels the armed leave.
+    await page.locator('#options-close').click();
+    await page.locator('#options-button').click();
+    await expect(leave).toHaveAttribute('data-exit-mode', 'abandon');
+    await leave.click();
+    await expect(leave).toHaveAttribute('data-exit-mode', 'confirm-abandon');
+    await leave.click();
 
     await expect(page.locator('.layout')).toHaveAttribute('data-screen', 'title');
-    await expect(page.locator('#title-case-progress')).toHaveText('1 / 5 sealed');
+    await expect(page.locator('#title-case-progress')).toHaveText('1 / 5 done');
     await expect(page.locator('#title-trial-label')).toContainText('Trial 02');
     await expect(page.locator('#title-start-label')).toHaveText('Run Trial');
     await page.locator('#title-start').click();

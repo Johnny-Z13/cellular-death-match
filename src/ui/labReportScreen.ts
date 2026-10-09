@@ -10,19 +10,19 @@ export function renderLabReport(report: LabReport): HTMLElement {
 
   const outcomeText = report.header.outcome === 'won'
     ? `Stable Ecosystem - ${report.header.biomeName ?? 'Unknown Biome'}`
-    : `Ecosystem Collapse - Epoch ${report.header.epochCount}`;
+    : `Ecosystem Collapse - Trial ${report.header.epochCount}`;
 
   const header = el('div', 'lab-report-header');
   header.append(
     el('h2', '', `Lab Report #${report.header.runNumber}`),
     el('p', `lab-report-outcome ${report.header.outcome}`, outcomeText),
-    el('p', 'lab-report-duration', `${report.header.epochCount} epochs, ${report.header.durationFormatted}`),
+    el('p', 'lab-report-duration', `${report.header.epochCount} ${report.header.epochCount === 1 ? 'trial' : 'trials'}, ${report.header.durationFormatted}`),
   );
 
   const discoveries = section('Discoveries');
   discoveries.append(
-    el('p', '', `${report.discoveries.breeds.length} breeds discovered`),
-    labelList(report.discoveries.breeds, 'lab-report-list', 'No new breeds'),
+    el('p', '', `${report.discoveries.breeds.length} strains discovered`),
+    labelList(report.discoveries.breeds, 'lab-report-list', 'No new strains'),
     el('p', '', `${report.discoveries.hybrids.length} hybrids created`),
     labelList(report.discoveries.hybrids, 'lab-report-list', 'No new hybrids'),
     el('p', '', `${report.discoveries.reactionsTriggered} reactions triggered`),
@@ -54,9 +54,9 @@ export function renderLabReport(report: LabReport): HTMLElement {
     el('p', '', `Longest stability: ${report.ecosystem.longestStabilitySeconds}s`),
   );
 
-  const strainBank = section('Strain Bank');
+  const strainBank = section('Strains saved');
   strainBank.append(
-    el('p', '', `${report.strainBank.newCount} new strains banked`),
+    el('p', '', `${report.strainBank.newCount} new strains saved`),
     labelList(report.strainBank.newStrains, 'lab-report-list', 'No new strains'),
     el('p', '', `Collection: ${report.strainBank.totalProgress}`),
   );

@@ -30,5 +30,6 @@ describe('sound design', () => {
     expect(soundEventForDishSignal('fold', 'FOLDING FAULT')).toBe('folding_fault');
     expect(soundEventForDishSignal('stabilize', 'WATER DILUTED ACID')).toBe('water_stabilize');
     expect(soundEventForDishSignal('caution', 'BRINE REACTION')).toBe('salt_crystal');
+    expect(soundEventForDishSignal('caution', 'Crystal reaction: Salt-Water Crystal discovered.')).toBe('salt_crystal');
   });
 });

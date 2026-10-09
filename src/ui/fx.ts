@@ -158,9 +158,9 @@ export function createFx(): Fx {
       return false;
     }
     const batch = items.length > 2;
-    genomeEyebrow.textContent = batch ? 'GENOME ARCHIVE EXPANDED' : 'GENOME DECODED';
-    genomeTitle.textContent = batch ? `${items.length} GENOMES DECODED` : items[0]!.name;
-    genomeSub.textContent = `${items[0]!.archivePosition} · EGG SYNTHESIS UNLOCKED`;
+    genomeEyebrow.textContent = batch ? 'NEW STRAINS' : 'NEW STRAIN';
+    genomeTitle.textContent = batch ? `${items.length} STRAINS FOUND` : items[0]!.name;
+    genomeSub.textContent = `${items[0]!.archivePosition} · NOW AVAILABLE AS EGGS`;
     genomeArt.replaceChildren(...items.map((item) => {
       const img = document.createElement('img');
       img.src = item.asset;

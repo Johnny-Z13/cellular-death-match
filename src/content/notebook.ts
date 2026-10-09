@@ -158,13 +158,13 @@ export function notebookViewForProgression(
       researchNextAction: researchCopy.nextAction,
       displayTitle: entry.title,
       displayNotes: researchStage === 'observed'
-        ? `Evidence: ${entry.category === 'lifeform' ? 'A viable phenotype appeared.' : 'A reaction signature was recorded.'}`
-        : `Notes: ${chimera ? `${chimera.lore} ` : ''}${entry.body}${genome ? ` Genome reconstruction: ${genome.reconstructionNote}` : ''}`,
+        ? `Evidence: ${entry.category === 'lifeform' ? 'A new strain appeared.' : 'A reaction was recorded.'}`
+        : `Notes: ${chimera ? `${chimera.lore} ` : ''}${entry.body}`,
       displayRecipe: researchStage === 'observed'
         ? entry.category === 'lifeform'
-          ? 'Genome sequence: unresolved · Egg synthesis: unavailable'
-          : 'Protocol: unresolved'
-        : `${recipeLabelFor(entry)}${eggSynthesisAvailable ? ' · Egg synthesis: available' : ''}`,
+          ? 'Egg: not available yet'
+          : 'Recipe: unknown'
+        : `${recipeLabelFor(entry)}${eggSynthesisAvailable ? ' · Egg: available' : ''}`,
       discoveredAtLabel: `Discovered on ${formatDiscoveryDate(record?.discoveredAt ?? viewedAt)}`,
       isFresh: record?.fresh === true,
       chimeraSplice: chimera ? chimera.splice : null,
@@ -198,12 +198,12 @@ function researchStateCopy(
 ): { label: string; nextAction: string } {
   if (category === 'lifeform') {
     return stage === 'stabilized'
-      ? { label: 'Genome decoded', nextAction: 'Egg synthesis available.' }
-      : { label: 'Phenotype observed', nextAction: 'Keep it alive through a completed result to decode it.' };
+      ? { label: 'Strain found', nextAction: 'Now available as an egg.' }
+      : { label: 'Strain spotted', nextAction: 'Keep it alive until you finish a trial to add its egg.' };
   }
   return stage === 'observed'
-    ? { label: 'Signal observed', nextAction: 'Reproduce it in a fresh later dish to understand the protocol.' }
-    : { label: 'Protocol understood', nextAction: 'Repeatable method added to Findings.' };
+    ? { label: 'Reaction seen', nextAction: 'Reproduce it in a later trial to understand it.' }
+    : { label: 'Reaction understood', nextAction: 'Recipe saved to your Notebook.' };
 }
 
 export function genomeArchiveProgress(
@@ -243,18 +243,18 @@ export function genomeArchiveProgress(
     nextLead: observedLead
       ? {
         state: 'observed',
-        label: `${LIFEFORM_IDENTITIES[observedLead].name} phenotype observed`,
-        clue: 'Stabilize this living phenotype in a successful Study.',
+        label: `${LIFEFORM_IDENTITIES[observedLead].name} spotted`,
+        clue: 'Keep it alive until you finish a trial.',
       }
       : lockedLead
         ? {
           state: 'locked',
-          label: 'Unknown genome signal',
+          label: 'Unknown strain',
           clue: lockedGenomeClue(lockedLead),
         }
         : {
           state: 'complete',
-          label: 'Genome Archive complete',
+          label: 'Every strain found',
           clue: 'The catalogue is complete. The dish is not.',
         },
   };
@@ -297,8 +297,8 @@ export interface AtlasView {
 }
 
 const ATLAS_GROUP_LABELS: Record<NotebookCategory, string> = {
-  lifeform: 'Genome Archive',
-  catalyst: 'Catalysts',
+  lifeform: 'Strains',
+  catalyst: 'Reactions',
   event: 'Lab Events',
   lab_note: 'Field Notes',
 };
@@ -455,10 +455,10 @@ function recipeLabelFor(entry: NotebookEntry): string {
   const recipe = noteId?.startsWith('recipe_')
     ? REACTION_RECIPES.find((candidate) => candidate.discoveryNoteId === noteId)
     : null;
-  if (!recipe) return `Protocol: ${entry.clue}`;
+  if (!recipe) return `Recipe: ${entry.clue}`;
   const inputs = recipe.inputs.map(formatRecipeTerm).join(' + ');
   const trigger = recipe.trigger ? ` · finish with ${formatRecipeTerm(recipe.trigger)}` : '';
-  return `Protocol: ${inputs} → ${formatRecipeTerm(recipe.effect.type)}${trigger}`;
+  return `Recipe: ${inputs} → ${formatRecipeTerm(recipe.effect.type)}${trigger}`;
 }
 
 function formatRecipeTerm(value: string): string {

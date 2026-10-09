@@ -202,3 +202,52 @@ describe('evaluateObjective procedural objectives', () => {
     }, metrics(), context(runtime)).complete).toBe(true);
   });
 });
+
+describe('evaluateObjective progress fraction', () => {
+  const base = { name: 'Goal', description: 'Goal.', target: 'Goal' };
+
+  it('reports a measurable ratio for count and duration objectives', () => {
+    expect(evaluateObjective({ ...base, kind: 'breed_archetype', archetype: 'swarmlet', targetCount: 4 },
+      metrics({ archetypeCounts: new Map([['swarmlet', 1]]) }), context()).fraction).toBeCloseTo(0.25);
+    expect(evaluateObjective({ ...base, kind: 'reaction_chain', targetCount: 3 },
+      metrics(), { ...context(), reactions: 2 }).fraction).toBeCloseTo(2 / 3);
+    expect(evaluateObjective({ ...base, kind: 'mega_culture', volumeTarget: 800 },
+      metrics({ maxLifeformVolume: 200 }), context()).fraction).toBeCloseTo(0.25);
+    expect(evaluateObjective({ ...base, kind: 'preserve_grazers', minCount: 4 },
+      metrics({ protectedCultureCount: 3 }), context()).fraction).toBeCloseTo(0.75);
+    expect(evaluateObjective({ ...base, kind: 'colony_founder', targetCount: 5 },
+      metrics({ archetypeCounts: new Map([['bruiser', 2], ['swarmlet', 4]]) }), context()).fraction).toBeCloseTo(0.8);
+
+    const runtime = createObjectiveRuntime();
+    runtime.balanceTicks = 60 * 15;
+    runtime.symbiosisTicks = 60 * 6;
+    expect(evaluateObjective({ ...base, kind: 'balance_keeper', sustainTicks: 60 * 30 },
+      metrics(), context(runtime)).fraction).toBeCloseTo(0.5);
+    expect(evaluateObjective({ ...base, kind: 'symbiosis', sustainTicks: 60 * 30 },
+      metrics(), context(runtime)).fraction).toBeCloseTo(0.2);
+  });
+
+  it('reports null for yes/no objectives until they are met, then 1', () => {
+    expect(evaluateObjective({ ...base, kind: 'cross_breed' }, metrics(), context()).fraction).toBeNull();
+    expect(evaluateObjective({ ...base, kind: 'protector' }, metrics(), context()).fraction).toBeNull();
+    expect(evaluateObjective({ ...base, kind: 'understand_recipe', recipeId: 'bitter_bloom' },
+      metrics(), context()).fraction).toBeNull();
+
+    const runtime = createObjectiveRuntime();
+    runtime.hybridDiscovered = true;
+    expect(evaluateObjective({ ...base, kind: 'cross_breed' }, metrics(), context(runtime)).fraction).toBe(1);
+  });
+
+  it('steps a stabilize objective from unseen to observed to stabilized', () => {
+    const objective: ObjectiveDef = { ...base, kind: 'stabilize_breed', breedId: 'bloom_mass' };
+    expect(evaluateObjective(objective, metrics(), context()).fraction).toBe(0);
+    const observed = { ...context(), discoveredBreedTicks: new Map([['bloom_mass' as const, 20]]) };
+    expect(evaluateObjective(objective, metrics(), observed).fraction).toBe(0.5);
+    expect(evaluateObjective(objective, metrics({ livingBreedIds: new Set(['bloom_mass']) }), observed).fraction).toBe(1);
+  });
+
+  it('clamps over-achievement to 1', () => {
+    expect(evaluateObjective({ ...base, kind: 'reaction_chain', targetCount: 3 },
+      metrics(), { ...context(), reactions: 9 }).fraction).toBe(1);
+  });
+});
