@@ -1499,6 +1499,9 @@ function loop() {
   const holdingForFirstInstruction = coach.isActive() && coach.getBeatIndex() === 0;
   if (holdingForFirstInstruction) simClock.reset(now);
   const ticksToRun = holdingForFirstInstruction ? 0 : simClock.consumeTicks(now);
+  // Teach first, then pressure: no crisis, outbreak or accident lands while
+  // Dr. E is running a lesson in this dish.
+  arena.setHazardsHeld(coach.isActive());
   const player = arena.state.cells.get(PLAYER_ID);
 
   for (let i = 0; i < ticksToRun; i++) {
@@ -2533,8 +2536,6 @@ interface TickerState {
   lastAccidentCount: number;
   lastOutbreakCount: number;
   lastMutationCount: number;
-  lastObjectiveSummary: string;
-  lastObjectiveSummaryTick: number;
   seenSignals: string[];
   didWarnDeadline: boolean;
   didWarnCritical: boolean;
@@ -2633,8 +2634,6 @@ function createTickerState(): TickerState {
     lastAccidentCount: 0,
     lastOutbreakCount: 0,
     lastMutationCount: 0,
-    lastObjectiveSummary: '',
-    lastObjectiveSummaryTick: -180,
     seenSignals: [],
     didWarnDeadline: false,
     didWarnCritical: false,
@@ -2719,15 +2718,7 @@ function updateTicker(ar: Arena): void {
     screens.addTicker('Visible mutation: a culture expressed a new trait.', 'discovery');
   }
 
-  if (
-    objective.summary !== tickerState.lastObjectiveSummary
-    && tickCount - tickerState.lastObjectiveSummaryTick >= 180
-  ) {
-    tickerState.lastObjectiveSummary = objective.summary;
-    tickerState.lastObjectiveSummaryTick = tickCount;
-    screens.addTicker(`Objective update: ${objective.summary}.`);
-  }
-
+  // Live goal progress lives in the goal strip; the log keeps events only.
   if (objective.def.timed && !tickerState.didWarnDeadline && objective.urgency === 'warning') {
     tickerState.didWarnDeadline = true;
     screens.addTicker('Deadline pressure is rising.', 'caution');

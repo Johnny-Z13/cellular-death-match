@@ -588,7 +588,7 @@ export function createScreens(): Screens {
       if (specialClass) line.classList.add(specialClass);
       line.textContent = message;
       tickerLines.prepend(line);
-      while (tickerLines.children.length > 6) {
+      while (tickerLines.children.length > 12) {
         tickerLines.lastElementChild?.remove();
       }
     },

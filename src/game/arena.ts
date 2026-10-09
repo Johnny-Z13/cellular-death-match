@@ -100,6 +100,8 @@ export interface Arena {
   getHomeostasisProgress(): number;
   isHomeostasisAchieved(): boolean;
   isEcosystemCollapsed(): boolean;
+  /** Hold crises, outbreaks and accidents while a guided lesson instructs. */
+  setHazardsHeld(held: boolean): void;
 }
 
 export interface EquilibriumInfo {
@@ -289,6 +291,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
   // onboarding dish (Swarmlet + Nutrient only, tutorial owns its ending).
   const isOnboardingDish = fightIndex === 0 && !includeControlSample;
   const worldEventIntensity = clamp(opts.worldEventIntensity ?? WORLD_EVENT_TUNING.defaultIntensity, 0, 1);
+  // Set by the shell while Dr. E is mid-instruction: a lesson should never be
+  // interrupted by an unexplained disaster. Benign drift and mutation still run.
+  let hazardsHeld = false;
   const nEnemies = opts.enemies.length;
   const state = createSim({
     LX: opts.LX,
@@ -561,6 +566,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
           latest: [...discoveryMessages],
         },
       };
+    },
+    setHazardsHeld(held: boolean): void {
+      hazardsHeld = held;
     },
     getObjectiveProgress(): ObjectiveProgress {
       const progress = currentObjectiveProgress();
@@ -878,6 +886,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
 
       if (mode === 'ecosystem') {
         const pressurePaused = homeostasisTracker.isAchieved();
+        const hazardsPaused = pressurePaused || hazardsHeld;
         applyToolEffects(state, toolEffects, archetypes);
         // Trail stamps pull + feed cells exactly like nutrient drops, so a drawn
         // line becomes a gentle gradient colonies drift along.
@@ -898,7 +907,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           }
           activeCrisis = null;
         }
-        if (!pressurePaused && !activeCrisis && tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveCrisisInterval === 0) {
+        if (!hazardsPaused && !activeCrisis && tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveCrisisInterval === 0) {
           const result = activateCrisis(this, state, archetypes);
           activeCrisis = { id: result.id, ttl: CRISES[result.id].durationTicks };
           birthCount += result.births;
@@ -963,7 +972,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           supplyDropCount += refillEggIfQuiet(toolStates, state);
           if (toolStates.egg.charges > 0) lastEmergencyEggTick = tickNo;
         }
-        if (!pressurePaused && tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveOutbreakInterval === 0) {
+        if (!hazardsPaused && tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveOutbreakInterval === 0) {
           const outbreak = triggerPredatorOutbreak(this, state, archetypes, effectiveOutbreakCount);
           if (outbreak) {
             outbreakCount += 1;
@@ -978,7 +987,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         if (tickNo % RESUPPLY_INTERVAL_TICKS === 0) {
           supplyDropCount += resupplyLab(toolStates, objective);
         }
-        if (!pressurePaused && tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveAccidentInterval === 0) {
+        if (!hazardsPaused && tickNo >= HAZARD_GRACE_TICKS && tickNo % effectiveAccidentInterval === 0) {
           const accident = randomAccidentEffect(state);
           pulseToolEffect(state, accident, archetypes);
           toolEffects.push(accident);

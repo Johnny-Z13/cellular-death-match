@@ -882,6 +882,35 @@ describe('arena ecosystem mode', () => {
     expect(arena.getEcology().signals.some((signal) => signal.includes('Crisis'))).toBe(true);
   });
 
+  it('holds crises, outbreaks and accidents while a guided lesson is still instructing', () => {
+    const make = () => createArena({
+      LX: 80,
+      LY: 80,
+      seed: 18,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 120, speed: 8, engulfMultiplier: 4 }],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 200,
+    });
+    const tick = (arena: ReturnType<typeof createArena>, n: number) => {
+      for (let i = 0; i < n; i++) arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    };
+
+    const held = make();
+    held.setHazardsHeld(true);
+    tick(held, 60 * 95);
+    expect(held.getEcology().crisis).toBe('none');
+    expect(held.getEcology().outbreaks).toBe(0);
+    expect(held.getEcology().accidents).toBe(0);
+    expect(held.getEcology().signals.some((signal) => signal.startsWith('Crisis'))).toBe(false);
+
+    // Releasing the hold restores normal pressure on the next interval.
+    held.setHazardsHeld(false);
+    tick(held, 60 * 40);
+    expect(held.getEcology().accidents + held.getEcology().outbreaks).toBeGreaterThan(0);
+  });
+
   it('does not apply tool pressure across dish edges when wrapping is disabled', () => {
     const arena = createArena({
       LX: 80,

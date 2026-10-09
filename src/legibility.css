@@ -493,3 +493,75 @@
   font-size: var(--fs-small);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- Phone dish log --------------------------------------------------------
+   Opening Log shows a solid, scrollable history sheet above the controls, not
+   a stack of pills floating over the dish. Callouts on the dish carry the
+   live moment; this is the record. */
+@media (max-width: 899px) and (orientation: portrait), (max-width: 899px) and (min-height: 521px) {
+  .layout[data-screen="arena"].mobile-log-open .ticker {
+    top: auto;
+    bottom: calc(136px + env(safe-area-inset-bottom));
+    width: auto;
+    transform: none;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 8px;
+    box-sizing: border-box;
+    max-height: min(44dvh, 360px);
+    padding: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(120, 196, 200, 0.32);
+    border-radius: 12px;
+    background: rgba(3, 10, 12, 0.97);
+    box-shadow: 0 -12px 34px rgba(0, 0, 0, 0.55);
+  }
+
+  .layout[data-screen="arena"].mobile-log-open .ticker-title {
+    display: block;
+    margin: 0;
+    color: var(--bio-bright, #8ff7e6);
+    font-size: var(--fs-min);
+  }
+
+  .layout[data-screen="arena"].mobile-log-open .ticker-lines {
+    justify-items: stretch;
+    gap: 2px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .layout[data-screen="arena"].mobile-log-open .ticker-line,
+  .layout[data-screen="arena"].mobile-log-open .ticker-line:nth-child(n) {
+    display: block;
+    min-height: 0;
+    padding: 5px 0 5px 10px;
+    border-width: 0 0 0 2px;
+    border-style: solid;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    animation: none;
+    font-size: var(--fs-small);
+    text-align: left;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* The paused badge sits just under the goal rail, over the paused dish,
+   instead of on top of the goal strip. */
+.layout[data-screen="arena"] .simulation-paused-badge {
+  top: calc(var(--hud-bottom, 0px) + 8px);
+  font-size: var(--fs-min);
+  white-space: nowrap;
+}
+
+/* Landscape phones: the log rail scrolls inside its own box instead of
+   spilling past the tool rack. */
+@media (max-width: 899px) and (orientation: landscape) and (max-height: 520px) {
+  .layout[data-screen="arena"].mobile-log-open .ticker {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}

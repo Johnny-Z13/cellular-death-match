@@ -137,7 +137,9 @@ describe('discovery menu placeholders', () => {
   });
 
   it('retains the full six-line completed-dish research brief in the dish log', () => {
-    expect(screensSource).toContain('while (tickerLines.children.length > 6)');
+    // Twelve lines of history back the phone log sheet; the desktop brief
+    // still shows at most six.
+    expect(screensSource).toContain('while (tickerLines.children.length > 12)');
     expect(css).toContain('.ticker-line:nth-child(n + 7)');
   });
 
