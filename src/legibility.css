@@ -700,3 +700,26 @@
   font-size: var(--fs-min);
   line-height: 1.4;
 }
+
+/* Finish is a success action now that leaving lives in Options: never let
+   the old destructive tint win on phones. */
+.layout[data-screen="arena"] .end-action.end-action-ready {
+  border-color: var(--bio);
+}
+
+.layout[data-screen="arena"] .end-action.end-action-ready .tool-icon {
+  box-shadow: 0 0 16px rgba(91, 233, 214, 0.8);
+}
+
+/* An open drawer already reads as a pause; its title says so instead of a
+   floating badge sitting on the drawer header. */
+.layout[data-screen="arena"].mobile-lifeforms-open .simulation-paused-badge,
+.layout[data-screen="arena"].mobile-log-open .simulation-paused-badge {
+  display: none;
+}
+
+.layout[data-screen="arena"].mobile-lifeforms-open .life-panel-title::after,
+.layout[data-screen="arena"].mobile-log-open .ticker-title::after {
+  content: " · dish paused";
+  color: rgba(216, 246, 242, 0.55);
+}
