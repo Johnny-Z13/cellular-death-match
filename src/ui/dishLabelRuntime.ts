@@ -11,8 +11,11 @@ import { lifeformIdentityForSpawn } from '../content/lifeformIdentity';
 import { displayColorForSpawn } from './render';
 import {
   DISH_LABEL_TUNING,
+  applyLabelDwell,
+  createLabelDwell,
+  labelHoldKeys,
   planDishLabels,
-  type DishLabelPlacement,
+  type PreviousLabel,
   type LabelCulture,
 } from './dishLabels';
 import type { DishInspectInfo, DishLabelOverlay } from './dishLabelOverlay';
@@ -53,7 +56,8 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
   let goalIds: ReadonlySet<number> = new Set();
   let hoverPos: readonly [number, number] | null = null;
   let hoverLocal: [number, number] = [0, 0];
-  let previous = new Map<string, DishLabelPlacement>();
+  let previous = new Map<string, PreviousLabel>();
+  let dwell = createLabelDwell();
   const eventFirstSeen = new Map<number, number>();
   const freshStrains = new Map<string, number>();
   const volHistory = new Map<number, Array<[number, number]>>();
@@ -159,6 +163,7 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
       goalIds = new Set();
       hoverPos = null;
       previous = new Map();
+      dwell = createLabelDwell();
       eventFirstSeen.clear();
       freshStrains.clear();
       volHistory.clear();
@@ -229,9 +234,11 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
           pingId,
           compact: options.isCompact(),
           previous,
+          hold: labelHoldKeys(dwell, nowMs),
         });
-        previous = new Map(plan.map((label) => [label.key, label.placement]));
-        overlay.render(plan);
+        const shown = applyLabelDwell(plan, dwell, nowMs);
+        previous = new Map(shown.map((label) => [label.key, { placement: label.placement, cultureId: label.cultureId }]));
+        overlay.render(shown);
         refreshHover(arena, nowMs);
       }
       return goalIds;

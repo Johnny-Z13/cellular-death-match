@@ -392,6 +392,21 @@
 
 .dish-label.is-below,
 .dish-label.is-below-2 { transform: translate(-50%, 0); }
+.dish-label.is-left,
+.dish-label.is-right { transform: translate(-50%, -50%); }
+
+/* Tags glide with their cultures between 10Hz updates and fade out rather
+   than vanishing, so the dish reads calm instead of flickering. */
+.dish-label {
+  transition:
+    left 110ms linear,
+    top 110ms linear,
+    transform 160ms ease-out,
+    opacity 160ms ease;
+}
+
+.dish-label.is-entering { transition: none; }
+.dish-label.is-leaving { opacity: 0; }
 
 .dish-label-dot {
   flex: none;
@@ -441,7 +456,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dish-label { animation: none; }
+  .dish-label { animation: none; transition: none; }
   .dish-labels { transition: none; }
 }
 

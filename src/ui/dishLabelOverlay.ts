@@ -28,6 +28,10 @@ export interface DishLabelOverlay {
 
 export function createDishLabelOverlay(root: HTMLElement, card: HTMLElement): DishLabelOverlay {
   const nodes = new Map<string, HTMLElement>();
+  // Tags that left the plan fade out before removal; a key that returns
+  // during the fade gets its element back instead of a fresh one.
+  const leaving = new Map<string, number>();
+  const LEAVE_MS = 180;
   const cardName = document.createElement('strong');
   const cardRole = document.createElement('span');
   const cardBehavior = document.createElement('p');
@@ -40,6 +44,11 @@ export function createDishLabelOverlay(root: HTMLElement, card: HTMLElement): Di
 
   function nodeFor(label: PlannedLabel): HTMLElement {
     let node = nodes.get(label.key);
+    const pendingRemoval = leaving.get(label.key);
+    if (pendingRemoval !== undefined) {
+      window.clearTimeout(pendingRemoval);
+      leaving.delete(label.key);
+    }
     if (!node) {
       node = document.createElement('span');
       const dot = document.createElement('i');
@@ -61,7 +70,9 @@ export function createDishLabelOverlay(root: HTMLElement, card: HTMLElement): Di
       for (const label of plan) {
         live.add(label.key);
         const node = nodeFor(label);
-        const className = `dish-label dish-label--${label.kind} is-${label.placement}`;
+        // The first frame places a new tag without gliding in from 0,0.
+        const isNew = !node.style.left;
+        const className = `dish-label dish-label--${label.kind} is-${label.placement}${isNew ? ' is-entering' : ''}`;
         if (node.className !== className) node.className = className;
         node.style.left = `${label.xPct.toFixed(2)}%`;
         node.style.top = `${label.yPct.toFixed(2)}%`;
@@ -72,9 +83,13 @@ export function createDishLabelOverlay(root: HTMLElement, card: HTMLElement): Di
         if (text.textContent !== label.text) text.textContent = label.text;
       }
       for (const [key, node] of nodes) {
-        if (live.has(key)) continue;
-        node.remove();
-        nodes.delete(key);
+        if (live.has(key) || leaving.has(key)) continue;
+        node.classList.add('is-leaving');
+        leaving.set(key, window.setTimeout(() => {
+          leaving.delete(key);
+          if (nodes.get(key) === node) nodes.delete(key);
+          node.remove();
+        }, LEAVE_MS));
       }
     },
     setEnabled(enabled) {
@@ -115,6 +130,8 @@ export function createDishLabelOverlay(root: HTMLElement, card: HTMLElement): Di
       root.style.height = `${canvas.offsetHeight}px`;
     },
     clear() {
+      for (const timer of leaving.values()) window.clearTimeout(timer);
+      leaving.clear();
       for (const node of nodes.values()) node.remove();
       nodes.clear();
       card.hidden = true;

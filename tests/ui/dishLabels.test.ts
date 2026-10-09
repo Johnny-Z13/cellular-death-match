@@ -3,6 +3,9 @@ import {
   DISH_LABEL_TUNING,
   humanEventLabel,
   planDishLabels,
+  applyLabelDwell,
+  createLabelDwell,
+  labelHoldKeys,
   type DishLabelInput,
   type LabelCulture,
   type LabelEvent,
@@ -144,7 +147,9 @@ describe('planDishLabels', () => {
         culture({ id: 3, strainKey: 'bloom_mass', name: 'Bloom Mass', isGoal: true, center: [80, 80], vol: 100 }),
         culture({ id: 4, strainKey: 'bruiser', name: 'Bruiser', center: [80, 80], vol: 90 }),
         culture({ id: 5, strainKey: 'sniper', name: 'Sniper', center: [80, 80], vol: 80 }),
-        culture({ id: 6, strainKey: 'mirror', name: 'Mirror', center: [80, 80], vol: 70 }),
+        culture({ id: 6, strainKey: 'boss', name: 'Boss', center: [80, 80], vol: 75 }),
+        culture({ id: 7, strainKey: 'splitter', name: 'Splitter', center: [80, 80], vol: 72 }),
+        culture({ id: 8, strainKey: 'mirror', name: 'Mirror', center: [80, 80], vol: 70 }),
       ],
     }));
     expect(plan[0]).toMatchObject({ text: 'Bloom Mass', placement: 'above' });
@@ -158,6 +163,8 @@ describe('planDishLabels', () => {
         culture({ id: 3, strainKey: 'bruiser', name: 'Bruiser', center: [80, 80], vol: 90 }),
         culture({ id: 4, strainKey: 'mirror', name: 'Mirror', center: [80, 80], vol: 85 }),
         culture({ id: 5, strainKey: 'sniper', name: 'Sniper', center: [80, 80], vol: 80 }),
+        culture({ id: 8, strainKey: 'boss', name: 'Boss', center: [80, 80], vol: 78 }),
+        culture({ id: 9, strainKey: 'splitter', name: 'Splitter', center: [80, 80], vol: 76 }),
         culture({ id: 6, strainKey: 'swarmlet', name: 'Swarmlet', center: [80, 80], vol: 70 }),
         culture({ id: 7, strainKey: 'swarmlet', name: 'Swarmlet', center: [30, 140], vol: 40 }),
       ],
@@ -179,7 +186,7 @@ describe('planDishLabels', () => {
 
   it('holds a tag\'s previous side so busy dishes do not flicker', () => {
     const cultures = [culture({ id: 2, center: [80, 80], vol: 100 })];
-    const plan = planDishLabels(input({ cultures, previous: new Map([['strain-swarmlet', 'below']]) }));
+    const plan = planDishLabels(input({ cultures, previous: new Map([['strain-swarmlet', { placement: 'below', cultureId: 2 }]]) }));
     expect(plan[0]!.placement).toBe('below');
   });
 
@@ -245,5 +252,106 @@ describe('humanEventLabel', () => {
   it('suppresses the duplicate flash and spark markers', () => {
     expect(humanEventLabel('PREDATOR OUTBREAK FLASH')).toBeNull();
     expect(humanEventLabel('Foam reaction: Foam Lightning discovered. SPARK')).toBeNull();
+  });
+});
+
+describe('planDishLabels stability (no flashing)', () => {
+  it('keeps a shown tag on its side even when a wobbling culture edge brushes that spot', () => {
+    const cultures = [
+      culture({ id: 2, strainKey: 'swarmlet', name: 'Swarmlet', center: [80, 80], vol: 100 }),
+      // A neighbour whose body now pokes into the space above the swarmlet.
+      culture({ id: 3, strainKey: 'bruiser', name: 'Bruiser', center: [80, 62], vol: 60 }),
+    ];
+    const plan = planDishLabels(input({
+      cultures,
+      previous: new Map([['strain-swarmlet', { placement: 'above', cultureId: 2 }]]),
+    }));
+    expect(plan.find((label) => label.text === 'Swarmlet')?.placement).toBe('above');
+  });
+
+  it('keeps a tag on the same culture while it stays comparable to the largest', () => {
+    const plan = planDishLabels(input({
+      cultures: [
+        culture({ id: 2, center: [30, 30], vol: 100 }),
+        culture({ id: 3, center: [130, 130], vol: 120 }),
+      ],
+      previous: new Map([['strain-swarmlet', { placement: 'above', cultureId: 2 }]]),
+    }));
+    expect(plan.find((label) => label.text === 'Swarmlet')?.cultureId).toBe(2);
+  });
+
+  it('moves the tag when another culture of the strain becomes clearly larger', () => {
+    const plan = planDishLabels(input({
+      cultures: [
+        culture({ id: 2, center: [30, 30], vol: 60 }),
+        culture({ id: 3, center: [130, 130], vol: 200 }),
+      ],
+      previous: new Map([['strain-swarmlet', { placement: 'above', cultureId: 2 }]]),
+    }));
+    expect(plan.find((label) => label.text === 'Swarmlet')?.cultureId).toBe(3);
+  });
+
+  it('keeps a shown tag on a culture that dips just under the size floor', () => {
+    const vol = DISH_LABEL_TUNING.minVol - 3;
+    const fresh = planDishLabels(input({ cultures: [culture({ id: 2, vol })] }));
+    expect(fresh).toEqual([]);
+    const held = planDishLabels(input({
+      cultures: [culture({ id: 2, vol })],
+      previous: new Map([['strain-swarmlet', { placement: 'above', cultureId: 2 }]]),
+    }));
+    expect(held.map((label) => label.text)).toEqual(['Swarmlet']);
+  });
+
+  it('pings under the strain\'s own key so the tag element is reused, not recreated', () => {
+    const plan = planDishLabels(input({ pingId: 2, cultures: [culture({ id: 2, vol: 80 })] }));
+    expect(plan[0]).toMatchObject({ key: 'strain-swarmlet', kind: 'ping' });
+  });
+
+  it('lets a callout step around an existing tag instead of knocking it off', () => {
+    const cultures = [culture({ id: 2, center: [80, 80], vol: 120 })];
+    const before = planDishLabels(input({ cultures }));
+    const tag = before.find((label) => label.text === 'Swarmlet')!;
+    const after = planDishLabels(input({
+      cultures,
+      events: [event({ id: 9, kind: 'mutation', label: 'VISIBLE MUTATION', pos: [80, 80], radius: 4 })],
+      previous: new Map([[tag.key, { placement: tag.placement, cultureId: 2 }]]),
+    }));
+    expect(after.find((label) => label.text === 'Swarmlet')?.placement).toBe(tag.placement);
+    expect(after.some((label) => label.text === 'Mutation')).toBe(true);
+  });
+});
+
+describe('label dwell (calm appear/disappear)', () => {
+  it('holds a recently shown tag through a cap swap with a newcomer', () => {
+    const cultures = Array.from({ length: 6 }, (_, index) => culture({
+      id: index + 2,
+      strainKey: `strain-${index}`,
+      name: `Strain ${index}`,
+      center: [15 + index * 26, 80],
+      vol: index === 5 ? 400 : index === 0 ? 20 : 30,
+    }));
+    const keep = 'strain-strain-0';
+    const plan = planDishLabels(input({ cultures, compact: true, hold: new Set([keep]) }));
+    expect(plan.some((label) => label.key === keep)).toBe(true);
+  });
+
+  it('keeps a tag at least the minimum dwell and suppresses quick re-entry', () => {
+    const memory = createLabelDwell();
+    const tag = (key: string): PlannedLabel => ({ key, kind: 'strain', text: key, icon: '', color: '#fff', xPct: 50, yPct: 50, placement: 'above', cultureId: 2 });
+    expect(applyLabelDwell([tag('strain-a')], memory, 0).map((l) => l.key)).toEqual(['strain-a']);
+    expect([...labelHoldKeys(memory, 500)]).toEqual(['strain-a']);
+    expect([...labelHoldKeys(memory, DISH_LABEL_TUNING.minDwellMs + 1)]).toEqual([]);
+    // It leaves, then the planner wants it back almost immediately.
+    applyLabelDwell([], memory, 2000);
+    expect(applyLabelDwell([tag('strain-a')], memory, 2300)).toEqual([]);
+    expect(applyLabelDwell([tag('strain-a')], memory, 2000 + DISH_LABEL_TUNING.reentryMs + 1).map((l) => l.key)).toEqual(['strain-a']);
+  });
+
+  it('never delays goal tags, pings or event callouts', () => {
+    const memory = createLabelDwell();
+    const label = (key: string, kind: PlannedLabel['kind']): PlannedLabel => ({ key, kind, text: key, icon: '', color: '#fff', xPct: 50, yPct: 50, placement: 'above', cultureId: 2 });
+    applyLabelDwell([label('strain-a', 'goal')], memory, 0);
+    applyLabelDwell([], memory, 100);
+    expect(applyLabelDwell([label('strain-a', 'goal'), label('event-1', 'event')], memory, 200)).toHaveLength(2);
   });
 });
