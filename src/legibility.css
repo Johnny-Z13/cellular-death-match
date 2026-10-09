@@ -22,7 +22,8 @@
    and its meter. Same structure on every viewport. */
 .layout[data-screen="arena"] .hud .hud-summary {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  /* Readouts take their own width; only the spacer flexes. */
+  grid-template-columns: max-content max-content minmax(0, 1fr) max-content;
   grid-template-areas:
     "trial window . balance"
     "goal goal goal goal";
@@ -298,8 +299,13 @@
    dish log, and the racks track it. */
 @media (min-width: 1181px) {
   :root {
-    --desktop-top-band: 112px;
-    --desktop-bottom-band: 52px;
+    /* The goal band, then the dish's 8px bezel. */
+    --desktop-bezel: 8px;
+    --desktop-top-band: calc(112px + var(--desktop-bezel));
+    /* The dish log sits below the bezel: latest entry only, two lines at
+       most (the title joins it on tall screens). */
+    --desktop-log-box: 46px;
+    --desktop-bottom-band: calc(var(--desktop-bezel) + 8px + var(--desktop-log-box) + 8px);
     --desktop-dish-size: min(
       calc(100svh - var(--desktop-top-band) - var(--desktop-bottom-band)),
       calc(100svw - (2 * var(--desktop-rack-width)) - (4 * var(--desktop-gap))),
@@ -319,8 +325,35 @@
   }
 
   .layout[data-screen="arena"] .ticker {
-    top: calc(var(--desktop-dish-top) + var(--desktop-dish-size) + 8px);
-    max-height: calc(100svh - var(--desktop-dish-top) - var(--desktop-dish-size) - 12px);
+    top: calc(var(--desktop-dish-top) + var(--desktop-dish-size) + var(--desktop-bezel) + 8px);
+    bottom: auto;
+    max-height: calc(100svh - var(--desktop-dish-top) - var(--desktop-dish-size) - var(--desktop-bezel) - 12px);
+  }
+
+  .layout[data-screen="arena"] .ticker-title {
+    display: none;
+  }
+
+  .layout[data-screen="arena"] .ticker-line:nth-child(n + 2) {
+    display: none;
+  }
+
+  .layout[data-screen="arena"] .ticker-line {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+}
+
+@media (min-width: 1181px) and (min-height: 860px) {
+  :root {
+    --desktop-log-box: 68px;
+  }
+
+  .layout[data-screen="arena"] .ticker-title {
+    display: block;
   }
 }
 
@@ -758,11 +791,32 @@
 }
 
 /* Menus keep the paused badge (the onboarding contract wants pause state
-   visible) but move it to the bottom edge, clear of their headings. */
+   visible) in its own lane along the bottom edge; Options and the Notebook
+   stop short of that lane instead of being covered by it. */
+.simulation-paused-badge {
+  white-space: nowrap;
+}
+
 .layout.menu-open .simulation-paused-badge,
 .layout:has(#screen-notebook.visible) .simulation-paused-badge {
   top: auto;
-  bottom: calc(14px + env(safe-area-inset-bottom));
+  bottom: max(8px, env(safe-area-inset-bottom));
+  padding: 4px 10px;
+}
+
+.layout.debug-open .debug {
+  max-height: calc(100dvh - 96px - env(safe-area-inset-bottom));
+}
+
+.layout #screen-notebook.notebook-screen {
+  padding-bottom: calc(44px + env(safe-area-inset-bottom));
+}
+
+.layout #screen-notebook .notebook-card {
+  /* One fixed size: switching tabs swaps content in place instead of the
+     whole device jumping between heights. */
+  height: calc(100dvh - 58px - env(safe-area-inset-bottom));
+  max-height: calc(100dvh - 58px - env(safe-area-inset-bottom));
 }
 
 /* Wrapped rack tiles: icon, name, count — the same compact tile at every
@@ -869,6 +923,9 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   line-clamp: 3;
+  /* A stretched grid cell would otherwise show a sliver of the clipped line. */
+  align-self: start;
+  max-height: 3lh;
 }
 
 /* Title pitch: the one-line promise a cold player reads before Run Trial. */
@@ -925,5 +982,246 @@
      "Finish trial" reads in full and stands out from the tools. */
   .layout[data-screen="arena"] .toolbox .end-action {
     grid-column: span 2;
+  }
+}
+
+/* ---- Alignment pass (polish 2) --------------------------------------------
+   One grid per surface: the HUD header row is the same 44px line as the
+   chrome buttons, the goal meter carries its own percentage, and the dish
+   bezel follows the dish's square shape instead of a circle around it. */
+
+/* The goal percentage sits at the end of its own meter on every viewport,
+   so the goal sentence gets the full width. */
+.layout[data-screen="arena"] .hud-goal {
+  grid-template-areas:
+    "mark copy copy"
+    "meter meter value";
+}
+
+.hud-goal-value {
+  align-self: center;
+  min-width: 3.5ch;
+  line-height: 1;
+  text-align: right;
+}
+
+/* An older phone rule split the header into equal columns by timed state;
+   readouts take their own width on every layout. */
+.layout[data-screen="arena"] .hud:not(.hud-objective-timed) .hud-summary,
+.layout[data-screen="arena"] .hud.hud-objective-timed .hud-summary {
+  grid-template-columns: max-content max-content minmax(0, 1fr) max-content;
+}
+
+/* The bezel is a rounded square concentric with the dish (it was a circle
+   whose arcs poked out above, below and beside a square dish), 8px proud of
+   it on every layout. */
+.layout[data-screen="arena"] .dish-frame {
+  inset: -8px;
+  border-radius: 12px;
+}
+
+/* Dr. E's header: label left, state right, never wrapping into two lines. */
+.layout[data-screen="arena"] .hud-director-head > span:first-child,
+.layout[data-screen="arena"] .coach .coach-kicker {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layout[data-screen="arena"] .hud-director-head > span:last-child {
+  flex: 0 0 auto;
+}
+
+/* The welcome card has room for his full title: it wraps rather than cut. */
+.layout[data-screen="arena"] .coach.coach-welcome .coach-kicker {
+  overflow: visible;
+  white-space: normal;
+  text-wrap: balance;
+}
+
+/* Docked Dr. E without a skip button gives its reserved gutter back, so the
+   step counter lines up with the HUD's right edge. */
+.layout[data-screen="arena"].hud-slot-docked.coach-active .coach:not(.coach-welcome):not(.coach-intro):has(.coach-skip[hidden]) .coach-copy {
+  padding-right: 10px;
+}
+
+@media (max-width: 899px) and (orientation: portrait), (max-width: 899px) and (min-height: 521px) {
+  /* Both chrome buttons share the HUD's first line. */
+  .layout[data-screen="arena"] .options-button,
+  .layout[data-screen="arena"] .fullscreen-button {
+    top: calc(max(5px, env(safe-area-inset-top)) + 7px);
+  }
+
+  /* Header row (trial · balance) is the button line; the goal sentence and
+     meter below it run the full width of the panel. */
+  .layout[data-screen="arena"] .hud .hud-summary {
+    margin-right: 0;
+    grid-template-rows: 44px auto;
+    padding: 0 4px 6px;
+  }
+
+  .layout[data-screen="arena"] .hud .hud-summary > .hud-equilibrium-row {
+    margin-right: 104px;
+  }
+
+  /* Header readouts stack label over value, like instrument dials, so trial,
+     time and balance fit beside the buttons on a 375px phone. */
+  .layout[data-screen="arena"] .hud .hud-summary > .hud-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    line-height: 1;
+  }
+
+  .layout[data-screen="arena"] .hud .hud-summary > .hud-equilibrium-row {
+    align-items: flex-end;
+  }
+
+  /* Dr. E sits below the button line now: his copy no longer reserves the
+     buttons' 103px gutter. */
+  .layout[data-screen="arena"] .hud-director-copy {
+    padding-right: 10px;
+  }
+}
+
+/* Tablets: an id rule capped the canvas at 78vw inside a full-width stage;
+   the dish fills its stage, with a gutter. */
+@media (min-width: 600px) and (max-width: 899px) and (orientation: portrait),
+  (min-width: 600px) and (max-width: 899px) and (min-height: 521px) {
+  .layout[data-screen="arena"] {
+    --mobile-dish-size: min(calc(100vw - 32px), calc(100dvh - var(--hud-bottom, 150px) - 12px - var(--mobile-bottom-chrome)), 800px);
+  }
+
+  .layout[data-screen="arena"] #game {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+  }
+
+  .layout[data-screen="arena"] .hud .hud-summary {
+    grid-template-rows: auto auto;
+    padding: 2px 4px 6px;
+  }
+
+  .layout[data-screen="arena"] .hud .hud-summary > .hud-row {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .layout[data-screen="arena"] .hud .hud-summary > .hud-equilibrium-row {
+    margin-right: 0;
+  }
+
+  /* Dr. E's column is narrow here: tighter tracking keeps "Dr. E · New
+     trial" whole, and his note gets two clean lines. */
+  .layout[data-screen="arena"] .hud-director-head,
+  .layout[data-screen="arena"] .coach:not(.coach-welcome) .coach-kicker {
+    letter-spacing: 0.08em;
+  }
+
+  .layout[data-screen="arena"] .hud .hud-director .hud-director-progress {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    max-height: 2lh;
+  }
+
+  /* "Goal complete" already says it; the duplicate state word would cut it. */
+  .layout[data-screen="arena"] .coach.coach-success .coach-step {
+    display: none;
+  }
+}
+
+/* Strain reveal: the band fits its padded box (96vw overflowed it and sat
+   the reveal off-centre on phones), long names wrap evenly, and on phones
+   the scrim is near-opaque so the HUD and rack never read through it. */
+.fx-genome-inner {
+  width: min(760px, 100%);
+}
+
+.fx-genome-title {
+  text-wrap: balance;
+}
+
+@media (max-width: 899px) and (orientation: portrait), (max-width: 899px) and (min-height: 521px) {
+  .fx-genome {
+    background:
+      radial-gradient(circle at 50% 42%, rgba(91, 233, 214, 0.08), transparent 55%),
+      rgba(1, 4, 5, 0.94);
+  }
+}
+
+/* Title: the next-lead line wraps to two lines instead of cutting its clue. */
+.title-archive-strip #title-genome-lead {
+  display: -webkit-box;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+/* Desktop egg list: each strain's role reads in full over two lines (the
+   one-line teaser cut most of them mid-word). */
+@media (min-width: 900px) {
+  .layout[data-screen="arena"] .life-panel .life-item small {
+    display: -webkit-box;
+    white-space: normal;
+    line-height: 1.3;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+}
+
+/* Landscape phones: the HUD column is narrow, so header readouts stack like
+   the portrait ones and a timed trial's clock never pushes past the panel. */
+@media (max-width: 899px) and (orientation: landscape) and (max-height: 520px) {
+  .layout[data-screen="arena"] .hud .hud-summary {
+    column-gap: 10px;
+  }
+
+  .layout[data-screen="arena"] .hud .hud-summary > .hud-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    line-height: 1;
+  }
+
+  .layout[data-screen="arena"] .hud .hud-summary > .hud-equilibrium-row {
+    align-items: flex-end;
+  }
+}
+
+/* Notebook found entries: same minimum footprint, but a row grows to fit its
+   longest card instead of clipping the recipe line; the status chip stays on
+   one line and drops under the name when the card is narrow. */
+.notebook-list {
+  grid-auto-rows: minmax(196px, auto);
+}
+
+.notebook-entry-head {
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: 4px;
+}
+
+.notebook-entry-head .notebook-status {
+  flex: 0 0 auto;
+  max-width: none;
+  white-space: nowrap;
+}
+
+/* Short small-desktop windows (900-1180 wide, the HUD pinned to the top): the
+   centred dish keeps its bezel clear of the HUD's 104px band. */
+@media (min-width: 900px) and (max-width: 1180px) and (max-height: 780px) {
+  .layout {
+    --desktop-dish-size: min(
+      calc(100svh - 236px),
+      72svh,
+      calc(100svw - (2 * var(--desktop-rack-width)) - (4 * var(--desktop-gap))),
+      760px
+    );
   }
 }

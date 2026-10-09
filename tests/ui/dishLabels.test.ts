@@ -207,6 +207,22 @@ describe('planDishLabels', () => {
     expect(plan.find((label) => label.cultureId === 3)?.placement.startsWith('above')).toBe(true);
   });
 
+  it('keeps tags out from under fixed controls on the dish, even a held side', () => {
+    const c = culture({ id: 2, center: [140, 40], vol: 100 });
+    const free = planDishLabels(input({ cultures: [c] }));
+    const tab = labelRect(free[0]!);
+    const plan = planDishLabels(input({
+      cultures: [c],
+      obstacles: [tab],
+      previous: new Map([['strain-swarmlet', { placement: free[0]!.placement, cultureId: 2 }]]),
+      hold: new Set(['strain-swarmlet']),
+    }));
+    expect(plan).toHaveLength(1);
+    expect(plan[0]!.placement).not.toBe(free[0]!.placement);
+    const r = labelRect(plan[0]!);
+    expect(r.x < tab.x + tab.w && tab.x < r.x + r.w && r.y < tab.y + tab.h && tab.y < r.y + r.h).toBe(false);
+  });
+
   it('puts callouts beside the event, never on top of the culture it names', () => {
     const bloom = culture({ id: 5, strainKey: 'bloom_mass', name: 'Bloom Mass', isGoal: true, center: [80, 80], vol: 250 });
     const plan = planDishLabels(input({

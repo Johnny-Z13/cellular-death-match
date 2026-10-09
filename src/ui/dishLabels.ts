@@ -41,7 +41,7 @@ export const DISH_LABEL_TUNING = {
   eventLiftGrid: 10,
   /** Rendered tag metrics used for collision estimates (CSS mirrors these). */
   charPx: 7,
-  chromePx: 28,
+  chromePx: 32,
   heightPx: 22,
   stackGapPx: 4,
   /** Tags keep their centre at least this far (percent) from the dish edge. */
@@ -110,6 +110,9 @@ export interface DishLabelInput {
   previous?: ReadonlyMap<string, PreviousLabel>;
   /** Keys still inside their minimum dwell: placed ahead of newcomers. */
   hold?: ReadonlySet<string>;
+  /** Fixed UI over the dish (Notebook tab, preview badge), in dish pixels.
+   *  Tags never sit under these. */
+  obstacles?: readonly DishLabelRect[];
 }
 
 export interface PreviousLabel {
@@ -130,7 +133,8 @@ export interface PlannedLabel {
   cultureId: number | null;
 }
 
-interface Rect { x: number; y: number; w: number; h: number }
+export interface DishLabelRect { x: number; y: number; w: number; h: number }
+type Rect = DishLabelRect;
 
 const KIND_RANK: Record<DishLabelKind, number> = {
   event: 0, ping: 1, goal: 2, new: 3, control: 4, strain: 5,
@@ -141,7 +145,7 @@ const PLACEMENTS: readonly DishLabelPlacement[] = ['above', 'below', 'right', 'l
 export function planDishLabels(input: DishLabelInput): PlannedLabel[] {
   const t = DISH_LABEL_TUNING;
   const pxPerGrid = input.dishPx / input.gridSize;
-  const placed: Rect[] = [];
+  const placed: Rect[] = [...(input.obstacles ?? [])];
   const out: PlannedLabel[] = [];
   const previous = input.previous ?? new Map<string, PreviousLabel>();
 

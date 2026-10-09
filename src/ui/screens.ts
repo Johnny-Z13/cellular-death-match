@@ -1341,7 +1341,7 @@ export function createScreens(): Screens {
       lastStudyStartKey = info.key;
       window.clearTimeout(studyStartTimer);
       hudDirectorKicker.textContent = 'Dr. E · New trial';
-      hudDirectorState.textContent = 'Assigned';
+      hudDirectorState.textContent = '';
       hudDirector.classList.remove('hud-director-intro');
       void hudDirector.offsetWidth;
       hudDirector.classList.add('hud-director-intro');

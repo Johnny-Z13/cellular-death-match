@@ -552,6 +552,7 @@ const dishLabels = createDishLabelRuntime({
   gridSize: LX,
   // Phones get the shorter tag budget; tablets and wider get the full one.
   isCompact: () => window.matchMedia('(max-width: 599px)').matches,
+  obstacles: [document.getElementById('notebook-button')!, document.getElementById('preview-exit')!],
 });
 let dishGoalCellIds: ReadonlySet<number> = new Set();
 // The culture a guided lesson is built around (Trials 2-5, first time).
