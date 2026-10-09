@@ -20,6 +20,9 @@ export interface DishLabelOverlay {
   /** Show the inspect card for a culture at a point inside the dish (CSS px
    *  relative to the dish's top-left), or hide it with null. */
   inspect(info: DishInspectInfo | null, x?: number, y?: number): void;
+  /** Pin the overlay to the canvas box; some layouts draw the canvas smaller
+   *  than the dish stage, and tags must land on the pixels, not the stage. */
+  fitTo(canvas: HTMLCanvasElement): void;
   clear(): void;
 }
 
@@ -100,6 +103,16 @@ export function createDishLabelOverlay(root: HTMLElement, card: HTMLElement): Di
       const top = Math.min(Math.max(4, y - height / 2), stage.height - height - 4);
       card.style.left = `${Math.max(4, left)}px`;
       card.style.top = `${top}px`;
+    },
+    fitTo(canvas) {
+      const box = `${canvas.offsetLeft}px ${canvas.offsetTop}px ${canvas.offsetWidth}px ${canvas.offsetHeight}px`;
+      if (root.dataset.box === box) return;
+      root.dataset.box = box;
+      root.style.inset = 'auto';
+      root.style.left = `${canvas.offsetLeft}px`;
+      root.style.top = `${canvas.offsetTop}px`;
+      root.style.width = `${canvas.offsetWidth}px`;
+      root.style.height = `${canvas.offsetHeight}px`;
     },
     clear() {
       for (const node of nodes.values()) node.remove();

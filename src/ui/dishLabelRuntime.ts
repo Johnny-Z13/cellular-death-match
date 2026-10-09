@@ -186,6 +186,7 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
       if (pingId !== null && nowMs > pingUntilMs) pingId = null;
 
       if (enabled) {
+        overlay.fitTo(canvas);
         const plan = planDishLabels({
           cultures,
           events: markers.map((marker) => ({

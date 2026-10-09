@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-07-27 (mobile production hardening)
+Last updated: 2026-10-09 (legibility overhaul, branch `ux/legibility-overhaul`)
 
 ## Summary
 
@@ -22,6 +22,17 @@ Cellular Death Match is a mobile-first Petri dish ecosystem roguelike. Runs are 
 - Mobile performance profiles: 640px/45fps balanced presentation, 480px/30fps constrained presentation, fixed-tick simulation unchanged, and hidden-tab catch-up/audio suppression.
 - Notch/home-indicator safe areas, dynamic viewport units, 44px mobile chrome targets, labelled keyboard-operable dish, and focus-managed modal journeys.
 - Desktop layout with side panels, lifeform guide, inspector, and dish log.
+
+## Legibility Layer (2026-10-09)
+
+Details, evidence and open questions: [`docs/ux-legibility/README.md`](./ux-legibility/README.md).
+
+- **One vocabulary.** Player-facing text uses Culture, Strain, Egg, Tool, Reaction, Trial, Upgrade, Notebook, Balance and Badge (`src/content/glossary.ts`). Internal ids still say breed/lifeform/genome/study/epoch/seal. `tests/content/glossary.test.ts` and `e2e/type-floor.spec.ts` keep retired words out of rendered text.
+- **Goal strip.** The HUD leads with an imperative goal (`src/content/goalCopy.ts`) and a progress meter (`ObjectiveProgress.fraction`). Dr. E's coach docks over the director slot (`--hud-slot-*` published by `main.ts`) so the goal never hides.
+- **Self-labelling dish.** `src/ui/dishLabels.ts` plans name tags (one per strain, on its largest culture), goal markers, new-strain tags, tap pings and event callouts. `dishLabelOverlay.ts` renders them; `dishLabelRuntime.ts` feeds them at 10Hz. Goal cultures (`src/game/goalTargets.ts`) get a dashed ring in `render.ts`. Desktop hover shows an inspect card. The Options menu has a "Dish labels" toggle (`cdm.dish-labels.v1`).
+- **Calmer lessons.** `arena.setHazardsHeld()` holds crises, outbreaks and accidents while Dr. E's lesson for that dish is active.
+- **Layout.** There is an 11px type floor (`--fs-min`). Wide desktop sizes the dish from the height between the goal band and the log. On phones the dish sits below the measured rail, and the tool rack wraps so every tool is visible (`--rack-height`). The rack's end slot is only "Finish trial" or "Retry save"; leaving an unfinished trial is a two-tap action in Options.
+- **Smaller aids.** There is a desktop ghost ring for a field tool's reach, upgrade cards that say when their tool is not unlocked yet, a solid phone log sheet, and an agar plate background.
 
 ## Main Systems
 
