@@ -176,7 +176,7 @@ body::after {
   background: rgba(3, 10, 12, 0.92);
   color: var(--bio-bright);
   font-family: var(--font-display);
-  font-size: 8px;
+  font-size: var(--fs-min);
   letter-spacing: 0.16em;
   text-transform: uppercase;
   pointer-events: none;
@@ -416,7 +416,7 @@ canvas {
   background: linear-gradient(90deg, rgba(10, 20, 23, 0.92), rgba(16, 30, 34, 0.96));
   color: var(--bio-bright);
   font-family: var(--font-display);
-  font-size: 9px;
+  font-size: var(--fs-min);
   letter-spacing: 0.3em;
   text-transform: uppercase;
   line-height: 1;
@@ -480,7 +480,7 @@ canvas {
 
 .mobile-tool-readout strong {
   font-family: var(--font-display);
-  font-size: 10px;
+  font-size: var(--fs-min);
   letter-spacing: 0.06em;
   line-height: 1.1;
   color: var(--ink);
@@ -488,7 +488,7 @@ canvas {
 
 .mobile-tool-readout span {
   color: var(--ink-dim);
-  font-size: 10px;
+  font-size: var(--fs-min);
   line-height: 1.15;
 }
 
@@ -707,7 +707,7 @@ canvas {
 
 .tool-button strong {
   font-family: var(--font-display);
-  font-size: 10px;
+  font-size: var(--fs-min);
   font-weight: 400;
   letter-spacing: 0.04em;
   line-height: 1.15;
@@ -718,7 +718,7 @@ canvas {
   display: none;
   margin-top: 2px;
   color: var(--ink-faint);
-  font-size: 10px;
+  font-size: var(--fs-min);
 }
 
 .tool-icon {
@@ -936,14 +936,14 @@ canvas {
 .toolbox-title {
   color: var(--ink-faint);
   font-family: var(--font-display);
-  font-size: 9px;
+  font-size: var(--fs-min);
   font-weight: 400;
   letter-spacing: 0.22em;
 }
 
 .tool-summary {
   color: var(--ink-dim);
-  font-size: 10px;
+  font-size: var(--fs-min);
   line-height: 1.3;
 }
 
@@ -1038,7 +1038,7 @@ canvas {
   background: rgba(18, 32, 36, 0.84);
   color: var(--ink-dim);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-min);
   padding: 6px 9px;
   cursor: pointer;
   transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
@@ -1082,7 +1082,7 @@ canvas {
 .debug-title {
   margin: 0 0 10px 0;
   font-family: var(--font-display);
-  font-size: 10px;
+  font-size: var(--fs-min);
   letter-spacing: 0.2em;
   color: var(--ink-faint);
   font-weight: 400;
@@ -1206,14 +1206,14 @@ canvas {
 .options-data-actions .debug-mini-button strong {
   color: var(--ink);
   font-family: var(--font-display);
-  font-size: 10px;
+  font-size: var(--fs-min);
   font-weight: 400;
   letter-spacing: 0.05em;
 }
 
 .options-data-actions .debug-mini-button span {
   color: var(--ink-faint);
-  font-size: 9px;
+  font-size: var(--fs-min);
   line-height: 1.35;
 }
 
@@ -1259,7 +1259,7 @@ canvas {
 .delete-data-kicker {
   color: var(--danger);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-min);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -1291,7 +1291,7 @@ canvas {
   background: rgba(18, 32, 36, 0.84);
   color: var(--ink);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-min);
   cursor: pointer;
 }
 
@@ -1318,7 +1318,7 @@ canvas {
   margin: 0 0 6px 0;
   color: var(--ink-dim);
   font-family: var(--font-display);
-  font-size: 9px;
+  font-size: var(--fs-min);
   font-weight: 400;
   letter-spacing: 0.22em;
   text-shadow: 0 0 10px rgba(91, 233, 214, 0.24);
@@ -1459,7 +1459,7 @@ canvas {
 .life-panel-title {
   color: var(--ink-faint);
   font-family: var(--font-display);
-  font-size: 9px;
+  font-size: var(--fs-min);
   font-weight: 400;
   letter-spacing: 0.22em;
 }
@@ -1467,7 +1467,7 @@ canvas {
 .life-count {
   color: var(--bio);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-min);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -1481,13 +1481,13 @@ canvas {
   background: rgba(14, 26, 29, 0.92);
   color: var(--ink-dim);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-min);
   cursor: pointer;
 }
 
 .life-summary {
   color: var(--ink-dim);
-  font-size: 10px;
+  font-size: var(--fs-min);
   line-height: 1.3;
 }
 
@@ -1551,7 +1551,7 @@ canvas {
   max-width: 100%;
   overflow: hidden;
   color: var(--ink);
-  font-size: 9px;
+  font-size: var(--fs-min);
   line-height: 1;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1582,7 +1582,7 @@ canvas {
   border-radius: 11px;
   background: rgba(16, 20, 23, 0.36);
   color: var(--ink-dim);
-  font-size: 10px;
+  font-size: var(--fs-min);
   line-height: 1.3;
   opacity: 0.86;
   padding: 8px 11px;
@@ -1615,7 +1615,7 @@ canvas {
 .life-panel .life-item b {
   align-self: center;
   color: var(--ink-dim);
-  font-size: 9px;
+  font-size: var(--fs-min);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   text-align: right;
@@ -2089,7 +2089,7 @@ canvas {
 
 .fx-genome-skip {
   color: var(--ink-faint);
-  font-size: 9px;
+  font-size: var(--fs-min);
   letter-spacing: 0.08em;
 }
 
@@ -2184,7 +2184,7 @@ canvas {
 
 .fx-toast-kicker {
   font-family: var(--font-display);
-  font-size: 9px;
+  font-size: var(--fs-min);
   letter-spacing: 0.24em;
   color: var(--bio);
 }
@@ -2292,7 +2292,7 @@ canvas {
 
 .coach-kicker {
   font-family: var(--font-display);
-  font-size: 9px;
+  font-size: var(--fs-min);
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--bio);
@@ -2300,7 +2300,7 @@ canvas {
 
 .coach-step {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-min);
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
 }
@@ -2324,7 +2324,7 @@ canvas {
 .coach-skip {
   justify-self: end;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-min);
   letter-spacing: 0.04em;
   color: var(--ink-faint);
   background: transparent;
@@ -2654,7 +2654,7 @@ canvas {
 .commit-debug {
   margin: 16px auto 0 auto;
   color: var(--ink-faint);
-  font-size: 10px;
+  font-size: var(--fs-min);
   letter-spacing: 0.04em;
   line-height: 1.3;
   overflow-wrap: anywhere;
@@ -2780,7 +2780,7 @@ canvas {
 
 .loadout-strain-copy small {
   color: var(--ink-faint);
-  font-size: 9px;
+  font-size: var(--fs-min);
   line-height: 1.3;
 }
 
@@ -2860,7 +2860,7 @@ canvas {
     min-height: 44px;
     padding: 8px;
     gap: 7px;
-    font-size: 10px;
+    font-size: var(--fs-min);
   }
 
   .loadout-confirm {
@@ -2988,7 +2988,7 @@ canvas {
 .title-eyebrow {
   margin: 0 0 14px;
   font-family: var(--font-display);
-  font-size: 10px;
+  font-size: var(--fs-min);
   letter-spacing: 0.4em;
   color: var(--bio);
   text-shadow: 0 0 18px rgba(91, 233, 214, 0.5);
@@ -3028,7 +3028,7 @@ canvas {
   justify-content: space-between;
   gap: 12px;
   color: var(--bio-bright);
-  font-size: 9px;
+  font-size: var(--fs-min);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -3063,7 +3063,7 @@ canvas {
   justify-items: center;
   gap: 4px;
   color: var(--ink-faint);
-  font-size: 8px;
+  font-size: var(--fs-min);
   text-transform: uppercase;
 }
 
@@ -3077,7 +3077,7 @@ canvas {
   border-radius: 50%;
   background: var(--panel-solid);
   color: var(--ink-faint);
-  font: 500 9px/1 var(--font-mono);
+  font: 500 var(--fs-min)/1 var(--font-mono);
 }
 
 .case-trial-rail .is-active b {
@@ -3104,7 +3104,7 @@ canvas {
   background: rgba(91, 233, 214, 0.055);
 }
 
-.active-hypothesis span { color: var(--bio); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; }
+.active-hypothesis span { color: var(--bio); font-size: var(--fs-min); letter-spacing: 0.1em; text-transform: uppercase; }
 .active-hypothesis strong { color: var(--ink); font: 400 13px/1.35 var(--font-serif); }
 .title-card .title-start-button { display: flex; margin-inline: auto; }
 
@@ -3343,7 +3343,7 @@ canvas {
   background: rgba(8, 17, 20, 0.88);
   box-shadow: 0 0 12px rgba(91, 233, 214, 0.16);
   font-family: var(--font-display);
-  font-size: 9px;
+  font-size: var(--fs-min);
   font-weight: 400;
 }
 
@@ -3403,7 +3403,7 @@ canvas {
   background: rgba(11, 24, 29, 0.72);
   padding: 3px 6px;
   font-family: var(--font-display);
-  font-size: 8px;
+  font-size: var(--fs-min);
   font-weight: 400;
   letter-spacing: 0.08em;
   max-width: 48%;
@@ -3436,7 +3436,7 @@ canvas {
 .notebook-meta,
 .notebook-discovered-at {
   color: var(--ink-faint);
-  font-size: 9px;
+  font-size: var(--fs-min);
   line-height: 1.25;
 }
 
@@ -3463,14 +3463,14 @@ canvas {
   margin: 8px 0 4px;
   color: var(--bio-bright);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-min);
   line-height: 1.35;
 }
 
 .notebook-entry small {
   display: block;
   color: var(--ink-dim);
-  font-size: 10px;
+  font-size: var(--fs-min);
   line-height: 1.35;
 }
 
@@ -3515,7 +3515,7 @@ canvas {
 .notebook-tab-button {
   min-height: 44px;
   font-family: var(--font-display);
-  font-size: 10px;
+  font-size: var(--fs-min);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--ink-faint);
@@ -3591,7 +3591,7 @@ canvas {
 .research-time {
   color: var(--amber);
   font-family: var(--font-display);
-  font-size: 8px;
+  font-size: var(--fs-min);
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
@@ -3625,7 +3625,7 @@ canvas {
   border-radius: 999px;
   padding: 4px 8px;
   color: #fff0b2;
-  font-size: 9px;
+  font-size: var(--fs-min);
   text-transform: uppercase;
 }
 
@@ -3681,7 +3681,7 @@ canvas {
   max-width: 38ch;
   margin: 0;
   color: var(--ink-faint);
-  font-size: 10px;
+  font-size: var(--fs-min);
   line-height: 1.35;
   text-align: right;
 }
@@ -3732,7 +3732,7 @@ canvas {
   display: grid;
   gap: 6px;
   color: var(--bio);
-  font-size: 10px;
+  font-size: var(--fs-min);
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -3753,7 +3753,7 @@ canvas {
 .field-study-complete strong::after {
   content: " · logged";
   color: var(--bio);
-  font-size: 9px;
+  font-size: var(--fs-min);
   text-transform: uppercase;
 }
 
@@ -3784,14 +3784,14 @@ canvas {
 .research-seals-head span {
   color: var(--bio);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-min);
 }
 
 .research-seals-intro {
   margin: 0;
   color: var(--ink-faint);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-min);
   line-height: 1.45;
 }
 
@@ -3834,7 +3834,7 @@ canvas {
 .research-seal strong {
   color: var(--ink);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-min);
   line-height: 1.2;
 }
 
@@ -3849,7 +3849,7 @@ canvas {
 .research-seal small {
   color: var(--ink-faint);
   font-family: var(--font-serif);
-  font-size: 9px;
+  font-size: var(--fs-min);
   font-style: italic;
   line-height: 1.25;
 }
@@ -3870,7 +3870,7 @@ canvas {
 .research-records strong {
   color: var(--bio);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-min);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -3880,7 +3880,7 @@ canvas {
   margin: 0;
   color: var(--ink-dim);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-min);
   line-height: 1.45;
 }
 
@@ -4128,7 +4128,7 @@ canvas {
 
 .pick-card-action {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--fs-min);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -4160,7 +4160,7 @@ canvas {
   margin-top: 8px;
   border-bottom: 1px solid rgba(91, 233, 214, 0.38);
   color: var(--bio);
-  font-size: 9px;
+  font-size: var(--fs-min);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -4185,7 +4185,7 @@ canvas {
 .title-save-note {
   margin: 8px 0 0;
   color: var(--ink-faint);
-  font-size: 10px;
+  font-size: var(--fs-min);
   line-height: 1.4;
   text-align: center;
 }
@@ -4244,7 +4244,7 @@ canvas {
 .hud-key {
   color: var(--ink-faint);
   font-family: var(--font-display);
-  font-size: 9px;
+  font-size: var(--fs-min);
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -4273,7 +4273,7 @@ canvas {
 
 .hud-hint-row .hud-val {
   color: var(--bio);
-  font-size: 10px;
+  font-size: var(--fs-min);
   line-height: 1.3;
   white-space: normal;
 }
@@ -4379,7 +4379,7 @@ canvas {
   .options-button {
     top: max(8px, env(safe-area-inset-top));
     padding: 8px 9px;
-    font-size: 10px;
+    font-size: var(--fs-min);
     right: calc(64px + env(safe-area-inset-right));
     min-height: 44px;
   }
@@ -4420,7 +4420,7 @@ canvas {
        sit on top of the deadline / equilibrium values. */
     top: calc(58px + env(safe-area-inset-top));
     padding: 7px 9px;
-    font-size: 10px;
+    font-size: var(--fs-min);
   }
 
   .screen {
@@ -4491,7 +4491,7 @@ canvas {
   }
 
   .fx-banner-eyebrow {
-    font-size: 9px;
+    font-size: var(--fs-min);
     letter-spacing: 0.32em;
   }
 
@@ -4505,7 +4505,7 @@ canvas {
 
   .fx-banner-sub {
     max-width: 290px;
-    font-size: 10.5px;
+    font-size: var(--fs-min);
     line-height: 1.3;
   }
 
@@ -4520,7 +4520,7 @@ canvas {
   }
 
   .fx-banner-arcade .fx-banner-eyebrow {
-    font-size: 9px;
+    font-size: var(--fs-min);
     letter-spacing: 0.36em;
   }
 
@@ -4598,7 +4598,7 @@ canvas {
 
   .fx-toast-kicker {
     flex: 0 0 auto;
-    font-size: 8px;
+    font-size: var(--fs-min);
     letter-spacing: 0.18em;
   }
 
@@ -4649,7 +4649,7 @@ canvas {
 
   .coach-body {
     grid-area: body;
-    font-size: 10.5px;
+    font-size: var(--fs-min);
     line-height: 1.35;
   }
 
@@ -4658,12 +4658,12 @@ canvas {
   }
 
   .coach-kicker {
-    font-size: 8px;
+    font-size: var(--fs-min);
     letter-spacing: 0.17em;
   }
 
   .coach-step {
-    font-size: 9px;
+    font-size: var(--fs-min);
   }
 
   .coach-skip {
@@ -4900,7 +4900,7 @@ canvas {
     top: calc(8px + env(safe-area-inset-top));
     width: var(--landscape-rail-width);
     padding: 6px 8px;
-    font-size: 9px;
+    font-size: var(--fs-min);
   }
 
   .hud-row + .hud-row {
@@ -4909,7 +4909,7 @@ canvas {
 
   .hud-objective-row .hud-val {
     max-width: 68%;
-    font-size: 9px;
+    font-size: var(--fs-min);
     line-height: 1.15;
   }
 
@@ -4930,7 +4930,7 @@ canvas {
 
   .mobile-shell-button {
     padding-inline: 6px;
-    font-size: 9px;
+    font-size: var(--fs-min);
   }
 
   .mobile-tool-readout {
@@ -4978,13 +4978,13 @@ canvas {
   }
 
   .toolbox .tool-button strong {
-    font-size: 8px;
+    font-size: var(--fs-min);
     line-height: 1.1;
     white-space: nowrap;
   }
 
   .toolbox .tool-button b {
-    font-size: 9px;
+    font-size: var(--fs-min);
     line-height: 1;
   }
 
@@ -5370,7 +5370,7 @@ canvas {
 
 .coach-intro .coach-kicker {
   color: var(--bio-bright);
-  font-size: 10px;
+  font-size: var(--fs-min);
   letter-spacing: 0.27em;
 }
 
@@ -5408,7 +5408,7 @@ canvas {
   color: #eafcff;
   background: rgba(55, 168, 194, 0.14);
   font-family: var(--font-display);
-  font-size: 9px;
+  font-size: var(--fs-min);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   box-shadow: 0 0 22px rgba(126, 230, 255, 0.1);
@@ -5529,7 +5529,7 @@ canvas {
     justify-self: start;
     margin-top: 5px;
     padding: 5px 8px;
-    font-size: 9px;
+    font-size: var(--fs-min);
   }
 }
 
@@ -5544,7 +5544,7 @@ canvas {
   }
 
   .coach-intro .coach-kicker {
-    font-size: 8px;
+    font-size: var(--fs-min);
   }
 
   .coach-intro .coach-title {
@@ -5558,7 +5558,7 @@ canvas {
 
   .coach-intro .coach-action {
     padding: 7px 10px;
-    font-size: 8px;
+    font-size: var(--fs-min);
   }
 }
 
@@ -5642,7 +5642,7 @@ canvas {
   color: var(--bio-bright);
   background: rgba(55, 168, 194, 0.1);
   font-family: var(--font-display);
-  font-size: 8px;
+  font-size: var(--fs-min);
   letter-spacing: 0.15em;
   text-transform: uppercase;
 }
@@ -5704,13 +5704,13 @@ canvas {
   .coach-prompt .coach-body {
     display: block;
     margin: 0;
-    font-size: 10px;
+    font-size: var(--fs-min);
     line-height: 1.35;
   }
 
   .coach-prompt .coach-action {
     padding: 5px 7px;
-    font-size: 7px;
+    font-size: var(--fs-min);
   }
 
   .coach-prompt .coach-skip {
@@ -5718,7 +5718,7 @@ canvas {
     justify-self: start;
     margin: 0;
     padding: 4px 6px;
-    font-size: 8px;
+    font-size: var(--fs-min);
   }
 }
 
@@ -5982,7 +5982,7 @@ canvas {
   .title-professor { display: none; }
   .title-card { position: relative; left: auto; right: auto; width: min(calc(100vw - 24px), 560px); padding: 22px 18px; }
   .title-wordmark { font-size: clamp(27px, 9vw, 40px); margin-bottom: 14px; }
-  .title-eyebrow { margin-bottom: 10px; font-size: 8px; letter-spacing: 0.26em; }
+  .title-eyebrow { margin-bottom: 10px; font-size: var(--fs-min); letter-spacing: 0.26em; }
   .case-docket { padding: 11px; gap: 8px; }
   .case-trial-rail span { display: none; }
   .case-docket h2 { font-size: 14px; }
@@ -6031,8 +6031,8 @@ canvas {
   .coach-copy { position: relative; min-height: 56px; padding: 6px 74px 6px 5px; box-sizing: border-box; }
   .coach-body,
   .coach-step { display: none; }
-  .coach-title { font-size: 10.5px; line-height: 1.25; }
-  .coach-skip { position: absolute; right: 0; bottom: 7px; padding: 4px 6px; font-size: 8px; }
+  .coach-title { font-size: var(--fs-min); line-height: 1.25; }
+  .coach-skip { position: absolute; right: 0; bottom: 7px; padding: 4px 6px; font-size: var(--fs-min); }
 }
 
 @media (min-width: 1181px) {
@@ -6048,7 +6048,7 @@ canvas {
   .coach-portrait { min-height: 132px; }
   .coach-copy { padding: 10px 0 10px 7px; gap: 5px; }
   .coach-title { font-size: 12px; }
-  .coach-body { font-size: 10.5px; }
+  .coach-body { font-size: var(--fs-min); }
   @keyframes professor-slide-left {
     from { opacity: 0; transform: translateX(-52px); }
     to { opacity: 1; transform: translateX(0); }
@@ -6251,7 +6251,7 @@ canvas {
   justify-content: space-between;
   gap: 10px;
   color: var(--bio);
-  font-size: 8px;
+  font-size: var(--fs-min);
   letter-spacing: 0.11em;
   text-transform: uppercase;
 }
@@ -6282,7 +6282,7 @@ canvas {
   margin: 6px 0 0;
   overflow: hidden;
   color: var(--ink-faint);
-  font-size: 8px;
+  font-size: var(--fs-min);
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -6567,7 +6567,7 @@ canvas {
   }
 
   .coach-success .coach-body {
-    font-size: 10.5px;
+    font-size: var(--fs-min);
     line-height: 1.42;
   }
 }
@@ -6595,7 +6595,7 @@ canvas {
   }
 
   .coach-success .coach-body {
-    font-size: 9.5px;
+    font-size: var(--fs-min);
   }
 }
 
@@ -6698,7 +6698,7 @@ canvas {
   }
 
   .layout[data-screen="arena"] .hud-key {
-    font-size: 7px;
+    font-size: var(--fs-min);
     letter-spacing: 0.1em;
   }
 
@@ -6706,7 +6706,7 @@ canvas {
     max-width: none;
     overflow: hidden;
     color: #eaffff;
-    font-size: 9px;
+    font-size: var(--fs-min);
     text-align: left;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -6728,7 +6728,7 @@ canvas {
     width: 100%;
     max-width: none;
     overflow: hidden;
-    font-size: 10px;
+    font-size: var(--fs-min);
     font-weight: 600;
     line-height: 1.2;
     text-align: left;
@@ -6766,7 +6766,7 @@ canvas {
     writing-mode: horizontal-tb;
     padding: 7px 9px;
     border-radius: 999px;
-    font-size: 7px;
+    font-size: var(--fs-min);
     letter-spacing: 0.12em;
     transform: none;
   }
@@ -6796,7 +6796,7 @@ canvas {
   .layout[data-screen="arena"] .mobile-shell-button {
     padding: 7px;
     font-family: var(--font-display);
-    font-size: 8px;
+    font-size: var(--fs-min);
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
@@ -6812,7 +6812,7 @@ canvas {
 
   .layout[data-screen="arena"] .mobile-tool-readout strong,
   .layout[data-screen="arena"] .mobile-tool-readout span {
-    font-size: 9px;
+    font-size: var(--fs-min);
     line-height: 1;
   }
 
@@ -6918,13 +6918,13 @@ canvas {
   }
 
   .layout[data-screen="arena"] .tool-button strong {
-    font-size: 8px;
+    font-size: var(--fs-min);
     line-height: 1.05;
   }
 
   .layout[data-screen="arena"] .tool-button b {
     color: rgba(226, 246, 245, 0.84);
-    font-size: 9px;
+    font-size: var(--fs-min);
     line-height: 1;
   }
 
@@ -7002,7 +7002,7 @@ canvas {
     width: 42px;
     color: var(--bio);
     font-family: var(--font-display);
-    font-size: 7px;
+    font-size: var(--fs-min);
     letter-spacing: 0.12em;
     text-align: center;
     pointer-events: none;
@@ -7237,7 +7237,7 @@ canvas {
 .layout[data-screen="arena"] .coach .coach-kicker {
   overflow: hidden;
   color: var(--bio-bright);
-  font-size: 7.5px;
+  font-size: var(--fs-min);
   letter-spacing: 0.15em;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -7246,7 +7246,7 @@ canvas {
 .layout[data-screen="arena"] .coach .coach-step {
   flex: 0 0 auto;
   color: rgba(216, 246, 242, 0.48);
-  font-size: 8px;
+  font-size: var(--fs-min);
 }
 
 .layout[data-screen="arena"] .coach .coach-title {
@@ -7269,7 +7269,7 @@ canvas {
   margin: 1px 0 0;
   color: rgba(216, 246, 242, 0.7);
   font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-size: var(--fs-min);
   line-height: 1.25;
 }
 
@@ -7288,7 +7288,7 @@ canvas {
   padding: 5px 6px;
   border-color: rgba(120, 196, 200, 0.22);
   color: rgba(216, 246, 242, 0.58);
-  font-size: 8px;
+  font-size: var(--fs-min);
   pointer-events: auto;
 }
 
@@ -7406,7 +7406,7 @@ canvas {
 
   .layout[data-screen="arena"] .coach.coach-toolbox-lesson .coach-body {
     display: block;
-    font-size: 8px;
+    font-size: var(--fs-min);
     line-height: 1.2;
   }
 
@@ -7533,7 +7533,7 @@ canvas {
 
 .layout[data-screen="arena"] .coach.coach-welcome .coach-kicker {
   color: var(--bio-bright);
-  font-size: 9px;
+  font-size: var(--fs-min);
   letter-spacing: 0.2em;
 }
 
@@ -7660,7 +7660,7 @@ canvas {
   }
 
   .layout[data-screen="arena"] .coach.coach-welcome .coach-kicker {
-    font-size: 7.5px;
+    font-size: var(--fs-min);
     letter-spacing: 0.16em;
   }
 
@@ -7682,7 +7682,7 @@ canvas {
     min-height: 48px;
     margin-top: 4px;
     padding: 12px 16px;
-    font-size: 10px;
+    font-size: var(--fs-min);
     white-space: nowrap;
   }
 }
@@ -7696,7 +7696,7 @@ canvas {
   }
 
   .layout[data-screen="arena"] .coach.coach-welcome .coach-kicker {
-    font-size: 7px;
+    font-size: var(--fs-min);
   }
 
   .layout[data-screen="arena"] .coach.coach-welcome .coach-title {
@@ -7705,7 +7705,7 @@ canvas {
 
   .layout[data-screen="arena"] .coach.coach-welcome .coach-body {
     display: block;
-    font-size: 9.5px;
+    font-size: var(--fs-min);
     line-height: 1.35;
   }
 
@@ -7791,7 +7791,7 @@ canvas {
 .method-intro-kicker {
   margin: 0;
   color: var(--bio-bright);
-  font: 9px/1.2 var(--font-display);
+  font: var(--fs-min)/1.2 var(--font-display);
   letter-spacing: 0.2em;
   text-transform: uppercase;
 }
@@ -7857,7 +7857,7 @@ canvas {
   .method-intro-screen { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
   .method-intro-copy { gap: 6px; padding: 13px 15px 14px; }
   .method-intro-copy h2 { font-size: clamp(30px, 9vw, 38px); }
-  .method-intro-copy > p:not(.method-intro-kicker) { font-size: 10px; line-height: 1.4; }
+  .method-intro-copy > p:not(.method-intro-kicker) { font-size: var(--fs-min); line-height: 1.4; }
   .method-intro-continue { min-height: 44px; margin-top: 2px; }
 }
 
@@ -7914,7 +7914,7 @@ canvas {
   }
 
   #screen-pick .pick-card-name { grid-area: name; }
-  #screen-pick .pick-card-desc { grid-area: desc; font-size: 10.5px; }
+  #screen-pick .pick-card-desc { grid-area: desc; font-size: var(--fs-min); }
   #screen-pick .pick-card-action {
     grid-area: action;
     align-self: center;
@@ -8023,14 +8023,14 @@ canvas {
 
   .layout[data-screen="arena"] .hud-summary .hud-key {
     flex: 0 0 auto;
-    font-size: 6.5px;
+    font-size: var(--fs-min);
     letter-spacing: 0.1em;
   }
 
   .layout[data-screen="arena"] .hud-summary .hud-val {
     min-width: 0;
     overflow: hidden;
-    font-size: 8.5px;
+    font-size: var(--fs-min);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -8092,7 +8092,7 @@ canvas {
     gap: 8px;
     color: var(--bio-bright);
     font-family: var(--font-display);
-    font-size: 7px;
+    font-size: var(--fs-min);
     letter-spacing: 0.14em;
     line-height: 1.2;
     text-transform: uppercase;
@@ -8127,7 +8127,7 @@ canvas {
     min-width: 0;
     overflow: hidden;
     color: rgba(226, 250, 247, 0.86);
-    font-size: 8.5px;
+    font-size: var(--fs-min);
     line-height: 1.15;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
@@ -8191,7 +8191,7 @@ canvas {
   .layout[data-screen="arena"] .coach:not(.coach-welcome) .coach-body {
     display: -webkit-box;
     overflow: hidden;
-    font-size: 8.5px;
+    font-size: var(--fs-min);
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
   }
@@ -8268,7 +8268,7 @@ canvas {
   }
 
   .layout[data-screen="arena"] .hud-director-progress {
-    font-size: 8px;
+    font-size: var(--fs-min);
     -webkit-line-clamp: 1;
   }
 
@@ -8319,7 +8319,7 @@ canvas {
 
   .layout[data-screen="arena"] .coach.coach-toolbox-lesson:not(.coach-welcome) .coach-body {
     display: -webkit-box;
-    font-size: 8px;
+    font-size: var(--fs-min);
     line-height: 1.2;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;

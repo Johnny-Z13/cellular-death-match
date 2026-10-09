@@ -66,7 +66,7 @@
 
   .layout[data-screen="arena"] .hud-summary .hud-key {
     flex: 0 0 auto;
-    font-size: 6.5px;
+    font-size: var(--fs-min);
     letter-spacing: 0.12em;
   }
 
@@ -74,7 +74,7 @@
     min-width: 0;
     max-width: none;
     overflow: hidden;
-    font-size: 8.5px;
+    font-size: var(--fs-min);
     text-align: left;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -132,7 +132,7 @@
     gap: 8px;
     color: var(--bio-bright);
     font-family: var(--font-display);
-    font-size: 7px;
+    font-size: var(--fs-min);
     letter-spacing: 0.16em;
     line-height: 1.15;
     text-transform: uppercase;
@@ -162,7 +162,7 @@
     min-width: 0;
     overflow: hidden;
     color: rgba(226, 250, 247, 0.76);
-    font-size: 8.5px;
+    font-size: var(--fs-min);
     line-height: 1.15;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -222,7 +222,7 @@
   }
 
   .layout[data-screen="arena"] .coach:not(.coach-welcome) .coach-body {
-    font-size: 9px;
+    font-size: var(--fs-min);
     line-height: 1.2;
   }
 
