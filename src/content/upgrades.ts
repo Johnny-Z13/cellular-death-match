@@ -123,6 +123,37 @@ export const UPGRADES: ReadonlyArray<UpgradeDef> = [
   },
 ];
 
+export type UpgradeTool = 'egg' | 'nutrient' | 'toxin' | 'agitate' | 'water' | 'salt' | 'acid';
+
+/** Which rack tools each upgrade improves. The pick screen uses this to tell
+ *  the player when an upgrade is for a tool they have not unlocked yet. */
+export const UPGRADE_TOOLS: Readonly<Record<string, readonly UpgradeTool[]>> = {
+  egg_1: ['egg'],
+  food_1: ['nutrient'],
+  toxin_1: ['toxin'],
+  centrifuge_1: ['agitate'],
+  food_radius_1: ['nutrient'],
+  toxin_radius_1: ['toxin'],
+  water_1: ['water'],
+  salt_1: ['salt'],
+  acid_1: ['acid'],
+  volatile_reagents_1: ['water', 'salt', 'acid'],
+  red_buffer_1: [],
+};
+
+const TOOL_NAMES: Record<UpgradeTool, string> = {
+  egg: 'Egg', nutrient: 'Nutrient', toxin: 'Toxin', agitate: 'Agitate', water: 'Water', salt: 'Salt', acid: 'Acid',
+};
+
+export function upgradeToolNote(id: string, unlockedTools: readonly string[]): string | null {
+  const tools = UPGRADE_TOOLS[id];
+  if (!tools || tools.length === 0) return null;
+  if (tools.some((tool) => unlockedTools.includes(tool))) return null;
+  const names = tools.map((tool) => TOOL_NAMES[tool]);
+  const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+  return `For ${list} · not in your rack yet`;
+}
+
 const UPGRADES_BY_ID = new Map(UPGRADES.map((u) => [u.id, u]));
 
 export function getUpgradeDef(id: string): UpgradeDef | undefined {

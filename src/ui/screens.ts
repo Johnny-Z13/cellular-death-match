@@ -63,6 +63,8 @@ export interface EndInfo {
 export interface PickChoice {
   id: string;
   def: UpgradeDef;
+  /** Set when the upgrade improves a tool the player has not unlocked yet. */
+  note?: string | null;
 }
 
 export interface EggOption {
@@ -1104,7 +1106,14 @@ export function createScreens(): Screens {
         const action = document.createElement('span');
         action.className = 'pick-card-action';
         action.textContent = 'Choose';
-        btn.append(name, desc, action);
+        btn.append(name, desc);
+        if (c.note) {
+          const note = document.createElement('div');
+          note.className = 'pick-card-note';
+          note.textContent = c.note;
+          btn.append(note);
+        }
+        btn.append(action);
         btn.addEventListener('click', () => {
           if (picked) return;
           picked = true;

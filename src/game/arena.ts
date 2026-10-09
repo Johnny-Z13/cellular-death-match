@@ -1130,18 +1130,22 @@ function toolLoadoutFor(player: PlayerConfig): Record<LabTool, ToolState> {
   };
 }
 
+/** Field radius (grid units) a dropped tool will cover, upgrades included. */
+export function toolRadiusFor(tool: Exclude<LabTool, 'egg' | 'paste'>, player: PlayerConfig): number {
+  return tool === 'nutrient' ? player.nutrientRadius ?? TOOL_TUNING.nutrient.radius :
+    tool === 'toxin' ? player.toxinRadius ?? TOOL_TUNING.toxin.radius :
+    tool === 'water' ? player.waterRadius ?? TOOL_TUNING.water.radius :
+    tool === 'salt' ? player.saltRadius ?? TOOL_TUNING.salt.radius :
+    player.acidRadius ?? TOOL_TUNING.acid.radius;
+}
+
 function toolEffectFor(
   tool: Exclude<LabTool, 'egg' | 'paste'>,
   pos: [number, number],
   player: PlayerConfig,
   seed: number,
 ): ToolEffect {
-  const radius =
-    tool === 'nutrient' ? player.nutrientRadius ?? TOOL_TUNING.nutrient.radius :
-    tool === 'toxin' ? player.toxinRadius ?? TOOL_TUNING.toxin.radius :
-    tool === 'water' ? player.waterRadius ?? TOOL_TUNING.water.radius :
-    tool === 'salt' ? player.saltRadius ?? TOOL_TUNING.salt.radius :
-    player.acidRadius ?? TOOL_TUNING.acid.radius;
+  const radius = toolRadiusFor(tool, player);
   const maxTtl = TOOL_TUNING[tool].ttl;
   return {
     type: tool,

@@ -1,11 +1,11 @@
 ﻿import { createRun } from './game/run';
-import { createArena, type Arena, type ArenaStatus } from './game/arena';
+import { createArena, toolRadiusFor, type Arena, type ArenaStatus } from './game/arena';
 import { createRenderer, type Renderer } from './ui/render';
 import { createDebugPanel } from './ui/debug';
 import { createScreens, type ToolId } from './ui/screens';
 import { AGITATION_TUNING, SIM_SPEED_TUNING, TOOL_TUNING } from './content/ecologyTuning';
 import { renderLoadoutScreen } from './ui/loadoutScreen';
-import { getUpgradeDef } from './content/upgrades';
+import { getUpgradeDef, upgradeToolNote } from './content/upgrades';
 import { goalLineFor } from './content/goalCopy';
 import { createDishLabelOverlay } from './ui/dishLabelOverlay';
 import { createDishLabelRuntime } from './ui/dishLabelRuntime';
@@ -546,6 +546,8 @@ const dishLabels = createDishLabelRuntime({
   isCompact: () => window.matchMedia('(max-width: 899px)').matches,
 });
 let dishGoalCellIds: ReadonlySet<number> = new Set();
+// Desktop: where a dropped field would land, shown as a ghost ring.
+let toolPreviewPos: [number, number] | null = null;
 const labelsButton = document.getElementById('labels-button');
 function applyDishLabelsPreference(enabled: boolean): void {
   dishLabels.setEnabled(enabled);
@@ -730,9 +732,14 @@ canvas.addEventListener('pointermove', (event) => {
     return;
   }
   const rect = canvas.getBoundingClientRect();
-  dishLabels.hover(arena, canvasEventToGridPos(event), event.clientX - rect.left, event.clientY - rect.top);
+  const pos = canvasEventToGridPos(event);
+  toolPreviewPos = pos;
+  dishLabels.hover(arena, pos, event.clientX - rect.left, event.clientY - rect.top);
 });
-canvas.addEventListener('pointerleave', () => dishLabels.hover(null, null));
+canvas.addEventListener('pointerleave', () => {
+  toolPreviewPos = null;
+  dishLabels.hover(null, null);
+});
 canvas.addEventListener('pointerdown', () => dishLabels.hover(null, null));
 
 canvas.addEventListener('pointerup', endPasteStroke);
@@ -1022,7 +1029,12 @@ function showPhase() {
     // arena was started by startNewFight(); HUD updates in loop.
   } else if (state.phase === 'upgrade_pick') {
     updateButtonHint();
-    const choices = state.pendingPickChoices.map((id) => ({ id, def: getUpgradeDef(id)! }));
+    const unlocked = currentCapabilityUnlocks();
+    const choices = state.pendingPickChoices.map((id) => ({
+      id,
+      def: getUpgradeDef(id)!,
+      note: upgradeToolNote(id, unlocked),
+    }));
     screens.setPickChoices(choices, (id) => {
       uiAudio.play('ui_select');
       fx.playWipe();
@@ -2822,6 +2834,10 @@ function readAudioFrame(ar: Arena): {
   return { eating, fighting, reactions, mutations, hatches, events };
 }
 
+function isFieldTool(tool: ToolId): tool is 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' {
+  return tool === 'nutrient' || tool === 'toxin' || tool === 'water' || tool === 'salt' || tool === 'acid';
+}
+
 function canvasEventToGridPos(event: PointerEvent): [number, number] {
   const rect = canvas.getBoundingClientRect();
   const x = ((event.clientX - rect.left) / rect.width) * LX;
@@ -2854,6 +2870,22 @@ function renderToolEffects(ar: Arena): void {
         Math.ceil(sy),
       );
     }
+    ctx.restore();
+  }
+
+  // Ghost ring: the area the selected field tool will cover if dropped here.
+  if (toolPreviewPos && !pasteCursor && isFieldTool(selectedTool)) {
+    const radius = toolRadiusFor(selectedTool, run.getPlayerConfig()) * ((sx + sy) / 2);
+    const [r, g, b] = colorForEffect(selectedTool).core;
+    ctx.save();
+    ctx.setLineDash([6, 5]);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.75)`;
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.06)`;
+    ctx.beginPath();
+    ctx.arc((toolPreviewPos[0] + 0.5) * sx, (toolPreviewPos[1] + 0.5) * sy, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
     ctx.restore();
   }
 
