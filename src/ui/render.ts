@@ -9,6 +9,7 @@ export interface Renderer {
     state: SimState,
     archetypes?: ReadonlyMap<CellId, EnemySpawn>,
     dishEvents?: readonly DishEventMarker[],
+    goalCellIds?: ReadonlySet<CellId>,
   ): void;
 }
 
@@ -111,6 +112,7 @@ export function createRenderer(
       state: SimState,
       archetypes?: ReadonlyMap<CellId, EnemySpawn>,
       dishEvents: readonly DishEventMarker[] = [],
+      goalCellIds?: ReadonlySet<CellId>,
     ) {
       frame += 1;
       const { LX, LY, cells, boundary } = state.grid;
@@ -195,6 +197,9 @@ export function createRenderer(
       for (const event of dishEvents) {
         drawDishEventMarker(ctx, event, sx, sy, frame, reduceMotion);
       }
+      if (goalCellIds && goalCellIds.size > 0) {
+        drawGoalRings(ctx, state, goalCellIds, sx, sy, frame, reduceMotion);
+      }
       for (const b of state.bullets) {
         const palette = base[b.ownerId] ?? base[0]!;
         // Lighten by 0.5 for the bullet color (slightly brighter than boundary).
@@ -214,6 +219,53 @@ export function createRenderer(
   };
 }
 
+
+// A dashed ring around every culture that counts toward the current goal.
+// Shape, not colour, carries the meaning: a dark underlay keeps the light
+// dashes readable over any culture hue, and the radius is padded past the
+// equal-area circle so it clears irregular CPM outlines.
+const GOAL_RING = {
+  radiusScale: 1.25,
+  radiusPadGrid: 3,
+  dash: [2.4, 1.6] as const,
+  color: 'rgba(214, 255, 249, 0.95)',
+  underlay: 'rgba(0, 0, 0, 0.7)',
+};
+
+function drawGoalRings(
+  ctx: CanvasRenderingContext2D,
+  state: SimState,
+  goalCellIds: ReadonlySet<CellId>,
+  sx: number,
+  sy: number,
+  frame: number,
+  reduceMotion: boolean,
+): void {
+  const scale = (sx + sy) * 0.5;
+  const width = Math.max(2, scale * 0.6);
+  ctx.save();
+  for (const id of goalCellIds) {
+    const cell = state.cells.get(id);
+    if (!cell || cell.vol <= 0) continue;
+    const radius = (Math.sqrt(cell.vol / Math.PI) * GOAL_RING.radiusScale + GOAL_RING.radiusPadGrid) * scale;
+    const cx = (cell.center[0] + 0.5) * sx;
+    const cy = (cell.center[1] + 0.5) * sy;
+    ctx.setLineDash([]);
+    ctx.strokeStyle = GOAL_RING.underlay;
+    ctx.lineWidth = width + 3;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([scale * GOAL_RING.dash[0], scale * GOAL_RING.dash[1]]);
+    ctx.lineDashOffset = reduceMotion ? 0 : -frame * 0.4;
+    ctx.strokeStyle = GOAL_RING.color;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
 
 function drawDishEventMarker(
   ctx: CanvasRenderingContext2D,

@@ -21,8 +21,10 @@ export const DISH_LABEL_TUNING = {
   eventMs: 3500,
   maxEvents: 2,
   maxTags: { compact: 5, wide: 7 },
-  /** Gap between a culture's edge and its tag, in grid units. */
-  gapGrid: 2.5,
+  /** Tags clear the culture's padded outline (matches the goal ring in
+   *  render.ts): equal-area radius × radiusScale + gapGrid. */
+  radiusScale: 1.25,
+  gapGrid: 3,
   /** Rendered tag metrics used for collision estimates (CSS mirrors these). */
   charPx: 7,
   chromePx: 28,
@@ -158,7 +160,7 @@ export function planDishLabels(input: DishLabelInput): PlannedLabel[] {
   let tags = 0;
   for (const { culture: c, kind } of candidates) {
     if (tags >= maxTags) break;
-    const radius = Math.sqrt(c.vol / Math.PI);
+    const radius = Math.sqrt(c.vol / Math.PI) * t.radiusScale;
     const label = place(
       {
         key: `culture-${c.id}`,

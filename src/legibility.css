@@ -344,3 +344,152 @@
     display: none;
   }
 }
+
+/* ---- Dish labels ----------------------------------------------------------
+   Strain tags, goal/new markers, tap pings and event callouts float over the
+   canvas. Pointer-transparent; planned by ui/dishLabels.ts. */
+.dish-labels {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+.dish-labels.is-off,
+.layout:not([data-screen="arena"]) .dish-labels,
+.layout:not([data-screen="arena"]) .dish-inspect {
+  display: none;
+}
+
+.dish-labels.is-drawing {
+  opacity: 0.3;
+}
+
+.dish-label {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px 0 6px;
+  border: 1px solid color-mix(in srgb, var(--label-color, #8ff7e6) 55%, transparent);
+  border-radius: 11px;
+  background: rgba(2, 8, 10, 0.8);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  color: #eaffff;
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  transform: translate(-50%, -100%);
+  animation: dish-label-in 180ms ease-out both;
+}
+
+.dish-label.is-below { transform: translate(-50%, 0); }
+.dish-label.is-center { transform: translate(-50%, -50%); }
+
+.dish-label-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--label-color, #8ff7e6);
+  box-shadow: 0 0 6px var(--label-color, #8ff7e6);
+}
+
+.dish-label-icon {
+  color: var(--label-color, #8ff7e6);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.dish-label-icon:empty { display: none; }
+
+.dish-label--goal {
+  border-color: var(--bio-bright, #8ff7e6);
+  color: #fff;
+}
+
+.dish-label--goal .dish-label-icon { color: var(--bio-bright, #8ff7e6); }
+
+.dish-label--new { border-color: rgba(255, 255, 255, 0.8); }
+.dish-label--new .dish-label-icon { color: #ffe27a; }
+
+.dish-label--ping {
+  border-color: #fff;
+  background: rgba(10, 30, 34, 0.94);
+  font-weight: 600;
+}
+
+.dish-label--event {
+  border: 1.5px solid var(--label-color, #f6d365);
+  background: rgba(8, 6, 4, 0.86);
+  color: #fff;
+  font-weight: 600;
+}
+
+.dish-label--event .dish-label-dot { display: none; }
+
+@keyframes dish-label-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dish-label { animation: none; }
+  .dish-labels { transition: none; }
+}
+
+/* Desktop hover inspect card. */
+.dish-inspect {
+  position: absolute;
+  z-index: 4;
+  display: grid;
+  gap: 3px;
+  width: 232px;
+  padding: 10px 12px;
+  border: 1px solid rgba(120, 196, 200, 0.35);
+  border-left: 3px solid var(--label-color, var(--bio, #5be9d6));
+  border-radius: 8px;
+  background: rgba(3, 10, 12, 0.95);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+.dish-inspect[hidden] { display: none; }
+
+.dish-inspect-name {
+  color: #f2ffff;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.dish-inspect-role {
+  color: var(--bio-bright, #8ff7e6);
+  font-family: var(--font-display);
+  font-size: var(--fs-min);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.dish-inspect.is-goal .dish-inspect-role { color: var(--goal-ok); }
+
+.dish-inspect-behavior {
+  margin: 2px 0 0;
+  color: rgba(216, 246, 242, 0.82);
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  line-height: 1.35;
+}
+
+.dish-inspect-stats {
+  color: rgba(216, 246, 242, 0.62);
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}

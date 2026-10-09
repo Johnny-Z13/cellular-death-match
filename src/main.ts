@@ -7,6 +7,8 @@ import { AGITATION_TUNING, SIM_SPEED_TUNING, TOOL_TUNING } from './content/ecolo
 import { renderLoadoutScreen } from './ui/loadoutScreen';
 import { getUpgradeDef } from './content/upgrades';
 import { goalLineFor } from './content/goalCopy';
+import { createDishLabelOverlay } from './ui/dishLabelOverlay';
+import { createDishLabelRuntime } from './ui/dishLabelRuntime';
 import { COMMON_COLD_CASE, trialForIndex } from './content/researchCases';
 import { loadCaseRecord, recordCompletedTrial } from './game/caseRecord';
 import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/enemies';
@@ -519,6 +521,35 @@ canvas.addEventListener('animationend', () => {
   canvas.classList.remove('dish-shake', 'dish-shake-soft');
 });
 const juice = createJuice(canvas, LX, LY);
+const DISH_LABELS_KEY = 'cdm.dish-labels.v1';
+const dishLabelOverlay = createDishLabelOverlay(
+  document.getElementById('dish-labels')!,
+  document.getElementById('dish-inspect')!,
+);
+const dishLabels = createDishLabelRuntime({
+  overlay: dishLabelOverlay,
+  canvas,
+  controlId: PLAYER_ID,
+  gridSize: LX,
+  isCompact: () => window.matchMedia('(max-width: 899px)').matches,
+});
+let dishGoalCellIds: ReadonlySet<number> = new Set();
+const labelsButton = document.getElementById('labels-button');
+function applyDishLabelsPreference(enabled: boolean): void {
+  dishLabels.setEnabled(enabled);
+  if (!labelsButton) return;
+  labelsButton.textContent = `Dish labels — ${enabled ? 'On' : 'Off'}`;
+  labelsButton.setAttribute('aria-pressed', String(enabled));
+}
+applyDishLabelsPreference((() => {
+  try { return window.localStorage.getItem(DISH_LABELS_KEY) !== '0'; } catch { return true; }
+})());
+labelsButton?.addEventListener('click', () => {
+  uiAudio.play('ui_tap');
+  const next = !dishLabels.isEnabled();
+  try { window.localStorage.setItem(DISH_LABELS_KEY, next ? '1' : '0'); } catch { /* preference is optional */ }
+  applyDishLabelsPreference(next);
+});
 let pastePointerId: number | null = null;
 let lastPasteSoundAt = 0;
 let pasteCursor: [number, number] | null = null;
@@ -625,12 +656,15 @@ canvas.addEventListener('pointerdown', (event) => {
   // or join two unrelated positions into a single painted trail.
   if (!event.isPrimary || event.button !== 0 || pastePointerId !== null) return;
   const pos = canvasEventToGridPos(event);
+  // Name whatever was under the finger, whether or not the tool lands.
+  if (arena && run.getState().phase === 'arena') dishLabels.ping(arena, pos, performance.now());
   if (!applySelectedToolAt(pos)) return;
   if (selectedTool === 'paste') {
     // Begin a drawn stroke; subsequent pointermove events lay the trail.
     pastePointerId = event.pointerId;
     pasteCursor = pos;
     canvas.setPointerCapture(event.pointerId);
+    dishLabelOverlay.setDrawing(true);
   }
 });
 
@@ -670,9 +704,24 @@ function endPasteStroke(event?: PointerEvent): void {
   const pointerId = pastePointerId;
   pastePointerId = null;
   pasteCursor = null;
+  dishLabelOverlay.setDrawing(false);
   arena?.endPasteStroke();
   if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
 }
+
+// Desktop hover inspect: a mouse resting on a culture explains it. Touch
+// never triggers this; phones get the tap ping instead.
+canvas.addEventListener('pointermove', (event) => {
+  if (event.pointerType !== 'mouse' || event.buttons !== 0) return;
+  if (!arena || run.getState().phase !== 'arena' || blockingOverlayOpen()) {
+    dishLabels.hover(null, null);
+    return;
+  }
+  const rect = canvas.getBoundingClientRect();
+  dishLabels.hover(arena, canvasEventToGridPos(event), event.clientX - rect.left, event.clientY - rect.top);
+});
+canvas.addEventListener('pointerleave', () => dishLabels.hover(null, null));
+canvas.addEventListener('pointerdown', () => dishLabels.hover(null, null));
 
 canvas.addEventListener('pointerup', endPasteStroke);
 canvas.addEventListener('pointercancel', endPasteStroke);
@@ -1254,6 +1303,8 @@ function startNewFight() {
     additiveBloom: visualProfile.additiveBloom,
   });
   lastRenderAt = Number.NEGATIVE_INFINITY;
+  dishLabels.reset(performance.now());
+  dishGoalCellIds = new Set();
   tickCount = 0;
   tickerState = createTickerState();
   cellFxTracker = createCellFxTracker();
@@ -1411,7 +1462,7 @@ function loop() {
     // storage is unavailable so Retry cannot overwrite later dish activity.
     simClock.reset(now);
     if (shouldRenderFrame(lastRenderAt, now, visualProfile.targetRenderFps)) {
-      renderer.render(arena.state, arena.archetypes, arena.getDishEvents());
+      renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds);
       renderToolEffects(arena);
       juice.draw();
       lastRenderAt = now;
@@ -1461,8 +1512,9 @@ function loop() {
   if (ticksToRun > 0) ecologyAudio.update(readAudioFrame(arena));
 
   updateJuiceEvents(arena);
+  dishGoalCellIds = dishLabels.update(arena, run.getObjective(), now);
   if (shouldRenderFrame(lastRenderAt, now, visualProfile.targetRenderFps)) {
-    renderer.render(arena.state, arena.archetypes, arena.getDishEvents());
+    renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds);
     renderToolEffects(arena);
     juice.draw();
     lastRenderAt = now;

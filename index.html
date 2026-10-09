@@ -34,6 +34,8 @@
           aria-label="Interactive Petri dish. Select a lab tool, then tap the dish. Keyboard players can press Enter or Space to apply the selected tool at the center."
         ></canvas>
         <div class="dish-glass" aria-hidden="true"></div>
+        <div id="dish-labels" class="dish-labels" aria-hidden="true"></div>
+        <div id="dish-inspect" class="dish-inspect" role="tooltip" hidden></div>
         <button id="notebook-button" class="notebook-button notebook-tab" type="button" aria-label="Open Discoverer's Notebook">Notebook</button>
         <button id="preview-exit" class="preview-exit" type="button" hidden aria-label="Exit temporary preview and return to your saved laboratory">Preview · Exit</button>
       </div>
@@ -177,6 +179,7 @@
           <h3 class="debug-subtitle">laboratory</h3>
           <button id="audio-button" class="debug-option-button" type="button" aria-label="Mute audio" aria-pressed="false">Sound — On</button>
           <button id="haptics-button" class="debug-option-button" type="button" aria-label="Disable haptics" aria-pressed="false" hidden>Haptics — On</button>
+          <button id="labels-button" class="debug-option-button" type="button" aria-pressed="true">Dish labels — On</button>
           <div class="debug-help debug-only">select a lab tool</div>
           <div class="debug-help debug-only">click dish: apply tool</div>
           <div class="debug-help debug-only">repeat evidence: understand protocol</div>
