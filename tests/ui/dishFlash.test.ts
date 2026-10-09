@@ -73,7 +73,7 @@ describe('dish event flash', () => {
 
   it('boosts explicit flash markers above ordinary critical events', () => {
     const ordinary = dishFlashForEvents([event('critical')], false)!;
-    const flash = dishFlashForEvents([event('critical', 80, 100, 'REACTION FLARE FLASH')], false)!;
+    const flash = dishFlashForEvents([event('critical', 80, 100, 'Flare reaction FLASH')], false)!;
 
     expect(flash.color).toBe('#ffffff');
     expect(flash.alpha).toBeGreaterThan(ordinary.alpha);
@@ -81,7 +81,7 @@ describe('dish event flash', () => {
 
   it('draws explicit flash markers as brighter thicker rings', () => {
     const ordinary = dishEventMarkerVisual(event('critical'), 0, false);
-    const flash = dishEventMarkerVisual(event('critical', 80, 100, 'REACTION FLARE FLASH'), 0, false);
+    const flash = dishEventMarkerVisual(event('critical', 80, 100, 'Flare reaction FLASH'), 0, false);
 
     expect(flash.strokeStyle).toBe('#ffffff');
     expect(flash.globalAlpha).toBeGreaterThan(ordinary.globalAlpha);

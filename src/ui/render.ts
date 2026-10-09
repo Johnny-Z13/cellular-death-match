@@ -65,14 +65,29 @@ function mixColor(
   ]);
 }
 
+// Mutation tints show a culture's newest trait. Amounts are kept low enough
+// that a mutated culture still reads as its strain's hue (a budding Swarmlet
+// stays cyan rather than turning Splitter green).
+const TRAIT_TINT: Partial<Record<TraitId, { rgb: [number, number, number]; amount: number }>> = {
+  fleet: { rgb: [212, 255, 72], amount: 0.24 },
+  gelatinous: { rgb: [224, 88, 255], amount: 0.2 },
+  toxin_resistant: { rgb: [225, 255, 255], amount: 0.26 },
+  fragile: { rgb: [255, 174, 64], amount: 0.22 },
+  budding: { rgb: [91, 255, 154], amount: 0.22 },
+};
+
 function traitColor(base: Uint8ClampedArray, traits: readonly TraitId[] | undefined): Uint8ClampedArray {
   const trait = traits?.at(-1);
-  if (trait === 'fleet') return mixColor(base, [212, 255, 72], 0.42);
-  if (trait === 'gelatinous') return mixColor(base, [224, 88, 255], 0.34);
-  if (trait === 'toxin_resistant') return mixColor(base, [225, 255, 255], 0.44);
-  if (trait === 'fragile') return mixColor(base, [255, 174, 64], 0.38);
-  if (trait === 'budding') return mixColor(base, [91, 255, 154], 0.4);
-  return base;
+  const tint = trait ? TRAIT_TINT[trait] : undefined;
+  return tint ? mixColor(base, tint.rgb, tint.amount) : base;
+}
+
+/** The colour a culture of this spawn is drawn in, mutation tint included.
+ *  Name tags use it so the dot matches the pixels. */
+export function displayColorForSpawn(spawn: EnemySpawn): [number, number, number] {
+  const base = rgba(lifeformIdentityForSpawn(spawn).colors.primary);
+  const color = spawn.breedId ? base : traitColor(base, spawn.traits);
+  return [color[0]!, color[1]!, color[2]!];
 }
 
 // Lighten an RGB color by `factor` toward white (0..1).

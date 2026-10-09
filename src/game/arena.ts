@@ -385,8 +385,11 @@ export function createArena(opts: CreateArenaOpts): Arena {
     discoveredBreedIds.add(id);
     discoveredBreedTicks.set(id, tickNo);
     if (BREED_DEFS[id].parents && !knownBreedIds.has(id)) objectiveRuntime.hybridDiscovered = true;
-    discoverNote(`breed_${id}`, `NEW STRAIN CREATED: ${BREED_DEFS[id].name}.`);
-    if (sourceCell) {
+    // Only a strain new to the player is announced. A known strain appearing
+    // in this dish still counts for objectives but is not "new".
+    const announce = !knownBreedIds.has(id);
+    if (announce) discoverNote(`breed_${id}`, `New strain created: ${BREED_DEFS[id].name}.`);
+    if (sourceCell && announce) {
       const marker = breedDiscoveryMarkerFor(id);
       addDishEvent(marker.kind, `NEW STRAIN: ${BREED_DEFS[id].name}`, sourceCell.center, marker.radius, marker.color);
     }
@@ -1304,11 +1307,11 @@ function reactionContextFor(
 }
 
 function reactionMessageFor(type: CatalysisEffectType, recipeName: string): string {
-  if (type === 'flare') return `REACTION FLARE: ${recipeName} discovered.`;
-  if (type === 'crystal') return `REACTION CRYSTAL: ${recipeName} discovered.`;
-  if (type === 'foam') return `REACTION FOAM: ${recipeName} discovered.`;
+  if (type === 'flare') return `Flare reaction: ${recipeName} discovered.`;
+  if (type === 'crystal') return `Crystal reaction: ${recipeName} discovered.`;
+  if (type === 'foam') return `Foam reaction: ${recipeName} discovered.`;
   if (type === 'fold_fault') return `FOLDING FAULT: ${recipeName} discovered.`;
-  return `REACTION: ${recipeName} discovered.`;
+  return `Reaction: ${recipeName} discovered.`;
 }
 
 function catalysisEffectTypeFor(type: ToolEffectType): CatalysisEffectType | null {

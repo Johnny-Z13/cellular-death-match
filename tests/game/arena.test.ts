@@ -1175,7 +1175,7 @@ describe('arena ecosystem mode', () => {
     expect(arena.getEcology().discoveries.noteIds).toContain('recipe_acid_water_foam');
     expect(arena.getEcology().signals.some((signal) => signal.includes('Foam Inversion'))).toBe(true);
     expect(arena.getDishEvents().some((event) => (
-      event.kind === 'caution' && event.label.includes('FOAM')
+      event.kind === 'caution' && /Foam reaction/.test(event.label)
     ))).toBe(true);
   });
 
@@ -1831,10 +1831,10 @@ describe('arena ecosystem mode', () => {
     expect(arena.applyTool('toxin', cell.center)).toBe(true);
 
     expect(arena.getToolEffects().some((effect) => effect.type === 'flare')).toBe(true);
-    expect(arena.getEcology().signals.some((signal) => signal.includes('REACTION FLARE'))).toBe(true);
+    expect(arena.getEcology().signals.some((signal) => signal.includes('Flare reaction'))).toBe(true);
     expect(arena.getEcology().discoveries.noteIds).toContain('recipe_acid_toxin_flare');
     expect(arena.getDishEvents().filter((event) => (
-      event.kind === 'critical' && event.label.includes('REACTION FLARE')
+      event.kind === 'critical' && event.label.includes('Flare reaction')
     ))).toHaveLength(2);
   });
 
@@ -1869,7 +1869,7 @@ describe('arena ecosystem mode', () => {
     expect(arena.applyTool('toxin', [cell.center[0] + 2, cell.center[1]])).toBe(true);
 
     const flareDiscoveries = arena.getEcology().discoveries.latest.filter((message) =>
-      message.includes('REACTION FLARE: Acid-Toxin Flare discovered.'),
+      message.includes('Flare reaction: Acid-Toxin Flare discovered.'),
     );
     expect(flareDiscoveries).toHaveLength(1);
     expect(arena.getEcology().reactions).toBeGreaterThanOrEqual(2);
@@ -2013,6 +2013,32 @@ describe('arena ecosystem mode', () => {
     )).toBe(true);
   });
 
+  it('counts a known strain reappearing in the dish without announcing it as new', () => {
+    const arena = createArena({
+      LX: 90,
+      LY: 90,
+      seed: 260,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3, nutrientCharges: 1 },
+      enemies: [
+        { archetype: 'swarmlet' as const, targetVol: 120, speed: 12, engulfMultiplier: 4 },
+        { archetype: 'splitter' as const, targetVol: 260, speed: 8, engulfMultiplier: 6 },
+      ],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 20,
+      knownBreedIds: new Set(['bloom_mass'] as const),
+    });
+    arena.state.cells.get(2)!.center = [42, 44];
+    arena.state.cells.get(3)!.center = [50, 44];
+
+    expect(arena.applyTool('nutrient', [46, 44])).toBe(true);
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+
+    expect(arena.getEcology().discoveries.breedIds).toContain('bloom_mass');
+    expect(arena.getEcology().signals.some((signal) => /new strain/i.test(signal))).toBe(false);
+    expect(arena.getDishEvents().some((event) => event.label.startsWith('NEW STRAIN'))).toBe(false);
+  });
+
   it('discovers Bloom Mass from close Swarmlet and Splitter cultures in nutrient medium', () => {
     const arena = createArena({
       LX: 90,
@@ -2042,7 +2068,7 @@ describe('arena ecosystem mode', () => {
     arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
 
     expect(arena.getEcology().discoveries.breedIds).toContain('bloom_mass');
-    expect(arena.getEcology().discoveries.latest[0]).toContain('NEW STRAIN CREATED: Bloom Mass');
+    expect(arena.getEcology().discoveries.latest[0]).toContain('New strain created: Bloom Mass');
     expect(arena.getDishEvents().some((event) =>
       event.label.includes('Bloom Mass') && event.kind === 'discovery' && event.color === 'cyan',
     )).toBe(true);
@@ -2586,7 +2612,7 @@ describe('arena ecosystem mode', () => {
     expect(arena.getDishEvents().some((event) =>
       event.kind === 'critical'
       && event.color === 'red'
-      && event.label.includes('REACTION'),
+      && /reaction/i.test(event.label),
     )).toBe(true);
   });
 

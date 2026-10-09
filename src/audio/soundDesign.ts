@@ -112,7 +112,7 @@ export function soundEventForDishSignal(kind: string, label: string): SoundEvent
   if (kind === 'discovery') return 'hidden_breed';
   if (kind === 'fold') return 'folding_fault';
   if (kind === 'stabilize') return 'water_stabilize';
-  if (label.includes('CRYSTAL') || label.includes('BRINE')) return 'salt_crystal';
+  if (/crystal|brine/i.test(label)) return 'salt_crystal';
   if (kind === 'critical') return 'catalytic_flare';
   if (kind === 'caution') return 'objective_warning';
   return null;

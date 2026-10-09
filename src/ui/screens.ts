@@ -1569,9 +1569,11 @@ function setSelectedButtonState(button: HTMLButtonElement, selected: boolean): v
   button.setAttribute('aria-selected', String(selected));
 }
 
+const REACTION_MESSAGE = /^(?:[A-Z][a-z]+ reaction|Reaction): .+ discovered\.$/;
+
 function tickerSpecialClassFor(message: string): string | null {
   if (
-    message.startsWith('NEW STRAIN CREATED')
+    message.startsWith('New strain created')
     || message.startsWith('New lifeform discovered')
     || message.startsWith('New lifeform catalogued')
   ) {
@@ -1579,7 +1581,7 @@ function tickerSpecialClassFor(message: string): string | null {
   }
   if (
     message.startsWith('New catalyst discovered')
-    || message.startsWith('REACTION')
+    || REACTION_MESSAGE.test(message)
     || message.startsWith('FOLDING FAULT')
   ) {
     return 'ticker-line-catalyst';

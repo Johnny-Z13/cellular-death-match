@@ -388,8 +388,8 @@
   animation: dish-label-in 180ms ease-out both;
 }
 
-.dish-label.is-below { transform: translate(-50%, 0); }
-.dish-label.is-center { transform: translate(-50%, -50%); }
+.dish-label.is-below,
+.dish-label.is-below-2 { transform: translate(-50%, 0); }
 
 .dish-label-dot {
   flex: none;
@@ -722,4 +722,20 @@
 .layout[data-screen="arena"].mobile-log-open .ticker-title::after {
   content: " · dish paused";
   color: rgba(216, 246, 242, 0.55);
+}
+
+/* Labels belong to the live dish: any overlay that covers it (strain
+   reveal, Options, Notebook, phone drawers) hides them rather than letting
+   tags float above the scrim. The paused badge steps aside for menus too. */
+.layout.menu-open .dish-labels,
+.layout.mobile-lifeforms-open .dish-labels,
+.layout.mobile-log-open .dish-labels,
+.layout:has(.fx-genome.fx-genome-show) .dish-labels,
+.layout:has(#screen-notebook.visible) .dish-labels {
+  visibility: hidden;
+}
+
+.layout.menu-open .simulation-paused-badge,
+.layout:has(#screen-notebook.visible) .simulation-paused-badge {
+  display: none;
 }

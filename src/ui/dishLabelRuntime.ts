@@ -1,13 +1,20 @@
 // Glue between the live arena and the dish label overlay: tracks when each
-// strain and event first appeared in this dish, the tapped culture, recent
-// culture sizes (for the inspect trend), and the current goal cultures. All
-// state is module-local and refreshed at DISH_LABEL_TUNING.updateMs, never
-// per frame.
+// event first appeared, which strains were just found, the tapped (or freshly
+// planted) culture, recent culture sizes (for the inspect trend), and the
+// current goal cultures. All state is module-local and refreshed at
+// DISH_LABEL_TUNING.updateMs, never per frame.
 import type { Arena } from '../game/arena';
 import { goalCultureIds } from '../game/goalTargets';
 import type { ObjectiveDef } from '../content/objectives';
+import { BREED_DEFS, REACTION_RECIPES } from '../content/catalysis';
 import { lifeformIdentityForSpawn } from '../content/lifeformIdentity';
-import { DISH_LABEL_TUNING, planDishLabels, type LabelCulture } from './dishLabels';
+import { displayColorForSpawn } from './render';
+import {
+  DISH_LABEL_TUNING,
+  planDishLabels,
+  type DishLabelPlacement,
+  type LabelCulture,
+} from './dishLabels';
 import type { DishInspectInfo, DishLabelOverlay } from './dishLabelOverlay';
 
 const CONTROL_COLOR: [number, number, number] = [186, 32, 42];
@@ -25,8 +32,8 @@ export interface DishLabelRuntimeOptions {
 
 export interface DishLabelRuntime {
   reset(nowMs: number): void;
-  /** Highlight the culture under a dish tap. */
-  ping(arena: Arena, gridPos: readonly [number, number], nowMs: number): void;
+  /** Name the culture under a tap, or a just-planted egg (longer hold). */
+  ping(arena: Arena, gridPos: readonly [number, number], nowMs: number, holdMs?: number): void;
   /** Refresh tags if due. Returns the goal culture ids for the renderer. */
   update(arena: Arena, objective: ObjectiveDef | null, nowMs: number): ReadonlySet<number>;
   /** Desktop hover inspect. Pass null to hide. */
@@ -35,18 +42,20 @@ export interface DishLabelRuntime {
   isEnabled(): boolean;
 }
 
+type CultureView = LabelCulture & { role: string; behavior: string };
+
 export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLabelRuntime {
   const { overlay, canvas, controlId, gridSize } = options;
   let enabled = true;
-  let dishStartMs = 0;
   let lastUpdateMs = Number.NEGATIVE_INFINITY;
   let pingId: number | null = null;
   let pingUntilMs = 0;
   let goalIds: ReadonlySet<number> = new Set();
   let hoverPos: readonly [number, number] | null = null;
   let hoverLocal: [number, number] = [0, 0];
-  const strainFirstSeen = new Map<string, number>();
+  let previous = new Map<string, DishLabelPlacement>();
   const eventFirstSeen = new Map<number, number>();
+  const freshStrains = new Map<string, number>();
   const volHistory = new Map<number, Array<[number, number]>>();
 
   function cultureAt(arena: Arena, pos: readonly [number, number]): number {
@@ -70,13 +79,13 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
     return 0;
   }
 
-  function cultureView(arena: Arena, id: number): Omit<LabelCulture, 'strainFirstSeenMs'> & { role: string; behavior: string } | null {
+  function cultureView(arena: Arena, id: number, nowMs: number): CultureView | null {
     const cell = arena.state.cells.get(id);
     if (!cell || cell.vol <= 0) return null;
     if (id === controlId) {
       return {
         id, strainKey: 'control', name: 'Control sample', color: CONTROL_COLOR,
-        center: cell.center, vol: cell.vol, isControl: true, isGoal: goalIds.has(id),
+        center: cell.center, vol: cell.vol, isControl: true, isGoal: goalIds.has(id), isNew: false,
         role: 'Reference culture',
         behavior: 'The red anchor. Cultures that drift close attack it.',
       };
@@ -84,15 +93,17 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
     const spawn = arena.archetypes.get(id);
     if (!spawn) return null;
     const identity = lifeformIdentityForSpawn(spawn);
+    const foundAt = freshStrains.get(identity.name);
     return {
       id,
       strainKey: spawn.breedId ?? spawn.archetype,
       name: identity.name,
-      color: identity.colors.primary,
+      color: displayColorForSpawn(spawn),
       center: cell.center,
       vol: cell.vol,
       isControl: false,
       isGoal: goalIds.has(id),
+      isNew: foundAt !== undefined && nowMs - foundAt <= DISH_LABEL_TUNING.newStrainMs,
       role: identity.role,
       behavior: identity.behavior,
     };
@@ -114,7 +125,7 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
       return;
     }
     const id = cultureAt(arena, hoverPos);
-    const view = id ? cultureView(arena, id) : null;
+    const view = id ? cultureView(arena, id, nowMs) : null;
     if (!view) {
       overlay.inspect(null);
       return;
@@ -130,22 +141,33 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
     }, hoverLocal[0], hoverLocal[1]);
   }
 
+  // Event text that names what the current goal asks for (its reaction or
+  // strain), so that callout is never crowded out by background churn.
+  function goalWordsFor(objective: ObjectiveDef | null): string[] {
+    if (!objective) return [];
+    const words: string[] = [];
+    const recipe = REACTION_RECIPES.find((candidate) => candidate.id === objective.recipeId);
+    if (recipe) words.push(recipe.name);
+    if (objective.breedId) words.push(BREED_DEFS[objective.breedId].name);
+    return words;
+  }
+
   return {
-    reset(nowMs) {
-      dishStartMs = nowMs;
+    reset() {
       lastUpdateMs = Number.NEGATIVE_INFINITY;
       pingId = null;
       goalIds = new Set();
       hoverPos = null;
-      strainFirstSeen.clear();
+      previous = new Map();
       eventFirstSeen.clear();
+      freshStrains.clear();
       volHistory.clear();
       overlay.clear();
     },
-    ping(arena, gridPos, nowMs) {
+    ping(arena, gridPos, nowMs, holdMs = PING_MS) {
       const id = cultureAt(arena, gridPos);
       pingId = id || null;
-      pingUntilMs = nowMs + PING_MS;
+      pingUntilMs = nowMs + holdMs;
       lastUpdateMs = Number.NEGATIVE_INFINITY;
     },
     update(arena, objective, nowMs) {
@@ -159,34 +181,38 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
       }
       goalIds = objective ? goalCultureIds(objective, candidates) : new Set();
 
+      const markers = arena.getDishEvents();
+      const liveEventIds = new Set<number>();
+      for (const marker of markers) {
+        liveEventIds.add(marker.id);
+        if (eventFirstSeen.has(marker.id)) continue;
+        eventFirstSeen.set(marker.id, nowMs);
+        // The arena only marks strains that are new to the player.
+        const found = /^NEW STRAIN:\s*(.+)$/.exec(marker.label);
+        if (found) freshStrains.set(found[1]!, nowMs);
+      }
+      for (const id of eventFirstSeen.keys()) if (!liveEventIds.has(id)) eventFirstSeen.delete(id);
+
       const cultures: LabelCulture[] = [];
       for (const [id, cell] of arena.state.cells) {
         if (cell.vol <= 0) {
           volHistory.delete(id);
           continue;
         }
-        const view = cultureView(arena, id);
+        const view = cultureView(arena, id, nowMs);
         if (!view) continue;
-        if (!strainFirstSeen.has(view.strainKey)) strainFirstSeen.set(view.strainKey, nowMs);
-        cultures.push({ ...view, strainFirstSeenMs: strainFirstSeen.get(view.strainKey)! });
+        cultures.push(view);
         const history = volHistory.get(id) ?? [];
         history.push([nowMs, cell.vol]);
         while (history.length > 0 && nowMs - history[0]![0] > TREND_WINDOW_MS * 2) history.shift();
         volHistory.set(id, history);
       }
 
-      const markers = arena.getDishEvents();
-      const liveEventIds = new Set<number>();
-      for (const marker of markers) {
-        liveEventIds.add(marker.id);
-        if (!eventFirstSeen.has(marker.id)) eventFirstSeen.set(marker.id, nowMs);
-      }
-      for (const id of eventFirstSeen.keys()) if (!liveEventIds.has(id)) eventFirstSeen.delete(id);
-
       if (pingId !== null && nowMs > pingUntilMs) pingId = null;
 
       if (enabled) {
         overlay.fitTo(canvas);
+        const goalWords = goalWordsFor(objective);
         const plan = planDishLabels({
           cultures,
           events: markers.map((marker) => ({
@@ -194,15 +220,17 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
             kind: marker.kind,
             label: marker.label,
             pos: marker.pos,
+            radius: marker.radius,
             ageMs: nowMs - (eventFirstSeen.get(marker.id) ?? nowMs),
+            isGoal: goalWords.some((word) => marker.label.includes(word)),
           })),
-          nowMs,
-          dishStartMs,
           gridSize,
           dishPx: canvas.getBoundingClientRect().width || 400,
           pingId,
           compact: options.isCompact(),
+          previous,
         });
+        previous = new Map(plan.map((label) => [label.key, label.placement]));
         overlay.render(plan);
         refreshHover(arena, nowMs);
       }

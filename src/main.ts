@@ -543,7 +543,8 @@ const dishLabels = createDishLabelRuntime({
   canvas,
   controlId: PLAYER_ID,
   gridSize: LX,
-  isCompact: () => window.matchMedia('(max-width: 899px)').matches,
+  // Phones get the shorter tag budget; tablets and wider get the full one.
+  isCompact: () => window.matchMedia('(max-width: 599px)').matches,
 });
 let dishGoalCellIds: ReadonlySet<number> = new Set();
 // Desktop: where a dropped field would land, shown as a ghost ring.
@@ -650,6 +651,8 @@ function applySelectedToolAt(pos: [number, number]): boolean {
     if (selectedTool === 'egg') {
       onboardingDishGuideTracksLastEgg = true;
       setOnboardingDishPointerTarget(arena.getLastEggCellPos() ?? pos, true);
+      // Name the culture the player just planted while it is still a speck.
+      dishLabels.ping(arena, arena.getLastEggCellPos() ?? pos, performance.now(), 2500);
     } else {
       // Once the first reagent lands, subsequent "same spot" instructions
       // follow that field rather than chasing a moving organism.
@@ -2766,12 +2769,12 @@ function updateTicker(ar: Arena): void {
 }
 
 function toneForTickerSignal(signal: string): 'normal' | 'discovery' | 'caution' | 'critical' {
-  if (signal.startsWith('NEW STRAIN CREATED')) return 'discovery';
+  if (signal.startsWith('New strain created')) return 'discovery';
   if (signal.startsWith('NEW BREED DISCOVERED')) return 'discovery';
-  if (signal.startsWith('REACTION FLARE') || signal.startsWith('FOLDING FAULT') || signal.startsWith('Crisis')) {
+  if (signal.startsWith('Flare reaction') || signal.startsWith('FOLDING FAULT') || signal.startsWith('Crisis')) {
     return 'critical';
   }
-  if (signal.startsWith('REACTION') || signal.startsWith('Lab accident') || signal.startsWith('CAUTION')) {
+  if (/^(?:[A-Z][a-z]+ reaction|Reaction): .+ discovered\.$/.test(signal) || signal.startsWith('Lab accident') || signal.startsWith('CAUTION')) {
     return 'caution';
   }
   if (signal.startsWith('Lab note') || signal.includes('mutation') || signal.includes('cultured')) return 'discovery';

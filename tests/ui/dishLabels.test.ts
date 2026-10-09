@@ -5,6 +5,8 @@ import {
   planDishLabels,
   type DishLabelInput,
   type LabelCulture,
+  type LabelEvent,
+  type PlannedLabel,
 } from '../../src/ui/dishLabels';
 
 function culture(overrides: Partial<LabelCulture> & Pick<LabelCulture, 'id'>): LabelCulture {
@@ -16,23 +18,44 @@ function culture(overrides: Partial<LabelCulture> & Pick<LabelCulture, 'id'>): L
     vol: 120,
     isControl: false,
     isGoal: false,
-    strainFirstSeenMs: 0,
+    isNew: false,
     ...overrides,
   };
+}
+
+function event(overrides: Partial<LabelEvent> & Pick<LabelEvent, 'id' | 'label'>): LabelEvent {
+  return { kind: 'caution', pos: [80, 80], radius: 12, ageMs: 100, isGoal: false, ...overrides };
 }
 
 function input(overrides: Partial<DishLabelInput> = {}): DishLabelInput {
   return {
     cultures: [],
     events: [],
-    nowMs: 60_000,
-    dishStartMs: 0,
     gridSize: 160,
     dishPx: 400,
     pingId: null,
     compact: false,
     ...overrides,
   };
+}
+
+const PX = 400 / 160;
+
+function labelRect(label: PlannedLabel) {
+  const w = label.text.length * DISH_LABEL_TUNING.charPx + DISH_LABEL_TUNING.chromePx + (label.icon ? 12 : 0);
+  const h = DISH_LABEL_TUNING.heightPx;
+  const x = (label.xPct / 100) * 400 - w / 2;
+  const anchor = (label.yPct / 100) * 400;
+  const y = label.placement.startsWith('above') ? anchor - h : anchor;
+  return { x, y, w, h };
+}
+
+function coversCulture(label: PlannedLabel, c: LabelCulture): boolean {
+  const r = Math.sqrt(c.vol / Math.PI) * PX;
+  const rect = labelRect(label);
+  const cx = c.center[0] * PX;
+  const cy = c.center[1] * PX;
+  return rect.x < cx + r && cx - r < rect.x + rect.w && rect.y < cy + r && cy - r < rect.y + rect.h;
 }
 
 describe('planDishLabels', () => {
@@ -74,32 +97,24 @@ describe('planDishLabels', () => {
     expect(goal.icon).toBe(DISH_LABEL_TUNING.icons.goal);
   });
 
-  it('announces a strain that appears mid-dish as new, but not the starting cast', () => {
+  it('marks a strain new only when the caller says it was just found', () => {
     const plan = planDishLabels(input({
-      nowMs: 20_000,
-      dishStartMs: 0,
       cultures: [
-        culture({ id: 2, strainFirstSeenMs: 200, center: [30, 30] }),
-        culture({ id: 3, strainKey: 'needle_swarm', name: 'Needle Swarm', strainFirstSeenMs: 18_000, center: [120, 120] }),
+        culture({ id: 2, center: [30, 30] }),
+        culture({ id: 3, strainKey: 'needle_swarm', name: 'Needle Swarm', isNew: true, center: [120, 120] }),
       ],
     }));
     expect(plan.find((label) => label.cultureId === 2)?.kind).toBe('strain');
     const fresh = plan.find((label) => label.cultureId === 3)!;
     expect(fresh.kind).toBe('new');
     expect(fresh.text).toBe('New · Needle Swarm');
-
-    const later = planDishLabels(input({
-      nowMs: 18_000 + DISH_LABEL_TUNING.newStrainMs + 1,
-      cultures: [culture({ id: 3, strainKey: 'needle_swarm', name: 'Needle Swarm', strainFirstSeenMs: 18_000 })],
-    }));
-    expect(later[0]!.kind).toBe('strain');
   });
 
-  it('pings the culture under a tap even when it is not its strain\'s largest', () => {
+  it('pings the culture under a tap (or a just-planted egg) even below the size floor', () => {
     const plan = planDishLabels(input({
       pingId: 2,
       cultures: [
-        culture({ id: 2, center: [20, 20], vol: 40 }),
+        culture({ id: 2, center: [20, 20], vol: 6 }),
         culture({ id: 3, center: [140, 140], vol: 400 }),
       ],
     }));
@@ -115,6 +130,7 @@ describe('planDishLabels', () => {
       strainKey: `strain-${index}`,
       name: `Strain ${index}`,
       center: [10 + (index % 4) * 40, 15 + Math.floor(index / 4) * 50],
+      vol: 40,
     }));
     expect(planDishLabels(input({ cultures: many, compact: true })).length).toBeLessThanOrEqual(DISH_LABEL_TUNING.maxTags.compact);
     expect(planDishLabels(input({ cultures: many })).length).toBeLessThanOrEqual(DISH_LABEL_TUNING.maxTags.wide);
@@ -126,15 +142,47 @@ describe('planDishLabels', () => {
         culture({ id: 2, strainKey: 'swarmlet', name: 'Swarmlet', center: [80, 80], vol: 120 }),
         culture({ id: 3, strainKey: 'bloom_mass', name: 'Bloom Mass', isGoal: true, center: [80, 80], vol: 100 }),
         culture({ id: 4, strainKey: 'bruiser', name: 'Bruiser', center: [80, 80], vol: 90 }),
+        culture({ id: 5, strainKey: 'sniper', name: 'Sniper', center: [80, 80], vol: 80 }),
+        culture({ id: 6, strainKey: 'mirror', name: 'Mirror', center: [80, 80], vol: 70 }),
       ],
     }));
-    expect(plan.map((label) => [label.text, label.placement])).toEqual([
-      ['Bloom Mass', 'above'],
-      ['Swarmlet', 'below'],
-    ]);
+    expect(plan[0]).toMatchObject({ text: 'Bloom Mass', placement: 'above' });
+    expect(plan.map((label) => label.text)).not.toContain('Mirror');
   });
 
-  it('keeps tags inside the dish at the edges, flipping below when there is no room above', () => {
+  it('falls back to a strain\'s next-largest culture when its largest has no room', () => {
+    const plan = planDishLabels(input({
+      cultures: [
+        culture({ id: 2, strainKey: 'bloom_mass', name: 'Bloom Mass', isGoal: true, center: [80, 80], vol: 100 }),
+        culture({ id: 3, strainKey: 'bruiser', name: 'Bruiser', center: [80, 80], vol: 90 }),
+        culture({ id: 4, strainKey: 'mirror', name: 'Mirror', center: [80, 80], vol: 85 }),
+        culture({ id: 5, strainKey: 'sniper', name: 'Sniper', center: [80, 80], vol: 80 }),
+        culture({ id: 6, strainKey: 'swarmlet', name: 'Swarmlet', center: [80, 80], vol: 70 }),
+        culture({ id: 7, strainKey: 'swarmlet', name: 'Swarmlet', center: [30, 140], vol: 40 }),
+      ],
+    }));
+    const swarmlet = plan.find((label) => label.text === 'Swarmlet');
+    expect(swarmlet?.cultureId).toBe(7);
+  });
+
+  it('keeps tags off culture bodies when a clear side is free', () => {
+    const cultures = [
+      culture({ id: 2, strainKey: 'swarmlet', name: 'Swarmlet', center: [80, 90], vol: 300 }),
+      culture({ id: 3, strainKey: 'bruiser', name: 'Bruiser', center: [80, 64], vol: 200 }),
+    ];
+    const plan = planDishLabels(input({ cultures }));
+    for (const label of plan) {
+      for (const c of cultures) expect(coversCulture(label, c), `${label.text} over ${c.name}`).toBe(false);
+    }
+  });
+
+  it('holds a tag\'s previous side so busy dishes do not flicker', () => {
+    const cultures = [culture({ id: 2, center: [80, 80], vol: 100 })];
+    const plan = planDishLabels(input({ cultures, previous: new Map([['strain-swarmlet', 'below']]) }));
+    expect(plan[0]!.placement).toBe('below');
+  });
+
+  it('keeps tags inside the dish at the edges', () => {
     const plan = planDishLabels(input({
       cultures: [
         culture({ id: 2, center: [1, 2], vol: 50 }),
@@ -147,39 +195,45 @@ describe('planDishLabels', () => {
       expect(label.yPct).toBeGreaterThanOrEqual(0);
       expect(label.yPct).toBeLessThanOrEqual(100);
     }
-    expect(plan.find((label) => label.cultureId === 2)?.placement).toBe('below');
-    expect(plan.find((label) => label.cultureId === 3)?.placement).toBe('above');
+    expect(plan.find((label) => label.cultureId === 2)?.placement.startsWith('below')).toBe(true);
+    expect(plan.find((label) => label.cultureId === 3)?.placement.startsWith('above')).toBe(true);
   });
 
-  it('shows at most two fresh event callouts, newest first, ahead of strain tags', () => {
+  it('puts callouts beside the event, never on top of the culture it names', () => {
+    const bloom = culture({ id: 5, strainKey: 'bloom_mass', name: 'Bloom Mass', isGoal: true, center: [80, 80], vol: 250 });
     const plan = planDishLabels(input({
-      cultures: [culture({ id: 2, center: [80, 84], vol: 200 })],
+      cultures: [bloom],
+      events: [event({ id: 9, kind: 'discovery', label: 'NEW STRAIN: Bloom Mass', pos: [80, 80], radius: 14 })],
+    }));
+    expect(plan).toHaveLength(1);
+    expect(plan[0]).toMatchObject({ kind: 'event', text: 'New strain: Bloom Mass' });
+    expect(coversCulture(plan[0]!, bloom)).toBe(false);
+  });
+
+  it('ranks the goal\'s own reaction first, folds duplicates and stacks same-spot callouts', () => {
+    const plan = planDishLabels(input({
       events: [
-        { id: 7, kind: 'critical', label: 'PREDATOR OUTBREAK', pos: [80, 80], ageMs: 400 },
-        { id: 8, kind: 'mutation', label: 'VISIBLE MUTATION', pos: [20, 140], ageMs: 100 },
-        { id: 9, kind: 'caution', label: 'ROGUE CHEMICAL', pos: [140, 20], ageMs: 900 },
-        { id: 10, kind: 'critical', label: 'PREDATOR OUTBREAK FLASH', pos: [80, 80], ageMs: 0 },
-        { id: 11, kind: 'stabilize', label: 'AGAR BLOOM', pos: [40, 40], ageMs: DISH_LABEL_TUNING.eventMs + 1 },
+        event({ id: 7, kind: 'mutation', label: 'VISIBLE MUTATION', pos: [80, 80], ageMs: 50 }),
+        event({ id: 8, kind: 'mutation', label: 'VISIBLE MUTATION', pos: [40, 40], ageMs: 60 }),
+        event({ id: 9, kind: 'stabilize', label: 'Reaction: Nutrient Conduit discovered.', pos: [80, 80], ageMs: 400, isGoal: true }),
+        event({ id: 10, kind: 'critical', label: 'Flare reaction: Bitter Bloom discovered. FLASH', pos: [80, 80], ageMs: 0 }),
+        event({ id: 11, kind: 'stabilize', label: 'AGAR BLOOM', pos: [40, 40], ageMs: DISH_LABEL_TUNING.eventMs + 1 }),
       ],
     }));
     const events = plan.filter((label) => label.kind === 'event');
-    expect(events.map((label) => label.text)).toEqual(['Mutation', 'Predator outbreak']);
-    expect(events[1]!.icon).toBe(DISH_LABEL_TUNING.icons.critical);
-    expect(events[1]!.placement).toBe('center');
-    // Callouts are planned (and therefore stacked) ahead of every tag.
-    expect(plan[0]!.kind).toBe('event');
-    expect(plan[1]!.kind).toBe('event');
+    expect(events.map((label) => label.text)).toEqual(['Reaction: Nutrient Conduit', 'Mutation']);
+    expect(events[0]!.placement).not.toBe(events[1]!.placement);
   });
 });
 
 describe('humanEventLabel', () => {
-  it('turns shouted marker labels into short sentence-case callouts', () => {
+  it('turns marker labels into short sentence-case callouts', () => {
     expect(humanEventLabel('PREDATOR OUTBREAK')).toBe('Predator outbreak');
     expect(humanEventLabel('VISIBLE MUTATION')).toBe('Mutation');
     expect(humanEventLabel('ROGUE CHEMICAL')).toBe('Rogue chemical');
     expect(humanEventLabel('NEW STRAIN: Bloom Mass')).toBe('New strain: Bloom Mass');
-    expect(humanEventLabel('REACTION FLARE: Bitter Bloom discovered.')).toBe('Reaction: Bitter Bloom');
-    expect(humanEventLabel('REACTION: Brine Channel discovered.')).toBe('Reaction: Brine Channel');
+    expect(humanEventLabel('Flare reaction: Bitter Bloom discovered.')).toBe('Reaction: Bitter Bloom');
+    expect(humanEventLabel('Reaction: Brine Channel discovered.')).toBe('Reaction: Brine Channel');
     expect(humanEventLabel('FOLDING FAULT: Folding Fault discovered.')).toBe('Folding fault');
     expect(humanEventLabel('FOLDING FAULT: Velvet Prison discovered.')).toBe('Folding fault: Velvet Prison');
     expect(humanEventLabel('WATER DILUTED ACID')).toBe('Water diluted acid');
@@ -187,6 +241,6 @@ describe('humanEventLabel', () => {
 
   it('suppresses the duplicate flash and spark markers', () => {
     expect(humanEventLabel('PREDATOR OUTBREAK FLASH')).toBeNull();
-    expect(humanEventLabel('REACTION FOAM: Foam Lightning discovered. SPARK')).toBeNull();
+    expect(humanEventLabel('Foam reaction: Foam Lightning discovered. SPARK')).toBeNull();
   });
 });
