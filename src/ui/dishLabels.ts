@@ -181,8 +181,9 @@ export function planDishLabels(input: DishLabelInput): PlannedLabel[] {
   const candidates: Candidate[] = [];
   if (ping) candidates.push({ key: `ping-${ping.id}`, kind: 'ping', cultures: [ping] });
   for (const [strainKey, list] of byStrain) {
+    // A ping already names this strain; one tag per name is enough.
+    if (ping && ping.strainKey === strainKey) continue;
     const cultures = list
-      .filter((c) => c.id !== ping?.id)
       .sort((a, b) => b.vol - a.vol)
       .slice(0, t.culturesPerStrain);
     if (cultures.length === 0) continue;
@@ -301,6 +302,9 @@ export function humanEventLabel(raw: string): string | null {
   const reaction = /^(?:[A-Z][a-z]+ reaction|Reaction):\s*(.+?) discovered\.?$/.exec(text);
   if (reaction) return `Reaction: ${reaction[1]}`;
   if (text === 'VISIBLE MUTATION') return 'Mutation';
+  // Field events are named so they can't be mistaken for the Bloom Mass strain.
+  if (text === 'AGAR BLOOM') return 'Fertile patch';
+  if (text === 'BLOOM REACTION') return 'Growth burst';
   if (text === 'ROGUE CHEMICAL') return 'Rogue chemical';
   if (text === text.toUpperCase()) return text.charAt(0) + text.slice(1).toLowerCase();
   return text;

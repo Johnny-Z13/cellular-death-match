@@ -5,6 +5,10 @@
 export const LESSON_RECOVERY_TUNING = {
   /** How long the lesson culture must stay dead before the rewind. */
   graceMs: 2500,
+  /** How long to watch for the lesson's result after the last taught step
+   *  before admitting it isn't coming (e.g. the culture drifted off the
+   *  field) and running the steps again. */
+  observeTimeoutMs: 15000,
 };
 
 export interface LessonWatch {
@@ -42,4 +46,27 @@ export function checkLessonCulture(
   if (state.nowMs - watch.lostAtMs < LESSON_RECOVERY_TUNING.graceMs) return 'watching';
   watchLessonCulture(watch, null);
   return 'rewind';
+}
+
+export interface ObserveWatch {
+  awaitingSinceMs: number | null;
+}
+
+export function createObserveWatch(): ObserveWatch {
+  return { awaitingSinceMs: null };
+}
+
+/** True exactly once when the lesson has waited for its result too long. */
+export function checkLessonStall(
+  watch: ObserveWatch,
+  state: { awaitingResult: boolean; resultReached: boolean; nowMs: number },
+): boolean {
+  if (!state.awaitingResult || state.resultReached) {
+    watch.awaitingSinceMs = null;
+    return false;
+  }
+  watch.awaitingSinceMs ??= state.nowMs;
+  if (state.nowMs - watch.awaitingSinceMs < LESSON_RECOVERY_TUNING.observeTimeoutMs) return false;
+  watch.awaitingSinceMs = null;
+  return true;
 }

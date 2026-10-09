@@ -121,7 +121,8 @@ describe('planDishLabels', () => {
     const ping = plan.find((label) => label.kind === 'ping')!;
     expect(ping.cultureId).toBe(2);
     expect(ping.text).toBe('Swarmlet');
-    expect(plan.filter((label) => label.cultureId === 2)).toHaveLength(1);
+    // The ping replaces the strain's own tag: never two "Swarmlet" tags.
+    expect(plan.filter((label) => label.text === 'Swarmlet')).toHaveLength(1);
   });
 
   it('caps strain tags: fewer on compact phones', () => {
@@ -237,6 +238,8 @@ describe('humanEventLabel', () => {
     expect(humanEventLabel('FOLDING FAULT: Folding Fault discovered.')).toBe('Folding fault');
     expect(humanEventLabel('FOLDING FAULT: Velvet Prison discovered.')).toBe('Folding fault: Velvet Prison');
     expect(humanEventLabel('WATER DILUTED ACID')).toBe('Water diluted acid');
+    expect(humanEventLabel('AGAR BLOOM')).toBe('Fertile patch');
+    expect(humanEventLabel('BLOOM REACTION')).toBe('Growth burst');
   });
 
   it('suppresses the duplicate flash and spark markers', () => {

@@ -9,7 +9,13 @@ import { getUpgradeDef, upgradeToolNote } from './content/upgrades';
 import { goalLineFor } from './content/goalCopy';
 import { createDishLabelOverlay } from './ui/dishLabelOverlay';
 import { createDishLabelRuntime } from './ui/dishLabelRuntime';
-import { checkLessonCulture, createLessonWatch, watchLessonCulture } from './game/lessonRecovery';
+import {
+  checkLessonCulture,
+  checkLessonStall,
+  createLessonWatch,
+  createObserveWatch,
+  watchLessonCulture,
+} from './game/lessonRecovery';
 import { COMMON_COLD_CASE, trialForIndex } from './content/researchCases';
 import { loadCaseRecord, recordCompletedTrial } from './game/caseRecord';
 import { ARCHETYPE_INFO, EGG_ARCHETYPES, type EnemyArchetype } from './content/enemies';
@@ -550,6 +556,7 @@ const dishLabels = createDishLabelRuntime({
 let dishGoalCellIds: ReadonlySet<number> = new Set();
 // The culture a guided lesson is built around (Trials 2-5, first time).
 const lessonWatch = createLessonWatch();
+const lessonObserveWatch = createObserveWatch();
 // Desktop: where a dropped field would land, shown as a ghost ring.
 let toolPreviewPos: [number, number] | null = null;
 const labelsButton = document.getElementById('labels-button');
@@ -1354,6 +1361,7 @@ function startNewFight() {
   dishLabels.reset(performance.now());
   dishGoalCellIds = new Set();
   watchLessonCulture(lessonWatch, null);
+  lessonObserveWatch.awaitingSinceMs = null;
   tickCount = 0;
   tickerState = createTickerState();
   cellFxTracker = createCellFxTracker();
@@ -2710,7 +2718,11 @@ function updateTicker(ar: Arena): void {
     screens.addTicker(signal, toneForTickerSignal(signal));
   }
 
+  // The first seconds of a dish are its starting state, not news: record
+  // the bands silently so the log never opens on an alarm.
+  const settling = tickCount <= 60 * 8;
   const controlSampleBand = controlSampleVol <= 35 ? 'critical' : controlSampleVol <= 140 ? 'thin' : controlSampleVol >= 650 ? 'surging' : 'stable';
+  if (settling) tickerState.lastControlSampleBand = controlSampleBand;
   if (controlSampleBand !== tickerState.lastControlSampleBand) {
     tickerState.lastControlSampleBand = controlSampleBand;
     if (controlSampleBand === 'critical') screens.addTicker('Control sample is near collapse.', 'critical');
@@ -2719,6 +2731,7 @@ function updateTicker(ar: Arena): void {
   }
 
   const lifeformBand = livingLifeforms === 0 ? 'extinct' : livingLifeforms < 3 ? 'thin' : livingLifeforms >= 7 ? 'blooming' : 'stable';
+  if (settling) tickerState.lastLifeformBand = lifeformBand;
   if (lifeformBand !== tickerState.lastLifeformBand) {
     tickerState.lastLifeformBand = lifeformBand;
     if (lifeformBand === 'extinct') screens.addTicker('Every culture has died.', 'critical');
@@ -2727,6 +2740,7 @@ function updateTicker(ar: Arena): void {
   }
 
   const coverageBand = coverage <= 0.08 ? 'sterile' : coverage >= 0.42 ? 'bloom' : 'normal';
+  if (settling) tickerState.lastCoverageBand = coverageBand;
   if (coverageBand !== tickerState.lastCoverageBand) {
     tickerState.lastCoverageBand = coverageBand;
     if (coverageBand === 'sterile') screens.addTicker('Dish is approaching sterility.', 'critical');
@@ -2865,9 +2879,25 @@ function recoverLostLessonCulture(ar: Arena, nowMs: number): void {
     cultureAlive: (ar.state.cells.get(lessonWatch.cellId ?? -1)?.vol ?? 0) > 0,
     nowMs,
   });
-  if (verdict !== 'rewind') return;
-  fx.showToast('catalyst', 'It didn’t take', 'That culture died. Plant another and run the steps again.');
-  screens.addTicker('Dr. E: The culture died before the result. Let’s run it again.', 'caution');
+  if (verdict === 'rewind') {
+    restartLesson('It didn’t take', 'That culture died. Plant another and run the steps again.');
+    return;
+  }
+  // The culture lived but the result never came (it drifted off the field,
+  // or the timing missed): don't leave the player watching forever.
+  const stalled = checkLessonStall(lessonObserveWatch, {
+    awaitingResult: coach.isAwaitingObjective() && !isOnboardingEpoch(run.getState().fightIndex),
+    resultReached: ar.getObjectiveProgress().complete,
+    nowMs,
+  });
+  if (stalled) restartLesson('No reaction yet', 'Let’s run the steps again — keep each drop right on the culture.');
+}
+
+function restartLesson(title: string, body: string): void {
+  watchLessonCulture(lessonWatch, null);
+  lessonObserveWatch.awaitingSinceMs = null;
+  fx.showToast('catalyst', title, body);
+  screens.addTicker(`Dr. E: ${title}. ${body}`, 'caution');
   coach.beginTrial(run.getState().fightIndex);
   updateButtonHint();
 }

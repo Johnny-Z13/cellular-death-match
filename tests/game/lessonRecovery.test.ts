@@ -3,6 +3,8 @@ import {
   LESSON_RECOVERY_TUNING,
   checkLessonCulture,
   createLessonWatch,
+  createObserveWatch,
+  checkLessonStall,
   watchLessonCulture,
 } from '../../src/game/lessonRecovery';
 
@@ -37,5 +39,25 @@ describe('guided lesson recovery', () => {
     watchLessonCulture(watch, 7);
     expect(checkLessonCulture(watch, { ...live, cultureAlive: false, lessonActive: false })).toBe('idle');
     expect(watch.cellId).toBeNull();
+  });
+});
+
+describe('guided lesson stall', () => {
+  it('fires once after waiting too long for the lesson result', () => {
+    const watch = createObserveWatch();
+    const waiting = { awaitingResult: true, resultReached: false };
+    expect(checkLessonStall(watch, { ...waiting, nowMs: 0 })).toBe(false);
+    expect(checkLessonStall(watch, { ...waiting, nowMs: LESSON_RECOVERY_TUNING.observeTimeoutMs - 1 })).toBe(false);
+    expect(checkLessonStall(watch, { ...waiting, nowMs: LESSON_RECOVERY_TUNING.observeTimeoutMs })).toBe(true);
+    expect(checkLessonStall(watch, { ...waiting, nowMs: LESSON_RECOVERY_TUNING.observeTimeoutMs + 10 })).toBe(false);
+  });
+
+  it('resets when the result lands or the wait ends', () => {
+    const watch = createObserveWatch();
+    checkLessonStall(watch, { awaitingResult: true, resultReached: false, nowMs: 0 });
+    expect(checkLessonStall(watch, { awaitingResult: true, resultReached: true, nowMs: 20_000 })).toBe(false);
+    checkLessonStall(watch, { awaitingResult: true, resultReached: false, nowMs: 30_000 });
+    expect(checkLessonStall(watch, { awaitingResult: false, resultReached: false, nowMs: 50_000 })).toBe(false);
+    expect(watch.awaitingSinceMs).toBeNull();
   });
 });
