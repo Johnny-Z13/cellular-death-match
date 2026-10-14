@@ -40,7 +40,7 @@ export interface FaceParams {
 const NEUTRAL: FaceParams = {
   bodyRadius: 0.36, squash: 0, eyeSpacing: 0.14, eyeY: -0.07, eyeRadius: 0.075, eyeOpen: 1,
   pupilX: 0, pupilY: 0, browLift: 0, browTilt: 0,
-  mouthY: 0.14, mouthWidth: 0.1, mouthCurve: 0.25, mouthOpen: 0, cheeks: 0,
+  mouthY: 0.14, mouthWidth: 0.11, mouthCurve: 0.45, mouthOpen: 0, cheeks: 0.2,
 };
 
 export const FACE_EXPRESSIONS: Record<FaceExpressionId, FaceParams> = {
@@ -68,30 +68,37 @@ export interface FaceDirection {
   eyeScale: number; // eye size relative to FaceParams.eyeRadius
   eyeLift: number; // raises the eyes toward the rim (fused-on eye cells)
   bodyCells: number; // >1 splits the body into this many fused sub-cells
+  bodyPalette: Rgb[] | null; // sub-cell colours, in turn; null: shades of `body`
 }
 
 export const FACE_DIRECTIONS: Record<FaceDirectionId, FaceDirection> = {
   merge: {
     id: 'merge', name: 'The merge he is', note: 'Green body, two red cells fused on as eyes: the shape from the title dish.',
     body: [72, 226, 112], eye: [255, 78, 164], pupil: [12, 18, 20], mouth: [10, 24, 16], cheek: [255, 140, 170],
-    brow: null, lens: null, eyeScale: 1.6, eyeLift: 0.1, bodyCells: 1,
+    brow: null, lens: null, eyeScale: 1.6, eyeLift: 0.1, bodyCells: 1, bodyPalette: null,
   },
   blob: {
     id: 'blob', name: 'Single-cell blob', note: 'One soft culture; the eyes and mouth are gaps in its membrane.',
-    body: [91, 233, 214], eye: [4, 8, 10], pupil: [220, 255, 250], mouth: [4, 8, 10], cheek: [255, 170, 120],
-    brow: [40, 140, 130], lens: null, eyeScale: 1, eyeLift: 0, bodyCells: 1,
+    body: [91, 233, 214], eye: [236, 250, 248], pupil: [6, 14, 16], mouth: [6, 14, 16], cheek: [255, 150, 160],
+    brow: [16, 62, 58], lens: null, eyeScale: 1, eyeLift: 0, bodyCells: 1, bodyPalette: null,
   },
   loupe: {
     id: 'loupe', name: 'The loupe', note: 'The blob with one big glass lens for an eye, the old Dr. E\'s signature.',
-    body: [91, 233, 214], eye: [4, 8, 10], pupil: [220, 255, 250], mouth: [4, 8, 10], cheek: [255, 170, 120],
-    brow: [40, 140, 130], lens: [240, 195, 90], eyeScale: 1, eyeLift: 0, bodyCells: 1,
+    body: [91, 233, 214], eye: [236, 250, 248], pupil: [6, 14, 16], mouth: [6, 14, 16], cheek: [255, 150, 160],
+    brow: [16, 62, 58], lens: [240, 195, 90], eyeScale: 1, eyeLift: 0, bodyCells: 1, bodyPalette: null,
   },
   colony: {
-    id: 'colony', name: 'Colony face', note: 'Several fused cells make one creature, like a Pokémon made of bubbles.',
-    body: [132, 113, 255], eye: [230, 240, 255], pupil: [12, 18, 20], mouth: [40, 20, 70], cheek: [255, 140, 190],
+    id: 'colony', name: 'Colony face', note: 'Cells of several strains fused into one creature: Dr. E is a merge of friends.',
+    body: [91, 233, 214], eye: [236, 250, 248], pupil: [6, 14, 16], mouth: [10, 18, 24], cheek: [255, 120, 170],
     brow: null, lens: null, eyeScale: 1.2, eyeLift: 0, bodyCells: 6,
+    // Swarmlet cyan, the bio teal, Splitter green, Mirror violet: his friends' colours.
+    bodyPalette: [[91, 233, 214], [72, 201, 255], [72, 226, 112], [91, 233, 214], [132, 113, 255], [72, 201, 255]],
   },
 };
+
+// The direction the game uses: Dr. E as a colony of his friends' cells.
+// The other three stay in the look test for comparison.
+export const DR_E_DIRECTION: FaceDirectionId = 'colony';
 
 export interface DrEFaceTuning {
   gridSize: number; // face grid cells across
@@ -105,6 +112,9 @@ export interface DrEFaceTuning {
   blinkMs: number;
   breathHz: number;
   breathSquash: number;
+  coreShade: number; // how much darker a body cell is at its centre than at its membrane
+  membraneLight: number; // lightening of the outer membrane, like a culture's edge in the dish
+  seamLight: number; // lightening where two fused body cells meet
   talkMouthGain: number; // how far a full-volume syllable opens the mouth
   talkBounce: number; // squash added by a full-volume syllable
   blendMs: number; // expression change time
@@ -113,5 +123,6 @@ export interface DrEFaceTuning {
 export const DR_E_FACE: DrEFaceTuning = {
   gridSize: 40, wobble: 0.04, wobbleHz: 0.5, flicker: 0.12, flickerMs: 90, shimmer: 0.08,
   blinkMinMs: 2000, blinkMaxMs: 6000, blinkMs: 140, breathHz: 0.25, breathSquash: 0.02,
+  coreShade: 0.42, membraneLight: 0.38, seamLight: 0.2,
   talkMouthGain: 0.9, talkBounce: 0.05, blendMs: 150,
 };

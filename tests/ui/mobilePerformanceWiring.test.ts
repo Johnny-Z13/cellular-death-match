@@ -11,7 +11,9 @@ describe('mobile performance wiring', () => {
     expect(mainSource).toContain('shouldRenderFrame(lastRenderAt, now, visualProfile.targetRenderFps)');
     expect(mainSource).toContain('const ticksToRun = holdingForFirstInstruction ? 0 : simClock.consumeTicks(now);');
     expect(mainSource).toContain('additiveBloom: visualProfile.additiveBloom');
-    expect(renderSource).toContain('if (additiveBloom) {');
+    // The additive pass lives in the bloom helper the dish shares with Dr. E.
+    expect(renderSource).toContain('drawBloomLayers(ctx, offscreen!, canvas.width, canvas.height, additiveBloom);');
+    expect(renderSource).toContain('if (additive) {');
   });
 
   it('resets wall-clock time and ambience when the page is backgrounded', () => {

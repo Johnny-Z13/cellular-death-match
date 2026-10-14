@@ -1,0 +1,22 @@
+/* src/dev/devLab.css: shared by the dev-only look test and Voice Lab. */
+:root { --void: #04080a; --panel: rgba(9, 16, 19, 0.72); --hairline: rgba(120, 196, 200, 0.16); --bio: #5be9d6; --text: #e7f6f4; --muted: #8fb3b1; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--void); color: var(--text); font: 14px/1.5 'IBM Plex Mono', ui-monospace, monospace; }
+.lab { max-width: 1400px; margin: 0 auto; padding: 24px 16px 48px; }
+.lab-head h1 { font: 22px 'Michroma', sans-serif; letter-spacing: 0.08em; color: var(--bio); margin: 0 0 4px; }
+.lab-head p, .look-label p, figcaption, .lab-readout { color: var(--muted); }
+.lab-actions, .lab-presets, .lab-profiles { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+button, select, input, textarea { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 8px 12px; }
+button:hover, button:focus-visible, button[aria-pressed='true'] { border-color: var(--bio); outline: none; }
+textarea { width: 100%; }
+.look-row { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; padding: 16px 0; border-top: 1px solid var(--hairline); }
+.look-label { width: 260px; }
+.look-label h2 { font-size: 15px; margin: 0; }
+figure { margin: 0; display: grid; justify-items: center; gap: 6px; }
+canvas.dre-face { image-rendering: pixelated; }
+.lab-stage { display: grid; justify-items: start; gap: 12px; padding: 16px 0; }
+.lab-bubble { max-width: 60ch; min-height: 3em; margin: 0; padding: 12px 16px; border: 1px solid var(--hairline); border-radius: 16px; background: var(--panel); font: 18px/1.4 'Newsreader', Georgia, serif; }
+.lab-bubble .hidden { visibility: hidden; }
+.lab-sliders { display: grid; gap: 8px; max-width: 560px; }
+.lab-sliders label { display: grid; grid-template-columns: 170px 1fr 56px; align-items: center; gap: 12px; }
+.lab-json { white-space: pre-wrap; color: var(--bio); }

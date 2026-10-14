@@ -100,6 +100,38 @@ function lighten(c: Uint8ClampedArray, factor: number): Uint8ClampedArray {
   ]);
 }
 
+/** The dish's bloom: a blurred glow underlay, the crisp cell pixels on top,
+ *  then a faint additive glow. `source` is the grid-sized image; the dish and
+ *  Dr. E's face both paint through here so they share one light. */
+export function drawBloomLayers(
+  ctx: CanvasRenderingContext2D,
+  source: CanvasImageSource,
+  width: number,
+  height: number,
+  additive: boolean,
+): void {
+  const supportsFilter = typeof ctx.filter === 'string';
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  if (supportsFilter) ctx.filter = `blur(${Math.max(3, width / 90)}px)`;
+  ctx.globalAlpha = 0.9;
+  ctx.drawImage(source, 0, 0, width, height);
+  ctx.restore();
+
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(source, 0, 0, width, height);
+
+  if (additive) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.imageSmoothingEnabled = true;
+    if (supportsFilter) ctx.filter = `blur(${Math.max(2, width / 160)}px)`;
+    ctx.globalAlpha = 0.18;
+    ctx.drawImage(source, 0, 0, width, height);
+    ctx.restore();
+  }
+}
+
 export function createRenderer(
   canvas: HTMLCanvasElement,
   nCells: number,
@@ -119,7 +151,6 @@ export function createRenderer(
   const reduceMotion = typeof window !== 'undefined'
     && typeof window.matchMedia === 'function'
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const supportsCanvasFilter = typeof ctx.filter === 'string';
   const additiveBloom = options.additiveBloom !== false;
 
   return {
@@ -176,25 +207,7 @@ export function createRenderer(
       // canvas filter; without ctx.filter the bilinear upscale of the low-res
       // grid still softens the halo.
       ctx.drawImage(agarFor(canvas.width, canvas.height), 0, 0);
-      ctx.save();
-      ctx.imageSmoothingEnabled = true;
-      if (supportsCanvasFilter) ctx.filter = `blur(${Math.max(3, canvas.width / 90)}px)`;
-      ctx.globalAlpha = 0.9;
-      ctx.drawImage(offscreen!, 0, 0, canvas.width, canvas.height);
-      ctx.restore();
-
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(offscreen!, 0, 0, canvas.width, canvas.height);
-
-      if (additiveBloom) {
-        ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.imageSmoothingEnabled = true;
-        if (supportsCanvasFilter) ctx.filter = `blur(${Math.max(2, canvas.width / 160)}px)`;
-        ctx.globalAlpha = 0.18;
-        ctx.drawImage(offscreen!, 0, 0, canvas.width, canvas.height);
-        ctx.restore();
-      }
+      drawBloomLayers(ctx, offscreen!, canvas.width, canvas.height, additiveBloom);
 
       const flash = dishFlashForEvents(dishEvents, reduceMotion);
       if (flash) {
