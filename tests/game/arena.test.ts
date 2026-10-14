@@ -1741,6 +1741,30 @@ describe('arena ecosystem mode', () => {
     expect(bruiser.intent.vec[0]).toBeGreaterThan(0.9);
   });
 
+  it('evolves no breeds when breed discovery is off (the title screen dish)', () => {
+    for (const [breedDiscovery, discovers] of [[true, true], [false, false]] as const) {
+      const arena = createArena({
+        LX: 100,
+        LY: 100,
+        seed: 41,
+        player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+        // A sniper beside two swarmlets is the tool-free Needle Swarm recipe.
+        enemies: [
+          { archetype: 'sniper' as const, targetVol: 160, speed: 12, engulfMultiplier: 1 },
+          { archetype: 'swarmlet' as const, targetVol: 150, speed: 12, engulfMultiplier: 4 },
+          { archetype: 'swarmlet' as const, targetVol: 150, speed: 12, engulfMultiplier: 4 },
+        ],
+        wrap: false,
+        mode: 'ecosystem',
+        breedDiscovery,
+      });
+      for (let t = 0; t < 3; t++) arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+
+      expect(arena.getEcology().discoveries.breedIds.includes('needle_swarm')).toBe(discovers);
+      expect([...arena.archetypes.values()].some((spawn) => spawn.breedId)).toBe(discovers);
+    }
+  });
+
   it('keeps reseeding after more cultures have died than the population cap', () => {
     const arena = createArena({
       LX: 120,

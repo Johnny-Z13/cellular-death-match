@@ -200,6 +200,9 @@ export interface CreateArenaOpts {
   fightIndex?: number;
   knownBreedIds?: ReadonlySet<BreedId>;
   lifeCycle?: LifeCycleProfileId;
+  /** False keeps the dish from evolving breeds (the title screen's dish must
+   *  not reveal strains the player has yet to find). */
+  breedDiscovery?: boolean;
 }
 
 const PLAYER_ID = 1;
@@ -291,6 +294,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
   const effectiveAccidentInterval = Math.max(60, Math.round(ACCIDENT_INTERVAL_TICKS * esc.accidentIntervalMul));
   const effectiveOutbreakCount = esc.outbreakSeverity;
   const includeControlSample = opts.includeControlSample ?? true;
+  const breedDiscovery = opts.breedDiscovery ?? true;
   // The first epoch with the control sample removed is the coach-driven
   // onboarding dish (Swarmlet + Nutrient only, tutorial owns its ending).
   const isOnboardingDish = fightIndex === 0 && !includeControlSample;
@@ -1032,9 +1036,11 @@ export function createArena(opts: CreateArenaOpts): Arena {
           accidentCount += 1;
           while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
         }
-        evaluateBreedDiscoveries(state, archetypes, toolEffects, new Set([...knownBreedIds, ...discoveredBreedIds]), (id, sourceCell) => {
-          discoverBreed(this, id, sourceCell);
-        }, isOnboardingDish);
+        if (breedDiscovery) {
+          evaluateBreedDiscoveries(state, archetypes, toolEffects, new Set([...knownBreedIds, ...discoveredBreedIds]), (id, sourceCell) => {
+            discoverBreed(this, id, sourceCell);
+          }, isOnboardingDish);
+        }
       }
       decayDishEvents();
 

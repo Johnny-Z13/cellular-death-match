@@ -96,7 +96,7 @@ import {
   saveResearchArchiveVerified,
   type ResearchArchiveState,
 } from './game/researchArchive';
-import { createTitleAutomata } from './ui/titleAutomata';
+import { createTitleDish } from './ui/titleDish';
 import { playStudioIdent } from './ui/studioIdent';
 import { createHaptics } from './ui/haptics';
 import {
@@ -206,7 +206,6 @@ if (
 const haptics = createHaptics();
 const fx = createFx();
 const coach = createCoach(runtimeStorage);
-createTitleAutomata();
 
 // Publish the HUD's live bottom edge so the Professor's transmission rail can
 // use the quiet band above the dish without colliding with wrapped status copy.
@@ -282,6 +281,7 @@ const strainLibrary: StrainLibrary = createStrainLibrary(discoveryStorage);
 let pendingGenomeDecodeIds: LifeformIdentityId[] = [];
 // Allow up to PALETTE_SIZE total cell colors for evolving ecosystem spawns.
 const PALETTE_SIZE = 32;
+createTitleDish(visualProfile, PALETTE_SIZE);
 
 let arena: Arena | null = null;
 let renderer: Renderer | null = null;
