@@ -21,7 +21,8 @@ test('keeps objective status in Dr. E’s rail when authored coaching is inactiv
   await expect(page.locator('#hud-director-progress')).toContainText('Bloom Mass');
   await expect(page.locator('#hud-objective')).toContainText('Culture Shock');
   await expect(page.locator('#hud-hint')).toContainText('Swarmlet');
-  await expect.poll(() => director.locator('img').evaluate((image) => (image as HTMLImageElement).complete)).toBe(true);
+  // Dr. E's live cell face has painted in the director slot.
+  await expect(director.locator('canvas.dre-face')).toHaveAttribute('data-drawn', '1');
 
   const hudBox = await page.locator('#hud').boundingBox();
   const dishBox = await page.locator('#game').boundingBox();
