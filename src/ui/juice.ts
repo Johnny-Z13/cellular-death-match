@@ -3,6 +3,7 @@
 // This core (store + visual math) is DOM-free so it unit-tests in node;
 // createJuice (added separately) wraps it with canvas drawing.
 import type { ToolId } from './screens';
+import type { DishGrid } from './dishShape';
 
 export type BurstKind = 'birth' | 'death' | 'discovery';
 export type ShakeIntensity = 'soft' | 'hard';
@@ -155,7 +156,7 @@ export interface Juice {
   draw(): void;
 }
 
-export function createJuice(canvas: HTMLCanvasElement, LX: number, LY: number): Juice {
+export function createJuice(canvas: HTMLCanvasElement, grid: () => DishGrid): Juice {
   const store = createJuiceStore();
   const reduceMotion = typeof window !== 'undefined'
     && typeof window.matchMedia === 'function'
@@ -181,6 +182,7 @@ export function createJuice(canvas: HTMLCanvasElement, LX: number, LY: number): 
       if (!ctx) return;
       const now = performance.now();
       stepJuice(store, now);
+      const { LX, LY } = grid();
       const sx = canvas.width / LX;
       const sy = canvas.height / LY;
       const rs = (sx + sy) / 2;

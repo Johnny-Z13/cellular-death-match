@@ -35,6 +35,8 @@ test('keeps the Petri dish playable and core controls usable', async ({ page }, 
       bodyScrollWidth: document.body.scrollWidth,
       dish: { left: dish.left, right: dish.right, top: dish.top, bottom: dish.bottom, width: dish.width, height: dish.height },
       visualQuality: layout.dataset.visualQuality,
+      // A wide dish is 213 x 120 sites; the square one is 160 x 160.
+      dishAspect: document.documentElement.dataset.dish === 'wide' ? 213 / 120 : 1,
     };
   });
 
@@ -45,7 +47,7 @@ test('keeps the Petri dish playable and core controls usable', async ({ page }, 
   expect(metrics.dish.top).toBeGreaterThanOrEqual(-1);
   expect(metrics.dish.bottom).toBeLessThanOrEqual(metrics.viewport.height + 1);
   expect(metrics.dish.width).toBeGreaterThanOrEqual(minimumDishSize[testInfo.project.name]!);
-  expect(Math.abs(metrics.dish.width - metrics.dish.height)).toBeLessThanOrEqual(2);
+  expect(Math.abs(metrics.dish.width / metrics.dish.height - metrics.dishAspect)).toBeLessThan(0.02);
   expect(Math.abs((metrics.dish.left + metrics.dish.right) / 2 - metrics.viewport.width / 2)).toBeLessThanOrEqual(2);
   if (testInfo.project.name === 'desktop') expect(metrics.visualQuality).toBe('desktop');
   else expect(metrics.visualQuality).toMatch(/^mobile-/);

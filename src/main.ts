@@ -120,12 +120,18 @@ import {
 import { isObjectiveFeasible, type StudyCapabilities } from './game/objectivePool';
 import { dishExitState } from './game/dishExitAction';
 import { studyIntroductionRoute } from './ui/studyIntroduction';
+import { dishGridFor, dishLayoutFor, type DishLayout } from './ui/dishShape';
 import { isCrazyGamesEnvironment } from './platform/crazyGames';
 
 declare const __COMMIT_MESSAGE__: string;
 
-const LX = 160;
-const LY = 160;
+// The dish's shape is chosen at each trial start from the layout, and the
+// layout follows the window (ui/dishShape.ts). ?layout=wide|classic forces one.
+const LAYOUT_OVERRIDE = new URLSearchParams(window.location.search).get('layout');
+let dishLayout: DishLayout = dishLayoutFor(window.innerWidth, window.innerHeight, LAYOUT_OVERRIDE);
+let { LX, LY } = dishGridFor(dishLayout);
+document.documentElement.dataset.layout = dishLayout;
+document.documentElement.dataset.dish = LX === LY ? 'square' : 'wide';
 const PLAYER_ID = 1;
 // Epoch ticks now comes from escalation.ts via arena's fightIndex.
 const PASTE_CURSOR_RADIUS = 9; // grid units; mirrors TOOL_TUNING.paste.radius for the draw cursor glow
@@ -142,7 +148,7 @@ const layoutMaybe = document.querySelector('.layout');
 if (!(layoutMaybe instanceof HTMLElement)) throw new Error('Missing .layout');
 const layout: HTMLElement = layoutMaybe;
 let visualProfile = performanceProfileFor(browserPerformanceSignals());
-applyCanvasProfile(canvas, visualProfile);
+applyCanvasProfile(canvas, visualProfile, { LX, LY });
 layout.dataset.visualQuality = visualProfile.id;
 layout.dataset.diagnostics = String(new URLSearchParams(window.location.search).has('physdebug'));
 const commitDebug = document.getElementById('commit-debug');
@@ -357,7 +363,7 @@ function refreshVisualPerformanceProfile(): void {
   const profileChanged = next.id !== visualProfile.id;
   visualProfile = next;
   layout.dataset.visualQuality = next.id;
-  const canvasChanged = applyCanvasProfile(canvas, next);
+  const canvasChanged = applyCanvasProfile(canvas, next, { LX, LY });
   if ((profileChanged || canvasChanged) && arena) {
     renderer = createRenderer(canvas, PALETTE_SIZE, {
       additiveBloom: next.additiveBloom,
@@ -369,6 +375,10 @@ function refreshVisualPerformanceProfile(): void {
 function schedulePerformanceProfileRefresh(): void {
   window.cancelAnimationFrame(performanceResizeFrame);
   performanceResizeFrame = window.requestAnimationFrame(() => {
+    // The layout follows the window at once; the dish keeps its shape until
+    // the next trial starts.
+    dishLayout = dishLayoutFor(window.innerWidth, window.innerHeight, LAYOUT_OVERRIDE);
+    document.documentElement.dataset.layout = dishLayout;
     refreshVisualPerformanceProfile();
     syncOnboardingPointer();
   });
@@ -557,7 +567,7 @@ document.addEventListener('fullscreenchange', () => {
 canvas.addEventListener('animationend', () => {
   canvas.classList.remove('dish-shake', 'dish-shake-soft');
 });
-const juice = createJuice(canvas, LX, LY);
+const juice = createJuice(canvas, () => ({ LX, LY }));
 const DISH_LABELS_KEY = 'cdm.dish-labels.v1';
 const dishLabelOverlay = createDishLabelOverlay(
   document.getElementById('dish-labels')!,
@@ -567,7 +577,6 @@ const dishLabels = createDishLabelRuntime({
   overlay: dishLabelOverlay,
   canvas,
   controlId: PLAYER_ID,
-  gridSize: LX,
   // Phones get the shorter tag budget; tablets and wider get the full one.
   isCompact: () => window.matchMedia('(max-width: 599px)').matches,
   obstacles: [document.getElementById('notebook-button')!, document.getElementById('preview-exit')!],
@@ -1360,6 +1369,9 @@ function startNewFight() {
   const runState = run.getState();
   const useOnboardingDish = shouldUseOnboardingDishForCurrentStage(runState.fightIndex, false);
   const enemies = useOnboardingDish ? run.getOnboardingSpawnList() : run.getEpochSpawnList();
+  ({ LX, LY } = dishGridFor(dishLayout));
+  document.documentElement.dataset.dish = LX === LY ? 'square' : 'wide';
+  applyCanvasProfile(canvas, visualProfile, { LX, LY });
   arena = createArena({
     LX,
     LY,
@@ -1506,7 +1518,7 @@ function focusStudyStart(
       return;
     }
 
-    const exactControl = authoredTrial.number === 2 && compactViewport
+    const exactControl = authoredTrial.number === 2 && panelsInDrawers()
       ? document.getElementById('mobile-lifeforms-toggle')
       : authoredTrial.number === 2
         ? document.querySelector<HTMLElement>('[data-lifeform-id="bloom_mass"]')
@@ -1515,9 +1527,15 @@ function focusStudyStart(
   });
 }
 
+// Phones and the wide layout keep the eggs and the log in drawers; the
+// classic desktop layout shows them as fixed side panels.
+function panelsInDrawers(): boolean {
+  return dishLayout === 'wide' || window.matchMedia('(max-width: 899px)').matches;
+}
+
 function blockingOverlayOpen(): boolean {
   if (overlayState.menuOpen || overlayState.notebookOpen) return true;
-  if (!window.matchMedia('(max-width: 899px)').matches) return false;
+  if (!panelsInDrawers()) return false;
   return layout.dataset.mobileDrawer === 'lifeforms' || layout.dataset.mobileDrawer === 'log';
 }
 
@@ -2172,7 +2190,7 @@ function setOnboardingDishPointerTarget(pos: [number, number], besideEgg = false
 function onboardingControlForTarget(target: string): HTMLElement | null {
   if (target === 'dish') return canvas;
   const needsMobileDrawer = target.startsWith('lifeform:')
-    && window.matchMedia('(max-width: 899px)').matches
+    && panelsInDrawers()
     && layout.dataset.mobileDrawer !== 'lifeforms';
   const selector = needsMobileDrawer
     ? '#mobile-lifeforms-toggle'

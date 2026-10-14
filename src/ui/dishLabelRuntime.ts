@@ -30,7 +30,6 @@ export interface DishLabelRuntimeOptions {
   overlay: DishLabelOverlay;
   canvas: HTMLCanvasElement;
   controlId: number;
-  gridSize: number;
   isCompact: () => boolean;
   /** Fixed controls that sit over the dish; tags keep clear of them. */
   obstacles?: readonly HTMLElement[];
@@ -51,7 +50,7 @@ export interface DishLabelRuntime {
 type CultureView = LabelCulture & { role: string; behavior: string };
 
 export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLabelRuntime {
-  const { overlay, canvas, controlId, gridSize } = options;
+  const { overlay, canvas, controlId } = options;
   let enabled = true;
   let lastUpdateMs = Number.NEGATIVE_INFINITY;
   let pingId: number | null = null;
@@ -80,7 +79,7 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
   function cultureAt(arena: Arena, pos: readonly [number, number]): number {
     // Nearest owned pixel within a small radius, so a tap on the rim of a
     // thin culture still finds it.
-    const { cells, LY } = arena.state.grid;
+    const { cells, LX, LY } = arena.state.grid;
     const cx = Math.round(pos[0]);
     const cy = Math.round(pos[1]);
     for (let r = 0; r <= 3; r++) {
@@ -89,7 +88,7 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
           if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
           const x = cx + dx;
           const y = cy + dy;
-          if (x < 0 || y < 0 || x >= gridSize || y >= gridSize) continue;
+          if (x < 0 || y < 0 || x >= LX || y >= LY) continue;
           const id = cells[x * LY + y] ?? 0;
           if (id !== 0) return id;
         }
@@ -245,7 +244,7 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
             ageMs: nowMs - (eventFirstSeen.get(marker.id) ?? nowMs),
             isGoal: goalWords.some((word) => marker.label.includes(word)),
           })),
-          gridSize,
+          gridSize: arena.state.grid.LX,
           dishPx: box.width || 400,
           pingId,
           compact: options.isCompact(),

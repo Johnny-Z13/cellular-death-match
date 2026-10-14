@@ -1,0 +1,233 @@
+/* The wide layout. On landscape screens the 16:9 dish fills the window and
+   the menus float over it as glass (ui/dishShape.ts picks the layout). The
+   goal strip sits on top, the tools form a hotbar along the bottom, and the
+   eggs and the log open as drawers. Everything is scoped to
+   :root[data-layout="wide"], so the classic layout is untouched. */
+
+:root[data-layout="wide"] {
+  --wide-gap: 12px;
+  --wide-glass: rgba(5, 14, 16, 0.5);
+  --wide-glass-solid: rgba(5, 14, 16, 0.86);
+  --wide-edge: rgba(120, 196, 200, 0.2);
+  --wide-blur: blur(16px) saturate(1.25);
+  --wide-shadow: 0 12px 32px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  /* The floating bars' footprint, for the drawers between them. */
+  --wide-top: 108px;
+  --wide-bottom: 92px;
+}
+
+/* The plate carries on past the dish, so any letterbox reads as more agar. */
+:root[data-layout="wide"] .layout[data-screen="arena"] {
+  background: radial-gradient(ellipse at 50% 46%, rgb(10 22 24), rgb(2 6 7) 78%);
+}
+
+:root[data-layout="wide"] .layout[data-screen="arena"] > .dish-stage {
+  position: fixed;
+  inset: 0;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  transform: none;
+  /* Desktop's align-self: start would shrink a fixed box to its content. */
+  align-self: stretch;
+  justify-self: stretch;
+  display: grid;
+  place-items: center;
+  container-type: size;
+  z-index: 0;
+}
+
+:root[data-layout="wide"] .layout[data-screen="arena"] #game {
+  width: min(100cqw, calc(100cqh * 213 / 120));
+  height: auto;
+  max-width: none;
+  max-height: none;
+  aspect-ratio: 213 / 120;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  outline-offset: -3px;
+}
+
+:root[data-layout="wide"] .layout[data-screen="arena"] .dish-frame {
+  display: none;
+}
+
+/* A soft lens over the whole stage in place of the round bezel. */
+:root[data-layout="wide"] .layout[data-screen="arena"] .dish-glass {
+  inset: 0;
+  border: 0;
+  border-radius: 0;
+  background: radial-gradient(ellipse at 50% 50%, transparent 66%, rgba(0, 0, 0, 0.32));
+  box-shadow: none;
+  z-index: 1;
+}
+
+/* Glass for every floating menu. */
+:root[data-layout="wide"] .layout[data-screen="arena"] .hud,
+:root[data-layout="wide"] .layout[data-screen="arena"] .toolbox,
+:root[data-layout="wide"] .layout[data-screen="arena"] .life-panel,
+:root[data-layout="wide"] .layout[data-screen="arena"] .ticker,
+:root[data-layout="wide"] .layout[data-screen="arena"] .mobile-shell {
+  background: var(--wide-glass);
+  -webkit-backdrop-filter: var(--wide-blur);
+  backdrop-filter: var(--wide-blur);
+  border: 1px solid var(--wide-edge);
+  box-shadow: var(--wide-shadow);
+  transition: background 160ms ease, transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 180ms ease;
+}
+
+:root[data-layout="wide"] .layout[data-screen="arena"] .hud:hover,
+:root[data-layout="wide"] .layout[data-screen="arena"] .toolbox:hover,
+:root[data-layout="wide"] .layout[data-screen="arena"] .toolbox:focus-within,
+:root[data-layout="wide"] .layout[data-screen="arena"] .life-panel,
+:root[data-layout="wide"] .layout[data-screen="arena"] .ticker:hover,
+:root[data-layout="wide"] .layout[data-screen="arena"].mobile-log-open .ticker,
+:root[data-layout="wide"] .layout[data-screen="arena"] .mobile-shell:hover {
+  background: var(--wide-glass-solid);
+}
+
+/* Tools: one compact hotbar along the bottom. */
+:root[data-layout="wide"] .layout[data-screen="arena"] .toolbox {
+  position: fixed;
+  top: auto;
+  left: 50%;
+  right: auto;
+  bottom: max(var(--wide-gap), env(safe-area-inset-bottom));
+  width: auto;
+  max-width: calc(100vw - 2 * var(--wide-gap));
+  height: auto;
+  max-height: none;
+  display: flex;
+  flex-flow: row nowrap;
+  gap: 6px;
+  padding: 7px;
+  overflow: visible;
+  border-radius: 18px;
+  transform: translateX(-50%);
+  z-index: 5;
+}
+
+:root[data-layout="wide"] .layout[data-screen="arena"] .toolbox-head,
+:root[data-layout="wide"] .layout[data-screen="arena"] .toolbox-more {
+  display: none;
+}
+
+:root[data-layout="wide"] .layout[data-screen="arena"] .toolbox .tool-button {
+  flex: 0 0 auto;
+  width: 74px;
+  min-width: 0;
+  height: auto;
+  min-height: 62px;
+  grid-template-columns: 1fr;
+  grid-template-rows: 22px auto auto;
+  justify-items: center;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 4px;
+  border-radius: 12px;
+  text-align: center;
+  background: rgba(12, 28, 32, 0.46);
+}
+
+:root[data-layout="wide"] .layout[data-screen="arena"] .toolbox .tool-button small {
+  display: none;
+}
+
+:root[data-layout="wide"] .layout[data-screen="arena"] .toolbox .tool-button strong {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+:root[data-layout="wide"] .layout[data-screen="arena"] .toolbox .tool-button b {
+  font-size: 11px;
+}
+
+/* Eggs: a drawer from the right, opened from the Eggs chip. */
+:root[data-layout="wide"] .layout[data-screen="arena"] .life-panel {
+  position: fixed;
+  left: auto;
+  right: var(--wide-gap);
+  top: var(--wide-top);
+  bottom: var(--wide-bottom);
+  width: min(320px, 34vw);
+  height: auto;
+  max-height: none;
+  display: grid;
+  align-content: start;
+  overflow: auto;
+  border-radius: 18px;
+  transform: translateX(calc(100% + 2 * var(--wide-gap)));
+  opacity: 0;
+  visibility: hidden;
+  /* Stay visible until the slide-out ends; only the drawer delays this. */
+  transition: background 160ms ease, transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 180ms ease, visibility 0s linear 240ms;
+  z-index: 6;
+}
+
+:root[data-layout="wide"] .layout[data-screen="arena"].mobile-lifeforms-open .life-panel {
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  transition: background 160ms ease, transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 180ms ease;
+}
+
+/* Log: the latest line bottom-left, above the chips; all of it when opened. */
+:root[data-layout="wide"] .layout[data-screen="arena"] .ticker {
+  position: fixed;
+  left: var(--wide-gap);
+  right: auto;
+  top: auto;
+  bottom: calc(var(--wide-gap) + 64px);
+  width: min(300px, 24vw);
+  max-height: 76px;
+  overflow: hidden;
+  padding: 8px 12px;
+  border-radius: 14px;
+  transform: none;
+  z-index: 5;
+}
+
+:root[data-layout="wide"] .layout[data-screen="arena"].mobile-log-open .ticker {
+  max-height: calc(100svh - var(--wide-top) - var(--wide-gap) - 64px);
+  overflow: auto;
+}
+
+:root[data-layout="wide"] .layout[data-screen="arena"].mobile-log-open .ticker-line {
+  display: block;
+}
+
+/* The chips (Eggs, the armed tool, Log), bottom-left beside the hotbar. */
+:root[data-layout="wide"] .layout[data-screen="arena"] .mobile-shell {
+  position: fixed;
+  display: flex;
+  left: var(--wide-gap);
+  right: auto;
+  top: auto;
+  bottom: max(var(--wide-gap), env(safe-area-inset-bottom));
+  width: auto;
+  max-width: calc(50vw - 420px);
+  min-width: 0;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 14px;
+  z-index: 5;
+}
+
+:root[data-layout="wide"] .layout[data-screen="arena"] .notebook-button.notebook-tab {
+  position: fixed;
+  left: auto;
+  right: 0;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+  z-index: 5;
+}
+
+/* A dish started wide keeps its shape if the window turns portrait. */
+:root[data-dish="wide"]:not([data-layout="wide"]) .layout[data-screen="arena"] #game {
+  height: auto;
+  aspect-ratio: 213 / 120;
+}

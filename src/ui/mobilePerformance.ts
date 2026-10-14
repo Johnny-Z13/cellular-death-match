@@ -1,3 +1,5 @@
+import { DISH_LAYOUT_TUNING, type DishGrid } from './dishShape';
+
 export type VisualQuality = 'desktop' | 'mobile-balanced' | 'mobile-economy';
 
 export interface DevicePerformanceSignals {
@@ -72,12 +74,18 @@ export function browserPerformanceSignals(): DevicePerformanceSignals {
   };
 }
 
+// canvasSize is the backing size of the square 160-site dish; a wide dish
+// keeps the same pixels per site.
 export function applyCanvasProfile(
   canvas: HTMLCanvasElement,
   profile: VisualPerformanceProfile,
+  grid: DishGrid = DISH_LAYOUT_TUNING.square,
 ): boolean {
-  if (canvas.width === profile.canvasSize && canvas.height === profile.canvasSize) return false;
-  canvas.width = profile.canvasSize;
-  canvas.height = profile.canvasSize;
+  const perSite = profile.canvasSize / DISH_LAYOUT_TUNING.square.LX;
+  const width = Math.round(grid.LX * perSite);
+  const height = Math.round(grid.LY * perSite);
+  if (canvas.width === width && canvas.height === height) return false;
+  canvas.width = width;
+  canvas.height = height;
   return true;
 }

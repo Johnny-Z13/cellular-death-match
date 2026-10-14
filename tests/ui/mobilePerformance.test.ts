@@ -66,4 +66,12 @@ describe('mobile visual performance profiles', () => {
     expect([canvas.width, canvas.height]).toEqual([640, 640]);
     expect(applyCanvasProfile(canvas, profile)).toBe(false);
   });
+
+  it('gives a wide dish the same pixels per site as the square one', () => {
+    const canvas = { width: 800, height: 800 } as HTMLCanvasElement;
+    const profile = performanceProfileFor({ viewportWidth: 1440, coarsePointer: false, hardwareConcurrency: 8 });
+
+    expect(applyCanvasProfile(canvas, profile, { LX: 213, LY: 120 })).toBe(true);
+    expect([canvas.width, canvas.height]).toEqual([1065, 600]);
+  });
 });
