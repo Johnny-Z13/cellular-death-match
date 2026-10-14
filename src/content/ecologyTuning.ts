@@ -102,3 +102,39 @@ export const AGITATION_TUNING = {
   extraSpeed: 14,
   cooldownTicks: 300,
 } as const;
+
+// Life cycle for open dishes. 'arena' is the original death match: every
+// culture hunts until one remains. 'culture' is a food web. Grazers feed on
+// the agar in proportion to free space; hunters eat other strains until they
+// divide, then digest. Everything burns mass, and starved cultures dissolve.
+// Ratios are multiples of a culture's genome size (its spawn targetVol).
+export const LIFE_CYCLE_PROFILES = {
+  arena: null,
+  culture: {
+    // Snipers (suppressors) never engulf, so they feed on agar like grazers.
+    hunterRoles: ['predator', 'anchor', 'mimic'],
+    desperateBelow: 0.5,      // grazers hunt only under base × this
+    satedSpeed: 0.35,         // speed multiplier while not hunting
+    huntEngulfScale: 1,       // scales a hunter's engulf multiplier above 1
+    // Engulfing is charged per pixel transfer, and contact boundaries churn,
+    // so the arena's 0.5 gain / 0.6 drain bleeds a victim dry within seconds.
+    engulfGain: 0.2,
+    engulfDrain: 0.2,
+    bulletDrain: 0.2,
+    hunterMetabolismPerTick: 0.0008, // fraction of base burned per tick
+    grazerMetabolismPerTick: 0.0004,
+    // fraction of the gap to the agar ceiling regained per tick, × free space
+    agarGrowthPerTick: 0.0014,
+    agarCeiling: 2.2,
+    divideAt: 2.0,            // splits into two halves at base × this
+    digestTicks: 60 * 6,      // both halves rest after dividing
+    divideCheckTicks: 30,
+    starveBelow: 0.15,        // dissolves under base × this
+  },
+};
+
+export type LifeCycleProfileId = keyof typeof LIFE_CYCLE_PROFILES;
+export type LifeCycleProfile = NonNullable<(typeof LIFE_CYCLE_PROFILES)[LifeCycleProfileId]>;
+// The authored case trials keep the death match; the open lab after the case
+// is the long-running sandbox.
+export const OPEN_LAB_LIFE_CYCLE: LifeCycleProfileId = 'culture';

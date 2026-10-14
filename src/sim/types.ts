@@ -64,6 +64,9 @@ export interface SimState {
   events: SimEvent[];
   rng: import('./rng').Rng;
   wrapBullets: boolean;        // true: bullets wrap on grid edges (matches Python wrap_bullets=True)
+  engulfGain: number;          // targetVol an engulfer gains per pixel it takes
+  engulfDrain: number;         // targetVol its victim loses per pixel taken
+  bulletDrain: number;         // targetVol a bullet's victim loses per pixel hit
 }
 
 // 8-connectivity neighbor directions (matches Python neighbor_dirs).

@@ -3,7 +3,7 @@ import { createArena, toolRadiusFor, type Arena, type ArenaStatus } from './game
 import { createRenderer, type Renderer } from './ui/render';
 import { createDebugPanel } from './ui/debug';
 import { createScreens, type ToolId } from './ui/screens';
-import { AGITATION_TUNING, SIM_SPEED_TUNING, TOOL_TUNING } from './content/ecologyTuning';
+import { AGITATION_TUNING, OPEN_LAB_LIFE_CYCLE, SIM_SPEED_TUNING, TOOL_TUNING } from './content/ecologyTuning';
 import { renderLoadoutScreen } from './ui/loadoutScreen';
 import { getUpgradeDef, upgradeToolNote } from './content/upgrades';
 import { goalLineFor } from './content/goalCopy';
@@ -1372,6 +1372,8 @@ function startNewFight() {
     objective: run.getObjective(),
     fightIndex: runState.fightIndex,
     knownBreedIds: new Set(discoveryProgression.discoveredBreedIds),
+    // The authored case keeps the death match; the open lab is the sandbox.
+    lifeCycle: runState.fightIndex >= COMMON_COLD_CASE.trials.length ? OPEN_LAB_LIFE_CYCLE : 'arena',
   });
   renderer = createRenderer(canvas, PALETTE_SIZE, {
     additiveBloom: visualProfile.additiveBloom,

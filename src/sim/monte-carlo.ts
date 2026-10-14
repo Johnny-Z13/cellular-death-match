@@ -157,9 +157,9 @@ function applyPixelTransfer(
   if (sourceVal !== 0 && targetVal !== 0) {
     const source = state.cells.get(sourceVal);
     if (source && source.intent.engulfMultiplier > 1) {
-      source.targetVol += 0.5;
+      source.targetVol += state.engulfGain;
       const victim = state.cells.get(targetVal);
-      if (victim) victim.targetVol -= 0.6;
+      if (victim) victim.targetVol -= state.engulfDrain;
     }
   }
 

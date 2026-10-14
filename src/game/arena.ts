@@ -17,6 +17,8 @@ import {
   AGITATION_TUNING,
   ARENA_TIMING,
   ECOSYSTEM_LIMITS,
+  LIFE_CYCLE_PROFILES,
+  type LifeCycleProfileId,
   PASTE_TUNING,
   TOOL_EFFECT_TUNING,
   TOOL_TUNING,
@@ -43,6 +45,7 @@ import { bossStep, type BossState } from './enemies/boss';
 import { displacementVec } from './geometry';
 import { clampReagentShift, getBreedProfile, getReagentShift, type BreedProfileId } from '../sim/breedProfiles';
 import { createHomeostasisTracker } from './homeostasis';
+import { applyAppetite, applyMetabolism, createLifeCycleState, readyToDivide } from './lifeCycle';
 import { getEscalation } from './escalation';
 import {
   createObjectiveRuntime,
@@ -196,6 +199,7 @@ export interface CreateArenaOpts {
   worldEventIntensity?: number;
   fightIndex?: number;
   knownBreedIds?: ReadonlySet<BreedId>;
+  lifeCycle?: LifeCycleProfileId;
 }
 
 const PLAYER_ID = 1;
@@ -290,6 +294,11 @@ export function createArena(opts: CreateArenaOpts): Arena {
   // The first epoch with the control sample removed is the coach-driven
   // onboarding dish (Swarmlet + Nutrient only, tutorial owns its ending).
   const isOnboardingDish = fightIndex === 0 && !includeControlSample;
+  // The coached onboarding dish keeps its tuned death-match dynamics.
+  const lifeCycle = mode === 'ecosystem' && !isOnboardingDish
+    ? LIFE_CYCLE_PROFILES[opts.lifeCycle ?? 'arena']
+    : null;
+  const life = createLifeCycleState();
   const worldEventIntensity = clamp(opts.worldEventIntensity ?? WORLD_EVENT_TUNING.defaultIntensity, 0, 1);
   // Set by the shell while Dr. E is mid-instruction: a lesson should never be
   // interrupted by an unexplained disaster. Benign drift and mutation still run.
@@ -306,6 +315,11 @@ export function createArena(opts: CreateArenaOpts): Arena {
   });
 
   if (!includeControlSample) removeControlSample(state);
+  if (lifeCycle) {
+    state.engulfGain = lifeCycle.engulfGain;
+    state.engulfDrain = lifeCycle.engulfDrain;
+    state.bulletDrain = lifeCycle.bulletDrain;
+  }
 
   const archetypes = new Map<CellId, EnemySpawn>();
   const aiStates = new Map<CellId, AiState>();
@@ -881,9 +895,29 @@ export function createArena(opts: CreateArenaOpts): Arena {
           const cell = state.cells.get(id);
           if (!cell || cell.vol === 0) continue;
           const target = mode === 'ecosystem'
-            ? chooseEcosystemTarget(cell, playerCell, state, archetypes)
+            ? chooseEcosystemTarget(cell, playerCell, state, archetypes, lifeCycle !== null)
             : playerCell;
           dispatchAi(cell, target, this);
+        }
+      }
+
+      if (lifeCycle) {
+        applyAppetite(state, archetypes, lifeCycle, life, tickNo);
+        applyMetabolism(state, archetypes, lifeCycle, life);
+        if (tickNo % lifeCycle.divideCheckTicks === 0) {
+          for (const id of readyToDivide(state, archetypes, lifeCycle, life)) {
+            if (livingCultureCount(state, archetypes) >= ECOSYSTEM_MAX_POPULATION) break;
+            const parent = state.cells.get(id)!;
+            const parentSpawn = archetypes.get(id)!;
+            const seedPos = findStableSeedPos(state, parent.center);
+            if (!seedPos) continue;
+            parent.targetVol /= 2;
+            const daughter = this.spawnEnemy({ spawn: { ...parentSpawn, traits: parentSpawn.traits?.slice() }, pos: seedPos });
+            state.cells.get(daughter)!.targetVol = parent.targetVol;
+            life.digestUntil.set(id, tickNo + lifeCycle.digestTicks);
+            life.digestUntil.set(daughter, tickNo + lifeCycle.digestTicks);
+            birthCount += 1;
+          }
         }
       }
 
@@ -2053,6 +2087,7 @@ function chooseEcosystemTarget(
   player: Cell,
   state: SimState,
   archetypes: Map<CellId, EnemySpawn>,
+  spareKin: boolean,
 ): Cell {
   const { LX, LY } = state.grid;
   // Only a living control sample is a threat worth reacting to — a dead one
@@ -2065,10 +2100,15 @@ function chooseEcosystemTarget(
 
   let best: Cell | null = null;
   let bestScore = Infinity;
-  const selfArchetype = archetypes.get(self.id)?.archetype;
+  const selfSpawn = archetypes.get(self.id);
+  const selfArchetype = selfSpawn?.archetype;
+  const selfStrain = selfSpawn?.breedId ?? selfArchetype;
   const profile = selfArchetype ? ARCHETYPE_ECOLOGY[selfArchetype] : undefined;
   for (const [id, candidate] of state.cells) {
     if (id === self.id || id === PLAYER_ID || candidate.vol <= 0) continue;
+    // Under a life cycle, a strain does not hunt its own kin.
+    const candidateSpawn = archetypes.get(id);
+    if (spareKin && (candidateSpawn?.breedId ?? candidateSpawn?.archetype) === selfStrain) continue;
     const v = displacementVec(self.center, candidate.center, LX, LY, state.grid.wrap);
     const dist = Math.hypot(v[0], v[1]);
     const targetArchetype = archetypes.get(id)?.archetype;
