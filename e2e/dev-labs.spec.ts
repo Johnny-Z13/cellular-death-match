@@ -21,3 +21,19 @@ test('the Dr. E look test draws every direction at every size', async ({ page })
   for (const share of lit) expect(share).toBeGreaterThan(0.2);
   runtime.assertClean();
 });
+
+test('the Voice Lab says a line, reveals it, and exports the voice', async ({ page }) => {
+  const runtime = monitorRuntime(page);
+  await page.goto('/voicelab.html');
+  await page.getByRole('button', { name: 'Oh! A visitor!' }).click();
+  await expect(page.locator('#readout')).toContainText('synth');
+  await expect(page.locator('#bubble .shown')).toHaveText('Oh! A visitor!', { timeout: 5_000 });
+
+  await page.locator('#line').fill('...');
+  await page.getByRole('button', { name: 'Say', exact: true }).click();
+  await expect(page.locator('#readout')).toContainText('cannot say');
+
+  await page.getByRole('button', { name: 'Copy JSON' }).click();
+  await expect(page.locator('#json')).toContainText('export const DR_E_VOICE: DrEVoice = {');
+  runtime.assertClean();
+});
