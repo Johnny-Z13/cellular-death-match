@@ -1,29 +1,39 @@
-// The title screen's dish, as on the itch cover: the game's own simulation and
-// renderer running an open-lab culture beside the wordmark. It ticks only while
+// The title screen is the dish: the game's own simulation and renderer run an
+// open-lab culture that fills the screen edge to edge, behind the wordmark. Its
+// grid takes the window's shape, so there is no plate edge. It ticks only while
 // the title is visible and the page is shown. A few name tags follow the
 // largest cultures and stay clear of the title copy.
-import { createArena } from '../game/arena';
+import { createArena, type Arena } from '../game/arena';
 import { createRun } from '../game/run';
 import { createFixedStepClock } from '../game/simClock';
 import { ARCHETYPE_DEFAULTS, type EnemyArchetype, type EnemySpawn } from '../content/enemies';
 import { lifeformIdentityForSpawn } from '../content/lifeformIdentity';
 import { OPEN_LAB_LIFE_CYCLE } from '../content/ecologyTuning';
 import { COMMON_COLD_CASE } from '../content/researchCases';
-import { createRenderer, displayColorForSpawn } from './render';
+import { createRenderer, displayColorForSpawn, type Renderer } from './render';
 import type { VisualPerformanceProfile } from './mobilePerformance';
 
 export const TITLE_DISH_TUNING = {
-  grid: 160,
-  // The open lab's opening mix (the first epoch plus the six eggs the
-  // longevity probe lays), interleaved so the colours alternate round the dish.
-  strains: ['bruiser', 'swarmlet', 'splitter', 'swarmlet', 'sniper', 'bruiser', 'swarmlet', 'mirror', 'swarmlet', 'swarmlet'] as EnemyArchetype[],
+  // Grid cells are at least this many CSS pixels, and the grid holds at most
+  // this many sites (the open lab's 160 x 160 dish is 25,600).
+  minCellPx: 4,
+  maxGridArea: 30000,
+  canvasPxPerCell: 4,
+  // Rebuild the dish when the window's shape drifts this far from the grid's.
+  rebuildAspectChange: 0.15,
+  // The open lab's mix of six hunters to ten grazers, interleaved so the
+  // colours alternate round the field.
+  strains: [
+    'bruiser', 'swarmlet', 'splitter', 'swarmlet', 'sniper', 'swarmlet', 'mirror', 'swarmlet',
+    'bruiser', 'swarmlet', 'splitter', 'swarmlet', 'sniper', 'swarmlet', 'mirror', 'swarmlet',
+  ] as EnemyArchetype[],
   // Dish time grown before the title is seen, a few milliseconds of each
   // frame at a time so the boot ident keeps its frame rate.
   warmupTicks: 900,
   warmupBudgetMs: 8,
   // Half the game's pace: the title dish is ambience, not play.
   ticksPerSecond: 30,
-  maxTags: 4,
+  maxTags: 5,
   tagRefreshMs: 600,
   // Tags keep this far from the title copy and the screen edge.
   tagClearancePx: 10,
@@ -42,30 +52,13 @@ export function createTitleDish(profile: VisualPerformanceProfile, paletteSize: 
   if (!(canvas instanceof HTMLCanvasElement) || !tagLayer || !screen) return;
 
   const T = TITLE_DISH_TUNING;
-  const seed = (Date.now() & 0xffffffff) >>> 0;
-  const arena = createArena({
-    LX: T.grid,
-    LY: T.grid,
-    seed,
-    player: createRun(seed).getPlayerConfig(),
-    enemies: T.strains.map((archetype) => ({ ...ARCHETYPE_DEFAULTS[archetype] })),
-    wrap: false,
-    mode: 'ecosystem',
-    includeControlSample: true,
-    fightIndex: COMMON_COLD_CASE.trials.length,
-    worldEventIntensity: 0,
-    knownBreedIds: new Set(),
-    lifeCycle: OPEN_LAB_LIFE_CYCLE,
-    breedDiscovery: false,
-  });
-  arena.setHazardsHeld(true);
-  canvas.width = profile.canvasSize;
-  canvas.height = profile.canvasSize;
-  const renderer = createRenderer(canvas, paletteSize, { additiveBloom: profile.additiveBloom });
   const clock = createFixedStepClock({ ticksPerSecond: T.ticksPerSecond, nowMs: performance.now() });
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  let warmupLeft = T.warmupTicks;
+  let arena: Arena;
+  let renderer: Renderer;
+  let grid = { LX: 1, LY: 1 };
+  let warmupLeft = 0;
   let paused = false;
   let dirty = true;
   let canvasRect = canvas.getBoundingClientRect();
@@ -75,7 +68,36 @@ export function createTitleDish(profile: VisualPerformanceProfile, paletteSize: 
   let tagged = new Map<string, number>();
   const tagNodes = new Map<string, HTMLElement>();
 
+  // A fresh dish shaped like the window.
+  const build = (): void => {
+    const cellPx = Math.max(T.minCellPx, Math.sqrt((window.innerWidth * window.innerHeight) / T.maxGridArea));
+    grid = { LX: Math.round(window.innerWidth / cellPx), LY: Math.round(window.innerHeight / cellPx) };
+    const seed = (Date.now() & 0xffffffff) >>> 0;
+    arena = createArena({
+      ...grid,
+      seed,
+      player: createRun(seed).getPlayerConfig(),
+      enemies: T.strains.map((archetype) => ({ ...ARCHETYPE_DEFAULTS[archetype] })),
+      wrap: false,
+      mode: 'ecosystem',
+      includeControlSample: true,
+      fightIndex: COMMON_COLD_CASE.trials.length,
+      worldEventIntensity: 0,
+      knownBreedIds: new Set(),
+      lifeCycle: OPEN_LAB_LIFE_CYCLE,
+      breedDiscovery: false,
+    });
+    arena.setHazardsHeld(true);
+    canvas.width = grid.LX * T.canvasPxPerCell;
+    canvas.height = grid.LY * T.canvasPxPerCell;
+    renderer = createRenderer(canvas, paletteSize, { additiveBloom: profile.additiveBloom });
+    warmupLeft = T.warmupTicks;
+    tagged = new Map();
+  };
+
   const measure = (): void => {
+    const aspect = window.innerWidth / window.innerHeight;
+    if (Math.abs(aspect / (grid.LX / grid.LY) - 1) > T.rebuildAspectChange) build();
     canvasRect = canvas.getBoundingClientRect();
     const copy = screen.querySelectorAll<HTMLElement>('.title-eyebrow, .title-wordmark > span, .title-pitch, .title-archive-strip, .title-start-button, .title-save-note');
     avoid = [...copy, document.getElementById('options-button')]
@@ -111,9 +133,10 @@ export function createTitleDish(profile: VisualPerformanceProfile, paletteSize: 
   const tagSpot = (id: number, node: HTMLElement, placed: readonly Rect[]): (Rect & { x: number; y: number }) | null => {
     const cell = arena.state.cells.get(id);
     if (!cell || cell.vol <= 0) return null;
-    const scale = canvasRect.width / T.grid;
-    const x = canvasRect.left + (cell.center[0] + 0.5) * scale;
-    const y = canvasRect.top + (cell.center[1] + 0.5) * scale - Math.sqrt(cell.vol / Math.PI) * scale - 6;
+    const sx = canvasRect.width / grid.LX;
+    const sy = canvasRect.height / grid.LY;
+    const x = canvasRect.left + (cell.center[0] + 0.5) * sx;
+    const y = canvasRect.top + (cell.center[1] + 0.5) * sy - Math.sqrt(cell.vol / Math.PI) * sy - 6;
     const pad = T.tagClearancePx;
     const half = node.offsetWidth / 2;
     const box = { x, y, left: x - half - pad, right: x + half + pad, top: y - node.offsetHeight - pad, bottom: y + pad };
@@ -204,6 +227,7 @@ export function createTitleDish(profile: VisualPerformanceProfile, paletteSize: 
     placeTags();
   };
 
+  build();
   window.addEventListener('resize', measure);
   // The copy rises into place and its font loads late; measure once each settles.
   screen.querySelector('.title-card')?.addEventListener('animationend', measure);
