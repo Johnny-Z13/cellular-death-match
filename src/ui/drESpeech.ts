@@ -125,6 +125,7 @@ export function createDrESpeech(options: DrESpeechOptions): DrESpeech {
   };
 
   watch(document.getElementById('coach-title'));
+  watch(document.getElementById('dex-line'));
   const intro = document.getElementById('screen-method-intro');
   const introTitle = document.getElementById('method-intro-title');
   if (intro && introTitle && typeof MutationObserver === 'function') {

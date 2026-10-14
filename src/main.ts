@@ -124,6 +124,8 @@ import { dishGridFor, dishLayoutFor, type DishLayout } from './ui/dishShape';
 import { createDrEPresence } from './ui/drEPresence';
 import { createDrESpeech } from './ui/drESpeech';
 import { groupExtent, type MergeEvent } from './game/mergeDetection';
+import { dexView, loadFriends, recordFriend } from './game/friendsDex';
+import { createDexScreen } from './ui/dexScreen';
 import { isCrazyGamesEnvironment } from './platform/crazyGames';
 
 declare const __COMMIT_MESSAGE__: string;
@@ -314,6 +316,17 @@ voiceButton?.addEventListener('click', () => {
   applyDrEVoicePreference(next);
 });
 createDrESpeech({ presence: drE, audio: uiAudio, voiceEnabled: () => drEVoiceEnabled, reducedMotion: reduceMotionPref });
+// The friends dex: strains come from the discovery progression; friends found
+// by merging are saved under their own key.
+let friendsSave = loadFriends(runtimeStorage);
+const dex = createDexScreen({ additiveBloom: visualProfile.additiveBloom, playTap: () => uiAudio.play('ui_tap') });
+const currentDexView = () => dexView(discoveryProgression, friendsSave);
+dex.refresh(currentDexView());
+document.getElementById('dex-button')?.addEventListener('click', () => {
+  uiAudio.unlock();
+  uiAudio.play('ui_select');
+  dex.open(currentDexView());
+});
 
 let arena: Arena | null = null;
 let renderer: Renderer | null = null;
@@ -1560,7 +1573,7 @@ function panelsInDrawers(): boolean {
 }
 
 function blockingOverlayOpen(): boolean {
-  if (overlayState.menuOpen || overlayState.notebookOpen) return true;
+  if (overlayState.menuOpen || overlayState.notebookOpen || dex.isOpen()) return true;
   if (!panelsInDrawers()) return false;
   return layout.dataset.mobileDrawer === 'lifeforms' || layout.dataset.mobileDrawer === 'log';
 }
@@ -2567,6 +2580,7 @@ function trapNotebookFocus(event: KeyboardEvent): void {
 }
 
 function refreshNotebook(): void {
+  dex.refresh(currentDexView());
   const notebook = notebookViewForProgression(discoveryProgression);
   screens.updateNotebook(notebook);
   screens.updateAtlas(atlasViewForProgression(discoveryProgression));
@@ -2997,7 +3011,14 @@ function announceMerge(merge: MergeEvent): void {
   haptics.play('discovery');
   drE.react('delighted', 2600);
   screens.addTicker(`Merged: ${merge.form.name}, friend ${number}.`, 'discovery');
-  fx.showUnlockBanner('Friend rescued', merge.form.name, `${number} · Rare`, 'bio');
+  const firstFind = !friendsSave.found[merge.form.id];
+  if (firstFind) {
+    const fightIndex = run.getState().fightIndex;
+    const where = fightIndex < COMMON_COLD_CASE.trials.length ? `Trial ${fightIndex + 1}` : 'Open Lab';
+    friendsSave = recordFriend(runtimeStorage, friendsSave, merge.form.id, where);
+    dex.refresh(currentDexView());
+  }
+  fx.showUnlockBanner(firstFind ? 'Friend rescued' : 'Friend merged', merge.form.name, `${number} · Rare`, 'bio');
 }
 
 function canvasEventToGridPos(event: PointerEvent): [number, number] {
