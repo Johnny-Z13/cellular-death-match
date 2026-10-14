@@ -126,6 +126,7 @@ import { createDrESpeech } from './ui/drESpeech';
 import { groupExtent, type MergeEvent } from './game/mergeDetection';
 import { dexView, loadFriends, recordFriend } from './game/friendsDex';
 import { createDexScreen } from './ui/dexScreen';
+import { createFriendReveal } from './ui/friendReveal';
 import { isCrazyGamesEnvironment } from './platform/crazyGames';
 
 declare const __COMMIT_MESSAGE__: string;
@@ -321,6 +322,11 @@ createDrESpeech({ presence: drE, audio: uiAudio, voiceEnabled: () => drEVoiceEna
 let friendsSave = loadFriends(runtimeStorage);
 const dex = createDexScreen({ additiveBloom: visualProfile.additiveBloom, playTap: () => uiAudio.play('ui_tap') });
 const currentDexView = () => dexView(discoveryProgression, friendsSave);
+const reveal = createFriendReveal({
+  presence: drE,
+  playSound: (id) => uiAudio.play(id),
+  haptic: (cue) => haptics.play(cue),
+});
 dex.refresh(currentDexView());
 document.getElementById('dex-button')?.addEventListener('click', () => {
   uiAudio.unlock();
@@ -1573,7 +1579,7 @@ function panelsInDrawers(): boolean {
 }
 
 function blockingOverlayOpen(): boolean {
-  if (overlayState.menuOpen || overlayState.notebookOpen || dex.isOpen()) return true;
+  if (overlayState.menuOpen || overlayState.notebookOpen || dex.isOpen() || reveal.isOpen()) return true;
   if (!panelsInDrawers()) return false;
   return layout.dataset.mobileDrawer === 'lifeforms' || layout.dataset.mobileDrawer === 'log';
 }
@@ -3007,18 +3013,26 @@ function announceMerge(merge: MergeEvent): void {
     screens.addTicker(`${merge.form.name} came apart.`, 'caution');
     return;
   }
-  uiAudio.play('experiment_ready');
-  haptics.play('discovery');
-  drE.react('delighted', 2600);
   screens.addTicker(`Merged: ${merge.form.name}, friend ${number}.`, 'discovery');
-  const firstFind = !friendsSave.found[merge.form.id];
-  if (firstFind) {
-    const fightIndex = run.getState().fightIndex;
-    const where = fightIndex < COMMON_COLD_CASE.trials.length ? `Trial ${fightIndex + 1}` : 'Open Lab';
-    friendsSave = recordFriend(runtimeStorage, friendsSave, merge.form.id, where);
-    dex.refresh(currentDexView());
+  if (friendsSave.found[merge.form.id]) {
+    uiAudio.play('experiment_ready');
+    haptics.play('discovery');
+    drE.react('delighted', 2600);
+    fx.showUnlockBanner('Friend merged', merge.form.name, `${number} · Rare`, 'bio');
+    return;
   }
-  fx.showUnlockBanner(firstFind ? 'Friend rescued' : 'Friend merged', merge.form.name, `${number} · Rare`, 'bio');
+  // First find: record it, then the ta-da rises from where it merged.
+  const fightIndex = run.getState().fightIndex;
+  const where = fightIndex < COMMON_COLD_CASE.trials.length ? `Trial ${fightIndex + 1}` : 'Open Lab';
+  friendsSave = recordFriend(runtimeStorage, friendsSave, merge.form.id, where);
+  const view = currentDexView();
+  const item = view.items.find((entry) => entry.id === merge.form.id);
+  if (!item) return;
+  const rect = canvas.getBoundingClientRect();
+  reveal.show(item, {
+    x: rect.left + ((merge.center[0] + 0.5) / LX) * rect.width,
+    y: rect.top + ((merge.center[1] + 0.5) / LY) * rect.height,
+  }, () => dex.refresh(currentDexView()));
 }
 
 function canvasEventToGridPos(event: PointerEvent): [number, number] {

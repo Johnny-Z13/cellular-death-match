@@ -1,0 +1,291 @@
+/* The ta-da (ui/friendReveal.ts): classes step the sequence. is-rising lifts
+   the droplet out of the dish, is-stamped lands the stamp and name with a ring
+   burst, is-speaking brings Dr. E in, and is-leaving flies the droplet into
+   the Friends chip. Rare friends glow teal, very rares gold. */
+
+.friend-reveal {
+  --tier: #5be9d6;
+  --tier-glow: rgba(91, 233, 214, 0.32);
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  color: #e7f6f4;
+}
+
+.friend-reveal[hidden] {
+  display: none;
+}
+
+.friend-reveal[data-tier="very-rare"] {
+  --tier: #f0c35a;
+  --tier-glow: rgba(240, 195, 90, 0.4);
+}
+
+.reveal-veil {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 40%, rgba(4, 18, 20, 0.5), rgba(1, 4, 5, 0.93) 70%);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 420ms ease;
+}
+
+.is-rising .reveal-veil { opacity: 1; }
+.is-leaving .reveal-veil { opacity: 0; transition-duration: 380ms; }
+
+.reveal-stage {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: min(560px, 100%);
+  text-align: center;
+}
+
+/* The droplet: a glass bead holding the living specimen. */
+.reveal-drop {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(250px, 52vw);
+  aspect-ratio: 1;
+  margin-bottom: 8px;
+  border: 1px solid color-mix(in srgb, var(--tier) 55%, transparent);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.2), transparent 26%),
+    radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--tier) 10%, transparent), rgba(3, 10, 12, 0.72) 72%);
+  box-shadow: 0 0 70px var(--tier-glow), inset 0 0 44px color-mix(in srgb, var(--tier) 16%, transparent);
+  opacity: 0;
+  transform: translate(var(--from-x, 0), var(--from-y, 0)) scale(0.16);
+}
+
+.is-rising .reveal-drop {
+  animation: reveal-rise 720ms cubic-bezier(0.18, 0.95, 0.3, 1.12) forwards;
+}
+
+@keyframes reveal-rise {
+  to { opacity: 1; transform: none; }
+}
+
+:root .reveal-drop canvas.reveal-specimen {
+  width: 80%;
+  max-width: none;
+}
+
+.reveal-ring {
+  position: absolute;
+  inset: -6%;
+  border: 2px solid var(--tier);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.is-stamped .reveal-ring {
+  animation: reveal-ring 950ms ease-out forwards;
+}
+
+@keyframes reveal-ring {
+  from { opacity: 0.95; transform: scale(0.82); }
+  to { opacity: 0; transform: scale(1.95); }
+}
+
+.reveal-stamp {
+  margin: 0;
+  padding: 6px 16px;
+  border: 2px solid var(--tier);
+  border-radius: 6px;
+  font-family: var(--font-display, 'Michroma', sans-serif);
+  font-size: 13px;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--tier);
+  text-shadow: 0 0 14px var(--tier-glow);
+  opacity: 0;
+  transform: rotate(-6deg) scale(2.4);
+}
+
+.is-stamped .reveal-stamp {
+  animation: reveal-stamp 380ms cubic-bezier(0.2, 1.5, 0.4, 1) forwards;
+}
+
+@keyframes reveal-stamp {
+  to { opacity: 1; transform: rotate(-6deg) scale(1); }
+}
+
+.reveal-kicker,
+.reveal-name,
+.reveal-number {
+  margin: 0;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 360ms ease, transform 360ms ease;
+}
+
+.is-stamped .reveal-kicker,
+.is-stamped .reveal-name,
+.is-stamped .reveal-number {
+  opacity: 1;
+  transform: none;
+}
+
+.is-stamped .reveal-name { transition-delay: 80ms; }
+.is-stamped .reveal-number { transition-delay: 160ms; }
+
+.reveal-kicker {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--tier);
+}
+
+.reveal-name {
+  font-family: var(--font-display, 'Michroma', sans-serif);
+  font-size: clamp(30px, 7vw, 56px);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 30px var(--tier-glow);
+}
+
+.reveal-number {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: #8fb3b1;
+}
+
+/* Dr. E pops up beside his line. */
+.reveal-dre {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 14px;
+  opacity: 0;
+  transform: translateY(12px) scale(0.92);
+  transition: opacity 320ms ease, transform 420ms cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+.is-speaking .reveal-dre {
+  opacity: 1;
+  transform: none;
+}
+
+:root .reveal-dre canvas.dre-face {
+  width: 84px;
+}
+
+.reveal-bubble {
+  position: relative;
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(120, 196, 200, 0.24);
+  border-radius: 16px;
+  background: rgba(10, 24, 28, 0.86);
+  text-align: left;
+}
+
+.reveal-bubble::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-left: 1px solid rgba(120, 196, 200, 0.24);
+  border-bottom: 1px solid rgba(120, 196, 200, 0.24);
+  background: rgba(10, 24, 28, 0.86);
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.reveal-line {
+  font-family: var(--font-notebook, 'Newsreader', Georgia, serif);
+  font-size: 19px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.reveal-continue {
+  margin-top: 16px;
+  min-height: 46px;
+  padding: 12px 26px;
+  border: 1px solid var(--tier);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tier) 14%, rgba(5, 14, 16, 0.9));
+  color: #e7f6f4;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 300ms ease 420ms, box-shadow 140ms ease;
+}
+
+.is-speaking .reveal-continue { opacity: 1; }
+
+.reveal-continue:hover,
+.reveal-continue:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--tier), 0 0 26px var(--tier-glow);
+}
+
+/* Into the dex. */
+.is-leaving .reveal-drop {
+  animation: reveal-leave 460ms cubic-bezier(0.55, 0.05, 0.75, 0.3) forwards;
+}
+
+@keyframes reveal-leave {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0.2; transform: translate(var(--to-x, 0), var(--to-y, 0)) scale(0.08); }
+}
+
+.is-leaving .reveal-stamp,
+.is-leaving .reveal-kicker,
+.is-leaving .reveal-name,
+.is-leaving .reveal-number,
+.is-leaving .reveal-dre,
+.is-leaving .reveal-continue {
+  opacity: 0;
+  transition: opacity 200ms ease;
+  animation: none;
+}
+
+.dex-button.is-bumped {
+  animation: dex-bump 650ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes dex-bump {
+  30% { transform: scale(1.22); box-shadow: 0 0 0 2px #5be9d6, 0 0 28px rgba(91, 233, 214, 0.6); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-drop,
+  .is-rising .reveal-drop,
+  .is-leaving .reveal-drop,
+  .reveal-stamp,
+  .is-stamped .reveal-stamp {
+    animation: none;
+    transform: none;
+  }
+
+  .is-rising .reveal-drop { opacity: 1; }
+  .is-stamped .reveal-stamp { opacity: 1; transform: rotate(-6deg); }
+  .is-leaving .reveal-drop { opacity: 0; transition: opacity 300ms ease; }
+  .is-stamped .reveal-ring,
+  .dex-button.is-bumped { animation: none; }
+
+  .reveal-kicker,
+  .reveal-name,
+  .reveal-number,
+  .reveal-dre {
+    transform: none;
+  }
+}

@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="/src/wide-layout.css?v=20261014-wide-1" />
     <link rel="stylesheet" href="/src/dr-e.css?v=20261015-face-1" />
     <link rel="stylesheet" href="/src/dex.css?v=20261015-dex-1" />
+    <link rel="stylesheet" href="/src/reveal.css?v=20261015-reveal-1" />
     <style>
       /* Z13 boot ident plate: painted before scripts run so the title never
          flashes; the failsafe clears it if the ident script never runs. */
@@ -434,6 +435,25 @@
         </span>
       </button>
       <div id="fx-wipe" class="fx-wipe" aria-hidden="true"></div>
+
+      <div id="friend-reveal" class="friend-reveal" role="dialog" aria-modal="true" aria-labelledby="reveal-name" hidden>
+        <div class="reveal-veil" aria-hidden="true"></div>
+        <div class="reveal-stage">
+          <div class="reveal-drop" aria-hidden="true">
+            <span class="reveal-ring"></span>
+            <canvas id="reveal-canvas" class="dex-specimen reveal-specimen"></canvas>
+          </div>
+          <p id="reveal-stamp" class="reveal-stamp">Rare</p>
+          <p class="reveal-kicker">Friend rescued</p>
+          <h2 id="reveal-name" class="reveal-name">Friend</h2>
+          <p id="reveal-number" class="reveal-number">#000</p>
+          <div class="reveal-dre">
+            <canvas class="dre-face" data-dre-slot="reveal" aria-hidden="true"></canvas>
+            <p class="reveal-bubble"><strong id="reveal-line" class="reveal-line"></strong></p>
+          </div>
+          <button id="reveal-continue" class="reveal-continue" type="button">Into the dex ›</button>
+        </div>
+      </div>
 
       <div id="screen-dex" class="dex-screen" role="dialog" aria-modal="true" aria-labelledby="dex-title" hidden>
         <section class="dex-card">
