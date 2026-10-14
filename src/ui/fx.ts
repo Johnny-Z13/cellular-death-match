@@ -73,6 +73,8 @@ export function createFx(): Fx {
   const mobileDirector = new NotificationDirector<MobileFxPayload>(4);
   const accentClasses = ['fx-banner-accent-bio', 'fx-banner-accent-amber', 'fx-banner-accent-violet'];
   let finishActiveGenome: (() => void) | null = null;
+  // Desktop toasts raised while a strain reveal owns the screen wait for it.
+  let heldDesktopToasts: Array<[ToastKind, string, string]> = [];
 
   genomeReveal?.addEventListener('click', () => finishActiveGenome?.());
   wipe?.addEventListener('animationend', () => wipe.classList.remove('fx-wipe-play'));
@@ -151,6 +153,21 @@ export function createFx(): Fx {
     genomeReveal?.setAttribute('aria-hidden', 'true');
     genomeReveal?.setAttribute('tabindex', '-1');
     finishActiveGenome = null;
+    const held = heldDesktopToasts;
+    heldDesktopToasts = [];
+    for (const [kind, kicker, title] of held) playDesktopToast(kind, kicker, title);
+  }
+
+  function playDesktopToast(kind: ToastKind, kicker: string, title: string): void {
+    if (!toasts) return;
+    const el = createToastElement(kind, kicker, title);
+    toasts.append(el);
+    while (toasts.children.length > 3) toasts.firstElementChild?.remove();
+    const life = reduceMotion ? 2600 : 3200;
+    window.setTimeout(() => {
+      el.classList.add('fx-toast-out');
+      window.setTimeout(() => el.remove(), 460);
+    }, life);
   }
 
   function setGenomeContent(items: readonly GenomeRevealInfo[]): boolean {
@@ -302,15 +319,11 @@ export function createFx(): Fx {
         enqueueMobile({ kind: 'toast', toastKind: kind, kicker, title }, priority);
         return;
       }
-      if (!toasts) return;
-      const el = createToastElement(kind, kicker, title);
-      toasts.append(el);
-      while (toasts.children.length > 3) toasts.firstElementChild?.remove();
-      const life = reduceMotion ? 2600 : 3200;
-      window.setTimeout(() => {
-        el.classList.add('fx-toast-out');
-        window.setTimeout(() => el.remove(), 460);
-      }, life);
+      if (finishActiveGenome) {
+        heldDesktopToasts.push([kind, kicker, title]);
+        return;
+      }
+      playDesktopToast(kind, kicker, title);
     },
     playWipe() {
       if (!wipe || reduceMotion) return;
