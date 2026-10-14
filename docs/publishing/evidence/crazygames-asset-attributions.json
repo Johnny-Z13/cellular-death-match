@@ -128,6 +128,17 @@
       "evidence": "docs/assets/professor/README.md"
     },
     {
+      "path": "public/art/professor/dr-e-mergent-pixel.png",
+      "kind": "image",
+      "sha256": "c50b394b186536a17d698adc6a9a65b2295bc0b67c56dfbda050f0ef6bb3ac75",
+      "status": "provider-declared",
+      "creator": "Z13 Labs (AI-assisted, drawn in code)",
+      "provider": "scripts/draw-professor-pixel.mjs (written with Claude Code) + Sharp",
+      "credit": "Dr. E. Mergent pixel portrait by Z13 Labs, drawn in code with Claude Code.",
+      "terms": "No image model; pixels are placed by repository code. Named originality and distribution approval pending.",
+      "evidence": "docs/assets/professor/README.md"
+    },
+    {
       "path": "public/art/genomes/bloom_mass.png",
       "kind": "image",
       "sha256": "4d38c5a8d046d85b479231007f2e904d9cd9531930e6cd38f3394fde1f84b890",

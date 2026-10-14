@@ -82,3 +82,27 @@ preserving Dr. E’s identity, expression, goggles, coat, glowing glove, petri
 dish, pose, cyan/amber lighting, and dark cellular-laboratory backdrop. It also
 explicitly excluded text, logos, watermarks, anatomy changes, new props, and
 artificial oversharpening.
+
+## Pixel portrait
+
+`public/art/professor/dr-e-mergent-pixel.png` replaces the painted portrait in
+all five slots: the title, the welcome and method introductions, the HUD, and
+the onboarding pointer. Johnny asked on 2026-10-14 for a professor that looks
+less AI-generated, in the same visual family as the genome sprites.
+
+- Installed: 2026-10-14
+- Grid: 64 × 80 cells, written at 24× as a 1536 × 1920 PNG with a transparent
+  background
+- SHA-256: `c50b394b186536a17d698adc6a9a65b2295bc0b67c56dfbda050f0ef6bb3ac75`
+- Source: `scripts/draw-professor-pixel.mjs`. Shapes and individual pixels are
+  placed in code, and no image model is involved. The code was written with
+  Claude Code. Re-running the script reproduces the file byte for byte.
+- Design: the name and voice are kept, along with a lean face, a white lab
+  coat, silver hair swept back into a crest, and a smile slightly too wide. A
+  brass jeweller's loupe magnifies one teal eye. Violet nitrile gloves hold a
+  glowing dish, and a teal colony is pinned to the lapel as a brooch. The
+  palette is the game's own: bio-teal, amber and violet.
+- Distribution status: provider-declared; named human approval is still required
+
+The painted `professor-emergent-v1.png` and `professor-emergent-v2.png` remain
+in `public/` but are no longer referenced by the game.

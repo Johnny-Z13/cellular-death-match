@@ -6429,13 +6429,32 @@ canvas {
   .screen-title-screen .title-archive-strip p { margin-top: 4px; }
 }
 
+/* Desktop: the Doctor stands whole on the right and offers his dish toward
+   the wordmark column on the left. */
 @media (min-width: 900px) and (orientation: landscape) {
+  .screen-title-screen .title-professor {
+    left: auto;
+    right: 0;
+    width: min(80svh, 50vw);
+  }
+
   .screen-title-screen .title-professor img {
-    object-position: 50% 18%;
+    object-fit: contain;
+    object-position: 100% 100%;
   }
 
   .screen-title-screen .title-card {
+    left: calc((100vw - min(80svh, 50vw)) / 2);
+    width: min(calc(100vw - min(80svh, 50vw) - 48px), 760px);
     gap: clamp(18px, 3.2svh, 32px);
+  }
+
+  .screen-title-screen .title-card .title-wordmark {
+    font-size: clamp(40px, 5.6vw, 82px);
+  }
+
+  .screen-title-screen .title-archive-strip {
+    width: min(100%, 600px);
   }
 
   .screen-title-screen .title-start-button {
@@ -7823,7 +7842,10 @@ canvas {
     padding-inline: max(6vw, 48px);
   }
 
-  .method-intro-professor img { object-position: 30% 18%; }
+  .method-intro-professor img {
+    object-fit: contain;
+    object-position: 4% 100%;
+  }
 
   .method-intro-vignette {
     background:

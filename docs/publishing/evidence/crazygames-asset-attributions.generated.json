@@ -1,20 +1,20 @@
 {
   "schemaVersion": 1,
   "registry": "docs/publishing/evidence/crazygames-asset-attributions.json",
-  "registrySha256": "02e71071bc2ab0b981cd82dde03f9d92e7d168384b38d7c9ceacd1db273ff8a2",
+  "registrySha256": "057e63e35ef768ef5f09ab925bef0b9d1822527927d0301225a480847b4550c0",
   "scanRoots": [
     "public"
   ],
   "summary": {
-    "registeredAssets": 53,
-    "observedAssets": 53,
+    "registeredAssets": 54,
+    "observedAssets": 54,
     "releaseClearedAssets": 1,
     "statusCounts": {
-      "provider-declared": 52,
+      "provider-declared": 53,
       "cleared": 1
     },
     "integrityCounts": {
-      "matched": 53
+      "matched": 54
     },
     "releaseReady": false,
     "releaseBlockers": [
@@ -130,6 +130,11 @@
       },
       {
         "path": "public/art/genomes/vitric_anchor.png",
+        "status": "provider-declared",
+        "reason": "Provider route declared; evidence and approval pending"
+      },
+      {
+        "path": "public/art/professor/dr-e-mergent-pixel.png",
         "status": "provider-declared",
         "reason": "Provider route declared; evidence and approval pending"
       },
@@ -645,6 +650,22 @@
       "evidence": "docs/assets/genomes/README.md",
       "bytes": 759,
       "expectedSha256": "d7ea351e9e4a3de6b2663f0ce91e0ddeb824d67b3307820ab3c52b6fddc39382",
+      "integrity": "matched",
+      "declaredStatus": "provider-declared",
+      "effectiveStatus": "provider-declared"
+    },
+    {
+      "path": "public/art/professor/dr-e-mergent-pixel.png",
+      "kind": "image",
+      "sha256": "c50b394b186536a17d698adc6a9a65b2295bc0b67c56dfbda050f0ef6bb3ac75",
+      "status": "provider-declared",
+      "creator": "Z13 Labs (AI-assisted, drawn in code)",
+      "provider": "scripts/draw-professor-pixel.mjs (written with Claude Code) + Sharp",
+      "credit": "Dr. E. Mergent pixel portrait by Z13 Labs, drawn in code with Claude Code.",
+      "terms": "No image model; pixels are placed by repository code. Named originality and distribution approval pending.",
+      "evidence": "docs/assets/professor/README.md",
+      "bytes": 41980,
+      "expectedSha256": "c50b394b186536a17d698adc6a9a65b2295bc0b67c56dfbda050f0ef6bb3ac75",
       "integrity": "matched",
       "declaredStatus": "provider-declared",
       "effectiveStatus": "provider-declared"

@@ -164,6 +164,13 @@ public/art/genomes/vitric_anchor.png
   Release status: Provider route declared; evidence and approval pending
   SHA-256: d7ea351e9e4a3de6b2663f0ce91e0ddeb824d67b3307820ab3c52b6fddc39382
 
+public/art/professor/dr-e-mergent-pixel.png
+  Credit: Dr. E. Mergent pixel portrait by Z13 Labs, drawn in code with Claude Code.
+  Provider: scripts/draw-professor-pixel.mjs (written with Claude Code) + Sharp
+  Terms/evidence: No image model; pixels are placed by repository code. Named originality and distribution approval pending. docs/assets/professor/README.md
+  Release status: Provider route declared; evidence and approval pending
+  SHA-256: c50b394b186536a17d698adc6a9a65b2295bc0b67c56dfbda050f0ef6bb3ac75
+
 public/art/professor/professor-emergent-v1.png
   Credit: Professor E. Mergent character art by Z13 Labs, generated with OpenAI.
   Provider: OpenAI Image Generation
