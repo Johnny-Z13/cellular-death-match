@@ -332,6 +332,20 @@ public/audio/generated/water_stabilize.mp3
   Release status: Provider route declared; evidence and approval pending
   SHA-256: c2d53cd683ccea90d921def28bfdd01b7e1aa718cf34a3694d4ff36c13e2616f
 
+public/branding/z13-ident.mp3
+  Credit: Z13 studio ident sound (take B) by Z13 Labs, generated with ElevenLabs Sound Effects.
+  Provider: ElevenLabs Sound Effects
+  Terms/evidence: https://elevenlabs.io/terms-of-use; Johnny approved reusing the studio ident in Z13 games on 2026-10-14; paid-plan eligibility at generation time pending. docs/assets/branding/README.md
+  Release status: Provider route declared; evidence and approval pending
+  SHA-256: 2824f6eaa98c9f6f806177a4cd40af349afb090c96fb68316c07dbc8fc2684bf
+
+public/branding/z13-mark.png
+  Credit: Z13 Labs studio mark.
+  Provider: Z13 Labs studio mark
+  Terms/evidence: Z13 Labs own mark, cropped from Johnny's z13-pixel.png. docs/assets/branding/README.md
+  Release status: Cleared
+  SHA-256: 29602e8d194a6351d370a95645d526c9950d6075e008b12a8101254709a0bd72
+
 public/favicon.png
   Credit: Professor E. Mergent favicon by Z13 Labs, generated with OpenAI and resized with Sharp.
   Provider: OpenAI Image Generation + Sharp

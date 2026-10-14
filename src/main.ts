@@ -97,6 +97,7 @@ import {
   type ResearchArchiveState,
 } from './game/researchArchive';
 import { createTitleAutomata } from './ui/titleAutomata';
+import { playStudioIdent } from './ui/studioIdent';
 import { createHaptics } from './ui/haptics';
 import {
   applyCanvasProfile,
@@ -185,6 +186,23 @@ screens.setFullscreenAvailable(customFullscreenAvailable);
 debug.setPresentationAvailable(customFullscreenAvailable);
 const ecologyAudio = createEcologyAudio();
 const uiAudio = createUiAudio();
+// Automated browsers (the e2e suite) skip the studio ident unless the URL
+// carries ?ident; reduced-motion players skip it too.
+const identPlate = document.getElementById('z13-ident');
+if (
+  new URLSearchParams(window.location.search).has('ident')
+  || (!navigator.webdriver && !window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+) {
+  void playStudioIdent({
+    plate: identPlate,
+    markSrc: `${import.meta.env.BASE_URL}branding/z13-mark.png`,
+    audioSrc: `${import.meta.env.BASE_URL}branding/z13-ident.mp3`,
+    muted: uiAudio.isMuted(),
+    captionFont: '"IBM Plex Mono", ui-monospace, monospace',
+  });
+} else {
+  identPlate?.remove();
+}
 const haptics = createHaptics();
 const fx = createFx();
 const coach = createCoach(runtimeStorage);

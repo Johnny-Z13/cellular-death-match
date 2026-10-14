@@ -19,8 +19,15 @@
     <link rel="stylesheet" href="/src/styles.css?v=20261009-legibility-1" />
     <link rel="stylesheet" href="/src/arena-layout.css?v=20261009-legibility-1" />
     <link rel="stylesheet" href="/src/legibility.css?v=20261009-polish-2" />
+    <style>
+      /* Z13 boot ident plate: painted before scripts run so the title never
+         flashes; the failsafe clears it if the ident script never runs. */
+      #z13-ident { position: fixed; inset: 0; z-index: 2147483000; background: #000; animation: z13-ident-failsafe 7s step-end forwards; }
+      @keyframes z13-ident-failsafe { to { visibility: hidden; pointer-events: none; } }
+    </style>
   </head>
   <body>
+    <div id="z13-ident" aria-hidden="true"></div>
     <main class="layout" data-screen="title">
       <div class="dish-stage">
         <div class="dish-frame" aria-hidden="true"></div>

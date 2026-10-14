@@ -1,19 +1,20 @@
 {
   "schemaVersion": 1,
   "registry": "docs/publishing/evidence/crazygames-asset-attributions.json",
-  "registrySha256": "5f75050314202401d5db21c1bc3ee985262d24c7ed2901b52b1f6352d4a75e4a",
+  "registrySha256": "02e71071bc2ab0b981cd82dde03f9d92e7d168384b38d7c9ceacd1db273ff8a2",
   "scanRoots": [
     "public"
   ],
   "summary": {
-    "registeredAssets": 51,
-    "observedAssets": 51,
-    "releaseClearedAssets": 0,
+    "registeredAssets": 53,
+    "observedAssets": 53,
+    "releaseClearedAssets": 1,
     "statusCounts": {
-      "provider-declared": 51
+      "provider-declared": 52,
+      "cleared": 1
     },
     "integrityCounts": {
-      "matched": 51
+      "matched": 53
     },
     "releaseReady": false,
     "releaseBlockers": [
@@ -249,6 +250,11 @@
       },
       {
         "path": "public/audio/generated/water_stabilize.mp3",
+        "status": "provider-declared",
+        "reason": "Provider route declared; evidence and approval pending"
+      },
+      {
+        "path": "public/branding/z13-ident.mp3",
         "status": "provider-declared",
         "reason": "Provider route declared; evidence and approval pending"
       },
@@ -1026,6 +1032,38 @@
       "integrity": "matched",
       "declaredStatus": "provider-declared",
       "effectiveStatus": "provider-declared"
+    },
+    {
+      "path": "public/branding/z13-ident.mp3",
+      "kind": "audio",
+      "sha256": "2824f6eaa98c9f6f806177a4cd40af349afb090c96fb68316c07dbc8fc2684bf",
+      "status": "provider-declared",
+      "creator": "Z13 Labs (AI-generated)",
+      "provider": "ElevenLabs Sound Effects",
+      "credit": "Z13 studio ident sound (take B) by Z13 Labs, generated with ElevenLabs Sound Effects.",
+      "terms": "https://elevenlabs.io/terms-of-use; Johnny approved reusing the studio ident in Z13 games on 2026-10-14; paid-plan eligibility at generation time pending.",
+      "evidence": "docs/assets/branding/README.md",
+      "bytes": 58976,
+      "expectedSha256": "2824f6eaa98c9f6f806177a4cd40af349afb090c96fb68316c07dbc8fc2684bf",
+      "integrity": "matched",
+      "declaredStatus": "provider-declared",
+      "effectiveStatus": "provider-declared"
+    },
+    {
+      "path": "public/branding/z13-mark.png",
+      "kind": "image",
+      "sha256": "29602e8d194a6351d370a95645d526c9950d6075e008b12a8101254709a0bd72",
+      "status": "cleared",
+      "creator": "Z13 Labs",
+      "provider": "Z13 Labs studio mark",
+      "credit": "Z13 Labs studio mark.",
+      "terms": "Z13 Labs own mark, cropped from Johnny's z13-pixel.png.",
+      "evidence": "docs/assets/branding/README.md",
+      "bytes": 50604,
+      "expectedSha256": "29602e8d194a6351d370a95645d526c9950d6075e008b12a8101254709a0bd72",
+      "integrity": "matched",
+      "declaredStatus": "cleared",
+      "effectiveStatus": "cleared"
     },
     {
       "path": "public/favicon.png",
