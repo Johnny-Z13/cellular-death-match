@@ -18,7 +18,6 @@
     "preview": "vite preview",
     "generate:audio": "node scripts/generate-audio-assets.mjs",
     "audio:manifest": "node scripts/generate-audio-assets.mjs --manifest-only",
-    "generate:keyart": "node scripts/generate-keyart.mjs",
     "credits:crazygames": "node scripts/sync-crazygames-attributions.mjs --write",
     "credits:crazygames:check": "node scripts/sync-crazygames-attributions.mjs --check",
     "test": "vitest run",
