@@ -17,6 +17,9 @@ export interface DrEFaceOptions {
   now?: () => number;
   reducedMotion?: boolean;
   additiveBloom?: boolean;
+  /** CSS sizes the canvas (the game's slots); setSize then only sets the
+   *  backing resolution. Default false: setSize also sets the CSS size. */
+  cssSized?: boolean;
 }
 
 export interface DrEFace {
@@ -86,8 +89,11 @@ export function createDrEFace(canvas: HTMLCanvasElement, options: DrEFaceOptions
 
   const setSize = (cssPx: number): void => {
     const pxPerCell = Math.max(1, Math.round((cssPx * (window.devicePixelRatio || 1)) / N));
-    canvas.width = N * pxPerCell;
-    canvas.height = N * pxPerCell;
+    if (canvas.width !== N * pxPerCell) {
+      canvas.width = N * pxPerCell;
+      canvas.height = N * pxPerCell;
+    }
+    if (options.cssSized) return;
     canvas.style.width = `${cssPx}px`;
     canvas.style.height = `${cssPx}px`;
   };
@@ -139,7 +145,8 @@ export function createDrEFace(canvas: HTMLCanvasElement, options: DrEFaceOptions
 
   const frame = (): void => {
     raf = requestAnimationFrame(frame);
-    if (document.hidden) return;
+    // Hidden tabs and slots that are not on screen cost nothing.
+    if (document.hidden || canvas.getClientRects().length === 0) return;
     const began = performance.now();
     const t = now();
     const p = { ...blendFace(from, to, (t - blendStart) / tuning.blendMs) };

@@ -121,6 +121,7 @@ import { isObjectiveFeasible, type StudyCapabilities } from './game/objectivePoo
 import { dishExitState } from './game/dishExitAction';
 import { studyIntroductionRoute } from './ui/studyIntroduction';
 import { dishGridFor, dishLayoutFor, type DishLayout } from './ui/dishShape';
+import { createDrEPresence } from './ui/drEPresence';
 import { isCrazyGamesEnvironment } from './platform/crazyGames';
 
 declare const __COMMIT_MESSAGE__: string;
@@ -288,6 +289,7 @@ let pendingGenomeDecodeIds: LifeformIdentityId[] = [];
 // Allow up to PALETTE_SIZE total cell colors for evolving ecosystem spawns.
 const PALETTE_SIZE = 32;
 createTitleDish(visualProfile, PALETTE_SIZE);
+createDrEPresence(visualProfile.additiveBloom);
 
 let arena: Arena | null = null;
 let renderer: Renderer | null = null;

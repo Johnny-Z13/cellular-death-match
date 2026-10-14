@@ -1,5 +1,5 @@
 // @ts-expect-error Vitest runs this test in Node; the app tsconfig does not ship Node types.
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const html = readFileSync('index.html', 'utf8');
@@ -7,12 +7,11 @@ const css = readFileSync('src/styles.css', 'utf8');
 const mainSource = readFileSync('src/main.ts', 'utf8');
 
 describe('Professor onboarding pointer', () => {
-  it('uses the Professor portrait as one decorative global guide', () => {
-    expect(existsSync('public/art/professor/dr-e-mergent-pixel.png')).toBe(true);
-    expect(html).toContain('id="onboarding-guide-pointer"');
+  it('uses Dr. E\'s live cell face as one decorative global guide', () => {
+    const pointer = html.slice(html.indexOf('id="onboarding-guide-pointer"'), html.indexOf('</div>', html.indexOf('id="onboarding-guide-pointer"')));
     expect(html).toContain('class="onboarding-professor-pointer"');
-    expect(html).toContain('src="/art/professor/dr-e-mergent-pixel.png"');
-    expect(html).toContain('alt=""');
+    expect(pointer).toContain('<canvas class="dre-face" data-dre-slot="pointer" aria-hidden="true"></canvas>');
+    expect(mainSource).toContain('createDrEPresence(visualProfile.additiveBloom);');
   });
 
   it('moves the same guide to controls, lifeforms, and exact dish positions', () => {

@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="/src/arena-layout.css?v=20261009-legibility-1" />
     <link rel="stylesheet" href="/src/legibility.css?v=20261009-polish-2" />
     <link rel="stylesheet" href="/src/wide-layout.css?v=20261014-wide-1" />
+    <link rel="stylesheet" href="/src/dr-e.css?v=20261015-face-1" />
     <style>
       /* Z13 boot ident plate: painted before scripts run so the title never
          flashes; the failsafe clears it if the ident script never runs. */
@@ -50,7 +51,7 @@
       </div>
       <span id="simulation-paused-badge" class="simulation-paused-badge" role="status" aria-live="polite" aria-hidden="true">Culture paused</span>
       <div id="onboarding-guide-pointer" class="onboarding-professor-pointer" aria-hidden="true">
-        <img src="/art/professor/dr-e-mergent-pixel.png" width="1536" height="1920" alt="" />
+        <canvas class="dre-face" data-dre-slot="pointer" aria-hidden="true"></canvas>
         <span aria-hidden="true"></span>
       </div>
       <button id="options-button" class="chrome-button options-button" type="button" aria-label="Open options" title="Options" aria-haspopup="dialog" aria-expanded="false">
@@ -287,7 +288,7 @@
 
       <div id="screen-method-intro" class="screen method-intro-screen" role="dialog" aria-modal="true" aria-labelledby="method-intro-title">
         <figure class="method-intro-professor" aria-hidden="true">
-          <img src="/art/professor/dr-e-mergent-pixel.png" width="1536" height="1920" alt="" />
+          <canvas class="dre-face" data-dre-slot="intro" aria-hidden="true"></canvas>
         </figure>
         <div class="method-intro-vignette" aria-hidden="true"></div>
         <section class="method-intro-copy">
@@ -374,7 +375,7 @@
         </div>
         <div id="hud-director" class="hud-director">
           <div class="hud-director-portrait" aria-hidden="true">
-            <img src="/art/professor/dr-e-mergent-pixel.png" width="1536" height="1920" alt="" />
+            <canvas class="dre-face" data-dre-slot="director" aria-hidden="true"></canvas>
           </div>
           <div class="hud-director-copy">
             <div class="hud-director-head"><span id="hud-director-kicker">Dr. E</span><span id="hud-director-state">Live</span></div>
@@ -430,7 +431,7 @@
 
       <aside id="coach" class="coach" aria-hidden="true" aria-live="polite" aria-label="Dr. E. Mergent's guidance">
         <div class="coach-portrait" aria-hidden="true">
-          <img src="/art/professor/dr-e-mergent-pixel.png" width="1536" height="1920" alt="" />
+          <canvas class="dre-face" data-dre-slot="coach" aria-hidden="true"></canvas>
         </div>
         <div class="coach-copy">
           <div class="coach-head">
