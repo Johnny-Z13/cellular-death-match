@@ -49,11 +49,25 @@ export function mcStep(state: SimState): boolean {
   const volEff = profile.volMul * (1 + (shifts?.volShift ?? 0));
   const movEff = profile.movMul * (1 + (shifts?.movShift ?? 0));
 
+  let engulf = profile.engulfMul * engulfTerm(state, sourceVal, targetVal);
+  let bond = 0;
+  const bonds = state.bonds;
+  if (bonds) {
+    const sourcePartners = sourceVal !== 0 ? bonds.partners(sourceVal) : undefined;
+    const targetPartners = targetVal !== 0 ? bonds.partners(targetVal) : undefined;
+    if (sourcePartners || targetPartners) {
+      // Bonded partners never eat each other.
+      if (sourcePartners?.has(targetVal)) engulf = 0;
+      bond = bonds.adhesion * bondTerm(state, xT, yT, sourcePartners, targetPartners);
+    }
+  }
+
   const dH =
     state.betaIsing * isingEff * isingTerm(state, xT, yT, sourceVal, targetVal) +
     state.betaVol * volEff * volumeTerm(state, sourceVal, targetVal) +
     state.betaMov * movEff * movementTerm(state, sourceVal, dir) +
-    profile.engulfMul * engulfTerm(state, sourceVal, targetVal);
+    engulf +
+    bond;
 
   if (rng.random() > Math.exp(-dH)) return false;
 
@@ -78,6 +92,27 @@ function isingTerm(
     else if (v === sourceVal) sameAsSource++;
   }
   return sameAsTarget - sameAsSource;
+}
+
+// Bond adhesion. The target pixel changes hands from targetVal to sourceVal:
+// every neighbour owned by a partner of the source becomes a contact the
+// bond rewards, and every neighbour owned by a partner of the target is a
+// contact the target's bond loses. Strength-weighted, so a forming merge
+// sticks a little and a locked one sticks fully.
+function bondTerm(
+  state: SimState,
+  xT: number,
+  yT: number,
+  sourcePartners: ReadonlyMap<CellId, number> | undefined,
+  targetPartners: ReadonlyMap<CellId, number> | undefined,
+): number {
+  let dH = 0;
+  for (const v of neighborVals(state.grid, xT, yT)) {
+    if (v === 0) continue;
+    dH -= sourcePartners?.get(v) ?? 0;
+    dH += targetPartners?.get(v) ?? 0;
+  }
+  return dH;
 }
 
 // Volume preservation (quadratic energy → linear force around target).
@@ -154,7 +189,8 @@ function applyPixelTransfer(
   // target, source's targetVol grows and target's shrinks. This lets engulf
   // outpace the volume term's pushback and rewards aggressive absorption.
   // (Mirrors Python target_cell_vols updates in cell_MC_step.)
-  if (sourceVal !== 0 && targetVal !== 0) {
+  // Bonded partners trade edge pixels but never digest each other.
+  if (sourceVal !== 0 && targetVal !== 0 && !state.bonds?.partners(sourceVal)?.has(targetVal)) {
     const source = state.cells.get(sourceVal);
     if (source && source.intent.engulfMultiplier > 1) {
       source.targetVol += state.engulfGain;

@@ -10,7 +10,17 @@ export interface Renderer {
     archetypes?: ReadonlyMap<CellId, EnemySpawn>,
     dishEvents?: readonly DishEventMarker[],
     goalCellIds?: ReadonlySet<CellId>,
+    mergeRings?: readonly MergeRing[],
   ): void;
+}
+
+/** A merge in the dish, in grid units: forming (a ring fills) or locked (one
+ *  organism, outlined by a soft membrane). */
+export interface MergeRing {
+  center: readonly [number, number];
+  radius: number;
+  progress: number;
+  locked: boolean;
 }
 
 export interface RendererOptions {
@@ -159,6 +169,7 @@ export function createRenderer(
       archetypes?: ReadonlyMap<CellId, EnemySpawn>,
       dishEvents: readonly DishEventMarker[] = [],
       goalCellIds?: ReadonlySet<CellId>,
+      mergeRings: readonly MergeRing[] = [],
     ) {
       frame += 1;
       const { LX, LY, cells, boundary } = state.grid;
@@ -227,6 +238,7 @@ export function createRenderer(
       if (goalCellIds && goalCellIds.size > 0) {
         drawGoalRings(ctx, state, goalCellIds, sx, sy, frame, reduceMotion);
       }
+      if (mergeRings.length > 0) drawMergeRings(ctx, mergeRings, sx, sy, frame, reduceMotion);
       for (const b of state.bullets) {
         const palette = base[b.ownerId] ?? base[0]!;
         // Lighten by 0.5 for the bullet color (slightly brighter than boundary).
@@ -314,6 +326,61 @@ const GOAL_RING = {
   color: 'rgba(214, 255, 249, 0.95)',
   underlay: 'rgba(0, 0, 0, 0.7)',
 };
+
+const MERGE_RING = {
+  arc: 'rgba(120, 255, 236, 0.95)',
+  track: 'rgba(91, 233, 214, 0.22)',
+  membrane: 'rgba(170, 255, 242, 0.34)',
+  underlay: 'rgba(0, 0, 0, 0.55)',
+};
+
+function drawMergeRings(
+  ctx: CanvasRenderingContext2D,
+  rings: readonly MergeRing[],
+  sx: number,
+  sy: number,
+  frame: number,
+  reduceMotion: boolean,
+): void {
+  const scale = (sx + sy) * 0.5;
+  ctx.save();
+  ctx.setLineDash([]);
+  for (const ring of rings) {
+    const cx = (ring.center[0] + 0.5) * sx;
+    const cy = (ring.center[1] + 0.5) * sy;
+    const radius = ring.radius * scale;
+    if (ring.locked) {
+      // One organism now: a soft membrane round all of it, breathing slowly.
+      const breath = reduceMotion ? 0 : Math.sin(frame * 0.05) * scale * 0.5;
+      ctx.lineWidth = Math.max(1.5, scale * 0.35);
+      ctx.strokeStyle = MERGE_RING.membrane;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius + breath, 0, Math.PI * 2);
+      ctx.stroke();
+      continue;
+    }
+    // Forming: a faint track and a bright arc that fills from twelve o'clock.
+    const width = Math.max(2, scale * 0.6);
+    const start = -Math.PI / 2;
+    ctx.lineWidth = width + 3;
+    ctx.strokeStyle = MERGE_RING.underlay;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, start, start + Math.PI * 2 * ring.progress);
+    ctx.stroke();
+    ctx.lineWidth = width;
+    ctx.strokeStyle = MERGE_RING.track;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = reduceMotion ? 1 : 0.75 + 0.25 * Math.sin(frame * 0.3);
+    ctx.strokeStyle = MERGE_RING.arc;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, start, start + Math.PI * 2 * ring.progress);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
 
 function drawGoalRings(
   ctx: CanvasRenderingContext2D,

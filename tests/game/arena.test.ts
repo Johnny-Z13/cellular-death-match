@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createArena, type Arena } from '../../src/game/arena';
-import { TOOL_TUNING, AGITATION_TUNING, ARENA_TIMING } from '../../src/content/ecologyTuning';
+import { TOOL_TUNING, AGITATION_TUNING, ARENA_TIMING, OPEN_LAB_LIFE_CYCLE } from '../../src/content/ecologyTuning';
+import { ARCHETYPE_DEFAULTS } from '../../src/content/enemies';
 import { getCell, setCell, updateBoundaryAround } from '../../src/sim/grid';
 import { removePixel } from '../../src/sim/cell';
 
@@ -1763,6 +1764,48 @@ describe('arena ecosystem mode', () => {
       expect(arena.getEcology().discoveries.breedIds.includes('needle_swarm')).toBe(discovers);
       expect([...arena.archetypes.values()].some((spawn) => spawn.breedId)).toBe(discovers);
     }
+  });
+
+  it('locks two fed cultures into a merge, and leaves the title dish without merges', () => {
+    const IDLE = { moveVec: [0, 0] as [number, number], shouldFire: false, shouldEngulf: false };
+    const outcome = (mergeDiscovery: boolean) => {
+      const arena = createArena({
+        LX: 100,
+        LY: 100,
+        seed: 9,
+        player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+        enemies: [],
+        wrap: false,
+        mode: 'ecosystem',
+        includeControlSample: false,
+        fightIndex: 5,
+        worldEventIntensity: 0,
+        lifeCycle: OPEN_LAB_LIFE_CYCLE,
+        breedDiscovery: false,
+        mergeDiscovery,
+      });
+      arena.setHazardsHeld(true);
+      const still = { ...ARCHETYPE_DEFAULTS.swarmlet, speed: 0 };
+      arena.spawnEnemy({ spawn: still, pos: [48, 50] });
+      arena.spawnEnemy({ spawn: { ...still }, pos: [53, 50] });
+      const events = [];
+      for (let t = 0; t < 600; t++) {
+        if (t % 120 === 0) arena.applyTool('nutrient', [50.5, 50]);
+        arena.tick(IDLE);
+        events.push(...arena.drainMergeEvents());
+      }
+      return { events, merges: arena.getMerges(), bonded: !!arena.state.bonds };
+    };
+
+    const on = outcome(true);
+    expect(on.events.map((e) => [e.kind, e.form.id])).toContainEqual(['locked', 'puddle_pals']);
+    expect(on.merges.locked.map((form) => form.form.id)).toEqual(['puddle_pals']);
+    expect(on.bonded).toBe(true);
+
+    const off = outcome(false);
+    expect(off.events).toEqual([]);
+    expect(off.merges).toEqual({ forming: [], locked: [] });
+    expect(off.bonded).toBe(false);
   });
 
   it('keeps reseeding after more cultures have died than the population cap', () => {

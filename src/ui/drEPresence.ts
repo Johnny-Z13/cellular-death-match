@@ -10,6 +10,8 @@ import type { SpeechEnvelope } from './drEFace/faceModel';
 
 export interface DrEPresence {
   setExpression(id: FaceExpressionId): void;
+  /** Wear `id` for `ms`, then go back to what the coach's state calls for. */
+  react(id: FaceExpressionId, ms: number): void;
   speak(speech: SpeechEnvelope, startMs: number): void;
   stopSpeaking(): void;
 }
@@ -36,8 +38,15 @@ export function createDrEPresence(additiveBloom: boolean): DrEPresence {
     }
   }
 
+  let reactTimer = 0;
+  let resting: () => void = () => {};
   const presence: DrEPresence = {
     setExpression: (id) => { for (const face of faces) face.setExpression(id); },
+    react(id, ms) {
+      window.clearTimeout(reactTimer);
+      presence.setExpression(id);
+      reactTimer = window.setTimeout(() => resting(), ms);
+    },
     speak: (speech, startMs) => { for (const face of faces) face.speak(speech, startMs); },
     stopSpeaking: () => { for (const face of faces) face.stopSpeaking(); },
   };
@@ -51,6 +60,10 @@ export function createDrEPresence(additiveBloom: boolean): DrEPresence {
       if (next === current) return;
       current = next;
       presence.setExpression(next);
+    };
+    resting = () => {
+      current = null;
+      sync();
     };
     new MutationObserver(sync).observe(coach, { attributes: true, attributeFilter: ['class'] });
     if (kicker) new MutationObserver(sync).observe(kicker, { childList: true, characterData: true, subtree: true });

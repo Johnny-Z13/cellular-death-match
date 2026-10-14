@@ -1,6 +1,6 @@
 ﻿import { createRun } from './game/run';
 import { createArena, toolRadiusFor, type Arena, type ArenaStatus } from './game/arena';
-import { createRenderer, type Renderer } from './ui/render';
+import { createRenderer, type MergeRing, type Renderer } from './ui/render';
 import { createDebugPanel } from './ui/debug';
 import { createScreens, type ToolId } from './ui/screens';
 import { AGITATION_TUNING, OPEN_LAB_LIFE_CYCLE, SIM_SPEED_TUNING, TOOL_TUNING } from './content/ecologyTuning';
@@ -123,6 +123,7 @@ import { studyIntroductionRoute } from './ui/studyIntroduction';
 import { dishGridFor, dishLayoutFor, type DishLayout } from './ui/dishShape';
 import { createDrEPresence } from './ui/drEPresence';
 import { createDrESpeech } from './ui/drESpeech';
+import { groupExtent, type MergeEvent } from './game/mergeDetection';
 import { isCrazyGamesEnvironment } from './platform/crazyGames';
 
 declare const __COMMIT_MESSAGE__: string;
@@ -1583,7 +1584,7 @@ function loop() {
     // storage is unavailable so Retry cannot overwrite later dish activity.
     simClock.reset(now);
     if (shouldRenderFrame(lastRenderAt, now, visualProfile.targetRenderFps)) {
-      renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds);
+      renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds, mergeRingsFor(arena));
       renderToolEffects(arena);
       juice.draw();
       lastRenderAt = now;
@@ -1634,12 +1635,13 @@ function loop() {
     tickCount++;
   }
   if (ticksToRun > 0) ecologyAudio.update(readAudioFrame(arena));
+  for (const merge of arena.drainMergeEvents()) announceMerge(merge);
 
   updateJuiceEvents(arena);
   recoverLostLessonCulture(arena, now);
   dishGoalCellIds = dishLabels.update(arena, run.getObjective(), now);
   if (shouldRenderFrame(lastRenderAt, now, visualProfile.targetRenderFps)) {
-    renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds);
+    renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds, mergeRingsFor(arena));
     renderToolEffects(arena);
     juice.draw();
     lastRenderAt = now;
@@ -2968,6 +2970,34 @@ function restartLesson(title: string, body: string): void {
 
 function isFieldTool(tool: ToolId): tool is 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' {
   return tool === 'nutrient' || tool === 'toxin' || tool === 'water' || tool === 'salt' || tool === 'acid';
+}
+
+// Dev server only (stripped from builds): lets QA scripts stage and read the
+// live dish.
+if (import.meta.env.DEV) {
+  (window as unknown as { cdmDebug: { arena: () => Arena | null } }).cdmDebug = { arena: () => arena };
+}
+
+// Forming merges fill a ring; locked ones are outlined as one organism.
+function mergeRingsFor(ar: Arena): MergeRing[] {
+  const { forming, locked } = ar.getMerges();
+  return [
+    ...forming.map((group) => ({ ...groupExtent(ar.state, group.members), progress: group.progress, locked: false })),
+    ...locked.map((form) => ({ ...groupExtent(ar.state, form.members), progress: 1, locked: true })),
+  ];
+}
+
+function announceMerge(merge: MergeEvent): void {
+  const number = `#${String(merge.form.number).padStart(3, '0')}`;
+  if (merge.kind === 'broke') {
+    screens.addTicker(`${merge.form.name} came apart.`, 'caution');
+    return;
+  }
+  uiAudio.play('experiment_ready');
+  haptics.play('discovery');
+  drE.react('delighted', 2600);
+  screens.addTicker(`Merged: ${merge.form.name}, friend ${number}.`, 'discovery');
+  fx.showUnlockBanner('Friend rescued', merge.form.name, `${number} · Rare`, 'bio');
 }
 
 function canvasEventToGridPos(event: PointerEvent): [number, number] {

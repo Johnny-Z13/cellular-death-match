@@ -86,6 +86,7 @@ export function createTitleDish(profile: VisualPerformanceProfile, paletteSize: 
       knownBreedIds: new Set(),
       lifeCycle: OPEN_LAB_LIFE_CYCLE,
       breedDiscovery: false,
+      mergeDiscovery: false,
     });
     arena.setHazardsHeld(true);
     canvas.width = grid.LX * T.canvasPxPerCell;

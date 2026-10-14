@@ -47,6 +47,8 @@ import { clampReagentShift, getBreedProfile, getReagentShift, type BreedProfileI
 import { createHomeostasisTracker } from './homeostasis';
 import { applyAppetite, applyMetabolism, createLifeCycleState, readyToDivide } from './lifeCycle';
 import { getEscalation } from './escalation';
+import { createMergeTracker, MERGE_DETECTION, type FormingGroup, type LockedForm, type MergeEvent } from './mergeDetection';
+import type { FormFeed } from '../content/forms';
 import {
   createObjectiveRuntime,
   evaluateObjective,
@@ -93,6 +95,10 @@ export interface Arena {
   getToolEffects(): ToolEffect[];
   getLastEggCellPos(): [number, number] | null;
   getDishEvents(): DishEventMarker[];
+  /** Groups forming a merge, and the locked forms now in the dish. */
+  getMerges(): { forming: readonly FormingGroup[]; locked: readonly LockedForm[] };
+  /** Merges that locked or came apart since the last call. */
+  drainMergeEvents(): MergeEvent[];
   applyTool(tool: LabTool, pos: [number, number], opts?: ApplyToolOpts): boolean;
   endPasteStroke(): void;
   agitate(): boolean;
@@ -203,6 +209,8 @@ export interface CreateArenaOpts {
   /** False keeps the dish from evolving breeds (the title screen's dish must
    *  not reveal strains the player has yet to find). */
   breedDiscovery?: boolean;
+  /** False turns merges off: no forming, locking or bonds (the title dish). */
+  mergeDiscovery?: boolean;
 }
 
 const PLAYER_ID = 1;
@@ -295,6 +303,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
   const effectiveOutbreakCount = esc.outbreakSeverity;
   const includeControlSample = opts.includeControlSample ?? true;
   const breedDiscovery = opts.breedDiscovery ?? true;
+  const merges = mode === 'ecosystem' && (opts.mergeDiscovery ?? true) ? createMergeTracker() : null;
+  const mergeEvents: MergeEvent[] = [];
   // The first epoch with the control sample removed is the coach-driven
   // onboarding dish (Swarmlet + Nutrient only, tutorial owns its ending).
   const isOnboardingDish = fightIndex === 0 && !includeControlSample;
@@ -642,6 +652,12 @@ export function createArena(opts: CreateArenaOpts): Arena {
         startToolCooldown('paste');
       }
     },
+    getMerges() {
+      return { forming: merges?.forming() ?? [], locked: merges?.locked() ?? [] };
+    },
+    drainMergeEvents() {
+      return mergeEvents.splice(0);
+    },
     getDishEvents(): DishEventMarker[] {
       return dishEvents.map((event) => ({
         ...event,
@@ -909,7 +925,12 @@ export function createArena(opts: CreateArenaOpts): Arena {
         applyAppetite(state, archetypes, lifeCycle, life, tickNo);
         applyMetabolism(state, archetypes, lifeCycle, life);
         if (tickNo % lifeCycle.divideCheckTicks === 0) {
+          // Cultures mid-merge are busy becoming one organism: they do not
+          // divide until the merge locks or lets go. A locked form divides as
+          // normal; its daughters are simply not part of it.
+          const merging = new Set((merges?.forming() ?? []).flatMap((group) => group.members));
           for (const id of readyToDivide(state, archetypes, lifeCycle, life)) {
+            if (merging.has(id)) continue;
             if (livingCultureCount(state, archetypes) >= ECOSYSTEM_MAX_POPULATION) break;
             const parent = state.cells.get(id)!;
             const parentSpawn = archetypes.get(id)!;
@@ -1060,7 +1081,32 @@ export function createArena(opts: CreateArenaOpts): Arena {
         this.spawnEnemy({ spawn: swarmletSpawn, pos: [pos[0] + 3, pos[1]] });
       }
 
+      // Locked forms move as one; the sim reads their bonds while any exist.
+      if (merges) {
+        merges.steer(state);
+        state.bonds = merges.bonds.size() > 0 ? merges.bonds : undefined;
+      }
+
       simTick(state, MC_STEPS_PER_TICK);
+
+      if (merges && tickNo % MERGE_DETECTION.scanTicks === 0) {
+        const strainOf = (id: CellId): string | null => {
+          if (id === PLAYER_ID) return 'control';
+          const spawn = archetypes.get(id);
+          return spawn ? spawn.breedId ?? spawn.archetype : null;
+        };
+        const fedBy = (id: CellId, feed: FormFeed): boolean => {
+          const cell = state.cells.get(id);
+          if (!cell) return false;
+          return overlapsEffect(state, cell, toolEffects, feed)
+            || (feed === 'nutrient' && overlapsEffect(state, cell, trailEffects, 'nutrient'));
+        };
+        for (const merge of merges.scan(state, strainOf, fedBy)) {
+          mergeEvents.push(merge);
+          if (merge.kind === 'locked') addDishEvent('discovery', `MERGED · ${merge.form.name.toUpperCase()}`, merge.center, merge.radius, 'cyan');
+          else addDishEvent('caution', `${merge.form.name} came apart`, merge.center, merge.radius, 'amber');
+        }
+      }
 
       // Feed homeostasis with breed volume shares, not culture counts.
       const breedVolumes = new Map<string, number>();
