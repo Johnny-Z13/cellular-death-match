@@ -24,21 +24,21 @@ interface UiSoundDef {
 }
 
 const UI_SOUND_DEFS: Record<UiSoundId, UiSoundDef> = {
-  ui_tap: { asset: '/audio/generated/ui_tap.mp3', gain: 0.32, cooldownMs: 40 },
-  ui_select: { asset: '/audio/generated/ui_select.mp3', gain: 0.4, cooldownMs: 60 },
-  epoch_begin: { asset: '/audio/generated/epoch_begin.mp3', gain: 0.6, cooldownMs: 400 },
-  epoch_win: { asset: '/audio/generated/epoch_win.mp3', gain: 0.66, cooldownMs: 400 },
-  epoch_fail: { asset: '/audio/generated/epoch_fail.mp3', gain: 0.62, cooldownMs: 400 },
-  experiment_ready: { asset: '/audio/generated/experiment_ready.mp3', gain: 0.6, cooldownMs: 600 },
-  drop_nutrient: { asset: '/audio/generated/drop_nutrient.mp3', gain: 0.5, cooldownMs: 50 },
-  drop_water: { asset: '/audio/generated/drop_water.mp3', gain: 0.5, cooldownMs: 50 },
-  drop_toxin: { asset: '/audio/generated/drop_toxin.mp3', gain: 0.5, cooldownMs: 50 },
-  drop_salt: { asset: '/audio/generated/drop_salt.mp3', gain: 0.5, cooldownMs: 50 },
-  drop_acid: { asset: '/audio/generated/drop_acid.mp3', gain: 0.52, cooldownMs: 50 },
-  drop_paste: { asset: '/audio/generated/drop_paste.mp3', gain: 0.4, cooldownMs: 90 },
+  ui_tap: { asset: 'audio/generated/ui_tap.mp3', gain: 0.32, cooldownMs: 40 },
+  ui_select: { asset: 'audio/generated/ui_select.mp3', gain: 0.4, cooldownMs: 60 },
+  epoch_begin: { asset: 'audio/generated/epoch_begin.mp3', gain: 0.6, cooldownMs: 400 },
+  epoch_win: { asset: 'audio/generated/epoch_win.mp3', gain: 0.66, cooldownMs: 400 },
+  epoch_fail: { asset: 'audio/generated/epoch_fail.mp3', gain: 0.62, cooldownMs: 400 },
+  experiment_ready: { asset: 'audio/generated/experiment_ready.mp3', gain: 0.6, cooldownMs: 600 },
+  drop_nutrient: { asset: 'audio/generated/drop_nutrient.mp3', gain: 0.5, cooldownMs: 50 },
+  drop_water: { asset: 'audio/generated/drop_water.mp3', gain: 0.5, cooldownMs: 50 },
+  drop_toxin: { asset: 'audio/generated/drop_toxin.mp3', gain: 0.5, cooldownMs: 50 },
+  drop_salt: { asset: 'audio/generated/drop_salt.mp3', gain: 0.5, cooldownMs: 50 },
+  drop_acid: { asset: 'audio/generated/drop_acid.mp3', gain: 0.52, cooldownMs: 50 },
+  drop_paste: { asset: 'audio/generated/drop_paste.mp3', gain: 0.4, cooldownMs: 90 },
 };
 
-const AMBIENCE_ASSET = '/audio/generated/ambience_loop.mp3';
+const AMBIENCE_ASSET = 'audio/generated/ambience_loop.mp3';
 const MUTE_KEY = 'cdm.audio.muted';
 const REVERB_KEY = 'cdm.audio.reverb';
 // The generated clip has no loop-friendly head/tail, so a native loop clicks at

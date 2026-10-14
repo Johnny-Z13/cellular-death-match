@@ -16,41 +16,41 @@ export const CHIMERA_LORE: Record<BreedId, ChimeraLore> = {
   bloom_mass: {
     splice: 'Coral × Hydra',
     lore: 'A self-budding bloom whose severed lobes regrow into hungry daughters.',
-    portrait: '/art/chimera/bloom_mass.png',
+    portrait: 'art/chimera/bloom_mass.png',
   },
   glass_antibody: {
     splice: 'Diatom × Basilisk',
     lore: 'A glass-shelled hunter that petrifies the tissue it cracks open.',
-    portrait: '/art/chimera/glass_antibody.png',
+    portrait: 'art/chimera/glass_antibody.png',
   },
   needle_swarm: {
     splice: 'Wasp × Manticore',
     lore: 'A fast, fragile swarm that fires barbed quills at anything it surrounds.',
-    portrait: '/art/chimera/needle_swarm.png',
+    portrait: 'art/chimera/needle_swarm.png',
   },
   static_lattice: {
     splice: 'Slime mould × Will-o-wisp',
     lore: 'A flickering lattice that prefers to repeat patterns over growing outward.',
-    portrait: '/art/chimera/static_lattice.png',
+    portrait: 'art/chimera/static_lattice.png',
   },
   folded_anchor: {
     splice: 'Tardigrade × Golem',
     lore: 'A near-indestructible anchor that folds movement into slow, locked ruts.',
-    portrait: '/art/chimera/folded_anchor.png',
+    portrait: 'art/chimera/folded_anchor.png',
   },
   quill_bloom: {
     splice: 'Sea urchin × Phoenix',
     lore: 'A swelling propagator that keeps firing prickly needles as it spreads.',
-    portrait: '/art/chimera/quill_bloom.png',
+    portrait: 'art/chimera/quill_bloom.png',
   },
   vitric_anchor: {
     splice: 'Radiolarian × Gargoyle',
     lore: 'A toxin-proof fortress that crystallizes and drags nearby motion to a crawl.',
-    portrait: '/art/chimera/vitric_anchor.png',
+    portrait: 'art/chimera/vitric_anchor.png',
   },
   mire_lattice: {
     splice: 'Myxomycete × Wyrm',
     lore: 'A pattern-mass that keeps budding fresh tiles of itself across the dish.',
-    portrait: '/art/chimera/mire_lattice.png',
+    portrait: 'art/chimera/mire_lattice.png',
   },
 };

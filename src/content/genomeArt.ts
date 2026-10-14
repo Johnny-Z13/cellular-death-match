@@ -118,7 +118,7 @@ export const GENOME_ART: Record<LifeformIdentityId, GenomeArtIdentity> = Object.
       id,
       name: identity.name,
       role: identity.role,
-      asset: `/art/genomes/${id}.png`,
+      asset: `art/genomes/${id}.png`,
       alt: copy.alt,
       complexityBand: copy.complexityBand,
       primary: identity.colors.primary,

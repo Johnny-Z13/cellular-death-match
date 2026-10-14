@@ -25,8 +25,8 @@ describe('genome reconstruction content contract', () => {
       expect(genome.soundId).toBe(LIFEFORM_IDENTITIES[id].soundId);
       expect(genome.alt.length).toBeGreaterThan(30);
       expect(genome.reconstructionNote.length).toBeGreaterThan(30);
-      expect(genome.asset).toBe(`/art/genomes/${id}.png`);
-      expect(existsSync(`public${genome.asset}`)).toBe(true);
+      expect(genome.asset).toBe(`art/genomes/${id}.png`);
+      expect(existsSync(`public/${genome.asset}`)).toBe(true);
       expect(archiveEntry?.category).toBe('lifeform');
     }
   });
@@ -43,7 +43,7 @@ describe('genome reconstruction content contract', () => {
 
   it('ships transparent 384px pixel art whose dominant visible shade is the exact canonical RGB', async () => {
     for (const id of GENOME_IDS) {
-      const image = sharp(`public${GENOME_ART[id].asset}`).ensureAlpha();
+      const image = sharp(`public/${GENOME_ART[id].asset}`).ensureAlpha();
       const metadata = await image.metadata();
       const { data, info } = await image.raw().toBuffer({ resolveWithObject: true });
       const counts = new Map<string, number>();

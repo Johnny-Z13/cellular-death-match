@@ -29,7 +29,7 @@ export interface LifeformSoundIdentity {
 export const SOUND_EVENT_DEFS: Record<SoundEventId, SoundEventDef> = {
   hatch: {
     id: 'hatch',
-    asset: '/audio/generated/hatch.mp3',
+    asset: 'audio/generated/hatch.mp3',
     proceduralLayer: 'soft',
     maxVoices: 3,
     cooldownMs: 120,
@@ -37,7 +37,7 @@ export const SOUND_EVENT_DEFS: Record<SoundEventId, SoundEventDef> = {
   },
   visible_mutation: {
     id: 'visible_mutation',
-    asset: '/audio/generated/visible_mutation.mp3',
+    asset: 'audio/generated/visible_mutation.mp3',
     proceduralLayer: 'medium',
     maxVoices: 2,
     cooldownMs: 180,
@@ -45,7 +45,7 @@ export const SOUND_EVENT_DEFS: Record<SoundEventId, SoundEventDef> = {
   },
   catalytic_flare: {
     id: 'catalytic_flare',
-    asset: '/audio/generated/catalytic_flare.mp3',
+    asset: 'audio/generated/catalytic_flare.mp3',
     proceduralLayer: 'strong',
     maxVoices: 1,
     cooldownMs: 380,
@@ -53,7 +53,7 @@ export const SOUND_EVENT_DEFS: Record<SoundEventId, SoundEventDef> = {
   },
   water_stabilize: {
     id: 'water_stabilize',
-    asset: '/audio/generated/water_stabilize.mp3',
+    asset: 'audio/generated/water_stabilize.mp3',
     proceduralLayer: 'soft',
     maxVoices: 2,
     cooldownMs: 240,
@@ -61,7 +61,7 @@ export const SOUND_EVENT_DEFS: Record<SoundEventId, SoundEventDef> = {
   },
   salt_crystal: {
     id: 'salt_crystal',
-    asset: '/audio/generated/salt_crystal.mp3',
+    asset: 'audio/generated/salt_crystal.mp3',
     proceduralLayer: 'medium',
     maxVoices: 2,
     cooldownMs: 280,
@@ -69,7 +69,7 @@ export const SOUND_EVENT_DEFS: Record<SoundEventId, SoundEventDef> = {
   },
   folding_fault: {
     id: 'folding_fault',
-    asset: '/audio/generated/folding_fault.mp3',
+    asset: 'audio/generated/folding_fault.mp3',
     proceduralLayer: 'strong',
     maxVoices: 1,
     cooldownMs: 520,
@@ -77,7 +77,7 @@ export const SOUND_EVENT_DEFS: Record<SoundEventId, SoundEventDef> = {
   },
   hidden_breed: {
     id: 'hidden_breed',
-    asset: '/audio/generated/hidden_breed.mp3',
+    asset: 'audio/generated/hidden_breed.mp3',
     proceduralLayer: 'medium',
     maxVoices: 1,
     cooldownMs: 700,
@@ -85,7 +85,7 @@ export const SOUND_EVENT_DEFS: Record<SoundEventId, SoundEventDef> = {
   },
   objective_warning: {
     id: 'objective_warning',
-    asset: '/audio/generated/objective_warning.mp3',
+    asset: 'audio/generated/objective_warning.mp3',
     proceduralLayer: 'medium',
     maxVoices: 1,
     cooldownMs: 900,
