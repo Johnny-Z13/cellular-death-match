@@ -20,6 +20,11 @@
   image-rendering: pixelated;
 }
 
+/* His line as he says it: the unsaid words keep their space. */
+.dre-unsaid {
+  visibility: hidden;
+}
+
 /* Coach rail: a face in the portrait column. */
 .layout[data-screen="arena"] .coach .coach-portrait {
   background: transparent;

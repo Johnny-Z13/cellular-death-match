@@ -86,9 +86,10 @@ export function createDrEFace(canvas: HTMLCanvasElement, options: DrEFaceOptions
   let nextBlink = now() + tuning.blinkMinMs;
   let averagePaint = 0;
   let raf = 0;
+  let lastPaintAt = Number.NEGATIVE_INFINITY;
 
   const setSize = (cssPx: number): void => {
-    const pxPerCell = Math.max(1, Math.round((cssPx * (window.devicePixelRatio || 1)) / N));
+    const pxPerCell = Math.min(tuning.maxPxPerCell, Math.max(1, Math.round((cssPx * (window.devicePixelRatio || 1)) / N)));
     if (canvas.width !== N * pxPerCell) {
       canvas.width = N * pxPerCell;
       canvas.height = N * pxPerCell;
@@ -147,6 +148,9 @@ export function createDrEFace(canvas: HTMLCanvasElement, options: DrEFaceOptions
     raf = requestAnimationFrame(frame);
     // Hidden tabs and slots that are not on screen cost nothing.
     if (document.hidden || canvas.getClientRects().length === 0) return;
+    const wall = performance.now();
+    if (wall - lastPaintAt < 1000 / tuning.fps - 2) return;
+    lastPaintAt = wall;
     const began = performance.now();
     const t = now();
     const p = { ...blendFace(from, to, (t - blendStart) / tuning.blendMs) };

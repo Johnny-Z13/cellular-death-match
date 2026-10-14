@@ -122,6 +122,7 @@ import { dishExitState } from './game/dishExitAction';
 import { studyIntroductionRoute } from './ui/studyIntroduction';
 import { dishGridFor, dishLayoutFor, type DishLayout } from './ui/dishShape';
 import { createDrEPresence } from './ui/drEPresence';
+import { createDrESpeech } from './ui/drESpeech';
 import { isCrazyGamesEnvironment } from './platform/crazyGames';
 
 declare const __COMMIT_MESSAGE__: string;
@@ -289,7 +290,29 @@ let pendingGenomeDecodeIds: LifeformIdentityId[] = [];
 // Allow up to PALETTE_SIZE total cell colors for evolving ecosystem spawns.
 const PALETTE_SIZE = 32;
 createTitleDish(visualProfile, PALETTE_SIZE);
-createDrEPresence(visualProfile.additiveBloom);
+const drE = createDrEPresence(visualProfile.additiveBloom);
+// Dr. E's voice can be silenced on its own; his words still appear and his
+// mouth still moves. Same semantics as Sound: pressed = silenced.
+const DR_E_VOICE_KEY = 'cdm.dre-voice.v1';
+let drEVoiceEnabled = (() => {
+  try { return window.localStorage.getItem(DR_E_VOICE_KEY) !== '0'; } catch { return true; }
+})();
+const voiceButton = document.getElementById('voice-button');
+function applyDrEVoicePreference(enabled: boolean): void {
+  drEVoiceEnabled = enabled;
+  if (!voiceButton) return;
+  voiceButton.textContent = `Dr. E’s voice — ${enabled ? 'On' : 'Off'}`;
+  voiceButton.setAttribute('aria-label', enabled ? 'Silence Dr. E’s voice' : 'Let Dr. E speak');
+  voiceButton.setAttribute('aria-pressed', String(!enabled));
+}
+applyDrEVoicePreference(drEVoiceEnabled);
+voiceButton?.addEventListener('click', () => {
+  uiAudio.play('ui_tap');
+  const next = !drEVoiceEnabled;
+  try { window.localStorage.setItem(DR_E_VOICE_KEY, next ? '1' : '0'); } catch { /* preference is optional */ }
+  applyDrEVoicePreference(next);
+});
+createDrESpeech({ presence: drE, audio: uiAudio, voiceEnabled: () => drEVoiceEnabled, reducedMotion: reduceMotionPref });
 
 let arena: Arena | null = null;
 let renderer: Renderer | null = null;

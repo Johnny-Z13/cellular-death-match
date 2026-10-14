@@ -12,7 +12,12 @@ const CORE_PROJECTS = new Set(['phone', 'small-phone', 'desktop']);
 
 async function openLifeformPickerIfNeeded(page: Page, id: string): Promise<void> {
   const lifeform = page.locator(`[data-lifeform-id="${id}"]`);
-  if (!await lifeform.isVisible()) {
+  // Phones and the wide layout keep the eggs in a drawer that slides; ask
+  // whether it is open rather than whether an egg is momentarily visible.
+  const inDrawer = await page.evaluate(() => document.documentElement.dataset.layout === 'wide'
+    || window.matchMedia('(max-width: 899px)').matches);
+  const drawerOpen = await page.locator('.layout').getAttribute('data-mobile-drawer') === 'lifeforms';
+  if (inDrawer ? !drawerOpen : !await lifeform.isVisible()) {
     await page.locator('#mobile-lifeforms-toggle').click();
   }
   await expect(lifeform).toBeVisible();

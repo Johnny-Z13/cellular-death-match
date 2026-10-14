@@ -45,6 +45,9 @@ const REVERB_KEY = 'cdm.audio.reverb';
 // the seam. We re-trigger it with this much equal-power crossfade overlap so the
 // boundary is masked instead.
 const AMBIENCE_CROSSFADE = 1.4;
+const AMBIENCE_LEVEL = 0.5;
+// The ambience dips to this share of its level while Dr. E speaks.
+const SPEECH_DUCK = 0.55;
 
 export interface UiAudio {
   unlock(): void;
@@ -57,6 +60,11 @@ export interface UiAudio {
   isReverbEnabled(): boolean;
   setReverbEnabled(enabled: boolean): void;
   toggleReverb(): boolean;
+  /** Dr. E's voice channel: the context and a bus through the master, so
+   *  Sound mute applies. Null until the audio has been unlocked. */
+  speechBus(): { ctx: AudioContext; destination: AudioNode } | null;
+  /** Dip the ambience while Dr. E speaks. */
+  duckAmbience(ducked: boolean): void;
 }
 
 export function createUiAudio(): UiAudio {
@@ -71,6 +79,7 @@ export function createUiAudio(): UiAudio {
   let muted = readMutedPreference();
   let reverbEnabled = readReverbPreference();
   let reverbWet: GainNode | null = null;
+  let speechGain: GainNode | null = null;
   const buffers = new Map<UiSoundId, AudioBuffer>();
   const lastAt = new Map<UiSoundId, number>();
 
@@ -143,7 +152,7 @@ export function createUiAudio(): UiAudio {
     // Fade the overall ambience bed up gently.
     ambienceGain.gain.cancelScheduledValues(now);
     ambienceGain.gain.setValueAtTime(Math.max(0.0001, ambienceGain.gain.value), now);
-    ambienceGain.gain.linearRampToValueAtTime(0.5, now + 2.5);
+    ambienceGain.gain.linearRampToValueAtTime(AMBIENCE_LEVEL, now + 2.5);
     scheduleAmbienceVoice(now);
   }
 
@@ -192,6 +201,21 @@ export function createUiAudio(): UiAudio {
   }
 
   return {
+    speechBus() {
+      if (!ctx || !master) return null;
+      if (!speechGain) {
+        speechGain = ctx.createGain();
+        speechGain.connect(master);
+      }
+      return { ctx, destination: speechGain };
+    },
+    duckAmbience(ducked) {
+      if (!ctx || !ambienceGain || !ambienceWanted) return;
+      const now = ctx.currentTime;
+      ambienceGain.gain.cancelScheduledValues(now);
+      ambienceGain.gain.setValueAtTime(ambienceGain.gain.value, now);
+      ambienceGain.gain.linearRampToValueAtTime(ducked ? AMBIENCE_LEVEL * SPEECH_DUCK : AMBIENCE_LEVEL, now + 0.25);
+    },
     unlock() {
       const c = ensureContext();
       if (c.state === 'suspended') void c.resume();

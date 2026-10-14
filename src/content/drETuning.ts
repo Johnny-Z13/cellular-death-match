@@ -118,11 +118,13 @@ export interface DrEFaceTuning {
   talkMouthGain: number; // how far a full-volume syllable opens the mouth
   talkBounce: number; // squash added by a full-volume syllable
   blendMs: number; // expression change time
+  maxPxPerCell: number; // backing pixels per cell; CSS scales him up crisply
+  fps: number; // his animation rate; the membrane steps slower than this anyway
 }
 
 export const DR_E_FACE: DrEFaceTuning = {
   gridSize: 40, wobble: 0.04, wobbleHz: 0.5, flicker: 0.12, flickerMs: 90, shimmer: 0.08,
   blinkMinMs: 2000, blinkMaxMs: 6000, blinkMs: 140, breathHz: 0.25, breathSquash: 0.02,
-  coreShade: 0.42, membraneLight: 0.38, seamLight: 0.2,
+  coreShade: 0.42, membraneLight: 0.38, seamLight: 0.2, maxPxPerCell: 6, fps: 30,
   talkMouthGain: 0.9, talkBounce: 0.05, blendMs: 150,
 };
