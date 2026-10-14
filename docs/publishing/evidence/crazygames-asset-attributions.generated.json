@@ -1,20 +1,20 @@
 {
   "schemaVersion": 1,
   "registry": "docs/publishing/evidence/crazygames-asset-attributions.json",
-  "registrySha256": "057e63e35ef768ef5f09ab925bef0b9d1822527927d0301225a480847b4550c0",
+  "registrySha256": "a265396042f4138303289181667cb85a8e5d1592c332ea4b768e6a61e9b4bea9",
   "scanRoots": [
     "public"
   ],
   "summary": {
-    "registeredAssets": 54,
-    "observedAssets": 54,
+    "registeredAssets": 51,
+    "observedAssets": 51,
     "releaseClearedAssets": 1,
     "statusCounts": {
-      "provider-declared": 53,
+      "provider-declared": 50,
       "cleared": 1
     },
     "integrityCounts": {
-      "matched": 54
+      "matched": 51
     },
     "releaseReady": false,
     "releaseBlockers": [
@@ -135,21 +135,6 @@
       },
       {
         "path": "public/art/professor/dr-e-mergent-pixel.png",
-        "status": "provider-declared",
-        "reason": "Provider route declared; evidence and approval pending"
-      },
-      {
-        "path": "public/art/professor/professor-emergent-v1.png",
-        "status": "provider-declared",
-        "reason": "Provider route declared; evidence and approval pending"
-      },
-      {
-        "path": "public/art/professor/professor-emergent-v2.png",
-        "status": "provider-declared",
-        "reason": "Provider route declared; evidence and approval pending"
-      },
-      {
-        "path": "public/art/title-keyart-1024.png",
         "status": "provider-declared",
         "reason": "Provider route declared; evidence and approval pending"
       },
@@ -666,54 +651,6 @@
       "evidence": "docs/assets/professor/README.md",
       "bytes": 41980,
       "expectedSha256": "c50b394b186536a17d698adc6a9a65b2295bc0b67c56dfbda050f0ef6bb3ac75",
-      "integrity": "matched",
-      "declaredStatus": "provider-declared",
-      "effectiveStatus": "provider-declared"
-    },
-    {
-      "path": "public/art/professor/professor-emergent-v1.png",
-      "kind": "image",
-      "sha256": "65db0f9ae845ae5066228f39469752c57200a1bfbbea0889c1fa30de9cbe5d7a",
-      "status": "provider-declared",
-      "creator": "Z13 Labs (AI-generated)",
-      "provider": "OpenAI Image Generation",
-      "credit": "Professor E. Mergent character art by Z13 Labs, generated with OpenAI.",
-      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
-      "evidence": "docs/assets/professor/README.md",
-      "bytes": 720845,
-      "expectedSha256": "65db0f9ae845ae5066228f39469752c57200a1bfbbea0889c1fa30de9cbe5d7a",
-      "integrity": "matched",
-      "declaredStatus": "provider-declared",
-      "effectiveStatus": "provider-declared"
-    },
-    {
-      "path": "public/art/professor/professor-emergent-v2.png",
-      "kind": "image",
-      "sha256": "81c3405ba8f7a47e2dcb670cbfd5c01e118c98cbb9c70c2a54d41920099ca3f8",
-      "status": "provider-declared",
-      "creator": "Z13 Labs (AI-generated, identity-preserving high-resolution edit)",
-      "provider": "OpenAI Image Generation",
-      "credit": "Professor E. Mergent high-resolution character art by Z13 Labs, generated with OpenAI.",
-      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
-      "evidence": "docs/assets/professor/README.md",
-      "bytes": 2414301,
-      "expectedSha256": "81c3405ba8f7a47e2dcb670cbfd5c01e118c98cbb9c70c2a54d41920099ca3f8",
-      "integrity": "matched",
-      "declaredStatus": "provider-declared",
-      "effectiveStatus": "provider-declared"
-    },
-    {
-      "path": "public/art/title-keyart-1024.png",
-      "kind": "image",
-      "sha256": "4c4e182a3c417b0630c925fb65593793fa8b3c0951287d134d8ca4f020254356",
-      "status": "provider-declared",
-      "creator": "Z13 Labs (AI-generated)",
-      "provider": "Google Gemini API / gemini-2.5-flash-image",
-      "credit": "Cellular Death Match title art by Z13 Labs, generated with Google Gemini.",
-      "terms": "https://ai.google.dev/gemini-api/terms; named originality and distribution approval pending.",
-      "evidence": "scripts/generate-keyart.mjs",
-      "bytes": 426192,
-      "expectedSha256": "4c4e182a3c417b0630c925fb65593793fa8b3c0951287d134d8ca4f020254356",
       "integrity": "matched",
       "declaredStatus": "provider-declared",
       "effectiveStatus": "provider-declared"

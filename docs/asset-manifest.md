@@ -12,10 +12,12 @@ Generated assets and the scripts that produce them. Re-run a script to regenerat
 
 Script: `scripts/generate-keyart.mjs` (`node scripts/generate-keyart.mjs --force` to regenerate).
 The script generates, then recompresses to a 1024² web-friendly PNG via `sharp`.
+Retired on 2026-10-14: the title is now the game's own live dish, so the key art
+no longer ships. It is kept in `docs/assets/title/`, where the script writes.
 
 | Asset | File | Prompt summary |
 |---|---|---|
-| Title background | `public/art/title-keyart-1024.png` | Bioluminescent colony blooming across a black petri dish, cyan filaments with amber/violet accents, dark center for title text, lens vignette. Style prefix: premium dark scientific macro, deep-sea bioluminescence, microscope view, no text. |
+| Title background (retired) | `docs/assets/title/title-keyart-1024.png` | Bioluminescent colony blooming across a black petri dish, cyan filaments with amber/violet accents, dark center for title text, lens vignette. Style prefix: premium dark scientific macro, deep-sea bioluminescence, microscope view, no text. |
 
 ### Chimera specimen portraits
 

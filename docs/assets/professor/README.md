@@ -12,7 +12,7 @@
 
 ### Style references
 
-- `public/art/title-keyart-1024.png`
+- `docs/assets/title/title-keyart-1024.png` (shipped at `public/art/` until 2026-10-14)
 - `public/art/chimera/bloom_mass.png`
 - `public/art/chimera/vitric_anchor.png`
 
@@ -51,7 +51,7 @@ Before production use:
 
 ## Production derivative
 
-`public/art/professor/professor-emergent-v1.png` is the production crop derived
+`docs/assets/professor/professor-emergent-v1.png` is the production crop derived
 from this accepted concept.
 
 - Installed: 2026-08-25
@@ -65,15 +65,15 @@ not to this separately recorded production derivative.
 
 ## High-resolution production master
 
-`public/art/professor/professor-emergent-v2.png` is the higher-resolution
-production portrait used by the title, full-screen introductions, HUD, and
+`docs/assets/professor/professor-emergent-v2.png` is the higher-resolution
+production portrait that was used by the title, full-screen introductions, HUD, and
 onboarding pointer.
 
 - Installed: 2026-09-03
 - Dimensions: 1143 × 1376 PNG
 - SHA-256: `81c3405ba8f7a47e2dcb670cbfd5c01e118c98cbb9c70c2a54d41920099ca3f8`
 - Generator/provider: OpenAI built-in image generation
-- Source reference: `public/art/professor/professor-emergent-v1.png`
+- Source reference: `docs/assets/professor/professor-emergent-v1.png`
 - Distribution status: provider-declared; named human approval is still required
 - Distribution evidence: `docs/publishing/evidence/crazygames-asset-attributions.json`
 
@@ -85,9 +85,10 @@ artificial oversharpening.
 
 ## Pixel portrait
 
-`public/art/professor/dr-e-mergent-pixel.png` replaces the painted portrait in
-all five slots: the title, the welcome and method introductions, the HUD, and
-the onboarding pointer. Johnny asked on 2026-10-14 for a professor that looks
+`public/art/professor/dr-e-mergent-pixel.png` replaces the painted portrait
+everywhere Dr. E appears: the welcome and method introductions, the HUD, and
+the onboarding pointer. Since 2026-10-14 he is not on the title or the store
+cover; the live dish carries the brand. Johnny asked on 2026-10-14 for a professor that looks
 less AI-generated, in the same visual family as the genome sprites.
 
 - Installed: 2026-10-14
@@ -104,5 +105,5 @@ less AI-generated, in the same visual family as the genome sprites.
   palette is the game's own: bio-teal, amber and violet.
 - Distribution status: provider-declared; named human approval is still required
 
-The painted `professor-emergent-v1.png` and `professor-emergent-v2.png` remain
-in `public/` but are no longer referenced by the game.
+The painted `professor-emergent-v1.png` and `professor-emergent-v2.png` were
+moved out of `public/` into this folder on 2026-10-14. They no longer ship.

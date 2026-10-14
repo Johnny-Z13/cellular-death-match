@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Generates the title-screen key art for Cellular Death Match via Nano Banana.
+// Generates the retired title-screen key art for Cellular Death Match via Nano Banana.
+// The title is now the live dish, so the art is kept with the docs, not shipped.
 //   node scripts/generate-keyart.mjs           # generate missing
 //   node scripts/generate-keyart.mjs --force   # regenerate
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
@@ -8,7 +9,7 @@ import { join } from 'node:path';
 import sharp from 'sharp';
 
 const MODEL = 'gemini-2.5-flash-image';
-const OUTPUT_DIR = 'public/art';
+const OUTPUT_DIR = 'docs/assets/title';
 const STYLE_PREFIX =
   'Premium dark scientific macro photograph, deep-sea bioluminescence aesthetic, '
   + 'microscope view of a petri dish, near-black void background, cinematic depth of field, '

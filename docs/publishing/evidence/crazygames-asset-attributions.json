@@ -106,28 +106,6 @@
       "evidence": "scripts/generate-chimera-art.mjs"
     },
     {
-      "path": "public/art/professor/professor-emergent-v1.png",
-      "kind": "image",
-      "sha256": "65db0f9ae845ae5066228f39469752c57200a1bfbbea0889c1fa30de9cbe5d7a",
-      "status": "provider-declared",
-      "creator": "Z13 Labs (AI-generated)",
-      "provider": "OpenAI Image Generation",
-      "credit": "Professor E. Mergent character art by Z13 Labs, generated with OpenAI.",
-      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
-      "evidence": "docs/assets/professor/README.md"
-    },
-    {
-      "path": "public/art/professor/professor-emergent-v2.png",
-      "kind": "image",
-      "sha256": "81c3405ba8f7a47e2dcb670cbfd5c01e118c98cbb9c70c2a54d41920099ca3f8",
-      "status": "provider-declared",
-      "creator": "Z13 Labs (AI-generated, identity-preserving high-resolution edit)",
-      "provider": "OpenAI Image Generation",
-      "credit": "Professor E. Mergent high-resolution character art by Z13 Labs, generated with OpenAI.",
-      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
-      "evidence": "docs/assets/professor/README.md"
-    },
-    {
       "path": "public/art/professor/dr-e-mergent-pixel.png",
       "kind": "image",
       "sha256": "c50b394b186536a17d698adc6a9a65b2295bc0b67c56dfbda050f0ef6bb3ac75",
@@ -291,17 +269,6 @@
       "credit": "Vitric Anchor genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.",
       "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
       "evidence": "docs/assets/genomes/README.md"
-    },
-    {
-      "path": "public/art/title-keyart-1024.png",
-      "kind": "image",
-      "sha256": "4c4e182a3c417b0630c925fb65593793fa8b3c0951287d134d8ca4f020254356",
-      "status": "provider-declared",
-      "creator": "Z13 Labs (AI-generated)",
-      "provider": "Google Gemini API / gemini-2.5-flash-image",
-      "credit": "Cellular Death Match title art by Z13 Labs, generated with Google Gemini.",
-      "terms": "https://ai.google.dev/gemini-api/terms; named originality and distribution approval pending.",
-      "evidence": "scripts/generate-keyart.mjs"
     },
     {
       "path": "public/audio/generated/ambience_loop.mp3",
