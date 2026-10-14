@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createArena, type Arena } from '../../src/game/arena';
-import { TOOL_TUNING, AGITATION_TUNING } from '../../src/content/ecologyTuning';
+import { TOOL_TUNING, AGITATION_TUNING, ARENA_TIMING } from '../../src/content/ecologyTuning';
 import { getCell, setCell, updateBoundaryAround } from '../../src/sim/grid';
 import { removePixel } from '../../src/sim/cell';
 
@@ -1739,6 +1739,26 @@ describe('arena ecosystem mode', () => {
 
     // Intent must point at the living swarmlet (+x), not back at the corpse (-x).
     expect(bruiser.intent.vec[0]).toBeGreaterThan(0.9);
+  });
+
+  it('keeps reseeding after more cultures have died than the population cap', () => {
+    const arena = createArena({
+      LX: 120,
+      LY: 120,
+      seed: 77,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: Array.from({ length: 28 }, () => ({ archetype: 'swarmlet' as const, targetVol: 60, speed: 0, engulfMultiplier: 1 })),
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 60,
+    });
+    for (const id of [...arena.archetypes.keys()]) killCell(arena, id);
+    for (let t = 0; t < ARENA_TIMING.reseedIntervalTicks; t++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+
+    const living = [...arena.archetypes.keys()].filter((id) => (arena.state.cells.get(id)?.vol ?? 0) > 0);
+    expect(living.length).toBeGreaterThan(0);
   });
 
   it('forms a velvet prison when salt and toxin trap gelatinous anchors', () => {

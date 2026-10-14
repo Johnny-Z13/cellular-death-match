@@ -393,7 +393,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       const marker = breedDiscoveryMarkerFor(id);
       addDishEvent(marker.kind, `NEW STRAIN: ${BREED_DEFS[id].name}`, sourceCell.center, marker.radius, marker.color);
     }
-    if (!sourceCell || sourceCell.vol <= 0 || archetypes.size >= ECOSYSTEM_MAX_POPULATION) return;
+    if (!sourceCell || sourceCell.vol <= 0 || livingCultureCount(state, archetypes) >= ECOSYSTEM_MAX_POPULATION) return;
     // A discovery is born beside its source, never on top of it. `addCell`
     // intentionally refuses to overwrite occupied pixels, so reusing the
     // source centre can create a zero-volume specimen (and dead-end Trial 1
@@ -1503,7 +1503,7 @@ function triggerWorldEvent(
         state.rng.randInt(state.grid.LX),
         state.rng.randInt(state.grid.LY),
       ];
-  const canSpawn = !!parentSpawn && archetypes.size < ECOSYSTEM_MAX_POPULATION;
+  const canSpawn = !!parentSpawn && livingCultureCount(state, archetypes) < ECOSYSTEM_MAX_POPULATION;
   if (canSpawn && state.rng.random() < WORLD_EVENT_TUNING.sporeDriftChance) {
     arena.spawnEnemy({ spawn: budSpawn(parentSpawn, state.rng.random()), pos });
     return {
@@ -1541,14 +1541,15 @@ function triggerPredatorOutbreak(
   archetypes: Map<CellId, EnemySpawn>,
   outbreakHunters?: number,
 ): { births: number; effect: ToolEffect } | null {
-  if (archetypes.size >= ECOSYSTEM_MAX_POPULATION) return null;
+  const livingCultures = livingCultureCount(state, archetypes);
+  if (livingCultures >= ECOSYSTEM_MAX_POPULATION) return null;
   const source = dominantOutbreakSource(state);
   if (!source) return null;
 
   const sourceArchetype = source.id === PLAYER_ID
     ? 'control_sample'
     : archetypes.get(source.id)?.archetype ?? 'culture';
-  const hunterCount = Math.min(outbreakHunters ?? OUTBREAK_HUNTER_COUNT, ECOSYSTEM_MAX_POPULATION - archetypes.size);
+  const hunterCount = Math.min(outbreakHunters ?? OUTBREAK_HUNTER_COUNT, ECOSYSTEM_MAX_POPULATION - livingCultures);
   let births = 0;
   for (let i = 0; i < hunterCount; i++) {
     const angle = (Math.PI * 2 * i) / hunterCount + state.rng.random() * 0.45;
@@ -2384,7 +2385,7 @@ function activateCrisis(
   const ids = Object.keys(CRISES) as CrisisId[];
   const id = ids[state.rng.randInt(ids.length)] ?? 'heat_spike';
   let births = 0;
-  if (id === 'contamination_bloom' && archetypes.size < ECOSYSTEM_MAX_POPULATION) {
+  if (id === 'contamination_bloom' && livingCultureCount(state, archetypes) < ECOSYSTEM_MAX_POPULATION) {
     arena.spawnEnemy({
       spawn: {
         ...ARCHETYPE_DEFAULTS.swarmlet,
@@ -2449,7 +2450,7 @@ function reseedEcology(
   const living = Array.from(state.cells)
     .filter(([id, cell]) => id !== PLAYER_ID && cell.vol > 0)
     .sort((a, b) => b[1].vol - a[1].vol);
-  if (living.length >= ECOSYSTEM_MIN_POPULATION || archetypes.size >= ECOSYSTEM_MAX_POPULATION) return 0;
+  if (living.length >= ECOSYSTEM_MIN_POPULATION || livingCultureCount(state, archetypes) >= ECOSYSTEM_MAX_POPULATION) return 0;
 
   const parentEntry = living[0];
   const parentSpawn = parentEntry ? archetypes.get(parentEntry[0]) : undefined;
@@ -2491,6 +2492,17 @@ function eggSpawnFor(archetype: EnemyArchetype, roll: number): EnemySpawn {
   spawn.targetVol = clamp(spawn.targetVol * sizeJitter, 55, 620);
   spawn.instability = Math.max(spawn.instability ?? 1, (base.instability ?? 1) * 1.15);
   return spawn;
+}
+
+// The population cap counts cultures alive now. `archetypes` keeps every
+// culture ever born, so its size would close the dish to new life for good
+// once 28 had lived.
+function livingCultureCount(state: SimState, archetypes: Map<CellId, EnemySpawn>): number {
+  let living = 0;
+  for (const id of archetypes.keys()) {
+    if ((state.cells.get(id)?.vol ?? 0) > 0) living += 1;
+  }
+  return living;
 }
 
 function clamp(n: number, lo: number, hi: number): number {
