@@ -43,12 +43,30 @@ const STRAIN_NOTES: Record<string, string> = {
   mire_lattice: 'Mire Lattice. A lattice in the mud. Slow, but sure.',
 };
 
-const VERY_RARE: readonly Omit<DexEntry, 'tier' | 'strains' | 'touching'>[] = [
-  { id: 'glider', number: 27, name: 'Glider', note: 'A Glider! It keeps going and going. Where to?', hint: 'A merged friend that travels a long way without stopping.' },
-  { id: 'blinker', number: 28, name: 'Blinker', note: 'A Blinker: in, out, in, out. It has a heartbeat now.', hint: 'A merged friend that pulses, steady as a clock.' },
-  { id: 'compound', number: 29, name: 'Compound', note: 'Two merges, merged. I need to sit down.', hint: 'Two merged friends, fed together, touching.' },
-  { id: 'rainbow', number: 30, name: 'Rainbow', note: 'Four strains, one organism. A Rainbow!', hint: 'One merge made of four different strains.' },
-  { id: 'old_timer', number: 31, name: 'Old Timer', note: 'Old Timer. Three minutes together and still holding hands.', hint: 'Keep one merged friend together for a very long time.' },
+// Very rares are behaviours, so their art is a fixed arrangement chosen to
+// suggest each one: a line that travels, a row that pulses, two pairs bonded,
+// four strains in a ring, one old giant.
+const VERY_RARE: readonly Omit<DexEntry, 'tier'>[] = [
+  {
+    id: 'glider', number: 27, name: 'Glider', strains: ['swarmlet', 'splitter', 'swarmlet'], touching: [[0, 1], [1, 2]],
+    note: 'A Glider! It keeps going and going. Where to?', hint: 'A merged friend that travels a long way without stopping.',
+  },
+  {
+    id: 'blinker', number: 28, name: 'Blinker', strains: ['mirror', 'mirror', 'mirror'], touching: [[0, 1], [1, 2]],
+    note: 'A Blinker: in, out, in, out. It has a heartbeat now.', hint: 'A merged friend that pulses, steady as a clock.',
+  },
+  {
+    id: 'compound', number: 29, name: 'Compound', strains: ['swarmlet', 'swarmlet', 'bruiser', 'bruiser'], touching: [[0, 1], [1, 2], [2, 3], [0, 3]],
+    note: 'Two merges, merged. I need to sit down.', hint: 'Two merged friends, fed together, touching.',
+  },
+  {
+    id: 'rainbow', number: 30, name: 'Rainbow', strains: ['swarmlet', 'bruiser', 'splitter', 'mirror'], touching: [[0, 1], [1, 2], [2, 3], [0, 3]],
+    note: 'Four strains, one organism. A Rainbow!', hint: 'One merge made of four different strains.',
+  },
+  {
+    id: 'old_timer', number: 31, name: 'Old Timer', strains: ['boss'], touching: [],
+    note: 'Old Timer. Three minutes together and still holding hands.', hint: 'Keep one merged friend together for a very long time.',
+  },
 ];
 
 export const DEX: readonly DexEntry[] = [
@@ -67,7 +85,7 @@ export const DEX: readonly DexEntry[] = [
     number: form.number, id: form.id, name: form.name, tier: 'rare', strains: form.strains, touching: form.touching,
     note: form.note, hint: form.hint,
   })),
-  ...VERY_RARE.map((entry): DexEntry => ({ ...entry, tier: 'very-rare', strains: [], touching: [] })),
+  ...VERY_RARE.map((entry): DexEntry => ({ ...entry, tier: 'very-rare' })),
 ];
 
 export const FRIENDS_SAVE_KEY = 'cdm.friends.v1';

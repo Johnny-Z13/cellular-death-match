@@ -5,7 +5,7 @@
 // moves as one. A locked form whose cultures lose touch, or die, comes apart.
 // The rule (isolated, fed, held) comes from the merge census:
 // docs/v1/merge-census.md.
-import { FORMS, type FormDef, type FormFeed } from '../content/forms';
+import { FORMS, RAINBOW_FORM, type FormDef, type FormFeed, type VeryRareId } from '../content/forms';
 import type { CellId, SimState } from '../sim/types';
 import { BOND_TUNING, createBondSet, type BondSet } from './bonds';
 import { buildContactGraph, canonicalShape, contactComponents, type ContactGraph } from './contactGraph';
@@ -21,6 +21,54 @@ export const MERGE_DETECTION = {
   /** A locked form whose cultures stay apart this long comes apart. */
   breakGraceTicks: 45,
 };
+
+/** The very rares: how a locked form must behave to earn one. */
+export const VERY_RARE_TUNING = {
+  /** Glider: its centre travels this far (sites) within the window... */
+  gliderDistance: 40,
+  gliderWindowTicks: 720,
+  /** ...along a path at least this straight (net distance / path length). */
+  gliderStraightness: 0.8,
+  /** Blinker: volume swings of at least this share of the mean... */
+  blinkerSwing: 0.12,
+  /** ...crossing the mean this many times within the window. */
+  blinkerCrossings: 6,
+  blinkerWindowTicks: 480,
+  /** Old Timer: locked this long. */
+  oldTimerTicks: 60 * 180,
+};
+
+export interface FormSample {
+  x: number;
+  y: number;
+  vol: number;
+}
+
+/** A path that goes far, mostly straight, within its window. */
+export function isGliding(samples: readonly FormSample[]): boolean {
+  const T = VERY_RARE_TUNING;
+  if (samples.length < 3) return false;
+  const first = samples[0]!;
+  const last = samples[samples.length - 1]!;
+  const net = Math.hypot(last.x - first.x, last.y - first.y);
+  let path = 0;
+  for (let i = 1; i < samples.length; i++) path += Math.hypot(samples[i]!.x - samples[i - 1]!.x, samples[i]!.y - samples[i - 1]!.y);
+  return net >= T.gliderDistance && path > 0 && net / path >= T.gliderStraightness;
+}
+
+/** A volume that swings above and below its mean, again and again. */
+export function isBlinking(samples: readonly FormSample[]): boolean {
+  const T = VERY_RARE_TUNING;
+  if (samples.length < T.blinkerCrossings + 2) return false;
+  const vols = samples.map((s) => s.vol);
+  const mean = vols.reduce((a, b) => a + b, 0) / vols.length;
+  if (mean <= 0 || (Math.max(...vols) - Math.min(...vols)) / mean < T.blinkerSwing) return false;
+  let crossings = 0;
+  for (let i = 1; i < vols.length; i++) {
+    if (Math.sign(vols[i]! - mean) !== Math.sign(vols[i - 1]! - mean) && vols[i] !== mean) crossings += 1;
+  }
+  return crossings >= T.blinkerCrossings;
+}
 
 /** A form's arrangement, named the way the contact graph names a live group. */
 export function formShape(form: Pick<FormDef, 'strains' | 'touching'>): string {
@@ -56,11 +104,19 @@ export interface LockedForm {
   pairs: Array<[CellId, CellId]>;
   /** Ticks its cultures have been out of touch. */
   adrift: number;
+  /** Ticks since it locked. */
+  age: number;
+  /** Recent centre and volume, one sample per scan. */
+  samples: FormSample[];
+  /** The very rares it has already earned. */
+  earned: Set<VeryRareId>;
 }
 
 export interface MergeEvent {
-  kind: 'locked' | 'broke';
+  kind: 'locked' | 'broke' | 'very-rare';
   form: FormDef;
+  /** For 'very-rare': the behaviour earned. */
+  veryRare?: VeryRareId;
   members: CellId[];
   center: [number, number];
   radius: number;
@@ -138,10 +194,46 @@ export function createMergeTracker(): MergeTracker {
       });
       const inForm = new Set(locked.flatMap((form) => form.members));
 
+      // Very rares: how each locked form has behaved since it locked.
+      const V = VERY_RARE_TUNING;
+      const earn = (form: LockedForm, id: VeryRareId, members = form.members) => {
+        form.earned.add(id);
+        events.push({ ...event(state, 'very-rare', form.form, members), veryRare: id });
+      };
+      for (const form of locked) {
+        form.age += T.scanTicks;
+        const { center } = groupExtent(state, form.members);
+        const vol = form.members.reduce((sum, id) => sum + (state.cells.get(id)?.vol ?? 0), 0);
+        form.samples.push({ x: center[0], y: center[1], vol });
+        const keep = Math.ceil(Math.max(V.gliderWindowTicks, V.blinkerWindowTicks) / T.scanTicks) + 1;
+        if (form.samples.length > keep) form.samples.splice(0, form.samples.length - keep);
+        const recent = (ticks: number) => form.samples.slice(-Math.ceil(ticks / T.scanTicks) - 1);
+        if (!form.earned.has('glider') && isGliding(recent(V.gliderWindowTicks))) earn(form, 'glider');
+        if (!form.earned.has('blinker') && isBlinking(recent(V.blinkerWindowTicks))) earn(form, 'blinker');
+        if (!form.earned.has('old_timer') && form.age >= V.oldTimerTicks) earn(form, 'old_timer');
+      }
+      // Compound: two locked forms pressed together and fed bond into one.
+      for (let i = 0; i < locked.length; i++) {
+        for (let j = i + 1; j < locked.length; j++) {
+          const a = locked[i]!;
+          const b = locked[j]!;
+          if (a.earned.has('compound') && b.earned.has('compound')) continue;
+          const cross: Array<[CellId, CellId]> = [];
+          for (const x of a.members) for (const y of b.members) if (graph.contacts.get(x)?.has(y)) cross.push([x, y]);
+          if (cross.length === 0 || ![...a.members, ...b.members].every((id) => fedBy(id, 'nutrient'))) continue;
+          bonds.link(cross, 1);
+          a.pairs.push(...cross);
+          b.earned.add('compound');
+          earn(a, 'compound', [...a.members, ...b.members]);
+        }
+      }
+
       const next = new Map<string, FormingGroup>();
       for (const group of contactComponents(graph)) {
         if (group.length < 2 || group.length > T.maxGroup || group.some((id) => inForm.has(id))) continue;
-        const form = FORM_BY_SHAPE.get(canonicalShape(graph, group));
+        // Any four different strains together make the Rainbow.
+        const rainbow = group.length === 4 && new Set(group.map((id) => graph.strain.get(id))).size === 4;
+        const form = FORM_BY_SHAPE.get(canonicalShape(graph, group)) ?? (rainbow ? RAINBOW_FORM : undefined);
         if (!form || !group.every((id) => fedBy(id, form.feed))) continue;
         const members = [...group].sort((a, b) => a - b);
         const key = `${form.id}:${members.join(',')}`;
@@ -149,7 +241,7 @@ export function createMergeTracker(): MergeTracker {
         const held = (forming.get(key)?.held ?? 0) + T.scanTicks;
         const progress = Math.min(1, held / lockTicks);
         if (held >= lockTicks) {
-          locked.push({ instance: nextInstance++, form, members, pairs, adrift: 0 });
+          locked.push({ instance: nextInstance++, form, members, pairs, adrift: 0, age: 0, samples: [], earned: new Set() });
           bonds.link(pairs, 1);
           events.push(event(state, 'locked', form, members));
           continue;

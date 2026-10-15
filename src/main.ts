@@ -3012,28 +3012,34 @@ function mergeRingsFor(ar: Arena): MergeRing[] {
 }
 
 function announceMerge(merge: MergeEvent): void {
-  const number = `#${String(merge.form.number).padStart(3, '0')}`;
   if (merge.kind === 'broke') {
     screens.addTicker(`${merge.form.name} came apart.`, 'caution');
     return;
   }
-  screens.addTicker(`Merged: ${merge.form.name}, friend ${number}.`, 'discovery');
-  if (friendsSave.found[merge.form.id]) {
+  // A locked form, or a very-rare behaviour earned by one: either way a friend.
+  const friendId: string = merge.kind === 'very-rare' && merge.veryRare ? merge.veryRare : merge.form.id;
+  const item = currentDexView().items.find((entry) => entry.id === friendId);
+  if (!item) return;
+  const number = `#${String(item.number).padStart(3, '0')}`;
+  const tier = item.tier === 'very-rare' ? 'Very rare' : 'Rare';
+  screens.addTicker(
+    merge.kind === 'very-rare' ? `${merge.form.name} became a ${item.name}! Friend ${number}.` : `Merged: ${item.name}, friend ${number}.`,
+    'discovery',
+  );
+  if (friendsSave.found[friendId]) {
     uiAudio.play('experiment_ready');
     haptics.play('discovery');
     drE.react('delighted', 2600);
-    fx.showUnlockBanner('Friend merged', merge.form.name, `${number} · Rare`, 'bio');
+    fx.showUnlockBanner(merge.kind === 'very-rare' ? 'Very rare again' : 'Friend merged', item.name, `${number} · ${tier}`, item.tier === 'very-rare' ? 'amber' : 'bio');
     return;
   }
-  // First find: record it, then the ta-da rises from where it merged.
+  // First find: record it, then the ta-da rises from where it happened.
   const fightIndex = run.getState().fightIndex;
   const where = fightIndex < COMMON_COLD_CASE.trials.length ? `Trial ${fightIndex + 1}` : 'Open Lab';
-  friendsSave = recordFriend(runtimeStorage, friendsSave, merge.form.id, where);
-  const view = currentDexView();
-  const item = view.items.find((entry) => entry.id === merge.form.id);
-  if (!item) return;
+  friendsSave = recordFriend(runtimeStorage, friendsSave, friendId, where);
+  const found = currentDexView().items.find((entry) => entry.id === friendId)!;
   const rect = canvas.getBoundingClientRect();
-  reveal.show(item, {
+  reveal.show(found, {
     x: rect.left + ((merge.center[0] + 0.5) / LX) * rect.width,
     y: rect.top + ((merge.center[1] + 0.5) / LY) * rect.height,
   }, () => dex.refresh(currentDexView()));

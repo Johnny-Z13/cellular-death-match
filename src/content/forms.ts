@@ -10,7 +10,12 @@ export type FormFeed = 'nutrient' | 'water' | 'salt' | 'acid';
 
 export type FormId =
   | 'bloom_buddy' | 'puddle_pals' | 'split_pea' | 'big_spoon' | 'tri_puff' | 'daisy_chain'
-  | 'looking_glass' | 'lookout' | 'heavyweights' | 'mortar_and_pestle' | 'four_square' | 'the_sandwich';
+  | 'looking_glass' | 'lookout' | 'heavyweights' | 'mortar_and_pestle' | 'four_square' | 'the_sandwich'
+  | 'rainbow';
+
+/** The very rares: behaviours of locked forms over time, plus the Rainbow,
+ *  which is any merge of four different strains. */
+export type VeryRareId = 'glider' | 'blinker' | 'compound' | 'rainbow' | 'old_timer';
 
 export interface FormDef {
   id: FormId;
@@ -27,6 +32,14 @@ export interface FormDef {
   /** What Dr. E says when he hints at it. */
   hint: string;
 }
+
+/** The Rainbow has no fixed arrangement: any isolated group of four
+ *  different strains, fed with Nutrient, held for the lock window. */
+export const RAINBOW_FORM: FormDef = {
+  id: 'rainbow', number: 30, name: 'Rainbow', strains: [], touching: [], feed: 'nutrient',
+  note: 'Four strains, one organism. A Rainbow!',
+  hint: 'One merge made of four different strains.',
+};
 
 export const FORMS: readonly FormDef[] = [
   {

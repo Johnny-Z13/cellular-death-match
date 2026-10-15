@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FORMS } from '../../src/content/forms';
-import { createMergeTracker, formShape, MERGE_DETECTION } from '../../src/game/mergeDetection';
+import { createMergeTracker, formShape, isBlinking, isGliding, MERGE_DETECTION } from '../../src/game/mergeDetection';
 import { createGrid, recomputeBoundary, setCell } from '../../src/sim/grid';
 import { addPixel, createCell } from '../../src/sim/cell';
 import { createRng } from '../../src/sim/rng';
@@ -101,5 +101,70 @@ describe('merge detection', () => {
     expect(events.map((e) => e.kind)).toEqual(['broke']);
     expect(tracker.locked()).toEqual([]);
     expect(tracker.bonds.partners(1)).toBeUndefined();
+  });
+});
+
+describe('very rare behaviours', () => {
+  const path = (points: Array<[number, number]>, vol = 100) => points.map(([x, y]) => ({ x, y, vol }));
+  it('calls a long, straight journey a glide, and a wander not', () => {
+    const straight = path(Array.from({ length: 20 }, (_, i) => [i * 2.5, i * 0.3]));
+    const wander = path(Array.from({ length: 20 }, (_, i) => [Math.sin(i) * 30, Math.cos(i) * 30]));
+    expect(isGliding(straight)).toBe(true);
+    expect(isGliding(wander)).toBe(false);
+    expect(isGliding(path([[0, 0], [10, 0], [20, 0]]))).toBe(false);
+  });
+
+  it('calls a steady pulse a blink, and a slow drift not', () => {
+    const pulse = Array.from({ length: 30 }, (_, i) => ({ x: 0, y: 0, vol: 100 + (i % 4 < 2 ? 15 : -15) }));
+    const drift = Array.from({ length: 30 }, (_, i) => ({ x: 0, y: 0, vol: 100 + i }));
+    const shiver = Array.from({ length: 30 }, (_, i) => ({ x: 0, y: 0, vol: 100 + (i % 2 ? 2 : -2) }));
+    expect(isBlinking(pulse)).toBe(true);
+    expect(isBlinking(drift)).toBe(false);
+    expect(isBlinking(shiver)).toBe(false);
+  });
+});
+
+describe('group very rares', () => {
+  const many: Record<number, string> = { 1: 'bloom_mass', 2: 'swarmlet', 3: 'bruiser', 4: 'splitter', 5: 'swarmlet', 6: 'swarmlet' };
+  const strainOfMany = (id: CellId) => many[id] ?? null;
+
+  it('locks four different strains together, fed, as the Rainbow', () => {
+    const block = dish([
+      '..........',
+      '..11112222',
+      '..11112222',
+      '..11112222',
+      '..11112222',
+      '..33334444',
+      '..33334444',
+      '..33334444',
+      '..33334444',
+      '..........',
+    ]);
+    const tracker = createMergeTracker();
+    const events = [];
+    for (let i = 0; i < scansToLock; i++) events.push(...tracker.scan(block, strainOfMany, () => true));
+    expect(events.map((e) => [e.kind, e.form.id])).toEqual([['locked', 'rainbow']]);
+  });
+
+  it('bonds two locked forms pressed together and fed into a Compound', () => {
+    const tracker = createMergeTracker();
+    const apart = dish([
+      '.1111222.........',
+      '.1111222...555666',
+      '.1111222...555666',
+      '...........555666',
+    ]);
+    for (let i = 0; i < scansToLock; i++) tracker.scan(apart, strainOfMany, () => true);
+    expect(tracker.locked().map((f) => f.form.id).sort()).toEqual(['bloom_buddy', 'puddle_pals']);
+    const together = dish([
+      '.1111222.........',
+      '.1111222555666...',
+      '.1111222555666...',
+      '........555666...',
+    ]);
+    const events = tracker.scan(together, strainOfMany, () => true);
+    expect(events.filter((e) => e.kind === 'very-rare').map((e) => e.veryRare)).toEqual(['compound']);
+    expect(tracker.scan(together, strainOfMany, () => true).filter((e) => e.kind === 'very-rare')).toEqual([]);
   });
 });
