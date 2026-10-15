@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#04080a">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="description" content="Cellular Death Match: grow a living dish and rescue Dr. E's friends. Play the alpha in your browser, on desktop or phone.">
+  <meta property="og:title" content="Cellular Death Match: come for a playtest">
+  <meta property="og:description" content="A cellular automata ecosystem game from Z13 Labs. Play the alpha in your browser.">
+  <meta property="og:image" content="/assets/og.webp">
+  <title>Cellular Death Match: Alpha playtest</title>
+  <link rel="icon" href="./assets/z13.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap">
+  <link rel="stylesheet" href="./style.css?v=2">
+  <script type="module" src="./app.mjs?v=1"></script>
+</head>
+<body>
+  <a class="skip-link" href="#play">Skip to play</a>
+  <div class="ident" aria-hidden="true">
+    <img src="./assets/z13.png" alt="" width="218" height="85">
+    <p>P R E S E N T S</p>
+  </div>
+
+  <header class="masthead">
+    <a href="#top" aria-label="Cellular Death Match home"><img class="brand" src="./assets/z13.png" alt="Z13" width="74" height="29"></a>
+    <span class="alpha-label"><span aria-hidden="true"></span>Alpha playtest</span>
+    <button id="intro-sound" type="button" aria-label="Play intro with sound"><span class="intro-long">Play intro with sound</span><span class="intro-short">Intro</span> <span aria-hidden="true">♫</span></button>
+  </header>
+  <audio id="intro-audio" src="./assets/z13-ident.mp3" preload="none"></audio>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="title">
+      <picture class="hero-dish" aria-hidden="true">
+        <source media="(max-aspect-ratio: 3/4)" srcset="./assets/hero-tall.webp">
+        <img src="./assets/hero-wide.webp" alt="" width="1920" height="1080">
+      </picture>
+      <div class="hero-lens" aria-hidden="true"></div>
+      <div class="hero-content">
+        <p class="eyebrow">Dr. E’s laboratory</p>
+        <h1 id="title" class="wordmark" aria-label="Cellular Death Match"><span>Cellular</span> <span>Death</span> <span>Match</span></h1>
+        <p class="pitch">Grow a living dish. Coax its cultures together <br>and they merge into Dr. E’s lost friends.</p>
+        <div class="play" id="play">
+          <a class="play-button" href="/play/">Play now <span aria-hidden="true">→</span></a>
+          <a class="play-secondary" href="#getting-started">On your phone? <span aria-hidden="true">↓</span></a>
+        </div>
+        <p class="build-note"><a href="#build-notes">Alpha Build 1 · Read the build notes</a> <span aria-hidden="true">/</span> <a href="./release.json">Build details</a></p>
+      </div>
+      <p class="hero-footer">Plays in your browser · Desktop and phone · Sound on</p>
+    </section>
+
+    <section class="build-release" id="build-notes" aria-labelledby="build-title">
+      <div class="release-heading">
+        <p class="eyebrow">Latest drop / Alpha 1 / 15 Oct 2026</p>
+        <h2 id="build-title">Alpha Build 1<span>Dr. E has friends to find.</span></h2>
+        <p>Dr. E is now a living colony of cells who talks you through the lab. Cultures that you separate, feed and hold together merge into one organism, and each new one is a friend for his collection: thirty-two in all.</p>
+      </div>
+      <div class="release-notes">
+        <div>
+          <h3>New in this build</h3>
+          <ul>
+            <li><strong>Dr. E, made of cells.</strong> A friendly colony face with expressions, who speaks every line in his own mumble voice while the words appear.</li>
+            <li><strong>Merging.</strong> Get two or more cultures alone together, feed them, and hold them. A ring fills, and they lock into one creature that moves as one.</li>
+            <li><strong>Thirty-two friends.</strong> Strains are common, merges are rare, and five very rare ones only turn up in long play. Open <strong>Friends</strong> (top right) to see them all.</li>
+            <li><strong>The rescue.</strong> Your first of each friend rises out of the dish with a fanfare.</li>
+            <li><strong>Full-screen desktop.</strong> On a wide screen the dish fills the window and the menus float over it. Press <strong>F</strong> for the dish alone.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Known in this build</h3>
+          <ul>
+            <li>Dr. E’s voice is a first draft and has not been tuned by ear yet.</li>
+            <li>The tutorial teaches strains first; merging is a bonus invitation at the end of Trial 1 for now.</li>
+            <li>Your progress lives in this browser. A different browser or device starts fresh.</li>
+            <li>Phones on their side use the older side-rail layout.</li>
+            <li>The app icon is an old placeholder.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Help us find the fun</h3>
+          <p>Did you manage a merge? Which friend did you find first? Does Dr. E charm you or get in the way? Where did you get stuck? Mention <strong>Alpha Build 1</strong> with your feedback.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="inside" aria-labelledby="inside-title">
+      <div class="section-heading">
+        <p class="eyebrow">Inside the alpha</p>
+        <h2 id="inside-title">Everything you see<br>is alive.</h2>
+        <p>Every culture is a living cellular automaton. They graze, hunt, divide and, if you are patient, merge.</p>
+      </div>
+      <div class="captures">
+        <figure class="wide">
+          <img src="./assets/open-lab.webp" alt="A busy open lab: glowing cultures in many colours fill the screen under a floating goal bar and a row of tools." width="1440" height="900" loading="lazy">
+          <figcaption>The open lab <span>In-game capture</span></figcaption>
+        </figure>
+        <figure class="wide">
+          <img src="./assets/rescue.webp" alt="The rescue: a glass droplet holding two pink Snipers hugging a green Splitter, stamped RARE, named The Sandwich." width="1800" height="1012" loading="lazy">
+          <figcaption>Rescuing The Sandwich <span>In-game capture</span></figcaption>
+        </figure>
+        <figure class="wide">
+          <img src="./assets/friends.webp" alt="The Friends collection: a grid of living tiles, found friends glowing in colour and the rest as silhouettes." width="1440" height="900" loading="lazy">
+          <figcaption>Friends, found and still to find <span>In-game capture</span></figcaption>
+        </figure>
+        <figure class="tall">
+          <img src="./assets/dr-e-phone.webp" alt="Dr. E's colony face welcoming you on a phone." width="700" height="1515" loading="lazy">
+          <figcaption>Dr. E says hello <span>Phone capture</span></figcaption>
+        </figure>
+        <figure class="tall">
+          <img src="./assets/rescue-phone.webp" alt="The Sandwich rescued on a phone." width="700" height="1515" loading="lazy">
+          <figcaption>A rescue on a phone <span>Phone capture</span></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="playtest-notes" id="getting-started" aria-labelledby="notes-title">
+      <div class="notes-intro">
+        <p class="eyebrow">This is a playtest</p>
+        <h2 id="notes-title">Still being<br>grown.</h2>
+        <p>You are playing an early version. Art, sound, balance and features are still in progress.</p>
+        <p>Turn the sound on: Dr. E talks. Start with <strong>Run Trial</strong>; he shows you the ropes.</p>
+      </div>
+      <div class="notes-content">
+        <div class="note">
+          <h3>Getting started</h3>
+          <details open>
+            <summary>On a computer <span aria-hidden="true">+</span></summary>
+            <p>Click <a href="/play/"><strong>Play now</strong></a>. It runs in Chrome, Edge, Safari or Firefox; nothing to install. Press <strong>F</strong> during a trial for the dish alone, full screen, and <strong>F</strong> or <strong>Esc</strong> to bring the menus back.</p>
+          </details>
+          <details>
+            <summary>On a phone or tablet <span aria-hidden="true">+</span></summary>
+            <p>Open this page on your phone and tap <strong>Play now</strong>. For a full-screen app with its own icon, add it to your home screen:</p>
+            <ol class="steps">
+              <li><strong>iPhone and iPad:</strong> in Safari, tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>.</li>
+              <li><strong>Android:</strong> in Chrome, tap the <strong>⋮</strong> menu, then <strong>Add to Home screen</strong> or <strong>Install app</strong>.</li>
+            </ol>
+            <p>Play the game page itself (<strong>/play</strong>), not this one, when you add it.</p>
+          </details>
+        </div>
+        <div class="note">
+          <h3>Rescue your first friend</h3>
+          <ol class="steps">
+            <li>Find clear agar, away from other cultures.</li>
+            <li>Plant two Swarmlet eggs side by side.</li>
+            <li>Drop one Nutrient on them and watch the ring fill. Keep others away for four seconds.</li>
+          </ol>
+          <p>Every friend has a hint in <strong>Friends</strong>. Some only lock in Water or Salt.</p>
+        </div>
+        <div class="note">
+          <h3>Tell Johnny</h3>
+          <p>What made you smile? What confused you? What broke?</p>
+          <p><a class="feedback-link" href="mailto:johnny@z13labs.com?subject=Cellular%20Death%20Match%20%E2%80%94%20Alpha%20Build%201%20feedback">Email your thoughts <span aria-hidden="true">↗</span></a></p>
+          <p class="small">Your device and browser, the build number and a screenshot help us reproduce problems.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <img class="brand" src="./assets/z13.png" alt="Z13" width="62" height="24">
+    <p>Cellular Death Match <span>© 2026 Z13 Labs</span></p>
+    <a href="#play">Back to play ↑</a>
+    <small>Alpha playtest. Every image is captured from the game.</small>
+  </footer>
+</body>
+</html>

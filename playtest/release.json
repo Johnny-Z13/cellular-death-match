@@ -1,0 +1,10 @@
+{
+  "version": "Alpha Build 1",
+  "id": "alpha-1",
+  "date": "2026-10-15",
+  "sourceCommit": "493f3e9b49736796c84e030910401a8086d67c72",
+  "branch": "v1/friends-and-merges",
+  "description": "Dr. E becomes a talking colony of cells; cultures merge into friends; 32 to find; full-screen desktop.",
+  "play": "/play/",
+  "platforms": "Any modern browser: Chrome, Edge, Safari or Firefox, on desktop, tablet or phone."
+}
