@@ -62,6 +62,13 @@ function partColour(direction: FaceDirection, part: number): Rgb | null {
   }
 }
 
+// On screen and visible: display:none, visibility:hidden and zero-size slots
+// all skip painting.
+function isShown(canvas: HTMLCanvasElement): boolean {
+  if (typeof canvas.checkVisibility === 'function') return canvas.checkVisibility({ visibilityProperty: true });
+  return canvas.getClientRects().length > 0;
+}
+
 export function createDrEFace(canvas: HTMLCanvasElement, options: DrEFaceOptions): DrEFace {
   const tuning = options.tuning ?? DR_E_FACE;
   const now = options.now ?? (() => performance.now());
@@ -147,7 +154,7 @@ export function createDrEFace(canvas: HTMLCanvasElement, options: DrEFaceOptions
   const frame = (): void => {
     raf = requestAnimationFrame(frame);
     // Hidden tabs and slots that are not on screen cost nothing.
-    if (document.hidden || canvas.getClientRects().length === 0) return;
+    if (document.hidden || !isShown(canvas)) return;
     const wall = performance.now();
     if (wall - lastPaintAt < 1000 / tuning.fps - 2) return;
     lastPaintAt = wall;

@@ -1104,6 +1104,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         for (const merge of merges.scan(state, strainOf, fedBy)) {
           mergeEvents.push(merge);
           if (merge.kind === 'locked') addDishEvent('discovery', `MERGED · ${merge.form.name.toUpperCase()}`, merge.center, merge.radius, 'cyan');
+          else if (merge.kind === 'very-rare') addDishEvent('discovery', `VERY RARE · ${merge.form.name.toUpperCase()}`, merge.center, merge.radius, 'amber');
           else addDishEvent('caution', `${merge.form.name} came apart`, merge.center, merge.radius, 'amber');
         }
       }

@@ -100,8 +100,11 @@ export interface DishLabelInput {
   cultures: readonly LabelCulture[];
   events: readonly LabelEvent[];
   gridSize: number;
-  /** Rendered dish width in CSS pixels (the dish is square). */
+  /** Rendered dish width in CSS pixels. */
   dishPx: number;
+  /** Rendered dish height in CSS pixels; the width when absent (a square
+   *  dish). The wide dish is 16:9, so y needs its own extent. */
+  dishHeightPx?: number;
   /** Culture under the most recent tap or the egg just planted, if any. */
   pingId: number | null;
   /** Phones get fewer tags. */
@@ -145,6 +148,7 @@ const PLACEMENTS: readonly DishLabelPlacement[] = ['above', 'below', 'right', 'l
 export function planDishLabels(input: DishLabelInput): PlannedLabel[] {
   const t = DISH_LABEL_TUNING;
   const pxPerGrid = input.dishPx / input.gridSize;
+  const dishHeight = input.dishHeightPx ?? input.dishPx;
   const placed: Rect[] = [...(input.obstacles ?? [])];
   const out: PlannedLabel[] = [];
   const previous = input.previous ?? new Map<string, PreviousLabel>();
@@ -308,7 +312,7 @@ export function planDishLabels(input: DishLabelInput): PlannedLabel[] {
     const cy = gy * pxPerGrid;
     let fallback: { rect: Rect; placement: DishLabelPlacement } | null = null;
     for (const placement of order) {
-      const rect = rectFor(placement, cx, cy, offsetPx, w, h, input.dishPx);
+      const rect = rectFor(placement, cx, cy, offsetPx, w, h, input.dishPx, dishHeight);
       if (!rect) continue;
       if (placed.some((other) => overlaps(rect, other))) continue;
       if (avoidBodies && bodies.some((body) => overlaps(rect, body))) {
@@ -326,7 +330,7 @@ export function planDishLabels(input: DishLabelInput): PlannedLabel[] {
       const ay = placement.startsWith('above') ? rect.y + rect.h
         : placement.startsWith('below') ? rect.y
           : rect.y + rect.h / 2;
-      return { ...base, xPct: (ax / input.dishPx) * 100, yPct: (ay / input.dishPx) * 100, placement };
+      return { ...base, xPct: (ax / input.dishPx) * 100, yPct: (ay / dishHeight) * 100, placement };
     }
   }
 }
@@ -341,6 +345,7 @@ function rectFor(
   w: number,
   h: number,
   dishPx: number,
+  dishHeightPx: number,
 ): Rect | null {
   const t = DISH_LABEL_TUNING;
   const stack = h + t.stackGapPx;
@@ -359,7 +364,7 @@ function rectFor(
         : placement === 'above-2' ? cy - offset - h - stack
           : cy + offset + stack;
   }
-  if (y < 0 || y + h > dishPx) return null;
+  if (y < 0 || y + h > dishHeightPx) return null;
   return { x, y, w, h };
 }
 

@@ -58,7 +58,9 @@ export function mcStep(state: SimState): boolean {
     if (sourcePartners || targetPartners) {
       // Bonded partners never eat each other.
       if (sourcePartners?.has(targetVal)) engulf = 0;
-      bond = bonds.adhesion * bondTerm(state, xT, yT, sourcePartners, targetPartners);
+      // A fraction of this culture's own surface tension, so partners of a
+      // loose strain stick without mixing just as a tight strain's do.
+      bond = state.betaIsing * isingEff * bonds.adhesion * bondTerm(state, xT, yT, sourcePartners, targetPartners);
     }
   }
 

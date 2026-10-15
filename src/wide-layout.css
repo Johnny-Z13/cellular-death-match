@@ -240,3 +240,9 @@
     mask-image: linear-gradient(90deg, transparent, #000 2.5%, #000 97.5%, transparent);
   }
 }
+
+/* A square dish started before the window turned wide stays square. */
+:root[data-dish="square"][data-layout="wide"] .layout[data-screen="arena"] #game {
+  width: min(100cqw, 100cqh);
+  aspect-ratio: 1;
+}

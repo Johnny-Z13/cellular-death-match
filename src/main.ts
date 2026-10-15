@@ -124,7 +124,7 @@ import { dishGridFor, dishLayoutFor, type DishLayout } from './ui/dishShape';
 import { createDrEPresence } from './ui/drEPresence';
 import { createDrESpeech } from './ui/drESpeech';
 import { groupExtent, type MergeEvent } from './game/mergeDetection';
-import { dexView, loadFriends, recordFriend } from './game/friendsDex';
+import { dexView, loadFriends, recordFriend, type DexItem } from './game/friendsDex';
 import { createDexScreen } from './ui/dexScreen';
 import { createFriendReveal } from './ui/friendReveal';
 import { isCrazyGamesEnvironment } from './platform/crazyGames';
@@ -316,7 +316,7 @@ voiceButton?.addEventListener('click', () => {
   try { window.localStorage.setItem(DR_E_VOICE_KEY, next ? '1' : '0'); } catch { /* preference is optional */ }
   applyDrEVoicePreference(next);
 });
-createDrESpeech({ presence: drE, audio: uiAudio, voiceEnabled: () => drEVoiceEnabled, reducedMotion: reduceMotionPref });
+const speech = createDrESpeech({ presence: drE, audio: uiAudio, voiceEnabled: () => drEVoiceEnabled, reducedMotion: reduceMotionPref });
 // The friends dex: strains come from the discovery progression; friends found
 // by merging are saved under their own key.
 let friendsSave = loadFriends(runtimeStorage);
@@ -326,7 +326,22 @@ const reveal = createFriendReveal({
   presence: drE,
   playSound: (id) => uiAudio.play(id),
   haptic: (cue) => haptics.play(cue),
+  stopSpeech: () => speech.finish(),
 });
+dex.onToggle((open) => { if (!open) speech.finish(); });
+// Rescues that land while a ta-da is showing wait their turn.
+const pendingReveals: Array<{ item: DexItem; from: { x: number; y: number } }> = [];
+function showReveal(item: DexItem, from: { x: number; y: number }): void {
+  if (reveal.isOpen()) {
+    pendingReveals.push({ item, from });
+    return;
+  }
+  reveal.show(item, from, () => {
+    dex.refresh(currentDexView());
+    const next = pendingReveals.shift();
+    if (next) showReveal(next.item, next.from);
+  });
+}
 dex.refresh(currentDexView());
 document.getElementById('dex-button')?.addEventListener('click', () => {
   uiAudio.unlock();
@@ -584,6 +599,15 @@ window.addEventListener('keydown', (event) => {
     trapNotebookFocus(event);
     return;
   }
+  if (event.key === 'Tab' && (reveal.isOpen() || dex.isOpen())) {
+    trapFocusIn(document.getElementById(reveal.isOpen() ? 'friend-reveal' : 'screen-dex'), event);
+    return;
+  }
+  if (event.key === 'Escape' && dex.isOpen() && !reveal.isOpen()) {
+    event.preventDefault();
+    dex.close();
+    return;
+  }
   if (event.key !== 'Escape') return;
   if (overlayState.presentationMode) {
     event.preventDefault();
@@ -702,6 +726,8 @@ function applySelectedToolAt(pos: [number, number]): boolean {
     || document.hidden
     || overlayState.menuOpen
     || overlayState.notebookOpen
+    || dex.isOpen()
+    || reveal.isOpen()
     || coach.isMobileToolboxLessonActive()
   ) return false;
   if (!exactLessonAllowsDishAction(selectedTool)) {
@@ -1581,6 +1607,9 @@ function panelsInDrawers(): boolean {
 function blockingOverlayOpen(): boolean {
   if (overlayState.menuOpen || overlayState.notebookOpen || dex.isOpen() || reveal.isOpen()) return true;
   if (!panelsInDrawers()) return false;
+  // A phone's drawers cover the dish. On the wide layout only choosing an egg
+  // pauses it; the log is a small panel at the side.
+  if (dishLayout === 'wide') return layout.dataset.mobileDrawer === 'lifeforms';
   return layout.dataset.mobileDrawer === 'lifeforms' || layout.dataset.mobileDrawer === 'log';
 }
 
@@ -2571,6 +2600,28 @@ function trapOptionsFocus(event: KeyboardEvent): void {
   }
 }
 
+// Keep Tab inside an open dialog.
+function trapFocusIn(root: HTMLElement | null, event: KeyboardEvent): void {
+  if (!root) return;
+  const focusable = Array.from(root.querySelectorAll<HTMLElement>(
+    'button:not([disabled]):not([hidden]), [tabindex]:not([tabindex="-1"])',
+  )).filter((element) => element.getClientRects().length > 0);
+  if (focusable.length === 0) {
+    event.preventDefault();
+    return;
+  }
+  const first = focusable[0]!;
+  const last = focusable[focusable.length - 1]!;
+  const inside = root.contains(document.activeElement);
+  if (event.shiftKey && (!inside || document.activeElement === first)) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && (!inside || document.activeElement === last)) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
 function trapNotebookFocus(event: KeyboardEvent): void {
   const notebook = document.getElementById('screen-notebook');
   if (!notebook) return;
@@ -3002,6 +3053,9 @@ if (import.meta.env.DEV) {
   (window as unknown as { cdmDebug: { arena: () => Arena | null } }).cdmDebug = { arena: () => arena };
 }
 
+// How long Dr. E beams at a repeat merge.
+const MERGE_DELIGHT_MS = 2600;
+
 // Forming merges fill a ring; locked ones are outlined as one organism.
 function mergeRingsFor(ar: Arena): MergeRing[] {
   const { forming, locked } = ar.getMerges();
@@ -3029,7 +3083,7 @@ function announceMerge(merge: MergeEvent): void {
   if (friendsSave.found[friendId]) {
     uiAudio.play('experiment_ready');
     haptics.play('discovery');
-    drE.react('delighted', 2600);
+    drE.react('delighted', MERGE_DELIGHT_MS);
     fx.showUnlockBanner(merge.kind === 'very-rare' ? 'Very rare again' : 'Friend merged', item.name, `${number} · ${tier}`, item.tier === 'very-rare' ? 'amber' : 'bio');
     return;
   }
@@ -3039,10 +3093,10 @@ function announceMerge(merge: MergeEvent): void {
   friendsSave = recordFriend(runtimeStorage, friendsSave, friendId, where);
   const found = currentDexView().items.find((entry) => entry.id === friendId)!;
   const rect = canvas.getBoundingClientRect();
-  reveal.show(found, {
+  showReveal(found, {
     x: rect.left + ((merge.center[0] + 0.5) / LX) * rect.width,
     y: rect.top + ((merge.center[1] + 0.5) / LY) * rect.height,
-  }, () => dex.refresh(currentDexView()));
+  });
 }
 
 function canvasEventToGridPos(event: PointerEvent): [number, number] {

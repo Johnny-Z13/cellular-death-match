@@ -64,7 +64,7 @@
       </button>
       <button id="dex-button" class="chrome-button dex-button" type="button" aria-label="Open your friends" title="Friends" aria-haspopup="dialog" aria-expanded="false">
         <span class="dex-button__cell" aria-hidden="true"></span>
-        <span class="dex-button__count"><b id="dex-count">1</b><span>/32</span></span>
+        <span class="dex-button__count"><b id="dex-count">1</b><span id="dex-count-total">/32</span></span>
       </button>
       <button id="fullscreen-button" class="chrome-button fullscreen-button" type="button" aria-label="Enter full screen" title="Enter full screen">
         <span class="fullscreen-button__label">Full screen</span>
@@ -436,7 +436,7 @@
       </button>
       <div id="fx-wipe" class="fx-wipe" aria-hidden="true"></div>
 
-      <div id="friend-reveal" class="friend-reveal" role="dialog" aria-modal="true" aria-labelledby="reveal-name" hidden>
+      <div id="friend-reveal" class="friend-reveal" role="dialog" aria-modal="true" aria-labelledby="reveal-name" tabindex="-1" hidden>
         <div class="reveal-veil" aria-hidden="true"></div>
         <div class="reveal-stage">
           <div class="reveal-drop" aria-hidden="true">

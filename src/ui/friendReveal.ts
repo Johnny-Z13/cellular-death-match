@@ -17,6 +17,8 @@ export const REVEAL_TIMING = {
   speakMs: 1050,
   /** The droplet's flight into the Friends chip. */
   leaveMs: 460,
+  /** How long the chip bumps when the droplet lands. */
+  bumpMs: 700,
 };
 
 export interface FriendReveal {
@@ -29,6 +31,8 @@ export interface FriendRevealDeps {
   presence: DrEPresence;
   playSound: (id: 'epoch_win' | 'ui_tap') => void;
   haptic: (cue: HapticCue) => void;
+  /** Stop Dr. E mid-line when the reveal closes. */
+  stopSpeech: () => void;
 }
 
 const pad = (n: number) => `#${String(n).padStart(3, '0')}`;
@@ -53,6 +57,7 @@ export function createFriendReveal(deps: FriendRevealDeps): FriendReveal {
   const finish = () => {
     if (!open || root.classList.contains('is-leaving')) return;
     deps.playSound('ui_tap');
+    deps.stopSpeech();
     const target = chip?.getBoundingClientRect();
     if (target) {
       root.style.setProperty('--to-x', `${target.left + target.width / 2 - window.innerWidth / 2}px`);
@@ -69,7 +74,7 @@ export function createFriendReveal(deps: FriendRevealDeps): FriendReveal {
       line.textContent = '';
       open = false;
       chip?.classList.add('is-bumped');
-      window.setTimeout(() => chip?.classList.remove('is-bumped'), 700);
+      window.setTimeout(() => chip?.classList.remove('is-bumped'), T.bumpMs);
       chip?.focus({ preventScroll: true });
       done?.();
     });
@@ -97,6 +102,8 @@ export function createFriendReveal(deps: FriendRevealDeps): FriendReveal {
       root.style.setProperty('--from-y', `${from ? from.y - window.innerHeight / 2 : window.innerHeight * 0.4}px`);
       root.className = 'friend-reveal';
       root.hidden = false;
+      // Focus moves into the dialog at once, so keys never reach the paused dish.
+      root.focus({ preventScroll: true });
       // Next frame, so the droplet starts at the dish before it rises.
       requestAnimationFrame(() => root.classList.add('is-rising'));
       later(T.stampMs, () => {

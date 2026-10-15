@@ -2,7 +2,7 @@
 // AudioContext and the node the voice feeds (the Voice Lab today, the UI audio
 // bus once Dr. E speaks in game).
 import type { DrEVoice } from '../content/drETuning';
-import { MUMBLE_RATE, normalizeLine, synthesize, type MumblePlan } from './mumble';
+import { MUMBLE_RATE, normalizeLine, synthesize, type MumblePlan, type MumbleRender } from './mumble';
 
 export interface MumbleUtterance {
   text: string; // the line as displayed
@@ -19,6 +19,37 @@ export interface MumblePlayer {
    *  engine cannot say it (no words, over 180 characters, or too long). */
   say(text: string, voice: DrEVoice): MumbleUtterance | null;
   stop(): void;
+}
+
+// Synthesis takes several milliseconds a line, too long to do mid-frame each
+// time Dr. E speaks. Lines are rendered once and kept (most are said again),
+// and known lines are rendered ahead at idle time.
+const RENDER_CACHE_LINES = 64;
+const renders = new Map<string, MumbleRender>();
+
+/** The rendered line, from the cache when it has been said before. Throws
+ *  when the engine cannot say it. */
+export function renderLine(text: string, voice: DrEVoice): MumbleRender {
+  const key = `${voice.voice}|${voice.pitch}|${voice.pace}|${voice.weird}|${text}`;
+  const cached = renders.get(key);
+  if (cached) return cached;
+  const render = synthesize(normalizeLine(text), { voice: voice.voice, weird: voice.weird, pitch: voice.pitch, pace: voice.pace });
+  renders.set(key, render);
+  if (renders.size > RENDER_CACHE_LINES) renders.delete(renders.keys().next().value!);
+  return render;
+}
+
+/** Render `lines` ahead, one per idle moment, so saying them later is free. */
+export function prewarmLines(lines: readonly string[], voice: DrEVoice): void {
+  const queue = [...lines];
+  const idle = (fn: () => void) => (typeof requestIdleCallback === 'function' ? requestIdleCallback(fn) : setTimeout(fn, 50));
+  const next = () => {
+    const line = queue.shift();
+    if (line === undefined) return;
+    try { renderLine(line, voice); } catch { /* a line the voice cannot say */ }
+    idle(next);
+  };
+  idle(next);
 }
 
 export function createMumblePlayer(ctx: AudioContext, destination: AudioNode): MumblePlayer {
@@ -38,7 +69,7 @@ export function createMumblePlayer(ctx: AudioContext, destination: AudioNode): M
       const began = performance.now();
       let render;
       try {
-        render = synthesize(normalizeLine(text), { voice: voice.voice, weird: voice.weird, pitch: voice.pitch, pace: voice.pace });
+        render = renderLine(text, voice);
       } catch {
         return null;
       }

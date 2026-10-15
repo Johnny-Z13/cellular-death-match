@@ -246,6 +246,7 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
           })),
           gridSize: arena.state.grid.LX,
           dishPx: box.width || 400,
+          dishHeightPx: box.height || box.width || 400,
           pingId,
           compact: options.isCompact(),
           previous,

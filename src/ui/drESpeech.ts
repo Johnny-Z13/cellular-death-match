@@ -7,7 +7,8 @@
 // re-draws it as said and unsaid halves, so the element's text never changes.
 import { DR_E_VOICE } from '../content/drETuning';
 import { normalizeLine, plan as planLine, type MumblePlan } from '../audio/mumble';
-import { createMumblePlayer, type MumblePlayer } from '../audio/mumblePlayer';
+import { createMumblePlayer, prewarmLines, type MumblePlayer } from '../audio/mumblePlayer';
+import { ONBOARDING_BEATS, TRIAL_ONBOARDING_BEATS } from '../game/onboardingStage';
 import type { UiAudio } from '../audio/uiAudio';
 import type { DrEPresence } from './drEPresence';
 import { revealLengthAt } from './speechReveal';
@@ -44,11 +45,23 @@ export function createDrESpeech(options: DrESpeechOptions): DrESpeech {
     let said = current.el.querySelector<HTMLElement>(':scope > .dre-said');
     let unsaid = current.el.querySelector<HTMLElement>(':scope > .dre-unsaid');
     if (!said || !unsaid) {
+      // The halves change every word; screen readers get the whole line once,
+      // from the copy beside it, instead of a fragment per word.
       said = document.createElement('span');
       said.className = 'dre-said';
+      said.setAttribute('aria-hidden', 'true');
       unsaid = document.createElement('span');
       unsaid.className = 'dre-unsaid';
+      unsaid.setAttribute('aria-hidden', 'true');
       current.el.replaceChildren(said, unsaid);
+      let spoken = current.el.nextElementSibling;
+      if (!spoken?.classList.contains('dre-spoken')) {
+        spoken = document.createElement('span');
+        spoken.className = 'dre-spoken sr-only';
+        spoken.setAttribute('aria-live', 'off');
+        current.el.after(spoken);
+      }
+      spoken.textContent = current.text;
     }
     said.textContent = current.text.slice(0, shown);
     unsaid.textContent = current.text.slice(shown);
@@ -66,7 +79,7 @@ export function createDrESpeech(options: DrESpeechOptions): DrESpeech {
   const tick = (): void => {
     if (!line) return;
     const t = (performance.now() - line.startMs) / 1000;
-    const shown = line.plan ? revealLengthAt(line.text, line.plan, t) : line.text.length;
+    const shown = line.plan && !options.reducedMotion ? revealLengthAt(line.text, line.plan, t) : line.text.length;
     if (shown !== line.shown) draw(line, shown);
     if (!line.plan || t >= line.plan.duration) {
       presence.stopSpeaking();
@@ -124,6 +137,8 @@ export function createDrESpeech(options: DrESpeechOptions): DrESpeech {
     });
   };
 
+  // His first lines are known: render them while the player reads the title.
+  prewarmLines(['Oh! A visitor!', ...ONBOARDING_BEATS.map((b) => b.title), ...TRIAL_ONBOARDING_BEATS.flat().map((b) => b.title)], DR_E_VOICE);
   watch(document.getElementById('coach-title'));
   watch(document.getElementById('dex-line'));
   watch(document.getElementById('reveal-line'));

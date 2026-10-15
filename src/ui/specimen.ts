@@ -14,6 +14,9 @@ export const SPECIMEN_TUNING = {
   pxPerCell: 4,
   fps: 8,
   wobble: 0.05,
+  /** The membrane's wobble period and flicker step. */
+  wobbleMs: 900,
+  flickerMs: 140,
   flicker: 0.1,
   coreShade: 0.4,
   membraneLight: 0.38,
@@ -89,6 +92,10 @@ interface Specimen {
   blobs: Blob[];
   found: boolean;
   seed: number;
+  /** Reused every paint: the part grid, the grid-sized canvas and its pixels. */
+  grid: Int8Array;
+  offscreen: HTMLCanvasElement;
+  image: ImageData;
 }
 
 const live = new Set<Specimen>();
@@ -98,10 +105,11 @@ let lastPaint = 0;
 function paint(specimen: Specimen, timeMs: number, reducedMotion: boolean): void {
   const T = SPECIMEN_TUNING;
   const N = T.gridSize;
-  const { canvas, blobs, found } = specimen;
-  const grid = new Int8Array(N * N).fill(-1);
-  const step = reducedMotion ? 0 : Math.floor(timeMs / 140);
-  const w = reducedMotion ? 0 : timeMs / 900;
+  const { canvas, blobs, found, grid, offscreen, image } = specimen;
+  grid.fill(-1);
+  image.data.fill(0);
+  const step = reducedMotion ? 0 : Math.floor(timeMs / T.flickerMs);
+  const w = reducedMotion ? 0 : timeMs / T.wobbleMs;
   for (let y = 0; y < N; y++) {
     for (let x = 0; x < N; x++) {
       const px = (x - (N - 1) / 2) / N;
@@ -120,11 +128,7 @@ function paint(specimen: Specimen, timeMs: number, reducedMotion: boolean): void
       grid[y * N + x] = best;
     }
   }
-  const offscreen = document.createElement('canvas');
-  offscreen.width = N;
-  offscreen.height = N;
   const octx = offscreen.getContext('2d')!;
-  const image = octx.createImageData(N, N);
   for (let y = 0; y < N; y++) {
     for (let x = 0; x < N; x++) {
       const i = y * N + x;
@@ -188,11 +192,17 @@ export function createSpecimen(canvas: HTMLCanvasElement, entry: DexEntry, found
   canvas.height = T.gridSize * T.pxPerCell;
   const strains = entry.strains.length > 0 ? entry.strains : ['swarmlet'];
   const layout = layoutCultures(strains.length, entry.touching);
+  const offscreen = document.createElement('canvas');
+  offscreen.width = T.gridSize;
+  offscreen.height = T.gridSize;
   const specimen: Specimen = {
     canvas,
     found,
     seed: entry.number * 7,
     blobs: layout.map((spot, i) => ({ ...spot, colour: strainColour(strains[i]!) })),
+    grid: new Int8Array(T.gridSize * T.gridSize),
+    offscreen,
+    image: offscreen.getContext('2d')!.createImageData(T.gridSize, T.gridSize),
   };
   live.add(specimen);
   paint(specimen, performance.now(), true);

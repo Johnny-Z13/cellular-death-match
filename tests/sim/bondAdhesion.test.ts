@@ -62,6 +62,29 @@ describe('bond adhesion', () => {
     expect(bonded).toBeGreaterThan(free * 1.5);
   });
 
+  it('keeps a loose strain\'s bonded partners from growing into each other', () => {
+    // A strain with weak surface tension (a fed Swarmlet runs near 0.5).
+    const strays = (bonds?: BondView): number => {
+      let total = 0;
+      for (const seed of [11, 12, 13, 14]) {
+        const state = pulledApartPair(seed, bonds, 0.3);
+        for (const cell of state.cells.values()) cell.energyProfile = { isingMul: 0.45, volMul: 1, movMul: 1, engulfMul: 1 };
+        for (let i = 0; i < 12000; i++) mcStep(state);
+        const { LX, LY, cells } = state.grid;
+        for (let x = 0; x < LX; x++) {
+          for (let y = 0; y < LY; y++) {
+            const id = cells[x * LY + y];
+            if (!id) continue;
+            const own = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => cells[(x + dx!) * LY + y + dy!] === id).length;
+            if (own === 0) total += 1;
+          }
+        }
+      }
+      return total;
+    };
+    expect(strays(bondedPair)).toBeLessThanOrEqual(strays() + 6);
+  });
+
   it('stops bonded partners eating each other', () => {
     // A hungry culture eats an unbonded neighbour, but not its partner.
     const volumeLost = (bonds?: BondView): number => {

@@ -34,8 +34,8 @@ export const VERY_RARE_TUNING = {
   /** ...crossing the mean this many times within the window. */
   blinkerCrossings: 6,
   blinkerWindowTicks: 480,
-  /** Old Timer: locked this long. */
-  oldTimerTicks: 60 * 180,
+  /** Old Timer: locked this long (three minutes of dish time). */
+  oldTimerTicks: MERGE_DETECTION.ticksPerSecond * 180,
 };
 
 export interface FormSample {
@@ -184,6 +184,8 @@ export function createMergeTracker(): MergeTracker {
 
       // Locked forms hold while their cultures live and keep touching.
       locked = locked.filter((form) => {
+        // A form absorbed into a Compound leaves quietly.
+        if (form.members.length === 0) return false;
         const alive = form.members.every((id) => (state.cells.get(id)?.vol ?? 0) > 0);
         const touching = form.pairs.every(([a, b]) => graph.contacts.get(a)?.has(b));
         form.adrift = touching ? 0 : form.adrift + T.scanTicks;
@@ -217,14 +219,17 @@ export function createMergeTracker(): MergeTracker {
         for (let j = i + 1; j < locked.length; j++) {
           const a = locked[i]!;
           const b = locked[j]!;
-          if (a.earned.has('compound') && b.earned.has('compound')) continue;
+          if (a.members.length === 0 || b.members.length === 0 || a.earned.has('compound') || b.earned.has('compound')) continue;
           const cross: Array<[CellId, CellId]> = [];
           for (const x of a.members) for (const y of b.members) if (graph.contacts.get(x)?.has(y)) cross.push([x, y]);
           if (cross.length === 0 || ![...a.members, ...b.members].every((id) => fedBy(id, 'nutrient'))) continue;
+          // One organism now: a takes in b's cultures and bonds, and b is gone.
           bonds.link(cross, 1);
-          a.pairs.push(...cross);
-          b.earned.add('compound');
-          earn(a, 'compound', [...a.members, ...b.members]);
+          a.members.push(...b.members);
+          a.pairs.push(...b.pairs, ...cross);
+          for (const id of b.earned) a.earned.add(id);
+          b.members = [];
+          earn(a, 'compound');
         }
       }
 
@@ -246,6 +251,10 @@ export function createMergeTracker(): MergeTracker {
           events.push(event(state, 'locked', form, members));
           continue;
         }
+        // Which pairs touch can shift under the same members (a ring re-orders,
+        // the Rainbow has no fixed shape): drop bonds that no longer touch.
+        const before = forming.get(key)?.pairs ?? [];
+        bonds.unlink(before.filter(([a, b]) => !pairs.some(([c, d]) => c === a && d === b)));
         next.set(key, { key, form, members, pairs, held, progress });
         bonds.link(pairs, progress * BOND_TUNING.formingStrength);
       }
@@ -279,6 +288,7 @@ export function createMergeTracker(): MergeTracker {
         cy /= mass;
         vx /= form.members.length;
         vy /= form.members.length;
+        const meanSpeed = form.members.reduce((sum, id) => sum + (state.cells.get(id)?.intent.speed ?? 0), 0) / form.members.length;
         for (const id of form.members) {
           const cell = state.cells.get(id);
           if (!cell) continue;
@@ -287,9 +297,11 @@ export function createMergeTracker(): MergeTracker {
           const pull = Math.hypot(dx, dy) || 1;
           const sx = vx + (BOND_TUNING.cohesion * dx) / pull;
           const sy = vy + (BOND_TUNING.cohesion * dy) / pull;
-          const speed = Math.hypot(sx, sy);
-          cell.intent.vec = speed > 0 ? [sx / speed, sy / speed] : [0, 0];
-          cell.intent.speed = speed;
+          const length = Math.hypot(sx, sy);
+          // Steering redirects; it never adds energy, or a form left to
+          // itself would speed up tick after tick.
+          cell.intent.vec = length > 0 ? [sx / length, sy / length] : [0, 0];
+          cell.intent.speed = meanSpeed;
         }
       }
     },

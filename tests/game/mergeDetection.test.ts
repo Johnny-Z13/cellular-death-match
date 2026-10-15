@@ -168,3 +168,16 @@ describe('group very rares', () => {
     expect(tracker.scan(together, strainOfMany, () => true).filter((e) => e.kind === 'very-rare')).toEqual([]);
   });
 });
+
+describe('locked form motion', () => {
+  it('steers a locked form as one without ever speeding it up', () => {
+    const state = dish(PAIR);
+    const tracker = createMergeTracker();
+    for (let i = 0; i < scansToLock; i++) tracker.scan(state, strainOf, () => true);
+    expect(tracker.locked()).toHaveLength(1);
+    state.cells.get(1)!.intent = { vec: [1, 0], speed: 2, engulfMultiplier: 1, shooting: false };
+    state.cells.get(2)!.intent = { vec: [0, 1], speed: 2, engulfMultiplier: 1, shooting: false };
+    for (let i = 0; i < 100; i++) tracker.steer(state);
+    for (const id of [1, 2]) expect(state.cells.get(id)!.intent.speed).toBeLessThanOrEqual(2);
+  });
+});

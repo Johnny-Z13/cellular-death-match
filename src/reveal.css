@@ -19,6 +19,10 @@
   display: none;
 }
 
+.friend-reveal:focus {
+  outline: none;
+}
+
 .friend-reveal[data-tier="very-rare"] {
   --tier: #f0c35a;
   --tier-glow: rgba(240, 195, 90, 0.4);

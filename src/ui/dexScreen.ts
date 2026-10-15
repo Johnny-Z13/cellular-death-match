@@ -75,24 +75,31 @@ export function createDexScreen(opts: { additiveBloom: boolean; playTap: () => v
     return () => specimen.destroy();
   };
 
+  // The tabs are built once and only updated, so a keyboard user's focus
+  // stays on the tab they pressed.
+  const tabButtons = TABS.map(({ id, label }) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'dex-tab';
+    b.setAttribute('role', 'tab');
+    b.setAttribute('aria-controls', 'dex-grid');
+    b.innerHTML = '<span></span><b></b>';
+    b.querySelector('span')!.textContent = label;
+    b.addEventListener('click', () => {
+      opts.playTap();
+      tab = id;
+      render();
+    });
+    tabsEl.append(b);
+    return { id, b };
+  });
+
   const renderTabs = () => {
-    tabsEl.replaceChildren(...TABS.map(({ id, label }) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'dex-tab';
-      b.setAttribute('role', 'tab');
+    for (const { id, b } of tabButtons) {
       b.setAttribute('aria-selected', String(id === tab));
       const counts = view && id !== 'all' ? view.byTier[id] : view ? { found: view.found, total: view.total } : null;
-      b.innerHTML = '<span></span><b></b>';
-      b.querySelector('span')!.textContent = label;
       b.querySelector('b')!.textContent = counts ? `${counts.found}/${counts.total}` : '';
-      b.addEventListener('click', () => {
-        opts.playTap();
-        tab = id;
-        render();
-      });
-      return b;
-    }));
+    }
   };
 
   const renderDetail = () => {
@@ -198,6 +205,7 @@ export function createDexScreen(opts: { additiveBloom: boolean; playTap: () => v
     refresh(next) {
       view = next;
       count.textContent = String(next.found);
+      document.getElementById('dex-count-total')!.textContent = `/${next.total}`;
       button.setAttribute('aria-label', `Open your friends: ${next.found} of ${next.total} found`);
       if (open) render();
     },
