@@ -41,7 +41,7 @@ The order runs from natural affinities (easy) to arrangements the dishes resist 
 | 023 | Heavyweights | Bruiser, Bruiser | both | Salt | Bruiser pairs hold; Salt hardens them |
 | 024 | Mortar and Pestle | Bruiser, Splitter | both | Salt | Holds in the open lab |
 | 025 | Four Square | four Swarmlets | a ring | Nutrient | A 4-ring is far rarer than a clump; needs careful Paste |
-| 026 | The Sandwich | Sniper, Splitter, Sniper | Splitter touches both Snipers, Snipers apart | Nutrient | Johnny's shape: two reds fused round the green. The hardest rare |
+| 026 | The Sandwich | Sniper, Splitter, Sniper | all three touching | Nutrient | Johnny's shape: two reds fused round the green. A live probe showed the Snipers wrap the Splitter until all three touch, which is what he saw; a strict chain kept closing into this triangle under the bonds. The hardest rare |
 
 ## Very rare leads (slice I)
 

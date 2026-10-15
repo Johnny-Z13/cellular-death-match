@@ -98,8 +98,10 @@ export const FORMS: readonly FormDef[] = [
     hint: 'Four Swarmlets in a ring, each touching only its two neighbours.',
   },
   {
-    id: 'the_sandwich', number: 26, name: 'The Sandwich', strains: ['sniper', 'splitter', 'sniper'], touching: [[0, 1], [1, 2]], feed: 'nutrient',
-    note: 'The Sandwich. Two Snipers, one Splitter, nobody shooting. Delicious.',
-    hint: 'A Splitter between two Snipers. The Snipers must not touch.',
+    // Johnny's "two red fused around the green": on the dish the Snipers wrap
+    // the Splitter until all three touch, so the form is that triangle.
+    id: 'the_sandwich', number: 26, name: 'The Sandwich', strains: ['sniper', 'splitter', 'sniper'], touching: [[0, 1], [1, 2], [0, 2]], feed: 'nutrient',
+    note: 'The Sandwich. Two Snipers hugging a Splitter, nobody shooting. Delicious.',
+    hint: 'Two Snipers hugging one Splitter, all three touching, fed together.',
   },
 ];
