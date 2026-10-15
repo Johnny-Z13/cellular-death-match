@@ -5,6 +5,8 @@
   "installCommand": "",
   "outputDirectory": ".",
   "headers": [
+    { "source": "/favicon.ico", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+    { "source": "/favicon.png", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
     {
       "source": "/(.*)",
       "headers": [
@@ -43,6 +45,16 @@
       "source": "/release.json",
       "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
     }
+  ],
+  "rewrites": [
+    {"source": "/favicon.ico", "destination": "/play/favicon.ico"},
+    {"source": "/favicon.png", "destination": "/play/favicon.png"},
+    {"source": "/favicon-32.png", "destination": "/play/favicon-32.png"},
+    {"source": "/apple-touch-icon.png", "destination": "/play/apple-touch-icon.png"},
+    {"source": "/icon-192.png", "destination": "/play/icon-192.png"},
+    {"source": "/icon-512.png", "destination": "/play/icon-512.png"},
+    {"source": "/icon-1024.png", "destination": "/play/icon-1024.png"},
+    {"source": "/manifest.json", "destination": "/play/manifest.json"}
   ],
   "redirects": [
     { "source": "/", "destination": "/play/", "permanent": false },

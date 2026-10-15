@@ -11,7 +11,7 @@ const reportPath = 'docs/publishing/evidence/crazygames-asset-attributions.gener
 const rightsPath = 'docs/publishing/evidence/crazygames-v1-rights-provenance.md'
 const creditsPath = 'public/ASSET_CREDITS.txt'
 const mediaExtensions = new Set([
-  '.aac', '.avif', '.flac', '.gif', '.jpeg', '.jpg', '.m4a', '.mov',
+  '.ico', '.aac', '.avif', '.flac', '.gif', '.jpeg', '.jpg', '.m4a', '.mov',
   '.mp3', '.mp4', '.ogg', '.png', '.svg', '.wav', '.webm', '.webp',
 ])
 
@@ -93,7 +93,7 @@ describe('CrazyGames asset provenance', () => {
     const credits = readFileSync(creditsPath, 'utf8')
     const observed = registry.scanRoots.flatMap(listMedia).sort()
 
-    expect(observed).toHaveLength(52)
+    expect(observed).toHaveLength(54)
     expect(report.summary.observedAssets).toBe(observed.length)
     expect(report.assets.filter((asset) => asset.integrity === 'matched')).toHaveLength(observed.length)
 
@@ -158,7 +158,7 @@ describe('CrazyGames asset provenance', () => {
 
     expect(report.summary.releaseReady).toBe(false)
     expect(report.summary.releaseBlockers).toHaveLength(nonCleared.length)
-    expect(registry.assets).toHaveLength(52)
+    expect(registry.assets).toHaveLength(54)
     expect(registry.assets.some((asset) => asset.path === 'public/art/professor/dr-e-mergent-pixel.png')).toBe(true)
     expect(registry.assets.some((asset) => asset.path === 'public/art/ui/onboarding-pointer.png')).toBe(false)
     expect(registry.assets.filter((asset) => asset.status === 'review-required')).toHaveLength(0)

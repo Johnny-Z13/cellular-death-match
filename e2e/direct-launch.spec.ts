@@ -21,7 +21,7 @@ test('main URL opens the Z13 ident and game with no alpha page', async ({ page }
   await expect(plate.getByText('PRESENTS')).toBeAttached();
   await expect(plate).toHaveCount(0, { timeout: 7_000 });
   await expect(page.locator('.layout')).toHaveAttribute('data-screen', 'title');
-  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', /branding\/z13-diamond-icon\.svg/);
+  await expect(page.locator('link[rel="icon"][type="image/x-icon"]')).toHaveAttribute('href', /favicon\.ico\?v=4/);
   await expect(page.locator('.masthead, .hero, #build-notes')).toHaveCount(0);
   await startFirstTrial(page);
   await page.screenshot({ path: `test-results/direct-launch-${test.info().project.name}.png` });
@@ -34,4 +34,18 @@ test('old index link also opens the game directly', async ({ page }) => {
   await expect(page).toHaveTitle('Cellular Death Match');
   await expect(page.locator('#z13-ident')).toHaveCount(0, { timeout: 7_000 });
   await expect(page.locator('#title-start')).toBeVisible();
+});
+
+test('root favicon and app-icon routes serve the same current Dr. E files', async ({ request }, info) => {
+  test.skip(!process.env.CDM_LIVE || info.project.name !== 'desktop', 'Vercel rewrites require the live deployment');
+  for (const path of ['favicon.ico', 'favicon.png', 'favicon-32.png', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png']) {
+    const root = await request.get(`/${path}`);
+    const game = await request.get(`/play/${path}`);
+    expect(root.status(), `root ${path}`).toBe(200);
+    expect(game.status(), `game ${path}`).toBe(200);
+    expect(await root.body(), path).toEqual(await game.body());
+  }
+  const manifest = await request.get('/manifest.json');
+  expect(manifest.status()).toBe(200);
+  expect((await manifest.json()).icons.every((icon: { src: string }) => icon.src.endsWith('?v=4'))).toBe(true);
 });

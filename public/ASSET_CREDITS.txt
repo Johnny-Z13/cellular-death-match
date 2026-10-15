@@ -4,11 +4,11 @@ Generated from the repository provenance register. It covers bundled media.
 Provider names are included for transparency and do not imply endorsement.
 
 public/apple-touch-icon.png
-  Credit: Professor E. Mergent icon by Z13 Labs, generated with OpenAI and resized with Sharp.
-  Provider: OpenAI Image Generation + Sharp
-  Terms/evidence: https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending. docs/publishing/evidence/professor-app-icon-generation.md
-  Release status: Provider route declared; evidence and approval pending
-  SHA-256: d9bccdeba88a318d9d71f30259b57f1802f17891907b2a08b0975762f12df09c
+  Credit: Dr. E cellular face from Cellular Death Match by Z13 Labs.
+  Provider: Z13 Labs cellular Dr. E renderer
+  Terms/evidence: Deterministic render of the game-owned colony face; no external artwork or generated portrait. docs/assets/branding/dr-e-icons.md
+  Release status: Cleared
+  SHA-256: d7944fde27f6361d3712686b8239dce91c6f5234ef1b58be4bc68d79d1ccb0e2
 
 public/art/chimera/bloom_mass.png
   Credit: Bloom Mass specimen art by Z13 Labs, generated with Google Gemini.
@@ -339,30 +339,44 @@ public/branding/z13-mark.png
   Release status: Cleared
   SHA-256: 29602e8d194a6351d370a95645d526c9950d6075e008b12a8101254709a0bd72
 
+public/favicon-32.png
+  Credit: Dr. E cellular face from Cellular Death Match by Z13 Labs.
+  Provider: Z13 Labs cellular Dr. E renderer
+  Terms/evidence: Deterministic render of the game-owned colony face; no external artwork or generated portrait. docs/assets/branding/dr-e-icons.md
+  Release status: Cleared
+  SHA-256: 08687c98f01a45980a3133991bf0b3f8a47e7cfe80f788233aa91d498d706658
+
+public/favicon.ico
+  Credit: Dr. E cellular face from Cellular Death Match by Z13 Labs.
+  Provider: Z13 Labs cellular Dr. E renderer
+  Terms/evidence: Deterministic render of the game-owned colony face; no external artwork or generated portrait. docs/assets/branding/dr-e-icons.md
+  Release status: Cleared
+  SHA-256: f1ef05fdafc7255f0f1a841388a3ff37464ca8eb0d161060b8fb1ec926096ed9
+
 public/favicon.png
-  Credit: Professor E. Mergent favicon by Z13 Labs, generated with OpenAI and resized with Sharp.
-  Provider: OpenAI Image Generation + Sharp
-  Terms/evidence: https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending. docs/publishing/evidence/professor-app-icon-generation.md
-  Release status: Provider route declared; evidence and approval pending
-  SHA-256: 9e143e12a79c6caa13ccc79bcf9cee4e16fb174488f22cc971127649a41a4e90
+  Credit: Dr. E cellular face from Cellular Death Match by Z13 Labs.
+  Provider: Z13 Labs cellular Dr. E renderer
+  Terms/evidence: Deterministic render of the game-owned colony face; no external artwork or generated portrait. docs/assets/branding/dr-e-icons.md
+  Release status: Cleared
+  SHA-256: 9ed2443d84cbdbf1fdc3936b3b74c9b0d518531169f30895bb45abc3ac8f44fb
 
 public/icon-1024.png
-  Credit: Professor E. Mergent app icon by Z13 Labs, generated with OpenAI.
-  Provider: OpenAI Image Generation
-  Terms/evidence: https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending. docs/publishing/evidence/professor-app-icon-generation.md
-  Release status: Provider route declared; evidence and approval pending
-  SHA-256: 8b8835745093d9bae901f0a5bb341b0d6d0488913c6e1ac9699625abc9b26daf
+  Credit: Dr. E cellular face from Cellular Death Match by Z13 Labs.
+  Provider: Z13 Labs cellular Dr. E renderer
+  Terms/evidence: Deterministic render of the game-owned colony face; no external artwork or generated portrait. docs/assets/branding/dr-e-icons.md
+  Release status: Cleared
+  SHA-256: e32c3bcb5f7b8840e37fc6d438b2b7c6299082a6af5243bd8397c3df1b282e4e
 
 public/icon-192.png
-  Credit: Professor E. Mergent app icon by Z13 Labs, generated with OpenAI and resized with Sharp.
-  Provider: OpenAI Image Generation + Sharp
-  Terms/evidence: https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending. docs/publishing/evidence/professor-app-icon-generation.md
-  Release status: Provider route declared; evidence and approval pending
-  SHA-256: 0b0557308e5f6302f77e708b81ebc41831aa0a8d6d21c19cd40f570b19c1aa94
+  Credit: Dr. E cellular face from Cellular Death Match by Z13 Labs.
+  Provider: Z13 Labs cellular Dr. E renderer
+  Terms/evidence: Deterministic render of the game-owned colony face; no external artwork or generated portrait. docs/assets/branding/dr-e-icons.md
+  Release status: Cleared
+  SHA-256: 52df3e4557852e1300761c9b3475cf029bce87e5efd15a633e3abea5f4fd5b40
 
 public/icon-512.png
-  Credit: Professor E. Mergent app icon by Z13 Labs, generated with OpenAI and resized with Sharp.
-  Provider: OpenAI Image Generation + Sharp
-  Terms/evidence: https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending. docs/publishing/evidence/professor-app-icon-generation.md
-  Release status: Provider route declared; evidence and approval pending
-  SHA-256: 4e32d5435583972ee9c4b68ab1d4e12847b6229580c736be75aebfccab18305b
+  Credit: Dr. E cellular face from Cellular Death Match by Z13 Labs.
+  Provider: Z13 Labs cellular Dr. E renderer
+  Terms/evidence: Deterministic render of the game-owned colony face; no external artwork or generated portrait. docs/assets/branding/dr-e-icons.md
+  Release status: Cleared
+  SHA-256: 72fedbab2662793d9ce44350beff154032a5f063ef1015a39a2f054906b10462
