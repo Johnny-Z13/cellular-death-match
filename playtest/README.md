@@ -1,6 +1,6 @@
 # Cellular Death Match alpha tester portal
 
-Public tester link: https://cellular-death-match-alpha.vercel.app
+Public tester link: https://cellular-death-match.vercel.app
 
 Static HTML/CSS/ES module, in the game's fonts (Michroma, IBM Plex Mono, Newsreader) and palette. A brief Z13 ident, a live-dish hero captured from the title screen, a **Play now** link to the hosted build at `/play/`, compact Alpha Build notes, in-game captures, getting-started and rescue guides, and mailto feedback. No analytics, signup or autoplay audio. "Play intro with sound" replays the game's Z13 ident jingle; Escape, a second press or hiding the page stops it. Reduced motion skips the ident.
 
@@ -21,9 +21,9 @@ The Python server previews the page and the staged game; the headers in `vercel.
 
 1. Commit the game. `stage-playtest.mjs` refuses to run with uncommitted changes under `src/`, `public/`, `index.html`, `package.json` or `vite.config.ts`, so every staged build is reproducible from `release.json`'s `sourceCommit`.
 2. Run `npm test`, then stage with a new version and id. Update the visible build notes in `index.html` (eyebrow date, title, New/Known lists, feedback subject line) to match `release.json`.
-3. From **playtest/**, inspect `vercel deploy --dry --format=json --scope z13labs`, then `vercel deploy --prod --skip-domain --yes --scope z13labs`. Check the deployment with `vercel curl` (portal, `/play/`, `/release.json`) and in a browser under the real CSP, then `vercel promote <deployment-url> --yes --scope z13labs` and, if needed, `vercel alias set <deployment-url> cellular-death-match-alpha.vercel.app --scope z13labs`.
+3. From **playtest/**, inspect `vercel deploy --dry --format=json --scope z13labs`, then `vercel deploy --prod --skip-domain --yes --scope z13labs`. Check the deployment with `vercel curl` (portal, `/play/`, `/release.json`) and in a browser under the real CSP, then `vercel promote <deployment-url> --yes --scope z13labs` and, if needed, `vercel alias set <deployment-url> cellular-death-match.vercel.app --scope z13labs`.
 
-Vercel project `z13labs/cellular-death-match-alpha` (`prj_YSgXz1b5cIFmBdC2qLsEXKvYl18b`). It is separate from `z13labs/cellular-death-match`, the Git-connected project that deploys `main` to cellular-death-match.vercel.app. The share image and `og:url` in `index.html` are absolute URLs on the alpha alias. CLI credentials are local and excluded (`.vercel`, `.env*`). Never print credentials or put them in command arguments. No Git repository or game source is uploaded: only this folder, with `play/` holding the built bundle. The build is public to anyone with the link; `noindex` is not access control. Saves live in the tester's browser.
+Vercel project `z13labs/cellular-death-match` (`prj_pj0IXogr42aXHQWeTkNb8nGXZwX4`). Its GitHub connection is off: pushing `main` no longer deploys, and the site only changes when this folder is deployed. Before 15 Oct 2026 the project auto-built `main` as the bare game at the root; `vercel git connect` restores that, but the next push would then replace the portal. The share image and `og:url` in `index.html` are absolute URLs on this domain. CLI credentials are local and excluded (`.vercel`, `.env*`). Never print credentials or put them in command arguments. No Git repository or game source is uploaded: only this folder, with `play/` holding the built bundle. The build is public to anyone with the link; `noindex` is not access control. Saves live in the tester's browser.
 
 ## Assets
 

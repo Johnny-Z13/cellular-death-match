@@ -66,7 +66,9 @@ example `html/123/`) under a static server and open `/html/123/index.html`.
 
 ## Vercel
 
-Vercel can auto-detect the Vite project. If configuring manually:
+The public tester link, https://cellular-death-match.vercel.app, serves the tester portal with the game at `/play/`. It is deployed by hand from `playtest/` (see `playtest/README.md`), not built from `main`.
+
+For a plain game deployment, Vercel can auto-detect the Vite project. If configuring manually:
 
 ```text
 Framework preset: Vite
