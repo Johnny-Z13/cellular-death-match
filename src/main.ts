@@ -603,6 +603,14 @@ window.addEventListener('keydown', (event) => {
     trapFocusIn(document.getElementById(reveal.isOpen() ? 'friend-reveal' : 'screen-dex'), event);
     return;
   }
+  // F: the dish alone, full screen, every menu hidden. F or Escape brings
+  // them back.
+  if (event.key.toLowerCase() === 'f' && !event.metaKey && !event.ctrlKey && !event.altKey
+    && !isTypingInto(event.target) && !dex.isOpen() && !reveal.isOpen() && run.getState().phase === 'arena') {
+    event.preventDefault();
+    setPresentationMode(!overlayState.presentationMode);
+    return;
+  }
   if (event.key === 'Escape' && dex.isOpen() && !reveal.isOpen()) {
     event.preventDefault();
     dex.close();
@@ -2598,6 +2606,13 @@ function trapOptionsFocus(event: KeyboardEvent): void {
     event.preventDefault();
     first.focus();
   }
+}
+
+function isTypingInto(target: EventTarget | null): boolean {
+  return target instanceof HTMLInputElement
+    || target instanceof HTMLTextAreaElement
+    || target instanceof HTMLSelectElement
+    || (target instanceof HTMLElement && target.isContentEditable);
 }
 
 // Keep Tab inside an open dialog.

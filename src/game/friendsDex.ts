@@ -138,10 +138,13 @@ export interface DexView {
   byTier: Record<DexTier, { found: number; total: number }>;
 }
 
-export function dexView(progression: Pick<DiscoveryProgressionState, 'unlockedLifeforms' | 'discoveredBreedIds'>, save: FriendsSave): DexView {
+/** `revealAll` (Options → Reveal all) shows every friend as found. */
+export function dexView(progression: Pick<DiscoveryProgressionState, 'unlockedLifeforms' | 'discoveredBreedIds'> & { revealAll?: boolean }, save: FriendsSave): DexView {
   const strains = new Set<string>([...progression.unlockedLifeforms, ...progression.discoveredBreedIds]);
   const items = DEX.map((entry): DexItem => {
-    const found = entry.tier === 'origin' || (entry.tier === 'common' ? strains.has(entry.id) : !!save.found[entry.id]);
+    const found = progression.revealAll === true
+      || entry.tier === 'origin'
+      || (entry.tier === 'common' ? strains.has(entry.id) : !!save.found[entry.id]);
     return { ...entry, found, record: save.found[entry.id] ?? null };
   });
   const byTier = { origin: { found: 0, total: 0 }, common: { found: 0, total: 0 }, rare: { found: 0, total: 0 }, 'very-rare': { found: 0, total: 0 } };

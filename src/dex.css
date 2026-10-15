@@ -414,3 +414,12 @@
   .dex-tile { transition: none; }
   .dex-tile:hover { transform: none; }
 }
+
+/* Presentation mode (F, or the full-screen button) is the dish alone. */
+.layout[data-screen="arena"].presentation-mode .dex-button,
+.layout[data-screen="arena"].presentation-mode .dish-labels,
+.layout[data-screen="arena"].presentation-mode .onboarding-professor-pointer,
+.layout[data-screen="arena"].presentation-mode .simulation-paused-badge,
+.layout[data-screen="arena"].presentation-mode .preview-exit {
+  display: none !important;
+}

@@ -33,6 +33,12 @@ describe('friends dex', () => {
     expect(view.items.find((item) => item.id === 'puddle_pals')?.record).toEqual({ at: 1000, where: 'Trial 2' });
   });
 
+  it('shows every friend as found under Reveal all', () => {
+    const view = dexView({ unlockedLifeforms: [], discoveredBreedIds: [], revealAll: true }, { found: {} });
+    expect(view.found).toBe(32);
+    expect(view.byTier['very-rare']).toEqual({ found: 5, total: 5 });
+  });
+
   it('ignores a corrupt or unknown save rather than crashing', () => {
     expect(loadFriends(memoryStorage({ [FRIENDS_SAVE_KEY]: '{nope' })).found).toEqual({});
     expect(loadFriends(memoryStorage({ [FRIENDS_SAVE_KEY]: JSON.stringify({ v: 1, found: { ghost: { at: 1, where: 'x' } } }) })).found).toEqual({});
