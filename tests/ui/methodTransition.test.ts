@@ -12,7 +12,7 @@ describe('between-trial Method transition', () => {
     expect(html).toContain('id="screen-method-intro"');
     expect(html).toContain('role="dialog" aria-modal="true" aria-labelledby="method-intro-title"');
     expect(html).toContain('Right. You’re on your own now.');
-    expect(html).toContain('I’ll check in from time to time.');
+    expect(html).toContain('I’ll pop in now and then.');
     expect(html).not.toContain('Well done.');
     expect(html).toContain('id="method-intro-continue"');
     expect(html).toContain('Choose an upgrade ›');

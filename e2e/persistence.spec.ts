@@ -31,7 +31,7 @@ test.describe('reload-safe Case checkpoints', () => {
 
     await page.reload();
     await continueSavedCase(page);
-    await expect(page.locator('#coach-title')).toHaveText('Welcome to my lab.');
+    await expect(page.locator('#coach-title')).toHaveText('Oh! A visitor!');
     await page.locator('#coach-skip').click();
     await expect(page.locator('#coach-title')).toContainText('Press Egg.');
 
@@ -40,7 +40,7 @@ test.describe('reload-safe Case checkpoints', () => {
     await expect(page.locator('#coach-title')).toHaveText('Now press Nutrient.');
     await page.reload();
     await continueSavedCase(page);
-    await expect(page.locator('#coach-title')).toHaveText('Welcome to my lab.');
+    await expect(page.locator('#coach-title')).toHaveText('Oh! A visitor!');
     await expect(page.locator('[data-tool="egg"] [data-tool-count]')).toHaveText('8/8');
 
     await page.locator('#coach-skip').click();
@@ -48,7 +48,7 @@ test.describe('reload-safe Case checkpoints', () => {
     await expect(page.locator('#end-epoch-button')).toHaveClass(/end-action-ready/, { timeout: 25_000 });
     await page.reload();
     await continueSavedCase(page);
-    await expect(page.locator('#coach-title')).toHaveText('Welcome to my lab.');
+    await expect(page.locator('#coach-title')).toHaveText('Oh! A visitor!');
     await expect(page.locator('#hud-fight')).toHaveText('1 / 5');
 
     runtime.assertClean();

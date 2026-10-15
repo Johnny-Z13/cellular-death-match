@@ -173,8 +173,8 @@ describe('onboarding coach', () => {
     coach.beginRun();
 
     expect(elements.get('coach')?.classList.contains('coach-welcome')).toBe(true);
-    expect(elements.get('coach-title')?.textContent).toBe('Welcome to my lab.');
-    expect(elements.get('coach-body')?.textContent).toContain('show you the ropes');
+    expect(elements.get('coach-title')?.textContent).toBe('Oh! A visitor!');
+    expect(elements.get('coach-body')?.textContent).toContain('one egg, one feed');
     expect(coach.getExpectedTrigger()).toBeUndefined();
     expect(elements.get('coach-skip')?.textContent).toBe('Tap to continue');
     expect(coach.getCurrentPointerTarget()).toBeUndefined();
@@ -314,7 +314,7 @@ describe('onboarding coach', () => {
     expect(coach.isActive()).toBe(true);
     expect(coach.isPresentingSuccess()).toBe(true);
     expect(elements.get('coach')?.classList.contains('coach-exit')).toBe(true);
-    expect(elements.get('coach-title')?.textContent).toBe('Bloom Mass stabilized.');
+    expect(elements.get('coach-title')?.textContent).toBe('Bloom Mass! Friend number one.');
     expect(elements.get('coach-step')?.textContent).toBe('Result ready');
 
     vi.advanceTimersByTime(520);
@@ -329,8 +329,8 @@ describe('onboarding coach', () => {
     expect(elements.get('coach')?.classList.contains('coach-success')).toBe(true);
     expect(elements.get('coach')?.classList.contains('coach-prompt')).toBe(true);
     expect(elements.get('coach')?.classList.contains('coach-welcome')).toBe(false);
-    expect(elements.get('coach-title')?.textContent).toBe('Bloom Mass stabilized.');
-    expect(elements.get('coach-body')?.textContent).toContain('keep watching');
+    expect(elements.get('coach-title')?.textContent).toBe('Bloom Mass! Friend number one.');
+    expect(elements.get('coach-body')?.textContent).toContain('Finish the trial when ready');
     expect(coach.getCurrentPointerTarget()).toBe('end');
 
     vi.advanceTimersByTime(3600);
@@ -427,7 +427,7 @@ describe('onboarding coach', () => {
     expect(coach.isActive()).toBe(true);
     vi.advanceTimersByTime(520 + 2600);
     expect(elements.get('coach')?.classList.contains('coach-success')).toBe(true);
-    expect(elements.get('coach-title')?.textContent).toBe('Bloom Mass stabilized.');
+    expect(elements.get('coach-title')?.textContent).toBe('Bloom Mass! Friend number one.');
   });
 
   it('can show an idle onboarding nudge over the active tutorial and then restore the tutorial card', () => {

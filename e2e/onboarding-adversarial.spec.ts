@@ -48,7 +48,7 @@ test('owns exact input, rejects wrong actions, and restores focus to Dr. E’s t
   const runtime = monitorRuntime(page);
   await openFreshApp(page);
   await page.locator('#title-start').click();
-  await expect(page.locator('#coach-title')).toHaveText('Welcome to my lab.');
+  await expect(page.locator('#coach-title')).toHaveText('Oh! A visitor!');
 
   await page.locator('#options-button').click();
   await expect(page.locator('#simulation-paused-badge')).toBeVisible();
@@ -130,7 +130,7 @@ test('keeps Trial 2 recoverable through wrong specimens, wrong reagents, and rap
   await page.locator('[data-tool="toxin"]').click();
   await clickDish(page);
   await expect(page.locator('#end-epoch-button')).toHaveClass(/end-action-ready/, { timeout: 10_000 });
-  await expect(page.locator('#coach-title')).toHaveText('Bitter Bloom. Logged.', { timeout: 10_000 });
+  await expect(page.locator('#coach-title')).toHaveText('Bitter Bloom! Lovely and nasty.', { timeout: 10_000 });
   await page.screenshot({ path: testInfo.outputPath('trial-2-adversarial-recovered.png') });
   runtime.assertClean();
 });
@@ -172,7 +172,7 @@ test('restarts a hostile mid-step reload as a clean, fully guided dish on deskto
   await page.reload();
   await expect(page.locator('#title-start-label')).toHaveText('Restart Trial');
   await page.locator('#title-start').click();
-  await expect(page.locator('#coach-title')).toHaveText('Welcome to my lab.');
+  await expect(page.locator('#coach-title')).toHaveText('Oh! A visitor!');
   await expect(page.locator('[data-tool="egg"] [data-tool-count]')).toHaveText('8/8');
   await expect(page.locator('[data-tool="nutrient"] [data-tool-count]')).toHaveText('5/5');
   runtime.assertClean();

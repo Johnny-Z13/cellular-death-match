@@ -2417,11 +2417,15 @@ function maybeNudgeIdlePlayer(objectiveComplete: boolean, hint: string | undefin
     nudgeIndex: nudgeCountThisEpoch,
     recoveryHints: authoredTrial?.recoveryHints,
   });
+  // In the Open Lab, Dr. E's second nudge hints at a friend not yet found.
+  const friend = !authoredTrial && nudgeCountThisEpoch === 1
+    ? currentDexView().items.find((item) => item.tier === 'rare' && !item.found)
+    : undefined;
   nudgeCountThisEpoch += 1;
   lastActionTick = tickCount; // another full idle stretch before the next one
   coach.showNudge(
-    nudge.title,
-    nudge.body,
+    friend ? 'I’ve seen something odd…' : nudge.title,
+    friend ? friend.hint : nudge.body,
     { interruptTutorial: nudge.interruptTutorial },
   );
 }

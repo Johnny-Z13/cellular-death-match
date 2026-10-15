@@ -186,9 +186,9 @@ export function createCoach(storage?: Pick<Storage, 'getItem' | 'setItem'>): Coa
     clearPresentationClasses();
     root.classList.add('coach-welcome');
     layout?.classList.add('coach-welcome-active');
-    kickerEl.textContent = 'Dr. E. Mergent · Trial director';
-    titleEl.textContent = 'Welcome to my lab.';
-    bodyEl.textContent = 'Feed a culture and it mutates into something new — there are 14 strains to find. Let me show you the ropes: one egg, one feed.';
+    kickerEl.textContent = 'Dr. E · Your host';
+    titleEl.textContent = 'Oh! A visitor!';
+    bodyEl.textContent = 'I’m Dr. E, a merge of old friends. A cold snap broke the rest of them apart. Help me find them all? First: one egg, one feed.';
     stepEl.textContent = '';
     if (actionEl) actionEl.textContent = '';
     if (skipBtn) {
@@ -472,24 +472,24 @@ export function createCoach(storage?: Pick<Storage, 'getItem' | 'setItem'>): Coa
 function trialSuccessCopy(trialIndex: number): { title: string; body: string } {
   const copy = [
     {
-      title: 'Bloom Mass stabilized.',
-      body: 'Finish the trial when ready, or keep watching.',
+      title: 'Bloom Mass! Friend number one.',
+      body: 'Bonus: feed it beside a Swarmlet, just the two of them, and watch. Finish the trial when ready.',
     },
     {
-      title: 'Bitter Bloom. Logged.',
-      body: 'Finish the trial when ready, or keep watching.',
+      title: 'Bitter Bloom! Lovely and nasty.',
+      body: 'Finish the trial when ready, or keep watching. My friends could be hiding in there.',
     },
     {
-      title: 'Nutrient Conduit. Logged.',
+      title: 'Nutrient Conduit. Delicious.',
       body: 'Water carried food through living tissue. Finish whenever you’re ready, or keep watching.',
     },
     {
-      title: 'Foam Lightning. Logged.',
+      title: 'Foam Lightning! Ha!',
       body: 'A second Water pulse discharged the Foam. Finish whenever you’re ready, or keep watching.',
     },
     {
-      title: 'Brine Channel. Logged.',
-      body: 'The wider ecosystem held. Finish whenever you’re ready, or keep watching.',
+      title: 'Brine Channel. Steady.',
+      body: 'The wider dish held. Finish whenever you’re ready, or keep watching.',
     },
   ];
   return copy[trialIndex] ?? { title: 'Good work.', body: 'The result is logged.' };

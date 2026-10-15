@@ -40,7 +40,7 @@ export async function openFreshApp(page: Page): Promise<void> {
 export async function startFirstTrial(page: Page): Promise<void> {
   await page.locator('#title-start').click();
   await expect(page.locator('.layout')).toHaveAttribute('data-screen', 'arena');
-  await expect(page.locator('#coach-title')).toHaveText('Welcome to my lab.');
+  await expect(page.locator('#coach-title')).toHaveText('Oh! A visitor!');
   await page.locator('#coach-skip').click();
   await expect(page.locator('#coach-title')).toContainText('Press Egg.');
 }

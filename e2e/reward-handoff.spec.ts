@@ -70,7 +70,7 @@ test('uses one meaningful Dr. E graduation without repeating it after every resu
   await expect(page.locator('#screen-method-intro')).toHaveClass(/visible/);
   await expect(page.locator('#method-intro-title')).toHaveText('Right. You’re on your own now.');
   await expect(page.locator('.method-intro-copy > p:not(.method-intro-kicker)')).toHaveText(
-    'Run the next trials your way. I’ll check in from time to time.',
+    'Run the next trials your way. I’ll pop in now and then. And keep an eye out for my friends.',
   );
   await expect(page.locator('#method-intro-continue')).toBeFocused();
   await page.waitForTimeout(350);
