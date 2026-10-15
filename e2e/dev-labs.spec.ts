@@ -35,5 +35,8 @@ test('the Voice Lab says a line, reveals it, and exports the voice', async ({ pa
 
   await page.getByRole('button', { name: 'Copy JSON' }).click();
   await expect(page.locator('#json')).toContainText('export const DR_E_VOICE: DrEVoice = {');
+  await expect(page.locator('#face')).toHaveAttribute('data-drawn', '1');
+  await page.locator('#direction').selectOption('loupe');
+  await page.getByRole('button', { name: 'surprised' }).click();
   runtime.assertClean();
 });
