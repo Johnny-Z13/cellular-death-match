@@ -18,4 +18,5 @@ studio rather than for this game.
 
 The browser favicon `public/branding/z13-diamond-icon.svg` embeds the unchanged
 Z13 mark with a yellow diamond and dark background. It was approved for the
-website on 2026-10-15 and is reused by the direct game entry.
+website on 2026-10-15. The game now uses the cellular Dr. E icons described in
+[dr-e-icons.md](dr-e-icons.md); Z13 remains the studio ident.

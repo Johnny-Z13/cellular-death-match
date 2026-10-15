@@ -34,7 +34,7 @@ Inspect `vercel deploy --dry --format=json --scope z13labs`, deploy using
 then `vercel promote <deployment-url> --yes --scope z13labs`.
 
 Check the public root redirects to the game, the Z13 ident finishes at the title,
-the diamond favicon loads, and the game can start. The GitHub connection is off;
+the cellular Dr. E favicon loads, and the game can start. The GitHub connection is off;
 pushing alone does not deploy. CLI credentials and staged output are excluded
 from Git. No game source or Git metadata is uploaded. The game remains public
 to anyone with the link; `noindex` is not access control.
