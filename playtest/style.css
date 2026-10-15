@@ -72,7 +72,8 @@ h3 {
   color: var(--muted);
 }
 
-/* The Z13 ident: a short card that fades away on its own, script or not. */
+/* Rush Parade's Z13 ident, timed to the original 2.4-second studio jingle.
+   CSS also completes the reveal when JavaScript is unavailable. */
 .ident {
   position: fixed;
   inset: 0;
@@ -80,24 +81,47 @@ h3 {
   display: grid;
   place-content: center;
   justify-items: center;
-  gap: 18px;
   background: #000;
-  animation: ident-out 600ms ease 1.9s forwards;
-  pointer-events: none;
+  animation: ident-out 600ms linear 2.4s forwards;
+  cursor: pointer;
 }
 
-.ident img { width: 180px; animation: ident-in 900ms ease both; }
-
+.ident-mark { position: relative; width: 282px; height: 97px; }
+.ident-mark > span {
+  position: absolute;
+  inset: 0 32px 0 0;
+  background: url('./assets/z13.png') center / contain no-repeat;
+  animation: ident-letter 240ms both;
+}
+.ident-mark > span:nth-child(1) { clip-path: inset(0 63.7% 0 0); animation-delay: .0175s; }
+.ident-mark > span:nth-child(2) { clip-path: inset(0 38% 0 39%); animation-delay: .1775s; }
+.ident-mark > span:nth-child(3) { clip-path: inset(0 0 0 63%); animation-delay: .345s; }
+.ident-mark > i {
+  position: absolute;
+  right: 0;
+  bottom: 1px;
+  width: 23px;
+  height: 23px;
+  background: #ffd10d;
+  transform-origin: bottom right;
+  animation: ident-pixel 650ms .285s both;
+}
 .ident p {
-  margin: 0;
-  font: 400 12px var(--mono);
-  letter-spacing: 0.5em;
-  color: var(--muted);
-  animation: ident-in 900ms ease 300ms both;
+  margin: 27px 0 0;
+  font: 400 10px var(--mono);
+  color: #aaa;
+  animation: ident-letter 300ms .645s both;
 }
-
-@keyframes ident-in { from { opacity: 0; transform: translateY(6px); } }
-@keyframes ident-out { to { opacity: 0; visibility: hidden; } }
+.intro-skipped .ident { display: none; }
+@keyframes ident-letter { from { opacity: 0; transform: scale(1.16); } to { opacity: 1; transform: scale(1); } }
+@keyframes ident-pixel {
+  0% { opacity: 0; transform: translateY(-65px); }
+  35% { opacity: 1; transform: translateY(0); }
+  54% { opacity: 1; transform: scaleY(.85); }
+  65% { opacity: 1; transform: scaleY(1); }
+  100% { opacity: 1; transform: rotate(45deg); }
+}
+@keyframes ident-out { to { opacity: 0; visibility: hidden; pointer-events: none; } }
 
 /* Masthead. */
 .masthead {
@@ -111,6 +135,17 @@ h3 {
 }
 
 .brand { display: block; width: 74px; height: auto; }
+.brand-mark { display: inline-flex; align-items: flex-end; gap: 5px; padding-right: 1px; }
+.brand-mark > i {
+  display: block;
+  width: 7px;
+  height: 7px;
+  flex: none;
+  margin-bottom: 1px;
+  background: #ffd10d;
+  transform: rotate(45deg);
+  transform-origin: bottom right;
+}
 
 .alpha-label {
   display: inline-flex;
@@ -143,6 +178,7 @@ h3 {
   color: var(--muted);
   font: 400 12px var(--mono);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 #intro-sound:hover,
@@ -451,7 +487,8 @@ footer small { grid-column: 1 / -1; }
   .masthead { gap: 10px; }
   .intro-long { display: none; }
   .intro-short { display: inline; }
-  .alpha-label { letter-spacing: 0.16em; }
+  .alpha-label { font-size: 10px; letter-spacing: 0.12em; padding: 7px 9px; white-space: nowrap; }
+  #intro-sound { padding-inline: 10px; }
   .pitch br { display: none; }
   .hero-footer { padding-inline: var(--gutter); letter-spacing: 0.16em; line-height: 1.8; }
   .captures { gap: 12px; }

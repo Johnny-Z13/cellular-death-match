@@ -2,7 +2,7 @@
 
 Public tester link: https://cellular-death-match.vercel.app
 
-Static HTML/CSS/ES module, in the game's fonts (Michroma, IBM Plex Mono, Newsreader) and palette. A brief Z13 ident, a live-dish hero captured from the title screen, a **Play now** link to the hosted build at `/play/`, compact Alpha Build notes, in-game captures, getting-started and rescue guides, and mailto feedback. No analytics, signup or autoplay audio. "Play intro with sound" replays the game's Z13 ident jingle; Escape, a second press or hiding the page stops it. Reduced motion skips the ident.
+Static HTML/CSS/ES module, in the game's fonts (Michroma, IBM Plex Mono, Newsreader) and palette. A brief Z13 ident, a live-dish hero captured from the title screen, a **Play now** link to the hosted build at `/play/`, compact Alpha Build notes, in-game captures, getting-started and rescue guides, and mailto feedback. The Z13 letter pops and falling yellow diamond play automatically with the original studio jingle. If the browser blocks autoplay, the reveal continues silently; "Replay with sound" restarts both animation and audio on a click. Escape, Tab, a tap on the intro or hiding the page stops it. Reduced motion skips the automatic intro; an explicit replay plays audio only. No analytics or signup.
 
 CDM is a browser game, so there are no installers: the build itself is hosted at `/play/` (desktop and phone; its manifest's `start_url` is `./`, so Add to Home Screen from `/play/` opens the game).
 
@@ -28,3 +28,5 @@ Vercel project `z13labs/cellular-death-match` (`prj_pj0IXogr42aXHQWeTkNb8nGXZwX4
 ## Assets
 
 Every image is captured from the game (`assets/*.webp`, `assets/og.jpg`); the Z13 mark and ident jingle are the game's own (`public/branding/`).
+
+The browser-tab favicon (`assets/z13-diamond-icon.svg`) embeds the unchanged Z13 mark with its yellow diamond on a dark square, so it stays visible in light and dark browser chrome.

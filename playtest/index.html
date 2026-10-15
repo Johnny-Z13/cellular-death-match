@@ -15,26 +15,26 @@
   <meta property="og:image:height" content="675">
   <meta name="twitter:card" content="summary_large_image">
   <title>Cellular Death Match: Alpha playtest</title>
-  <link rel="icon" href="./assets/z13.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="./assets/z13-diamond-icon.svg?v=1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap">
-  <link rel="stylesheet" href="./style.css?v=2">
-  <script type="module" src="./app.mjs?v=1"></script>
+  <link rel="stylesheet" href="./style.css?v=3">
+  <script type="module" src="./app.mjs?v=2"></script>
 </head>
 <body>
   <a class="skip-link" href="#play">Skip to play</a>
   <div class="ident" aria-hidden="true">
-    <img src="./assets/z13.png" alt="" width="218" height="85">
+    <div class="ident-mark"><span></span><span></span><span></span><i></i></div>
     <p>P R E S E N T S</p>
   </div>
 
   <header class="masthead">
-    <a href="#top" aria-label="Cellular Death Match home"><img class="brand" src="./assets/z13.png" alt="Z13" width="74" height="29"></a>
+    <a href="#top" aria-label="Cellular Death Match home"><span class="brand-mark"><img class="brand" src="./assets/z13.png" alt="Z13" width="74" height="29"><i aria-hidden="true"></i></span></a>
     <span class="alpha-label"><span aria-hidden="true"></span>Alpha playtest</span>
-    <button id="intro-sound" type="button" aria-label="Play intro with sound"><span class="intro-long">Play intro with sound</span><span class="intro-short">Intro</span> <span aria-hidden="true">♫</span></button>
+    <button id="intro-sound" type="button" aria-label="Replay intro with sound"><span class="intro-long">Replay with sound</span><span class="intro-short">Intro</span> <span aria-hidden="true">♫</span></button>
   </header>
-  <audio id="intro-audio" src="./assets/z13-ident.mp3" preload="none"></audio>
+  <audio id="intro-audio" src="./assets/z13-ident.mp3" preload="auto"></audio>
 
   <main id="top">
     <section class="hero" aria-labelledby="title">
@@ -164,7 +164,7 @@
   </main>
 
   <footer>
-    <img class="brand" src="./assets/z13.png" alt="Z13" width="62" height="24">
+    <span class="brand-mark"><img class="brand" src="./assets/z13.png" alt="Z13" width="62" height="24"><i aria-hidden="true"></i></span>
     <p>Cellular Death Match <span>© 2026 Z13 Labs</span></p>
     <a href="#play">Back to play ↑</a>
     <small>Alpha playtest. Every image is captured from the game.</small>
