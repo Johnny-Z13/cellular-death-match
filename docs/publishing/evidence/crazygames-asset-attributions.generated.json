@@ -1,20 +1,20 @@
 {
   "schemaVersion": 1,
   "registry": "docs/publishing/evidence/crazygames-asset-attributions.json",
-  "registrySha256": "a265396042f4138303289181667cb85a8e5d1592c332ea4b768e6a61e9b4bea9",
+  "registrySha256": "c337bf1a0b0211e6e4d17e97c95beadbd623059160963df47388e6c5b67fa3a6",
   "scanRoots": [
     "public"
   ],
   "summary": {
-    "registeredAssets": 51,
-    "observedAssets": 51,
-    "releaseClearedAssets": 1,
+    "registeredAssets": 52,
+    "observedAssets": 52,
+    "releaseClearedAssets": 2,
     "statusCounts": {
       "provider-declared": 50,
-      "cleared": 1
+      "cleared": 2
     },
     "integrityCounts": {
-      "matched": 51
+      "matched": 52
     },
     "releaseReady": false,
     "releaseBlockers": [
@@ -990,6 +990,22 @@
       "integrity": "matched",
       "declaredStatus": "provider-declared",
       "effectiveStatus": "provider-declared"
+    },
+    {
+      "path": "public/branding/z13-diamond-icon.svg",
+      "kind": "image",
+      "sha256": "30669cb9af6c9b7eb88e2650aa6429e1343a49df3da3d0aac8ef45d676b4c066",
+      "status": "cleared",
+      "creator": "Z13 Labs",
+      "provider": "Z13 Labs studio mark",
+      "credit": "Z13 Labs studio mark.",
+      "terms": "Z13 Labs own mark embedded unchanged in an SVG with its yellow diamond and a dark favicon background.",
+      "evidence": "docs/assets/branding/README.md",
+      "bytes": 67731,
+      "expectedSha256": "30669cb9af6c9b7eb88e2650aa6429e1343a49df3da3d0aac8ef45d676b4c066",
+      "integrity": "matched",
+      "declaredStatus": "cleared",
+      "effectiveStatus": "cleared"
     },
     {
       "path": "public/branding/z13-ident.mp3",

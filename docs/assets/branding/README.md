@@ -15,3 +15,7 @@ Johnny asked for the ident at the start of Z13 games on 2026-10-14. The ident
 sound is AI-generated audio (ElevenLabs). It is not part of this repository's
 `public/audio/generated/manifest.json`, because it was generated for the
 studio rather than for this game.
+
+The browser favicon `public/branding/z13-diamond-icon.svg` embeds the unchanged
+Z13 mark with a yellow diamond and dark background. It was approved for the
+website on 2026-10-15 and is reused by the direct game entry.

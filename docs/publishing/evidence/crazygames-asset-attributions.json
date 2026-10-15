@@ -566,6 +566,17 @@
       "credit": "Z13 Labs studio mark.",
       "terms": "Z13 Labs own mark, cropped from Johnny's z13-pixel.png.",
       "evidence": "docs/assets/branding/README.md"
+    },
+    {
+      "path": "public/branding/z13-diamond-icon.svg",
+      "kind": "image",
+      "sha256": "30669cb9af6c9b7eb88e2650aa6429e1343a49df3da3d0aac8ef45d676b4c066",
+      "status": "cleared",
+      "creator": "Z13 Labs",
+      "provider": "Z13 Labs studio mark",
+      "credit": "Z13 Labs studio mark.",
+      "terms": "Z13 Labs own mark embedded unchanged in an SVG with its yellow diamond and a dark favicon background.",
+      "evidence": "docs/assets/branding/README.md"
     }
   ]
 }

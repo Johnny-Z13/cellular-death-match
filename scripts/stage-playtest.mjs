@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Builds the game and stages it at playtest/play/ for the alpha tester portal,
+// Builds the game and stages it at playtest/play/ for direct game launch,
 // then records the exact build in playtest/release.json.
 //   node scripts/stage-playtest.mjs "Alpha Build 1" alpha-1 "One-line summary"
 // Refuses to run with uncommitted game changes: a tester build must be
