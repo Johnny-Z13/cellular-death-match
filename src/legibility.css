@@ -190,12 +190,13 @@
   min-height: 0;
 }
 
+/* Dr. E's notes get three lines: two cut his longer bonus hints mid-word. */
 .layout[data-screen="arena"].hud-slot-docked.coach-active .coach:not(.coach-welcome):not(.coach-intro) .coach-body {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
 }
 
 /* ---- Phones: goal strip sits left of the chrome buttons ---------------- */
@@ -237,7 +238,8 @@
   (min-width: 600px) and (max-width: 899px) and (min-height: 521px) {
   .layout[data-screen="arena"] .hud,
   .layout[data-screen="arena"] .hud.visible {
-    right: 112px;
+    /* Clear of all three chrome buttons (friends, options, full screen). */
+    right: 172px;
     grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
     grid-template-rows: auto;
     gap: 0 10px;
@@ -258,7 +260,9 @@
 @media (min-width: 900px) {
   .layout[data-screen="arena"] .hud,
   .layout[data-screen="arena"] .hud.visible {
-    width: min(1040px, calc(100vw - 260px));
+    /* Centred, and clear of the three chrome buttons (friends, options,
+       full screen) on either side. */
+    width: min(1040px, calc(100vw - 440px));
     height: auto;
     min-height: 0;
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
@@ -338,7 +342,7 @@
     display: none;
   }
 
-  .layout[data-screen="arena"] .ticker-line {
+  .layout[data-screen="arena"] .ticker-line-text {
     display: -webkit-box;
     overflow: hidden;
     -webkit-box-orient: vertical;
@@ -743,13 +747,15 @@
   transform-origin: center;
 }
 
-/* Upgrade cards say when they improve a tool the player has not met yet. */
+/* Upgrade cards say when they improve a tool the player has not met yet.
+   A tag box (not a pill) so a note that wraps still reads as one label. */
 .pick-card-note {
-  justify-self: start;
+  align-self: flex-start;
   margin-top: 2px;
-  padding: 2px 8px;
+  padding: 3px 8px;
   border: 1px solid rgba(246, 211, 101, 0.45);
-  border-radius: 999px;
+  border-radius: 6px;
+  text-wrap: balance;
   color: #f6d365;
   font-family: var(--font-mono);
   font-size: var(--fs-min);
@@ -998,10 +1004,27 @@
 }
 
 @media (max-width: 899px) and (orientation: portrait), (max-width: 899px) and (min-height: 521px) {
-  /* Both chrome buttons share the HUD's first line. */
+  /* All three chrome buttons share the HUD's first line. */
   .layout[data-screen="arena"] .options-button,
-  .layout[data-screen="arena"] .fullscreen-button {
+  .layout[data-screen="arena"] .fullscreen-button,
+  .layout[data-screen="arena"] .dex-button {
     top: calc(max(5px, env(safe-area-inset-top)) + 7px);
+  }
+
+  /* The friends chip is a 44px square here (the cell and the found count;
+     the total lives on the friends screen), so trial, time and balance fit
+     beside the three buttons on a 375px phone. */
+  .layout[data-screen="arena"] .dex-button {
+    right: calc(118px + env(safe-area-inset-right));
+    justify-content: center;
+    gap: 5px;
+    width: 44px;
+    min-width: 44px;
+    padding: 0;
+  }
+
+  .layout[data-screen="arena"] .dex-button #dex-count-total {
+    display: none;
   }
 
   /* Header row (trial · balance) is the button line; the goal sentence and
@@ -1013,7 +1036,7 @@
   }
 
   .layout[data-screen="arena"] .hud .hud-summary > .hud-equilibrium-row {
-    margin-right: 104px;
+    margin-right: 164px;
   }
 
   /* Header readouts stack label over value, like instrument dials, so trial,
@@ -1120,6 +1143,11 @@
 /* Landscape phones: the HUD column is narrow, so header readouts stack like
    the portrait ones and a timed trial's clock never pushes past the panel. */
 @media (max-width: 899px) and (orientation: landscape) and (max-height: 520px) {
+  /* The friends chip sits on the same line as options and full screen. */
+  .layout[data-screen="arena"] .dex-button {
+    top: max(6px, env(safe-area-inset-top));
+  }
+
   .layout[data-screen="arena"] .hud .hud-summary {
     column-gap: 10px;
   }
@@ -1139,8 +1167,15 @@
 /* Notebook found entries: same minimum footprint, but a row grows to fit its
    longest card instead of clipping the recipe line; the status chip stays on
    one line and drops under the name when the card is narrow. */
+/* Rows take their tallest card's full height. (minmax(196px, auto) rows
+   cannot grow inside a full, fixed-height scroller, so the 196px minimum
+   lives on the card instead.) */
 .notebook-list {
-  grid-auto-rows: minmax(196px, auto);
+  grid-auto-rows: max-content;
+}
+
+.notebook-list > .notebook-entry {
+  min-height: 196px;
 }
 
 .notebook-entry-head {
@@ -1166,4 +1201,32 @@
       760px
     );
   }
+}
+
+/* Trial result strip (upgrade and trial-choice screens): the label and its
+   progress dots are one centred group under the centred heading, not two
+   ends of a strip. */
+.case-result-strip {
+  justify-content: center;
+  gap: 14px;
+}
+
+/* Title (phones): the lab name stays clear of the options gear. */
+@media (max-width: 899px) and (orientation: portrait) {
+  .screen-title-screen .title-eyebrow {
+    max-width: calc(100vw - 96px);
+    letter-spacing: 0.2em;
+  }
+}
+
+/* Upgrade cards: "Choose ›" never breaks its chevron onto a second line. */
+.pick-card-action {
+  white-space: nowrap;
+}
+
+/* Dr. E's step counter and state word are small meta labels: lifted to read
+   at the 11px floor (they sat near 4:1). */
+.layout[data-screen="arena"] .hud-director-head span:last-child,
+.layout[data-screen="arena"] .coach .coach-step {
+  color: rgba(216, 246, 242, 0.68);
 }

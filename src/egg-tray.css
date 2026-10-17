@@ -213,10 +213,10 @@
 }
 
 .layout[data-screen="arena"] #life-panel .life-summary {
-  display: -webkit-box;
+  display: block;
   align-self: start;
   box-sizing: content-box;
-  height: 2lh;
+  height: 3lh;
   overflow: hidden;
   padding: 6px 9px;
   border-left: 3px solid var(--life-color, var(--bio));
@@ -225,11 +225,17 @@
   color: var(--ink-dim);
   font-size: var(--fs-min, 11px);
   line-height: 1.3;
-  text-overflow: clip;
   white-space: normal;
+}
+
+/* Three lines hold every strain's description. The clamp lives on the
+   unpadded inner span, so no extra line peeks into the bottom padding. */
+.layout[data-screen="arena"] #life-panel .life-summary-text {
+  display: -webkit-box;
+  overflow: hidden;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
 }
 
 .layout[data-screen="arena"] #life-panel .life-summary strong {
@@ -387,7 +393,7 @@
 }
 
 :root[data-layout="wide"] .layout[data-screen="arena"] #toolbox [data-tool="egg"] {
-  width: 104px;
+  min-width: 104px;
 }
 
 /* Phone rack tiles are narrow: the strain name gets two fixed lines (so the

@@ -99,9 +99,12 @@
   to { opacity: 0; transform: scale(1.95); }
 }
 
+/* The stamp is tilted 6°: its corners need room above and below so it never
+   lands on the kicker. The right padding gives back the trailing letter
+   space so the word sits truly centred. */
 .reveal-stamp {
-  margin: 0;
-  padding: 6px 16px;
+  margin: 4px 0 12px;
+  padding: 6px calc(16px - 0.42em) 6px 16px;
   border: 2px solid var(--tier);
   border-radius: 6px;
   font-family: var(--font-display, 'Michroma', sans-serif);
@@ -142,6 +145,8 @@
 .is-stamped .reveal-number { transition-delay: 160ms; }
 
 .reveal-kicker {
+  /* Balances the trailing letter space so the line centres optically. */
+  padding-left: 0.32em;
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: 0.32em;

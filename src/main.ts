@@ -3059,9 +3059,17 @@ function isFieldTool(tool: ToolId): tool is 'nutrient' | 'toxin' | 'water' | 'sa
 }
 
 // Dev server only (stripped from builds): lets QA scripts stage and read the
-// live dish.
+// live dish, and stage a friend's ta-da for screenshots.
 if (import.meta.env.DEV) {
-  (window as unknown as { cdmDebug: { arena: () => Arena | null } }).cdmDebug = { arena: () => arena };
+  (window as unknown as { cdmDebug: { arena: () => Arena | null; reveal: (id: string) => boolean } }).cdmDebug = {
+    arena: () => arena,
+    reveal: (id) => {
+      const item = currentDexView().items.find((entry) => entry.id === id);
+      if (!item) return false;
+      showReveal(item, { x: window.innerWidth / 2, y: window.innerHeight / 2 });
+      return true;
+    },
+  };
 }
 
 // How long Dr. E beams at a repeat merge.

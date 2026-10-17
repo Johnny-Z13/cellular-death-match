@@ -400,7 +400,9 @@ function rareLifeformEntry(id: BreedId): NotebookEntry {
     id: `lifeform_${id}`,
     category: 'lifeform',
     title: identity.name,
-    body: `${identity.role}. ${identity.behavior} ${note.body}`,
+    // The discovery note restates the identity's behaviour line, so a rare
+    // strain reads like a common one: role, then behaviour, once.
+    body: `${identity.role}. ${identity.behavior}`,
     clue: BREED_DEFS[id].discoveryTrigger,
     caution: note.caution,
     unlock: { breedId: id },

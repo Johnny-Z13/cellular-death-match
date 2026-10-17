@@ -401,7 +401,11 @@ export function createScreens(): Screens {
     const identity = LIFEFORM_IDENTITIES[id as LifeformIdentityId];
     const name = document.createElement('strong');
     name.textContent = identity.name;
-    lifeSummary.replaceChildren(name, ` · ${identity.role}. ${identity.behavior}`);
+    // An inner span carries the two-line clamp (see .ticker-line-text).
+    const text = document.createElement('span');
+    text.className = 'life-summary-text';
+    text.append(name, ` · ${identity.role}. ${identity.behavior}`);
+    lifeSummary.replaceChildren(text);
     lifeSummary.style.setProperty('--life-color', rgb(identity.colors.primary));
   }
 
@@ -686,7 +690,12 @@ export function createScreens(): Screens {
       line.className = `ticker-line ticker-line-${tone}`;
       const specialClass = tickerSpecialClassFor(message);
       if (specialClass) line.classList.add(specialClass);
-      line.textContent = message;
+      // The text sits in its own span so a line clamp can cut it cleanly
+      // (a clamped box with padding shows a sliver of the next line).
+      const text = document.createElement('span');
+      text.className = 'ticker-line-text';
+      text.textContent = message;
+      line.append(text);
       tickerLines.prepend(line);
       while (tickerLines.children.length > 12) {
         tickerLines.lastElementChild?.remove();
