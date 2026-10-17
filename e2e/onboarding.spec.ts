@@ -54,10 +54,10 @@ test.describe('first discovery progression', () => {
 
     await expect(page.locator('.layout')).toHaveAttribute('data-screen', 'arena');
     await expect(page.locator('#hud-fight')).toHaveText('2 / 5');
-    await expect(page.locator('#coach-title')).toHaveText('Open Eggs. Choose Bloom Mass.');
-    await expect(page.locator('#mobile-lifeforms-toggle')).toBeFocused();
+    await expect(page.locator('#coach-title')).toHaveText('Tap Egg. Choose Bloom Mass.');
+    await expect(page.locator('[data-tool="egg"]')).toBeFocused();
 
-    await page.locator('#mobile-lifeforms-toggle').click();
+    await page.locator('[data-tool="egg"]').click();
     await expect(page.locator('#life-count')).toHaveText('2 strains ready');
     const bloom = page.locator('[data-lifeform-id="bloom_mass"]');
     await expect(bloom).toBeVisible();

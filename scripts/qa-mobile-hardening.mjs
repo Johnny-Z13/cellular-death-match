@@ -54,8 +54,8 @@ for (const viewport of viewports) {
 
   await page.click('#title-start');
   await page.waitForTimeout(2800);
-  const lifeformsOpen = await page.getAttribute('#mobile-lifeforms-toggle', 'aria-expanded');
-  if (lifeformsOpen === 'true') await page.click('#mobile-lifeforms-toggle');
+  const lifeformsOpen = await page.getAttribute('[data-tool="egg"]', 'aria-expanded');
+  if (lifeformsOpen === 'true') await page.click('[data-tool="egg"]');
 
   const metrics = await page.evaluate(() => {
     const rect = (selector) => {

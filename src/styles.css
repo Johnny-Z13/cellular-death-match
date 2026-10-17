@@ -25,7 +25,9 @@
   /* Text */
   --ink: #e7f6f4;
   --ink-dim: #9fc3c2;
-  --ink-faint: #6f8b8d;
+  /* Lifted from #6f8b8d (about 5:1 on the panel) to about 7:1: the faint
+     tier carries hints, conditions and meta lines at the 11px floor. */
+  --ink-faint: #8aa6a8;
 
   /* Type */
   --font-display: "Michroma", ui-sans-serif, system-ui, sans-serif;
@@ -636,27 +638,33 @@ canvas {
   animation: button-hint-breathe 1.2s ease-in-out infinite;
 }
 
+/* The sheen sweeps its gradient across a box the exact size of the button,
+   so it can never travel past the button's edge, even on a tile that lets
+   other content overflow (the Egg tile's tab). */
 .button-hint-pulse::after,
 .button-ready-pulse::after {
   content: "";
   position: absolute;
-  inset: -2px;
+  inset: 0;
   z-index: 0;
+  border-radius: inherit;
   pointer-events: none;
-  background: linear-gradient(
+  background-image: linear-gradient(
     110deg,
     transparent 0 34%,
     rgba(255, 255, 255, 0.45) 47%,
     rgba(91, 233, 214, 0.38) 56%,
     transparent 70% 100%
   );
-  transform: translateX(-135%);
+  background-repeat: no-repeat;
+  background-size: 250% 100%;
+  background-position: 125% 0;
   mix-blend-mode: screen;
   animation: button-hint-sheen 1.55s ease-in-out infinite;
 }
 
 .button-ready-pulse::after {
-  background: linear-gradient(
+  background-image: linear-gradient(
     110deg,
     transparent 0 34%,
     rgba(255, 255, 255, 0.5) 47%,
@@ -682,10 +690,10 @@ canvas {
 }
 
 @keyframes button-hint-sheen {
-  0% { transform: translateX(-135%); opacity: 0; }
+  0% { background-position: 125% 0; opacity: 0; }
   18% { opacity: 0.9; }
-  54% { transform: translateX(135%); opacity: 0; }
-  100% { transform: translateX(135%); opacity: 0; }
+  54% { background-position: -20% 0; opacity: 0; }
+  100% { background-position: -20% 0; opacity: 0; }
 }
 
 .tool-button strong,
@@ -835,18 +843,21 @@ canvas {
 .end-action.end-action-ready::after {
   content: "";
   position: absolute;
-  inset: -2px;
+  inset: 0;
   z-index: 0;
+  border-radius: inherit;
   pointer-events: none;
-  background: linear-gradient(
+  background-image: linear-gradient(
     110deg,
     transparent 0 34%,
     rgba(255, 255, 255, 0.72) 46%,
     rgba(91, 233, 214, 0.58) 54%,
     transparent 68% 100%
   );
+  background-repeat: no-repeat;
+  background-size: 250% 100%;
+  background-position: 125% 0;
   mix-blend-mode: screen;
-  transform: translateX(-135%);
   animation: end-ready-flash 1.35s ease-in-out infinite;
 }
 
@@ -865,9 +876,9 @@ canvas {
 }
 
 @keyframes end-ready-flash {
-  0%, 58% { transform: translateX(-135%); opacity: 0; }
+  0%, 58% { background-position: 125% 0; opacity: 0; }
   66% { opacity: 0.96; }
-  86%, 100% { transform: translateX(135%); opacity: 0; }
+  86%, 100% { background-position: -20% 0; opacity: 0; }
 }
 
 /* HUD objective line picks up the bio accent when the experiment is complete. */
@@ -3712,8 +3723,10 @@ canvas {
   line-height: 1.25;
 }
 
-.research-seal-locked {
-  opacity: 0.56;
+/* A locked badge keeps its condition readable; only its marker greys out
+   (the dashed border already says "not yet"). */
+.research-seal-locked .research-seal-marker {
+  opacity: 0.5;
   filter: grayscale(0.8);
 }
 

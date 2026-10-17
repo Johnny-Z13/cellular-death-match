@@ -19,7 +19,8 @@ describe('Professor onboarding pointer', () => {
     expect(mainSource).toContain("target === 'dish'");
     expect(mainSource).toContain("target.startsWith('tool:')");
     expect(mainSource).toContain("target.startsWith('lifeform:')");
-    expect(mainSource).toContain("? '#mobile-lifeforms-toggle'");
+    // A strain is in the egg tray: the guide points at the Egg tile until it opens.
+    expect(mainSource).toContain("? '[data-tool=\"egg\"]'");
     expect(mainSource).toContain('setOnboardingDishPointerTarget(arena.getLastEggCellPos() ?? pos, true)');
     expect(mainSource).toContain('onboardingDishGuideTracksLastEgg ? arena.getLastEggCellPos() : null');
     expect(mainSource).toContain("onboardingGuidePointer.classList.add('is-visible')");

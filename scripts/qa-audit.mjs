@@ -93,9 +93,9 @@ for (const vp of [
   }
 
   // 3) Deploy a breed and check it isn't yellow/orange when it shouldn't be.
-  if (vp.mobile) { await page.click('#mobile-lifeforms-toggle'); await page.waitForTimeout(300); }
-  await page.click('[data-lifeform-id="vitric_anchor"]').catch(() => note('P1', vp.name, 'vitric_anchor card not clickable'));
-  if (vp.mobile) { await page.click('#mobile-lifeforms-toggle'); await page.waitForTimeout(300); }
+  // The Egg tile opens the egg tray on every layout; picking closes it.
+  await page.click('[data-tool="egg"]'); await page.waitForTimeout(300);
+  await page.click('[data-lifeform-id="vitric_anchor"]').catch(() => note('P1', vp.name, 'vitric_anchor swatch not clickable'));
   for (let i = 0; i < 5; i++) { const p = at(0.2 + i * 0.03, 0.75); await page.mouse.click(p.x, p.y); await page.waitForTimeout(60); }
   await page.waitForTimeout(800);
   const vitricPeak = await page.evaluate(() => {

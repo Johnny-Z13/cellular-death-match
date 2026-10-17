@@ -55,6 +55,18 @@
   display: none;
 }
 
+/* Keyboard focus on a full-screen dish: a glow around the screen edge
+   instead of an outline whose straight edges would cut across the glass HUD
+   and hotbar. */
+:root[data-layout="wide"] .layout[data-screen="arena"] #game:focus-visible {
+  outline: 0;
+  box-shadow: none;
+}
+
+:root[data-layout="wide"] .layout[data-screen="arena"] .dish-stage:has(#game:focus-visible) .dish-glass {
+  box-shadow: inset 0 0 0 2px rgba(107, 207, 232, 0.4), inset 0 0 70px rgba(91, 233, 214, 0.16);
+}
+
 /* A soft lens over the whole stage in place of the round bezel. */
 :root[data-layout="wide"] .layout[data-screen="arena"] .dish-glass {
   inset: 0;
@@ -117,8 +129,10 @@
 
 :root[data-layout="wide"] .layout[data-screen="arena"] .toolbox .tool-button {
   flex: 0 0 auto;
-  width: 74px;
-  min-width: 0;
+  /* Tiles size to their label (one shared minimum), so a long name such as
+     "Finish trial" never runs past the tile edge. */
+  width: auto;
+  min-width: 80px;
   height: auto;
   min-height: 62px;
   grid-template-columns: 1fr;
@@ -126,7 +140,7 @@
   justify-items: center;
   align-items: center;
   gap: 3px;
-  padding: 6px 4px;
+  padding: 6px 10px;
   border-radius: 12px;
   text-align: center;
   background: rgba(12, 28, 32, 0.46);
@@ -137,7 +151,9 @@
 }
 
 :root[data-layout="wide"] .layout[data-screen="arena"] .toolbox .tool-button strong {
-  font-size: 12px;
+  overflow: visible;
+  font-size: 11px;
+  letter-spacing: 0.02em;
   white-space: nowrap;
 }
 
@@ -174,13 +190,15 @@
   transition: background 160ms ease, transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 180ms ease;
 }
 
-/* Log: the latest line bottom-left, above the chips; all of it when opened. */
+/* Log: the latest line bottom-left, above the chips; all of it when opened.
+   It sits above the hotbar's footprint (--wide-bottom), so the centred
+   hotbar never runs under it on a 1280px screen. */
 :root[data-layout="wide"] .layout[data-screen="arena"] .ticker {
   position: fixed;
   left: var(--wide-gap);
   right: auto;
   top: auto;
-  bottom: calc(var(--wide-gap) + 64px);
+  bottom: calc(var(--wide-bottom) + 4px);
   width: min(300px, 24vw);
   max-height: 76px;
   overflow: hidden;
@@ -191,7 +209,7 @@
 }
 
 :root[data-layout="wide"] .layout[data-screen="arena"].mobile-log-open .ticker {
-  max-height: calc(100svh - var(--wide-top) - var(--wide-gap) - 64px);
+  max-height: calc(100svh - var(--wide-top) - var(--wide-bottom) - 4px);
   overflow: auto;
 }
 
