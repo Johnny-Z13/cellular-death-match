@@ -12,14 +12,10 @@ const CORE_PROJECTS = new Set(['phone', 'small-phone', 'desktop']);
 
 async function openLifeformPickerIfNeeded(page: Page, id: string): Promise<void> {
   const lifeform = page.locator(`[data-lifeform-id="${id}"]`);
-  // Phones and the wide layout keep the eggs in a drawer that slides; ask
-  // whether it is open rather than whether an egg is momentarily visible.
-  const inDrawer = await page.evaluate(() => document.documentElement.dataset.layout === 'wide'
-    || window.matchMedia('(max-width: 899px)').matches);
-  const drawerOpen = await page.locator('.layout').getAttribute('data-mobile-drawer') === 'lifeforms';
-  if (inDrawer ? !drawerOpen : !await lifeform.isVisible()) {
-    await page.locator('#mobile-lifeforms-toggle').click();
-  }
+  // Every layout keeps the eggs in the tray the Egg tile opens; ask whether
+  // it is open rather than whether an egg is momentarily visible.
+  const trayOpen = await page.locator('.layout').getAttribute('data-mobile-drawer') === 'lifeforms';
+  if (!trayOpen) await page.locator('[data-tool="egg"]').click();
   await expect(lifeform).toBeVisible();
 }
 
@@ -100,11 +96,11 @@ test('keeps Trial 2 recoverable through wrong specimens, wrong reagents, and rap
   const runtime = monitorRuntime(page);
   await reachTrialTwo(page);
 
-  await expect(page.locator('#coach-title')).toHaveText('Open Eggs. Choose Bloom Mass.');
+  await expect(page.locator('#coach-title')).toHaveText('Tap Egg. Choose Bloom Mass.');
   const eggsBeforeWrongPlacement = await toolCharge(page, 'egg');
   await openLifeformPickerIfNeeded(page, 'swarmlet');
   await page.locator('[data-lifeform-id="swarmlet"]').click();
-  await expect(page.locator('#coach-title')).toHaveText('Open Eggs. Choose Bloom Mass.');
+  await expect(page.locator('#coach-title')).toHaveText('Tap Egg. Choose Bloom Mass.');
   await clickDish(page);
   await expect.poll(() => toolCharge(page, 'egg')).toBe(eggsBeforeWrongPlacement);
 
@@ -116,6 +112,10 @@ test('keeps Trial 2 recoverable through wrong specimens, wrong reagents, and rap
   await page.locator('[data-lifeform-id="swarmlet"]').click();
   await expect(page.locator('#coach-title')).toHaveText('Place it here.');
   await expect(page.locator('[data-lifeform-id="bloom_mass"]')).toHaveAttribute('aria-selected', 'true');
+  // A tap outside the egg tray only dismisses it; it never spends an egg.
+  await clickDish(page);
+  await expect(page.locator('.layout')).not.toHaveAttribute('data-mobile-drawer', 'lifeforms');
+  await expect(page.locator('#coach-title')).toHaveText('Place it here.');
 
   await clickDish(page);
   await expect(page.locator('#coach-title')).toHaveText('Press Nutrient.');

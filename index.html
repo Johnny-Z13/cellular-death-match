@@ -30,6 +30,7 @@
     <link rel="stylesheet" href="/src/dr-e.css?v=20261015-face-1" />
     <link rel="stylesheet" href="/src/dex.css?v=20261015-dex-1" />
     <link rel="stylesheet" href="/src/reveal.css?v=20261015-reveal-1" />
+    <link rel="stylesheet" href="/src/egg-tray.css?v=20261017-egg-tray-1" />
     <style>
       /* Z13 boot ident plate: painted before scripts run so the title never
          flashes; the failsafe clears it if the ident script never runs. */
@@ -83,7 +84,6 @@
         </svg>
       </button>
       <div id="mobile-shell" class="mobile-shell" role="group" aria-label="Mobile dish controls">
-        <button id="mobile-lifeforms-toggle" class="mobile-shell-button" type="button" aria-expanded="false" aria-controls="life-panel">Eggs</button>
         <div id="mobile-tool-readout" class="mobile-tool-readout" aria-live="polite">
           <strong id="mobile-tool-name">Egg</strong>
           <span id="mobile-tool-summary">plants the selected strain</span>
@@ -95,10 +95,11 @@
           <h2 class="toolbox-title">Tools</h2>
           <p id="tool-summary" class="tool-summary">Egg - plants the selected strain in open dish space.</p>
         </div>
-        <button class="tool-button selected" type="button" data-tool="egg" aria-haspopup="true" aria-expanded="false" aria-controls="life-panel">
+        <button class="tool-button selected" type="button" data-tool="egg" aria-haspopup="dialog" aria-expanded="false" aria-controls="life-panel">
+          <span class="egg-tool-tab" aria-hidden="true">Egg</span>
           <span class="tool-icon egg-icon"></span>
           <span>
-            <strong>Egg</strong>
+            <strong id="egg-tool-strain">Egg</strong>
             <small>seed new life</small>
           </span>
           <b data-tool-count>8/8</b>
@@ -404,7 +405,8 @@
         <div class="hud-row" id="hud-upgrades-row"><span class="hud-key">Build</span><span id="hud-upgrades" class="hud-val">none</span></div>
       </div>
 
-      <aside id="life-panel" class="life-panel" aria-label="Eggs">
+      <div id="egg-tray-scrim" class="egg-tray-scrim" aria-hidden="true"></div>
+      <aside id="life-panel" class="life-panel" role="dialog" aria-label="Choose an egg">
         <div class="life-panel-head">
           <div class="life-panel-title-row">
             <h2 class="life-panel-title">Eggs</h2>

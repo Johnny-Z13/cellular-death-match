@@ -58,7 +58,7 @@ test('Trial 2 guidance reliably reproduces Bitter Bloom', async ({ page }, testI
   await page.reload();
   await page.locator('#title-start').click();
 
-  await page.locator('#mobile-lifeforms-toggle').click();
+  await page.locator('[data-tool="egg"]').click();
   await page.locator('[data-lifeform-id="bloom_mass"]').click();
   await clickGuidedDish(page);
   await page.locator('[data-tool="nutrient"]').click();

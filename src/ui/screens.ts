@@ -139,7 +139,8 @@ export interface Screens {
   setDishExitState(state: DishExitState): void;
   announceStudyStart(info: { key: string; kind: 'trial' | 'study'; message: string }): void;
   clearStudyStartAnnouncement(): void;
-  openMobileLifeformsDrawer(): void;
+  /** The Egg tile opens and closes the egg tray (only once there is a choice). */
+  toggleEggTray(): void;
   closeMobileDrawers(): void;
   onToolboxReveal(handler: () => void): void;
   setToolboxLessonActive(active: boolean): void;
@@ -223,7 +224,6 @@ export function createScreens(): Screens {
   const hudGoalValue = get('hud-goal-value');
   const hudGoalFill  = get('hud-goal-fill');
   const toolSummary  = get('tool-summary');
-  const mobileLifeformsToggle = get('mobile-lifeforms-toggle') as HTMLButtonElement;
   const mobileLogToggle = get('mobile-log-toggle') as HTMLButtonElement;
   const mobileToolName = get('mobile-tool-name');
   const mobileToolSummary = get('mobile-tool-summary');
@@ -232,6 +232,8 @@ export function createScreens(): Screens {
   const lifeCount    = get('life-count');
   const lifePanel = get('life-panel');
   const lifePanelClose = get('life-panel-close') as HTMLButtonElement;
+  const eggTrayScrim = get('egg-tray-scrim');
+  const eggToolStrain = get('egg-tool-strain');
   const lifeList     = get('life-list');
   const tickerLines  = get('ticker-lines');
   const agitateButton = get('agitate-button') as HTMLButtonElement;
@@ -256,6 +258,9 @@ export function createScreens(): Screens {
   let selectedToolId: ToolId = 'egg';
   let selectedEggArchetype: EnemyArchetype = 'swarmlet';
   let unlockedLifeformIds = new Set<string>();
+  // Strains unlocked since the tray was last opened: the Egg tile carries a
+  // pip, and their swatches pulse the next time the tray opens.
+  const newStrainIds = new Set<string>();
   let unlockedToolIds = new Set<ToolId>(['egg', 'nutrient']);
   let agitationUnlocked = true;
   let currentAgitationState: AgitationState = {
@@ -322,9 +327,9 @@ export function createScreens(): Screens {
     layout.dataset.mobileDrawer = mobileDrawer;
     layout.classList.toggle('mobile-lifeforms-open', mobileDrawer === 'lifeforms');
     layout.classList.toggle('mobile-log-open', mobileDrawer === 'log');
-    mobileLifeformsToggle.setAttribute('aria-expanded', String(mobileDrawer === 'lifeforms'));
     eggTool?.setAttribute('aria-expanded', String(mobileDrawer === 'lifeforms'));
     mobileLogToggle.setAttribute('aria-expanded', String(mobileDrawer === 'log'));
+    if (next === 'lifeforms' && previous !== 'lifeforms') openedEggTray();
     if (
       previous === 'lifeforms'
       && next !== 'lifeforms'
@@ -337,6 +342,81 @@ export function createScreens(): Screens {
 
   function closeMobileDrawers(): void {
     setMobileDrawer('none');
+  }
+
+  // The tray hangs off the Egg tile: above it when the tile sits low (the
+  // wide hotbar, the phone rack), beside it when the tile sits high (the
+  // classic desktop tool column). Its caret points at the tile.
+  function positionEggTray(): void {
+    if (!eggTool) return;
+    const T = EGG_TRAY_TUNING;
+    const tile = eggTool.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const width = Math.min(vh < T.shortScreenPx ? T.shortWidthPx : T.widthPx, vw - T.marginPx * 2);
+    const above = tile.top > vh * 0.45;
+    lifePanel.dataset.side = above ? 'above' : 'right';
+    lifePanel.style.setProperty('--tray-width', `${width}px`);
+    if (above) {
+      const left = clamp(tile.left + tile.width / 2 - width / 2, T.marginPx, vw - width - T.marginPx);
+      lifePanel.style.setProperty('--tray-left', `${left}px`);
+      lifePanel.style.setProperty('--tray-bottom', `${vh - tile.top + T.gapPx}px`);
+      lifePanel.style.setProperty('--tray-max-height', `${Math.max(160, tile.top - T.gapPx - T.marginPx)}px`);
+      lifePanel.style.setProperty('--tray-caret', `${clamp(tile.left + tile.width / 2 - left, 18, width - 18)}px`);
+    } else {
+      const left = Math.min(tile.right + T.gapPx, vw - width - T.marginPx);
+      const maxHeight = vh - T.marginPx * 2;
+      const height = Math.min(lifePanel.scrollHeight, maxHeight);
+      const top = clamp(tile.top + tile.height / 2 - height / 2, T.marginPx, vh - height - T.marginPx);
+      lifePanel.style.setProperty('--tray-left', `${left}px`);
+      lifePanel.style.setProperty('--tray-top', `${top}px`);
+      lifePanel.style.setProperty('--tray-max-height', `${maxHeight}px`);
+      lifePanel.style.setProperty('--tray-caret', `${clamp(tile.top + tile.height / 2 - top, 18, height - 18)}px`);
+    }
+  }
+
+  function openedEggTray(): void {
+    positionEggTray();
+    eggTool?.classList.remove('egg-tool-new');
+    for (const id of newStrainIds) {
+      const button = lifeButtons.get(id);
+      if (!button) continue;
+      button.classList.remove('life-item-discovered');
+      void button.offsetWidth;
+      button.classList.add('life-item-discovered');
+      window.setTimeout(() => button.classList.remove('life-item-discovered'), 1800);
+    }
+    newStrainIds.clear();
+    renderLifeSummary(selectedLifeformId);
+  }
+
+  // The tray's header line describes the strain under the pointer or focus,
+  // falling back to the loaded one.
+  function renderLifeSummary(id: string | null): void {
+    if (!id || !(id in LIFEFORM_IDENTITIES)) {
+      lifeSummary.textContent = 'Pick a strain to plant.';
+      lifeSummary.style.removeProperty('--life-color');
+      return;
+    }
+    const identity = LIFEFORM_IDENTITIES[id as LifeformIdentityId];
+    const name = document.createElement('strong');
+    name.textContent = identity.name;
+    lifeSummary.replaceChildren(name, ` · ${identity.role}. ${identity.behavior}`);
+    lifeSummary.style.setProperty('--life-color', rgb(identity.colors.primary));
+  }
+
+  // Arrow keys walk the swatch grid; the grid's own column count sets the
+  // vertical step.
+  function moveTrayFocus(event: KeyboardEvent): void {
+    const step = { ArrowLeft: -1, ArrowRight: 1 }[event.key as 'ArrowLeft' | 'ArrowRight'];
+    const visible = Array.from(lifeList.querySelectorAll<HTMLButtonElement>('.life-item:not([hidden])'));
+    const index = visible.indexOf(document.activeElement as HTMLButtonElement);
+    if (index < 0) return;
+    const columns = getComputedStyle(lifeList).gridTemplateColumns.split(' ').length || 1;
+    const delta = step ?? (event.key === 'ArrowDown' ? columns : event.key === 'ArrowUp' ? -columns : 0);
+    if (!delta) return;
+    event.preventDefault();
+    visible[clamp(index + delta, 0, visible.length - 1)]?.focus();
   }
 
   function clearStudyStartAnnouncement(): void {
@@ -358,6 +438,7 @@ export function createScreens(): Screens {
       setSelectedButtonState(button, selected);
     }
     lifeCount.textContent = `${readyCount} ${readyCount === 1 ? 'strain' : 'strains'} ready`;
+    eggTool?.classList.toggle('egg-tool-has-choice', readyCount > 1);
     sortLifeList();
   }
 
@@ -404,15 +485,24 @@ export function createScreens(): Screens {
     for (const [buttonId, button] of lifeButtons) {
       setSelectedButtonState(button, buttonId === id);
     }
+    renderLifeSummary(id);
     if (!id || !(id in LIFEFORM_IDENTITIES)) {
-      lifeSummary.textContent = 'Pick a strain to plant.';
       syncToolReadouts();
       return;
     }
     const identity = LIFEFORM_IDENTITIES[id as LifeformIdentityId];
-    lifeSummary.textContent = `${identity.name} - ${identity.role}. ${identity.behavior} ${identity.origin}`;
+    // The Egg tile is the loaded egg: its colour and its strain's name.
     eggTool?.style.setProperty('--egg-color', rgb(identity.colors.primary));
+    eggToolStrain.textContent = identity.name;
+    eggTool?.setAttribute('aria-label', `Egg: ${identity.name}. Choose a strain`);
     syncToolReadouts();
+  }
+
+  function previewOnHover(button: HTMLButtonElement, id: string): void {
+    button.addEventListener('pointerenter', () => renderLifeSummary(id));
+    button.addEventListener('focus', () => renderLifeSummary(id));
+    button.addEventListener('pointerleave', () => renderLifeSummary(selectedLifeformId));
+    button.addEventListener('blur', () => renderLifeSummary(selectedLifeformId));
   }
 
   function activateLifeform(id: string): void {
@@ -424,11 +514,15 @@ export function createScreens(): Screens {
     if (eggOption) eggSelectHandler?.(eggOption.archetype);
   }
 
-  mobileLifeformsToggle.addEventListener('click', () => {
-    if (toolboxLessonActive) return;
-    setMobileDrawer(mobileDrawer === 'lifeforms' ? 'none' : 'lifeforms');
-  });
   lifePanelClose.addEventListener('click', closeMobileDrawers);
+  eggTrayScrim.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    closeMobileDrawers();
+  });
+  lifeList.addEventListener('keydown', moveTrayFocus);
+  window.addEventListener('resize', () => {
+    if (mobileDrawer === 'lifeforms') positionEggTray();
+  });
   mobileLogToggle.addEventListener('click', () => {
     if (toolboxLessonActive) return;
     setMobileDrawer(mobileDrawer === 'log' ? 'none' : 'log');
@@ -712,6 +806,7 @@ export function createScreens(): Screens {
         copy.append(label, detail);
         button.append(swatch, copy, tag);
         button.addEventListener('click', () => activateLifeform(option.archetype));
+        previewOnHover(button, option.archetype);
         lifeButtons.set(option.archetype, button);
         lifeList.append(button);
       }
@@ -737,6 +832,7 @@ export function createScreens(): Screens {
         itemText.append(itemName, itemDetail);
         item.append(itemSwatch, itemText, itemTag);
         item.addEventListener('click', () => activateLifeform(id));
+        previewOnHover(item, id);
         lifeButtons.set(id, item);
         lifeList.append(item);
       }
@@ -757,6 +853,11 @@ export function createScreens(): Screens {
     showcaseLifeformUnlock(id) {
       const button = lifeButtons.get(id);
       if (!button || button.disabled) return;
+      if (mobileDrawer !== 'lifeforms') {
+        newStrainIds.add(id);
+        eggTool?.classList.add('egg-tool-new');
+        return;
+      }
       button.classList.remove('life-item-discovered');
       void button.offsetWidth;
       button.classList.add('life-item-discovered');
@@ -1359,10 +1460,9 @@ export function createScreens(): Screens {
       }, 2_600);
     },
     clearStudyStartAnnouncement,
-    openMobileLifeformsDrawer() {
-      if (!toolboxLessonActive) {
-        setMobileDrawer(unlockedLifeformIds.size > 1 ? 'lifeforms' : 'none');
-      }
+    toggleEggTray() {
+      if (toolboxLessonActive) return;
+      setMobileDrawer(mobileDrawer !== 'lifeforms' && unlockedLifeformIds.size > 1 ? 'lifeforms' : 'none');
     },
     closeMobileDrawers() {
       closeMobileDrawers();
@@ -1379,7 +1479,6 @@ export function createScreens(): Screens {
         ...toolButtons,
         agitateButton,
         endEpochButton,
-        mobileLifeformsToggle,
         mobileLogToggle,
         notebookButton,
       ]) {
@@ -1419,6 +1518,21 @@ const NOTEBOOK_CATEGORY_WORDS: Record<NotebookCategory, string> = {
   lab_note: 'lab note',
   event: 'lab event',
 };
+
+// The egg tray's footprint: its widest size, its gap from the Egg tile, and
+// the margin it keeps from the screen edges.
+export const EGG_TRAY_TUNING = {
+  widthPx: 380,
+  // Short screens (phones on their side) get a wider, shallower tray.
+  shortScreenPx: 520,
+  shortWidthPx: 580,
+  gapPx: 12,
+  marginPx: 8,
+};
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
 
 function rgb(color: [number, number, number]): string {
   return `rgb(${color[0]}, ${color[1]}, ${color[2]})`;

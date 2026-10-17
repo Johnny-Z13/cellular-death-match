@@ -5,13 +5,13 @@
 //
 // Usage (dev server running, page title "Cellular Death Match"):
 //   node scripts/ux-flow-audit.mjs 390x844,375x667,844x390,768x1024,1280x720 output/ux-audit
-// Env: CDM_URL (default http://127.0.0.1:5199/).
+// Env: CDM_URL (default http://localhost:5199/).
 import { chromium } from '@playwright/test';
 import { writeFileSync, mkdirSync } from 'node:fs';
 
 const OUT = process.argv[3] ?? 'output/ux-audit';
 const sizes = (process.argv[2] ?? '390x844,375x667,844x390,768x1024,1280x720').split(',');
-const URL = process.env.CDM_URL ?? 'http://127.0.0.1:5199/';
+const URL = process.env.CDM_URL ?? 'http://localhost:5199/';
 const browser = await chromium.launch();
 const report = {};
 
@@ -140,7 +140,7 @@ for (const size of sizes) {
   await tryDo(async () => { if (await page.locator('#fx-genome').getAttribute('aria-hidden') === 'false') await page.click('#fx-genome'); await page.waitForTimeout(1200); await snap('after-reveal'); });
   await tryDo(async () => { if (await page.locator('#method-intro-continue').isVisible()) { await snap('on-your-own'); await page.click('#method-intro-continue'); await page.waitForTimeout(700); } await snap('upgrade-pick'); });
   await tryDo(async () => { await page.locator('#pick-choices .pick-card').first().click(); await page.waitForTimeout(2200); await snap('t2-start'); });
-  await tryDo(async () => { if (mobile) { await page.click('#mobile-lifeforms-toggle'); await page.waitForTimeout(600); await snap('t2-eggs-drawer'); } });
+  await tryDo(async () => { await page.click('[data-tool="egg"]'); await page.waitForTimeout(600); await snap('t2-egg-tray'); });
   await tryDo(async () => { await page.locator('[data-lifeform-id="bloom_mass"]').click(); await page.waitForTimeout(700); await snap('t2-place-bloom'); await tap(0.5, 0.5); await page.waitForTimeout(900); await snap('t2-press-nutrient'); });
   await tryDo(async () => { if (mobile) { await page.click('#mobile-log-toggle'); await page.waitForTimeout(600); await snap('t2-log-open'); await page.click('#mobile-log-toggle'); await page.waitForTimeout(300); } });
   await tryDo(async () => { await page.click('#notebook-button'); await page.waitForTimeout(700); await snap('notebook-library'); await page.click('#notebook-tab-study'); await page.waitForTimeout(300); await snap('notebook-trial'); await page.click('#notebook-tab-log'); await page.waitForTimeout(300); await snap('notebook-found'); await page.click('#notebook-close'); await page.waitForTimeout(400); });

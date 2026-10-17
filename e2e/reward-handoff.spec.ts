@@ -55,7 +55,7 @@ test('uses one meaningful Dr. E graduation without repeating it after every resu
 
   await page.locator('#pick-choices .pick-card').first().click();
   const bloom = page.locator('[data-lifeform-id="bloom_mass"]');
-  if (!await bloom.isVisible()) await page.locator('#mobile-lifeforms-toggle').click();
+  if (!await bloom.isVisible()) await page.locator('[data-tool="egg"]').click();
   await bloom.click();
   await clickDish(page);
   await page.locator('[data-tool="nutrient"]').click();

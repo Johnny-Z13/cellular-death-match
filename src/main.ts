@@ -700,7 +700,9 @@ function exactLessonAllowsToolSelection(tool: ToolId): boolean {
   if (!expected) return false;
   return expected === `${tool}-selected`
     || expected === `${tool}-used`
-    || (tool === 'egg' && expected === 'egg-selected');
+    || (tool === 'egg' && expected === 'egg-selected')
+    // The Egg tile opens the egg tray, where a lesson's strain is chosen.
+    || (tool === 'egg' && expected.startsWith('lifeform:'));
 }
 
 function exactLessonAllowsLifeformSelection(id: string): boolean {
@@ -929,7 +931,7 @@ screens.onToolSelect((tool) => {
   uiAudio.play('ui_select');
   selectedTool = tool;
   screens.setTool(tool);
-  if (tool === 'egg') screens.openMobileLifeformsDrawer();
+  if (tool === 'egg') screens.toggleEggTray();
   else screens.closeMobileDrawers();
   updateButtonHint();
   window.requestAnimationFrame(focusCurrentOnboardingTarget);
@@ -1597,11 +1599,8 @@ function focusStudyStart(
       return;
     }
 
-    const exactControl = authoredTrial.number === 2 && panelsInDrawers()
-      ? document.getElementById('mobile-lifeforms-toggle')
-      : authoredTrial.number === 2
-        ? document.querySelector<HTMLElement>('[data-lifeform-id="bloom_mass"]')
-        : document.querySelector<HTMLElement>('[data-tool="egg"]');
+    // Trial 2 starts on the Egg tile too: it opens the tray holding Bloom Mass.
+    const exactControl = document.querySelector<HTMLElement>('[data-tool="egg"]');
     (exactControl ?? canvas).focus({ preventScroll: true });
   });
 }
@@ -1614,11 +1613,11 @@ function panelsInDrawers(): boolean {
 
 function blockingOverlayOpen(): boolean {
   if (overlayState.menuOpen || overlayState.notebookOpen || dex.isOpen() || reveal.isOpen()) return true;
+  // Choosing an egg holds the dish still on every layout.
+  if (layout.dataset.mobileDrawer === 'lifeforms') return true;
   if (!panelsInDrawers()) return false;
-  // A phone's drawers cover the dish. On the wide layout only choosing an egg
-  // pauses it; the log is a small panel at the side.
-  if (dishLayout === 'wide') return layout.dataset.mobileDrawer === 'lifeforms';
-  return layout.dataset.mobileDrawer === 'lifeforms' || layout.dataset.mobileDrawer === 'log';
+  // A phone's log covers the dish; on the wide layout it is a small side panel.
+  return dishLayout !== 'wide' && layout.dataset.mobileDrawer === 'log';
 }
 
 function setCulturePaused(paused: boolean): void {
@@ -2272,11 +2271,11 @@ function setOnboardingDishPointerTarget(pos: [number, number], besideEgg = false
 
 function onboardingControlForTarget(target: string): HTMLElement | null {
   if (target === 'dish') return canvas;
-  const needsMobileDrawer = target.startsWith('lifeform:')
-    && panelsInDrawers()
+  // A strain lives in the egg tray: point at the Egg tile until it is open.
+  const needsEggTray = target.startsWith('lifeform:')
     && layout.dataset.mobileDrawer !== 'lifeforms';
-  const selector = needsMobileDrawer
-    ? '#mobile-lifeforms-toggle'
+  const selector = needsEggTray
+    ? '[data-tool="egg"]'
     : target === 'end'
       ? '#end-epoch-button'
       : target.startsWith('tool:')
@@ -2371,9 +2370,6 @@ document.getElementById('coach-skip')?.addEventListener('click', () => {
     syncOnboardingPointer();
     focusCurrentOnboardingTarget();
   }, 560);
-});
-document.getElementById('mobile-lifeforms-toggle')?.addEventListener('click', () => {
-  window.requestAnimationFrame(syncOnboardingPointer);
 });
 document.querySelector('[data-tool="egg"]')?.addEventListener('click', () => {
   window.requestAnimationFrame(syncOnboardingPointer);

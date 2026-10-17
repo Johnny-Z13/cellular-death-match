@@ -9,7 +9,8 @@ const screensSource = readFileSync('src/ui/screens.ts', 'utf8');
 describe('mobile shell DOM', () => {
   it('provides mobile-only controls without duplicating desktop panels', () => {
     expect(html).toContain('id="mobile-shell"');
-    expect(html).toContain('id="mobile-lifeforms-toggle"');
+    // Eggs open from the Egg tile itself; the shell has no separate Eggs chip.
+    expect(html).not.toContain('id="mobile-lifeforms-toggle"');
     expect(html).toContain('id="mobile-log-toggle"');
     expect(html).toContain('id="mobile-tool-readout"');
     expect(html).toContain('id="mobile-tool-name"');
@@ -30,16 +31,17 @@ describe('mobile shell DOM', () => {
   });
 
   it('starts mobile drawer toggles collapsed for touch play', () => {
-    expect(html).toContain('id="mobile-lifeforms-toggle" class="mobile-shell-button" type="button" aria-expanded="false" aria-controls="life-panel"');
+    expect(html).toContain('data-tool="egg" aria-haspopup="dialog" aria-expanded="false" aria-controls="life-panel"');
     expect(html).toContain('id="mobile-log-toggle" class="mobile-shell-button" type="button" aria-expanded="false" aria-controls="ticker"');
   });
 
-  it('anchors the mobile specimen popover to Egg and keeps it closed until asked', () => {
-    expect(html).toContain('aria-controls="life-panel">Eggs</button>');
-    expect(screensSource).toContain('openMobileLifeformsDrawer(): void;');
-    expect(screensSource).toContain("setMobileDrawer(unlockedLifeformIds.size > 1 ? 'lifeforms' : 'none');");
+  it('opens the egg tray from the Egg tile, only once there is a choice, and toggles it', () => {
+    expect(html).toContain('<span class="egg-tool-tab" aria-hidden="true">Egg</span>');
+    expect(html).toContain('id="egg-tray-scrim"');
+    expect(screensSource).toContain('toggleEggTray(): void;');
+    expect(screensSource).toContain("setMobileDrawer(mobileDrawer !== 'lifeforms' && unlockedLifeformIds.size > 1 ? 'lifeforms' : 'none');");
     expect(mainSource).not.toContain('shouldOpenLifeformsForNewPlayer({');
-    expect(mainSource).toContain("if (tool === 'egg') screens.openMobileLifeformsDrawer();");
+    expect(mainSource).toContain("if (tool === 'egg') screens.toggleEggTray();");
   });
 
   it('returns the dish to full focus after a mobile selection or successful action', () => {
