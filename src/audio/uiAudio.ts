@@ -24,31 +24,38 @@ interface UiSoundDef {
 }
 
 const UI_SOUND_DEFS: Record<UiSoundId, UiSoundDef> = {
-  ui_tap: { asset: '/audio/generated/ui_tap.mp3', gain: 0.32, cooldownMs: 40 },
-  ui_select: { asset: '/audio/generated/ui_select.mp3', gain: 0.4, cooldownMs: 60 },
-  epoch_begin: { asset: '/audio/generated/epoch_begin.mp3', gain: 0.6, cooldownMs: 400 },
-  epoch_win: { asset: '/audio/generated/epoch_win.mp3', gain: 0.66, cooldownMs: 400 },
-  epoch_fail: { asset: '/audio/generated/epoch_fail.mp3', gain: 0.62, cooldownMs: 400 },
-  experiment_ready: { asset: '/audio/generated/experiment_ready.mp3', gain: 0.6, cooldownMs: 600 },
-  drop_nutrient: { asset: '/audio/generated/drop_nutrient.mp3', gain: 0.5, cooldownMs: 50 },
-  drop_water: { asset: '/audio/generated/drop_water.mp3', gain: 0.5, cooldownMs: 50 },
-  drop_toxin: { asset: '/audio/generated/drop_toxin.mp3', gain: 0.5, cooldownMs: 50 },
-  drop_salt: { asset: '/audio/generated/drop_salt.mp3', gain: 0.5, cooldownMs: 50 },
-  drop_acid: { asset: '/audio/generated/drop_acid.mp3', gain: 0.52, cooldownMs: 50 },
-  drop_paste: { asset: '/audio/generated/drop_paste.mp3', gain: 0.4, cooldownMs: 90 },
+  ui_tap: { asset: 'audio/generated/ui_tap.mp3', gain: 0.32, cooldownMs: 40 },
+  ui_select: { asset: 'audio/generated/ui_select.mp3', gain: 0.4, cooldownMs: 60 },
+  epoch_begin: { asset: 'audio/generated/epoch_begin.mp3', gain: 0.6, cooldownMs: 400 },
+  epoch_win: { asset: 'audio/generated/epoch_win.mp3', gain: 0.66, cooldownMs: 400 },
+  epoch_fail: { asset: 'audio/generated/epoch_fail.mp3', gain: 0.62, cooldownMs: 400 },
+  experiment_ready: { asset: 'audio/generated/experiment_ready.mp3', gain: 0.6, cooldownMs: 600 },
+  drop_nutrient: { asset: 'audio/generated/drop_nutrient.mp3', gain: 0.5, cooldownMs: 50 },
+  drop_water: { asset: 'audio/generated/drop_water.mp3', gain: 0.5, cooldownMs: 50 },
+  drop_toxin: { asset: 'audio/generated/drop_toxin.mp3', gain: 0.5, cooldownMs: 50 },
+  drop_salt: { asset: 'audio/generated/drop_salt.mp3', gain: 0.5, cooldownMs: 50 },
+  drop_acid: { asset: 'audio/generated/drop_acid.mp3', gain: 0.52, cooldownMs: 50 },
+  drop_paste: { asset: 'audio/generated/drop_paste.mp3', gain: 0.4, cooldownMs: 90 },
 };
 
-const AMBIENCE_ASSET = '/audio/generated/ambience_loop.mp3';
+const AMBIENCE_ASSET = 'audio/generated/ambience_loop.mp3';
 const MUTE_KEY = 'cdm.audio.muted';
 const REVERB_KEY = 'cdm.audio.reverb';
 // The generated clip has no loop-friendly head/tail, so a native loop clicks at
 // the seam. We re-trigger it with this much equal-power crossfade overlap so the
 // boundary is masked instead.
 const AMBIENCE_CROSSFADE = 1.4;
+const AMBIENCE_LEVEL = 0.5;
+// The ambience dips to this share of its level while Dr. E speaks.
+const SPEECH_DUCK = 0.55;
 
 export interface UiAudio {
   unlock(): void;
   play(id: UiSoundId): void;
+  /** The catch reveal's synthesized cues: a wobble tick that climbs with
+   *  each wobble (`step` 0-2), a shimmer as the egg cracks, a pop as it
+   *  bursts. */
+  playCatchCue(cue: 'wobble' | 'crack' | 'burst', step: number): void;
   startAmbience(): void;
   stopAmbience(): void;
   isMuted(): boolean;
@@ -57,6 +64,11 @@ export interface UiAudio {
   isReverbEnabled(): boolean;
   setReverbEnabled(enabled: boolean): void;
   toggleReverb(): boolean;
+  /** Dr. E's voice channel: the context and a bus through the master, so
+   *  Sound mute applies. Null until the audio has been unlocked. */
+  speechBus(): { ctx: AudioContext; destination: AudioNode } | null;
+  /** Dip the ambience while Dr. E speaks. */
+  duckAmbience(ducked: boolean): void;
 }
 
 export function createUiAudio(): UiAudio {
@@ -71,6 +83,7 @@ export function createUiAudio(): UiAudio {
   let muted = readMutedPreference();
   let reverbEnabled = readReverbPreference();
   let reverbWet: GainNode | null = null;
+  let speechGain: GainNode | null = null;
   const buffers = new Map<UiSoundId, AudioBuffer>();
   const lastAt = new Map<UiSoundId, number>();
 
@@ -143,7 +156,7 @@ export function createUiAudio(): UiAudio {
     // Fade the overall ambience bed up gently.
     ambienceGain.gain.cancelScheduledValues(now);
     ambienceGain.gain.setValueAtTime(Math.max(0.0001, ambienceGain.gain.value), now);
-    ambienceGain.gain.linearRampToValueAtTime(0.5, now + 2.5);
+    ambienceGain.gain.linearRampToValueAtTime(AMBIENCE_LEVEL, now + 2.5);
     scheduleAmbienceVoice(now);
   }
 
@@ -191,7 +204,74 @@ export function createUiAudio(): UiAudio {
     osc.stop(now + 0.18);
   }
 
+  // A short pitched blip through the master bus (so mute applies).
+  function blip(c: AudioContext, out: AudioNode, at: number, from: number, to: number, peak: number, length: number, type: OscillatorType): void {
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(from, at);
+    osc.frequency.exponentialRampToValueAtTime(to, at + length * 0.6);
+    gain.gain.setValueAtTime(0, at);
+    gain.gain.linearRampToValueAtTime(peak, at + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + length);
+    osc.connect(gain).connect(out);
+    osc.start(at);
+    osc.stop(at + length + 0.02);
+  }
+
+  function playCatchCue(cue: 'wobble' | 'crack' | 'burst', step: number): void {
+    if (muted) return;
+    const c = ensureContext();
+    if (c.state === 'suspended' || !master) return;
+    const now = c.currentTime;
+    if (cue === 'wobble') {
+      // A hollow tock that climbs a little each wobble, like a shell rocking.
+      const base = 300 * 1.26 ** step;
+      blip(c, master, now, base, base * 0.72, 0.07, 0.14, 'triangle');
+      blip(c, master, now + 0.07, base * 1.5, base * 1.1, 0.035, 0.1, 'sine');
+      return;
+    }
+    if (cue === 'crack') {
+      // Glassy shimmer: three quick high partials.
+      [0, 0.05, 0.1].forEach((dt, i) => blip(c, master!, now + dt, 1600 + i * 420, 2300 + i * 380, 0.025, 0.2, 'sine'));
+      return;
+    }
+    // The pop: a noise burst through a falling band-pass, and a bright sweep up.
+    const length = 0.4;
+    const buffer = c.createBuffer(1, Math.ceil(c.sampleRate * length), c.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i += 1) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length) ** 2;
+    const noise = c.createBufferSource();
+    noise.buffer = buffer;
+    const band = c.createBiquadFilter();
+    band.type = 'bandpass';
+    band.frequency.setValueAtTime(2400, now);
+    band.frequency.exponentialRampToValueAtTime(500, now + length);
+    const gain = c.createGain();
+    gain.gain.setValueAtTime(0.16, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + length);
+    noise.connect(band).connect(gain).connect(master);
+    noise.start(now);
+    blip(c, master, now, 420, 1500, 0.06, 0.32, 'sine');
+  }
+
   return {
+    playCatchCue,
+    speechBus() {
+      if (!ctx || !master) return null;
+      if (!speechGain) {
+        speechGain = ctx.createGain();
+        speechGain.connect(master);
+      }
+      return { ctx, destination: speechGain };
+    },
+    duckAmbience(ducked) {
+      if (!ctx || !ambienceGain || !ambienceWanted) return;
+      const now = ctx.currentTime;
+      ambienceGain.gain.cancelScheduledValues(now);
+      ambienceGain.gain.setValueAtTime(ambienceGain.gain.value, now);
+      ambienceGain.gain.linearRampToValueAtTime(ducked ? AMBIENCE_LEVEL * SPEECH_DUCK : AMBIENCE_LEVEL, now + 0.25);
+    },
     unlock() {
       const c = ensureContext();
       if (c.state === 'suspended') void c.resume();

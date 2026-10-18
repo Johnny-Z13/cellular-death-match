@@ -6,15 +6,17 @@ import {
   monitorRuntime,
   openFreshApp,
   toolCharge,
+  dismissReveal,
 } from './helpers';
 
 const CORE_PROJECTS = new Set(['phone', 'small-phone', 'desktop']);
 
 async function openLifeformPickerIfNeeded(page: Page, id: string): Promise<void> {
   const lifeform = page.locator(`[data-lifeform-id="${id}"]`);
-  if (!await lifeform.isVisible()) {
-    await page.locator('#mobile-lifeforms-toggle').click();
-  }
+  // Every layout keeps the eggs in the tray the Egg tile opens; ask whether
+  // it is open rather than whether an egg is momentarily visible.
+  const trayOpen = await page.locator('.layout').getAttribute('data-mobile-drawer') === 'lifeforms';
+  if (!trayOpen) await page.locator('[data-tool="egg"]').click();
   await expect(lifeform).toBeVisible();
 }
 
@@ -32,7 +34,7 @@ async function reachTrialTwo(page: Page): Promise<void> {
   await page.waitForTimeout(3_100);
   await expect(page.locator('#fx-genome')).toHaveAttribute('aria-hidden', 'false');
   await expect(page.locator('#screen-method-intro')).not.toHaveClass(/visible/);
-  await page.locator('#fx-genome').press('Enter');
+  await dismissReveal(page, 'Enter');
   await continueToMethodPicker(page);
   await page.locator('#pick-choices .pick-card').first().dblclick();
   await expect(page.locator('#hud-fight')).toHaveText('2 / 5');
@@ -43,7 +45,7 @@ test('owns exact input, rejects wrong actions, and restores focus to Dr. E’s t
   const runtime = monitorRuntime(page);
   await openFreshApp(page);
   await page.locator('#title-start').click();
-  await expect(page.locator('#coach-title')).toHaveText('Welcome to my lab.');
+  await expect(page.locator('#coach-title')).toHaveText('Oh! A visitor!');
 
   await page.locator('#options-button').click();
   await expect(page.locator('#simulation-paused-badge')).toBeVisible();
@@ -95,11 +97,11 @@ test('keeps Trial 2 recoverable through wrong specimens, wrong reagents, and rap
   const runtime = monitorRuntime(page);
   await reachTrialTwo(page);
 
-  await expect(page.locator('#coach-title')).toHaveText('Open Eggs. Choose Bloom Mass.');
+  await expect(page.locator('#coach-title')).toHaveText('Tap Egg. Choose Bloom Mass.');
   const eggsBeforeWrongPlacement = await toolCharge(page, 'egg');
   await openLifeformPickerIfNeeded(page, 'swarmlet');
   await page.locator('[data-lifeform-id="swarmlet"]').click();
-  await expect(page.locator('#coach-title')).toHaveText('Open Eggs. Choose Bloom Mass.');
+  await expect(page.locator('#coach-title')).toHaveText('Tap Egg. Choose Bloom Mass.');
   await clickDish(page);
   await expect.poll(() => toolCharge(page, 'egg')).toBe(eggsBeforeWrongPlacement);
 
@@ -111,6 +113,10 @@ test('keeps Trial 2 recoverable through wrong specimens, wrong reagents, and rap
   await page.locator('[data-lifeform-id="swarmlet"]').click();
   await expect(page.locator('#coach-title')).toHaveText('Place it here.');
   await expect(page.locator('[data-lifeform-id="bloom_mass"]')).toHaveAttribute('aria-selected', 'true');
+  // A tap outside the egg tray only dismisses it; it never spends an egg.
+  await page.locator('#egg-tray-scrim').click({ position: { x: 12, y: 12 } });
+  await expect(page.locator('.layout')).not.toHaveAttribute('data-mobile-drawer', 'lifeforms');
+  await expect(page.locator('#coach-title')).toHaveText('Place it here.');
 
   await clickDish(page);
   await expect(page.locator('#coach-title')).toHaveText('Press Nutrient.');
@@ -125,7 +131,7 @@ test('keeps Trial 2 recoverable through wrong specimens, wrong reagents, and rap
   await page.locator('[data-tool="toxin"]').click();
   await clickDish(page);
   await expect(page.locator('#end-epoch-button')).toHaveClass(/end-action-ready/, { timeout: 10_000 });
-  await expect(page.locator('#coach-title')).toHaveText('Bitter Bloom. Logged.', { timeout: 10_000 });
+  await expect(page.locator('#coach-title')).toHaveText('Bitter Bloom! Lovely and nasty.', { timeout: 10_000 });
   await page.screenshot({ path: testInfo.outputPath('trial-2-adversarial-recovered.png') });
   runtime.assertClean();
 });
@@ -167,7 +173,7 @@ test('restarts a hostile mid-step reload as a clean, fully guided dish on deskto
   await page.reload();
   await expect(page.locator('#title-start-label')).toHaveText('Restart Trial');
   await page.locator('#title-start').click();
-  await expect(page.locator('#coach-title')).toHaveText('Welcome to my lab.');
+  await expect(page.locator('#coach-title')).toHaveText('Oh! A visitor!');
   await expect(page.locator('[data-tool="egg"] [data-tool-count]')).toHaveText('8/8');
   await expect(page.locator('[data-tool="nutrient"] [data-tool-count]')).toHaveText('5/5');
   runtime.assertClean();

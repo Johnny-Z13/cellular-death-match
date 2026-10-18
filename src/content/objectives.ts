@@ -20,7 +20,11 @@ export type ObjectiveKind =
   | 'acid_sculptor'
   | 'colony_founder'
   | 'symbiosis'
-  | 'extinction_reversal';
+  | 'extinction_reversal'
+  // Sustain goals: total time, paused (never reset) by a dip (game/balance.ts).
+  | 'hold_balance'
+  | 'keep_alive'
+  | 'food_web';
 
 export interface ObjectiveDef {
   kind: ObjectiveKind;

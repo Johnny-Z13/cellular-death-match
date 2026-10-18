@@ -40,7 +40,7 @@ export async function openFreshApp(page: Page): Promise<void> {
 export async function startFirstTrial(page: Page): Promise<void> {
   await page.locator('#title-start').click();
   await expect(page.locator('.layout')).toHaveAttribute('data-screen', 'arena');
-  await expect(page.locator('#coach-title')).toHaveText('Welcome to my lab.');
+  await expect(page.locator('#coach-title')).toHaveText('Oh! A visitor!');
   await page.locator('#coach-skip').click();
   await expect(page.locator('#coach-title')).toContainText('Press Egg.');
 }
@@ -71,6 +71,19 @@ export async function completeOpeningActions(page: Page): Promise<void> {
   await page.locator('[data-tool="nutrient"]').click();
   await expect(page.locator('#coach-title')).toHaveText('Feed it once.');
   await clickDish(page, 0.55, 0.53);
+}
+
+/** A new strain's catch takes two activations (the first finishes the
+ *  sequence, the next continues; a second strain takes two more). Activate
+ *  the reveal until it closes. */
+export async function dismissReveal(page: Page, key?: 'Enter'): Promise<void> {
+  const reveal = page.locator('#fx-genome');
+  for (let i = 0; i < 6 && await reveal.getAttribute('aria-hidden') === 'false'; i += 1) {
+    if (key) await reveal.press(key);
+    else await reveal.click();
+    await page.waitForTimeout(80);
+  }
+  await expect(reveal).toHaveAttribute('aria-hidden', 'true');
 }
 
 export async function continueToMethodPicker(page: Page): Promise<void> {

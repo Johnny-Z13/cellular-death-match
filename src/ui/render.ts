@@ -10,7 +10,17 @@ export interface Renderer {
     archetypes?: ReadonlyMap<CellId, EnemySpawn>,
     dishEvents?: readonly DishEventMarker[],
     goalCellIds?: ReadonlySet<CellId>,
+    mergeRings?: readonly MergeRing[],
   ): void;
+}
+
+/** A merge in the dish, in grid units: forming (a ring fills) or locked (one
+ *  organism, outlined by a soft membrane). */
+export interface MergeRing {
+  center: readonly [number, number];
+  radius: number;
+  progress: number;
+  locked: boolean;
 }
 
 export interface RendererOptions {
@@ -100,6 +110,38 @@ function lighten(c: Uint8ClampedArray, factor: number): Uint8ClampedArray {
   ]);
 }
 
+/** The dish's bloom: a blurred glow underlay, the crisp cell pixels on top,
+ *  then a faint additive glow. `source` is the grid-sized image; the dish and
+ *  Dr. E's face both paint through here so they share one light. */
+export function drawBloomLayers(
+  ctx: CanvasRenderingContext2D,
+  source: CanvasImageSource,
+  width: number,
+  height: number,
+  additive: boolean,
+): void {
+  const supportsFilter = typeof ctx.filter === 'string';
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  if (supportsFilter) ctx.filter = `blur(${Math.max(3, width / 90)}px)`;
+  ctx.globalAlpha = 0.9;
+  ctx.drawImage(source, 0, 0, width, height);
+  ctx.restore();
+
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(source, 0, 0, width, height);
+
+  if (additive) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.imageSmoothingEnabled = true;
+    if (supportsFilter) ctx.filter = `blur(${Math.max(2, width / 160)}px)`;
+    ctx.globalAlpha = 0.18;
+    ctx.drawImage(source, 0, 0, width, height);
+    ctx.restore();
+  }
+}
+
 export function createRenderer(
   canvas: HTMLCanvasElement,
   nCells: number,
@@ -119,7 +161,6 @@ export function createRenderer(
   const reduceMotion = typeof window !== 'undefined'
     && typeof window.matchMedia === 'function'
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const supportsCanvasFilter = typeof ctx.filter === 'string';
   const additiveBloom = options.additiveBloom !== false;
 
   return {
@@ -128,9 +169,11 @@ export function createRenderer(
       archetypes?: ReadonlyMap<CellId, EnemySpawn>,
       dishEvents: readonly DishEventMarker[] = [],
       goalCellIds?: ReadonlySet<CellId>,
+      mergeRings: readonly MergeRing[] = [],
     ) {
       frame += 1;
       const { LX, LY, cells, boundary } = state.grid;
+      const wall = state.wall;
       const base = buildRenderPalette(nCells, state.cells, archetypes, fallbackBase);
       const boundaryColors = base.map((c) => lighten(c, 0.3));
       // Lazy init when we know the grid size.
@@ -158,6 +201,20 @@ export function createRenderer(
           const color = palette ?? base[0]!;
 
           const pixIdx = (y * LX + x) * 4;
+          const gel = id === 0 && wall ? wall[cellIdx]! : 0;
+          if (gel > 0) {
+            // Agar wall: a translucent gel with a crisp rim, fading as it
+            // dissolves.
+            const rim = x === 0 || y === 0 || x === LX - 1 || y === LY - 1
+              || wall![cellIdx - LY] === 0 || wall![cellIdx + LY] === 0
+              || wall![cellIdx - 1] === 0 || wall![cellIdx + 1] === 0;
+            const gelColor = rim ? AGAR_GEL.rim : AGAR_GEL.core;
+            data[pixIdx]     = gelColor[0];
+            data[pixIdx + 1] = gelColor[1];
+            data[pixIdx + 2] = gelColor[2];
+            data[pixIdx + 3] = (gel * (rim ? AGAR_GEL.rimAlpha : AGAR_GEL.coreAlpha) / 255) | 0;
+            continue;
+          }
           data[pixIdx]     = color[0]!;
           data[pixIdx + 1] = color[1]!;
           data[pixIdx + 2] = color[2]!;
@@ -176,25 +233,7 @@ export function createRenderer(
       // canvas filter; without ctx.filter the bilinear upscale of the low-res
       // grid still softens the halo.
       ctx.drawImage(agarFor(canvas.width, canvas.height), 0, 0);
-      ctx.save();
-      ctx.imageSmoothingEnabled = true;
-      if (supportsCanvasFilter) ctx.filter = `blur(${Math.max(3, canvas.width / 90)}px)`;
-      ctx.globalAlpha = 0.9;
-      ctx.drawImage(offscreen!, 0, 0, canvas.width, canvas.height);
-      ctx.restore();
-
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(offscreen!, 0, 0, canvas.width, canvas.height);
-
-      if (additiveBloom) {
-        ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.imageSmoothingEnabled = true;
-        if (supportsCanvasFilter) ctx.filter = `blur(${Math.max(2, canvas.width / 160)}px)`;
-        ctx.globalAlpha = 0.18;
-        ctx.drawImage(offscreen!, 0, 0, canvas.width, canvas.height);
-        ctx.restore();
-      }
+      drawBloomLayers(ctx, offscreen!, canvas.width, canvas.height, additiveBloom);
 
       const flash = dishFlashForEvents(dishEvents, reduceMotion);
       if (flash) {
@@ -214,6 +253,7 @@ export function createRenderer(
       if (goalCellIds && goalCellIds.size > 0) {
         drawGoalRings(ctx, state, goalCellIds, sx, sy, frame, reduceMotion);
       }
+      if (mergeRings.length > 0) drawMergeRings(ctx, mergeRings, sx, sy, frame, reduceMotion);
       for (const b of state.bullets) {
         const palette = base[b.ownerId] ?? base[0]!;
         // Lighten by 0.5 for the bullet color (slightly brighter than boundary).
@@ -233,6 +273,16 @@ export function createRenderer(
   };
 }
 
+
+// Agar wall (Paste): a pale gel line. A translucent core and a crisp rim so it
+// reads as gel, never as a culture; alpha follows the wall's strength as it
+// dissolves.
+const AGAR_GEL = {
+  core: [160, 206, 132] as const,
+  coreAlpha: 60,
+  rim: [214, 246, 178] as const,
+  rimAlpha: 200,
+};
 
 // Agar substrate behind the cultures: a dark medium with a faint centre
 // glow, fine grain and a meniscus at the rim, so an empty dish reads as a
@@ -301,6 +351,61 @@ const GOAL_RING = {
   color: 'rgba(214, 255, 249, 0.95)',
   underlay: 'rgba(0, 0, 0, 0.7)',
 };
+
+const MERGE_RING = {
+  arc: 'rgba(120, 255, 236, 0.95)',
+  track: 'rgba(91, 233, 214, 0.22)',
+  membrane: 'rgba(170, 255, 242, 0.34)',
+  underlay: 'rgba(0, 0, 0, 0.55)',
+};
+
+function drawMergeRings(
+  ctx: CanvasRenderingContext2D,
+  rings: readonly MergeRing[],
+  sx: number,
+  sy: number,
+  frame: number,
+  reduceMotion: boolean,
+): void {
+  const scale = (sx + sy) * 0.5;
+  ctx.save();
+  ctx.setLineDash([]);
+  for (const ring of rings) {
+    const cx = (ring.center[0] + 0.5) * sx;
+    const cy = (ring.center[1] + 0.5) * sy;
+    const radius = ring.radius * scale;
+    if (ring.locked) {
+      // One organism now: a soft membrane round all of it, breathing slowly.
+      const breath = reduceMotion ? 0 : Math.sin(frame * 0.05) * scale * 0.5;
+      ctx.lineWidth = Math.max(1.5, scale * 0.35);
+      ctx.strokeStyle = MERGE_RING.membrane;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius + breath, 0, Math.PI * 2);
+      ctx.stroke();
+      continue;
+    }
+    // Forming: a faint track and a bright arc that fills from twelve o'clock.
+    const width = Math.max(2, scale * 0.6);
+    const start = -Math.PI / 2;
+    ctx.lineWidth = width + 3;
+    ctx.strokeStyle = MERGE_RING.underlay;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, start, start + Math.PI * 2 * ring.progress);
+    ctx.stroke();
+    ctx.lineWidth = width;
+    ctx.strokeStyle = MERGE_RING.track;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = reduceMotion ? 1 : 0.75 + 0.25 * Math.sin(frame * 0.3);
+    ctx.strokeStyle = MERGE_RING.arc;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, start, start + Math.PI * 2 * ring.progress);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
 
 function drawGoalRings(
   ctx: CanvasRenderingContext2D,

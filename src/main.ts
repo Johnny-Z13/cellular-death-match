@@ -1,9 +1,9 @@
 ﻿import { createRun } from './game/run';
 import { createArena, toolRadiusFor, type Arena, type ArenaStatus } from './game/arena';
-import { createRenderer, type Renderer } from './ui/render';
+import { createRenderer, type MergeRing, type Renderer } from './ui/render';
 import { createDebugPanel } from './ui/debug';
 import { createScreens, type ToolId } from './ui/screens';
-import { AGITATION_TUNING, SIM_SPEED_TUNING, TOOL_TUNING } from './content/ecologyTuning';
+import { AGITATION_TUNING, DISH_LIFE_CYCLE, SIM_SPEED_TUNING, TOOL_TUNING } from './content/ecologyTuning';
 import { renderLoadoutScreen } from './ui/loadoutScreen';
 import { getUpgradeDef, upgradeToolNote } from './content/upgrades';
 import { goalLineFor } from './content/goalCopy';
@@ -96,7 +96,8 @@ import {
   saveResearchArchiveVerified,
   type ResearchArchiveState,
 } from './game/researchArchive';
-import { createTitleAutomata } from './ui/titleAutomata';
+import { createTitleDish } from './ui/titleDish';
+import { playStudioIdent } from './ui/studioIdent';
 import { createHaptics } from './ui/haptics';
 import {
   applyCanvasProfile,
@@ -119,12 +120,24 @@ import {
 import { isObjectiveFeasible, type StudyCapabilities } from './game/objectivePool';
 import { dishExitState } from './game/dishExitAction';
 import { studyIntroductionRoute } from './ui/studyIntroduction';
+import { dishGridFor, dishLayoutFor, type DishLayout } from './ui/dishShape';
+import { createDrEPresence } from './ui/drEPresence';
+import { createDrESpeech } from './ui/drESpeech';
+import { groupExtent, type MergeEvent } from './game/mergeDetection';
+import { dexView, loadFriends, recordFriend, type DexItem } from './game/friendsDex';
+import { createDexScreen } from './ui/dexScreen';
+import { createFriendReveal } from './ui/friendReveal';
 import { isCrazyGamesEnvironment } from './platform/crazyGames';
 
 declare const __COMMIT_MESSAGE__: string;
 
-const LX = 160;
-const LY = 160;
+// The dish's shape is chosen at each trial start from the layout, and the
+// layout follows the window (ui/dishShape.ts). ?layout=wide|classic forces one.
+const LAYOUT_OVERRIDE = new URLSearchParams(window.location.search).get('layout');
+let dishLayout: DishLayout = dishLayoutFor(window.innerWidth, window.innerHeight, LAYOUT_OVERRIDE);
+let { LX, LY } = dishGridFor(dishLayout);
+document.documentElement.dataset.layout = dishLayout;
+document.documentElement.dataset.dish = LX === LY ? 'square' : 'wide';
 const PLAYER_ID = 1;
 // Epoch ticks now comes from escalation.ts via arena's fightIndex.
 const PASTE_CURSOR_RADIUS = 9; // grid units; mirrors TOOL_TUNING.paste.radius for the draw cursor glow
@@ -141,7 +154,7 @@ const layoutMaybe = document.querySelector('.layout');
 if (!(layoutMaybe instanceof HTMLElement)) throw new Error('Missing .layout');
 const layout: HTMLElement = layoutMaybe;
 let visualProfile = performanceProfileFor(browserPerformanceSignals());
-applyCanvasProfile(canvas, visualProfile);
+applyCanvasProfile(canvas, visualProfile, { LX, LY });
 layout.dataset.visualQuality = visualProfile.id;
 layout.dataset.diagnostics = String(new URLSearchParams(window.location.search).has('physdebug'));
 const commitDebug = document.getElementById('commit-debug');
@@ -185,10 +198,34 @@ screens.setFullscreenAvailable(customFullscreenAvailable);
 debug.setPresentationAvailable(customFullscreenAvailable);
 const ecologyAudio = createEcologyAudio();
 const uiAudio = createUiAudio();
+// Automated browsers (the e2e suite) skip the studio ident unless the URL
+// carries ?ident; reduced-motion players skip it too.
+const identPlate = document.getElementById('z13-ident');
+if (
+  new URLSearchParams(window.location.search).has('ident')
+  || (!navigator.webdriver && !window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+) {
+  void playStudioIdent({
+    plate: identPlate,
+    markSrc: `${import.meta.env.BASE_URL}branding/z13-mark.png`,
+    audioSrc: `${import.meta.env.BASE_URL}branding/z13-ident.mp3`,
+    muted: uiAudio.isMuted(),
+    captionFont: '"IBM Plex Mono", ui-monospace, monospace',
+  });
+} else {
+  identPlate?.remove();
+}
 const haptics = createHaptics();
-const fx = createFx();
+// A new strain's reveal plays as a catch: the egg wobbles and ticks, bursts
+// with the win fanfare and a haptic, and Dr. E cheers (ui/catchReveal.ts).
+const fx = createFx({
+  cue: (cue, step) => uiAudio.playCatchCue(cue, step),
+  fanfare: () => uiAudio.play('epoch_win'),
+  haptic: (cue) => haptics.play(cue),
+  cheer: () => drE.react('delighted', 4200),
+  stopSpeech: () => speech.finish(),
+});
 const coach = createCoach(runtimeStorage);
-createTitleAutomata();
 
 // Publish the HUD's live bottom edge so the Professor's transmission rail can
 // use the quiet band above the dish without colliding with wrapped status copy.
@@ -264,6 +301,61 @@ const strainLibrary: StrainLibrary = createStrainLibrary(discoveryStorage);
 let pendingGenomeDecodeIds: LifeformIdentityId[] = [];
 // Allow up to PALETTE_SIZE total cell colors for evolving ecosystem spawns.
 const PALETTE_SIZE = 32;
+createTitleDish(visualProfile, PALETTE_SIZE);
+const drE = createDrEPresence(visualProfile.additiveBloom);
+// Dr. E's voice can be silenced on its own; his words still appear and his
+// mouth still moves. Same semantics as Sound: pressed = silenced.
+const DR_E_VOICE_KEY = 'cdm.dre-voice.v1';
+let drEVoiceEnabled = (() => {
+  try { return window.localStorage.getItem(DR_E_VOICE_KEY) !== '0'; } catch { return true; }
+})();
+const voiceButton = document.getElementById('voice-button');
+function applyDrEVoicePreference(enabled: boolean): void {
+  drEVoiceEnabled = enabled;
+  if (!voiceButton) return;
+  voiceButton.textContent = `Dr. E’s voice — ${enabled ? 'On' : 'Off'}`;
+  voiceButton.setAttribute('aria-label', enabled ? 'Silence Dr. E’s voice' : 'Let Dr. E speak');
+  voiceButton.setAttribute('aria-pressed', String(!enabled));
+}
+applyDrEVoicePreference(drEVoiceEnabled);
+voiceButton?.addEventListener('click', () => {
+  uiAudio.play('ui_tap');
+  const next = !drEVoiceEnabled;
+  try { window.localStorage.setItem(DR_E_VOICE_KEY, next ? '1' : '0'); } catch { /* preference is optional */ }
+  applyDrEVoicePreference(next);
+});
+const speech = createDrESpeech({ presence: drE, audio: uiAudio, voiceEnabled: () => drEVoiceEnabled, reducedMotion: reduceMotionPref });
+// The friends dex: strains come from the discovery progression; friends found
+// by merging are saved under their own key.
+let friendsSave = loadFriends(runtimeStorage);
+const dex = createDexScreen({ additiveBloom: visualProfile.additiveBloom, playTap: () => uiAudio.play('ui_tap') });
+const currentDexView = () => dexView(discoveryProgression, friendsSave);
+const reveal = createFriendReveal({
+  presence: drE,
+  playSound: (id) => uiAudio.play(id),
+  haptic: (cue) => haptics.play(cue),
+  stopSpeech: () => speech.finish(),
+});
+dex.onToggle((open) => { if (!open) speech.finish(); });
+// Rescues that land while a ta-da is showing wait their turn.
+const pendingReveals: Array<{ item: DexItem; from: { x: number; y: number } }> = [];
+function showReveal(item: DexItem, from: { x: number; y: number }): void {
+  if (reveal.isOpen()) {
+    pendingReveals.push({ item, from });
+    return;
+  }
+  reveal.show(item, from, () => {
+    dex.refresh(currentDexView());
+    const next = pendingReveals.shift();
+    if (next) showReveal(next.item, next.from);
+  });
+}
+dex.refresh(currentDexView());
+document.getElementById('dex-button')?.addEventListener('click', () => {
+  uiAudio.unlock();
+  uiAudio.play('ui_select');
+  dex.open(currentDexView());
+});
 
 let arena: Arena | null = null;
 let renderer: Renderer | null = null;
@@ -339,7 +431,7 @@ function refreshVisualPerformanceProfile(): void {
   const profileChanged = next.id !== visualProfile.id;
   visualProfile = next;
   layout.dataset.visualQuality = next.id;
-  const canvasChanged = applyCanvasProfile(canvas, next);
+  const canvasChanged = applyCanvasProfile(canvas, next, { LX, LY });
   if ((profileChanged || canvasChanged) && arena) {
     renderer = createRenderer(canvas, PALETTE_SIZE, {
       additiveBloom: next.additiveBloom,
@@ -351,6 +443,10 @@ function refreshVisualPerformanceProfile(): void {
 function schedulePerformanceProfileRefresh(): void {
   window.cancelAnimationFrame(performanceResizeFrame);
   performanceResizeFrame = window.requestAnimationFrame(() => {
+    // The layout follows the window at once; the dish keeps its shape until
+    // the next trial starts.
+    dishLayout = dishLayoutFor(window.innerWidth, window.innerHeight, LAYOUT_OVERRIDE);
+    document.documentElement.dataset.layout = dishLayout;
     refreshVisualPerformanceProfile();
     syncOnboardingPointer();
   });
@@ -511,6 +607,23 @@ window.addEventListener('keydown', (event) => {
     trapNotebookFocus(event);
     return;
   }
+  if (event.key === 'Tab' && (reveal.isOpen() || dex.isOpen())) {
+    trapFocusIn(document.getElementById(reveal.isOpen() ? 'friend-reveal' : 'screen-dex'), event);
+    return;
+  }
+  // F: the dish alone, full screen, every menu hidden. F or Escape brings
+  // them back.
+  if (event.key.toLowerCase() === 'f' && !event.metaKey && !event.ctrlKey && !event.altKey
+    && !isTypingInto(event.target) && !dex.isOpen() && !reveal.isOpen() && run.getState().phase === 'arena') {
+    event.preventDefault();
+    setPresentationMode(!overlayState.presentationMode);
+    return;
+  }
+  if (event.key === 'Escape' && dex.isOpen() && !reveal.isOpen()) {
+    event.preventDefault();
+    dex.close();
+    return;
+  }
   if (event.key !== 'Escape') return;
   if (overlayState.presentationMode) {
     event.preventDefault();
@@ -539,7 +652,7 @@ document.addEventListener('fullscreenchange', () => {
 canvas.addEventListener('animationend', () => {
   canvas.classList.remove('dish-shake', 'dish-shake-soft');
 });
-const juice = createJuice(canvas, LX, LY);
+const juice = createJuice(canvas, () => ({ LX, LY }));
 const DISH_LABELS_KEY = 'cdm.dish-labels.v1';
 const dishLabelOverlay = createDishLabelOverlay(
   document.getElementById('dish-labels')!,
@@ -549,7 +662,6 @@ const dishLabels = createDishLabelRuntime({
   overlay: dishLabelOverlay,
   canvas,
   controlId: PLAYER_ID,
-  gridSize: LX,
   // Phones get the shorter tag budget; tablets and wider get the full one.
   isCompact: () => window.matchMedia('(max-width: 599px)').matches,
   obstacles: [document.getElementById('notebook-button')!, document.getElementById('preview-exit')!],
@@ -596,7 +708,9 @@ function exactLessonAllowsToolSelection(tool: ToolId): boolean {
   if (!expected) return false;
   return expected === `${tool}-selected`
     || expected === `${tool}-used`
-    || (tool === 'egg' && expected === 'egg-selected');
+    || (tool === 'egg' && expected === 'egg-selected')
+    // The Egg tile opens the egg tray, where a lesson's strain is chosen.
+    || (tool === 'egg' && expected.startsWith('lifeform:'));
 }
 
 function exactLessonAllowsLifeformSelection(id: string): boolean {
@@ -630,6 +744,8 @@ function applySelectedToolAt(pos: [number, number]): boolean {
     || document.hidden
     || overlayState.menuOpen
     || overlayState.notebookOpen
+    || dex.isOpen()
+    || reveal.isOpen()
     || coach.isMobileToolboxLessonActive()
   ) return false;
   if (!exactLessonAllowsDishAction(selectedTool)) {
@@ -823,7 +939,7 @@ screens.onToolSelect((tool) => {
   uiAudio.play('ui_select');
   selectedTool = tool;
   screens.setTool(tool);
-  if (tool === 'egg') screens.openMobileLifeformsDrawer();
+  if (tool === 'egg') screens.toggleEggTray();
   else screens.closeMobileDrawers();
   updateButtonHint();
   window.requestAnimationFrame(focusCurrentOnboardingTarget);
@@ -1141,6 +1257,11 @@ function finishGenomeReveal(): void {
 
 function genomeRevealInfo(genome: GenomeArtIdentity) {
   const archive = notebookViewForProgression(discoveryProgression).archive;
+  // The catch's dex card: the strain's friend number, what it does, and the
+  // friends count it just raised.
+  const view = currentDexView();
+  const friend = view.items.find((item) => item.id === genome.id);
+  const identity = genome.id in LIFEFORM_IDENTITIES ? LIFEFORM_IDENTITIES[genome.id as LifeformIdentityId] : null;
   return {
     id: genome.id,
     name: genome.name,
@@ -1148,6 +1269,12 @@ function genomeRevealInfo(genome: GenomeArtIdentity) {
     alt: genome.alt,
     primary: genome.primary,
     archivePosition: `${archive.decodedGenomes} / ${archive.totalGenomes} STRAINS FOUND`,
+    number: friend?.number,
+    role: identity?.role,
+    behavior: identity?.behavior,
+    note: friend?.note,
+    found: view.found,
+    total: view.total,
   };
 }
 
@@ -1342,6 +1469,9 @@ function startNewFight() {
   const runState = run.getState();
   const useOnboardingDish = shouldUseOnboardingDishForCurrentStage(runState.fightIndex, false);
   const enemies = useOnboardingDish ? run.getOnboardingSpawnList() : run.getEpochSpawnList();
+  ({ LX, LY } = dishGridFor(dishLayout));
+  document.documentElement.dataset.dish = LX === LY ? 'square' : 'wide';
+  applyCanvasProfile(canvas, visualProfile, { LX, LY });
   arena = createArena({
     LX,
     LY,
@@ -1354,6 +1484,9 @@ function startNewFight() {
     objective: run.getObjective(),
     fightIndex: runState.fightIndex,
     knownBreedIds: new Set(discoveryProgression.discoveredBreedIds),
+    // The food web for the case and the open lab (the onboarding dish keeps
+    // its own tuning inside the arena).
+    lifeCycle: DISH_LIFE_CYCLE,
   });
   renderer = createRenderer(canvas, PALETTE_SIZE, {
     additiveBloom: visualProfile.additiveBloom,
@@ -1486,19 +1619,25 @@ function focusStudyStart(
       return;
     }
 
-    const exactControl = authoredTrial.number === 2 && compactViewport
-      ? document.getElementById('mobile-lifeforms-toggle')
-      : authoredTrial.number === 2
-        ? document.querySelector<HTMLElement>('[data-lifeform-id="bloom_mass"]')
-        : document.querySelector<HTMLElement>('[data-tool="egg"]');
+    // Trial 2 starts on the Egg tile too: it opens the tray holding Bloom Mass.
+    const exactControl = document.querySelector<HTMLElement>('[data-tool="egg"]');
     (exactControl ?? canvas).focus({ preventScroll: true });
   });
 }
 
+// Phones and the wide layout keep the eggs and the log in drawers; the
+// classic desktop layout shows them as fixed side panels.
+function panelsInDrawers(): boolean {
+  return dishLayout === 'wide' || window.matchMedia('(max-width: 899px)').matches;
+}
+
 function blockingOverlayOpen(): boolean {
-  if (overlayState.menuOpen || overlayState.notebookOpen) return true;
-  if (!window.matchMedia('(max-width: 899px)').matches) return false;
-  return layout.dataset.mobileDrawer === 'lifeforms' || layout.dataset.mobileDrawer === 'log';
+  if (overlayState.menuOpen || overlayState.notebookOpen || dex.isOpen() || reveal.isOpen()) return true;
+  // Choosing an egg holds the dish still on every layout.
+  if (layout.dataset.mobileDrawer === 'lifeforms') return true;
+  if (!panelsInDrawers()) return false;
+  // A phone's log covers the dish; on the wide layout it is a small side panel.
+  return dishLayout !== 'wide' && layout.dataset.mobileDrawer === 'log';
 }
 
 function setCulturePaused(paused: boolean): void {
@@ -1520,7 +1659,7 @@ function loop() {
     // storage is unavailable so Retry cannot overwrite later dish activity.
     simClock.reset(now);
     if (shouldRenderFrame(lastRenderAt, now, visualProfile.targetRenderFps)) {
-      renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds);
+      renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds, mergeRingsFor(arena));
       renderToolEffects(arena);
       juice.draw();
       lastRenderAt = now;
@@ -1571,12 +1710,13 @@ function loop() {
     tickCount++;
   }
   if (ticksToRun > 0) ecologyAudio.update(readAudioFrame(arena));
+  for (const merge of arena.drainMergeEvents()) announceMerge(merge);
 
   updateJuiceEvents(arena);
   recoverLostLessonCulture(arena, now);
   dishGoalCellIds = dishLabels.update(arena, run.getObjective(), now);
   if (shouldRenderFrame(lastRenderAt, now, visualProfile.targetRenderFps)) {
-    renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds);
+    renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds, mergeRingsFor(arena));
     renderToolEffects(arena);
     juice.draw();
     lastRenderAt = now;
@@ -1609,7 +1749,7 @@ function loop() {
   const ecology = arena.getEcology();
   const equilibrium = arena.getEquilibrium();
   const equilibriumCanEndRun = !isOnboardingEpoch(run.getState().fightIndex);
-  screens.setEquilibrium(equilibrium);
+  screens.setEquilibrium({ ...equilibrium, balance: arena.getBalance() });
   sampleRunTelemetryFromArena(arena);
 
   // HUD update.
@@ -1720,6 +1860,7 @@ function bankCompletedStudy(
       peakBiodiversity,
       stabilitySeconds: Math.round(longestStabilityStreak / 60),
       biomeName: terminalOutcome === 'won' ? arena.getEquilibrium().biomeName : undefined,
+      biomeStrains: terminalOutcome === 'won' ? arena.getEquilibrium().biomeStrains : undefined,
     },
     completedStudy,
     terminalOutcome,
@@ -1903,7 +2044,7 @@ function advanceDiscoveryProgression(
   return true;
 }
 
-function syncResearchArchive(biomeName?: string | null): void {
+function syncResearchArchive(biomeName?: string | null, biomeStrains?: readonly string[]): void {
   const stabilizedBreedRecords = discoveryProgression.breedDiscoveryRecords.filter(
     (record) => record.stage === 'stabilized',
   );
@@ -1919,6 +2060,7 @@ function syncResearchArchive(biomeName?: string | null): void {
     peakBiodiversity,
     stabilitySeconds: Math.round(longestStabilityStreak / 60),
     biomeName,
+    biomeStrains,
   });
   const archiveSave = saveResearchArchiveVerified(discoveryStorage, result.state);
   if (archiveSave.status !== 'saved') {
@@ -1929,6 +2071,9 @@ function syncResearchArchive(biomeName?: string | null): void {
   if (result.newBiome) {
     newBiomeThisRun = true;
     strainLibrary.incrementBiomeCount();
+    // Holding a living dish is what grows the loadout: one more strain per
+    // new biome.
+    strainLibrary.addLoadoutSlot();
     strainLibrary.save();
   }
   for (const sealId of result.newSealIds) {
@@ -2151,11 +2296,11 @@ function setOnboardingDishPointerTarget(pos: [number, number], besideEgg = false
 
 function onboardingControlForTarget(target: string): HTMLElement | null {
   if (target === 'dish') return canvas;
-  const needsMobileDrawer = target.startsWith('lifeform:')
-    && window.matchMedia('(max-width: 899px)').matches
+  // A strain lives in the egg tray: point at the Egg tile until it is open.
+  const needsEggTray = target.startsWith('lifeform:')
     && layout.dataset.mobileDrawer !== 'lifeforms';
-  const selector = needsMobileDrawer
-    ? '#mobile-lifeforms-toggle'
+  const selector = needsEggTray
+    ? '[data-tool="egg"]'
     : target === 'end'
       ? '#end-epoch-button'
       : target.startsWith('tool:')
@@ -2251,9 +2396,6 @@ document.getElementById('coach-skip')?.addEventListener('click', () => {
     focusCurrentOnboardingTarget();
   }, 560);
 });
-document.getElementById('mobile-lifeforms-toggle')?.addEventListener('click', () => {
-  window.requestAnimationFrame(syncOnboardingPointer);
-});
 document.querySelector('[data-tool="egg"]')?.addEventListener('click', () => {
   window.requestAnimationFrame(syncOnboardingPointer);
 });
@@ -2333,11 +2475,15 @@ function maybeNudgeIdlePlayer(objectiveComplete: boolean, hint: string | undefin
     nudgeIndex: nudgeCountThisEpoch,
     recoveryHints: authoredTrial?.recoveryHints,
   });
+  // In the Open Lab, Dr. E's second nudge hints at a friend not yet found.
+  const friend = !authoredTrial && nudgeCountThisEpoch === 1
+    ? currentDexView().items.find((item) => item.tier === 'rare' && !item.found)
+    : undefined;
   nudgeCountThisEpoch += 1;
   lastActionTick = tickCount; // another full idle stretch before the next one
   coach.showNudge(
-    nudge.title,
-    nudge.body,
+    friend ? 'I’ve seen something odd…' : nudge.title,
+    friend ? friend.hint : nudge.body,
     { interruptTutorial: nudge.interruptTutorial },
   );
 }
@@ -2361,13 +2507,22 @@ function announceEpochCompletion(complete: boolean): void {
   }
 }
 
-function announceEquilibrium(info: { achieved: boolean; progress: number; biomeName: string | null }): void {
+// A minute of unbroken balance: the dish is a stable ecosystem. Its biome is
+// recorded straight away (a card in the Notebook), crises calm, and the
+// trial may finish whenever the player likes.
+function announceEquilibrium(info: { achieved: boolean; progress: number; biomeName: string | null; biomeStrains: string[] }): void {
   if (!info.achieved || didAnnounceEquilibrium || isOnboardingEpoch(run.getState().fightIndex)) return;
   didAnnounceEquilibrium = true;
   uiAudio.play('epoch_win');
   haptics.play('success');
-  fx.showToast('discovery', 'Stable Ecosystem', info.biomeName ?? 'Balance');
-  screens.addTicker('Balance reached: pressure paused. Finish when ready, or keep watching.', 'discovery');
+  fx.showUnlockBanner('Biome recorded', info.biomeName ?? 'Stable ecosystem', 'A minute in balance · crises calm', 'bio');
+  screens.addTicker(`Stable ecosystem: ${info.biomeName ?? 'a living dish'}. Crises calm; the biome is in your Notebook.`, 'discovery');
+  // Badge and loadout toasts raised by recording the biome queue behind the
+  // banner.
+  const slotsBefore = strainLibrary.getLoadoutSlots();
+  syncResearchArchive(info.biomeName, info.biomeStrains);
+  const slots = strainLibrary.getLoadoutSlots();
+  if (slots > slotsBefore) fx.showToast('discovery', 'New biome · loadout +1', `You can now bring ${slots} strains`);
 }
 
 function labelForStrain(strain: string): string {
@@ -2483,6 +2638,35 @@ function trapOptionsFocus(event: KeyboardEvent): void {
   }
 }
 
+function isTypingInto(target: EventTarget | null): boolean {
+  return target instanceof HTMLInputElement
+    || target instanceof HTMLTextAreaElement
+    || target instanceof HTMLSelectElement
+    || (target instanceof HTMLElement && target.isContentEditable);
+}
+
+// Keep Tab inside an open dialog.
+function trapFocusIn(root: HTMLElement | null, event: KeyboardEvent): void {
+  if (!root) return;
+  const focusable = Array.from(root.querySelectorAll<HTMLElement>(
+    'button:not([disabled]):not([hidden]), [tabindex]:not([tabindex="-1"])',
+  )).filter((element) => element.getClientRects().length > 0);
+  if (focusable.length === 0) {
+    event.preventDefault();
+    return;
+  }
+  const first = focusable[0]!;
+  const last = focusable[focusable.length - 1]!;
+  const inside = root.contains(document.activeElement);
+  if (event.shiftKey && (!inside || document.activeElement === first)) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && (!inside || document.activeElement === last)) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
 function trapNotebookFocus(event: KeyboardEvent): void {
   const notebook = document.getElementById('screen-notebook');
   if (!notebook) return;
@@ -2502,6 +2686,7 @@ function trapNotebookFocus(event: KeyboardEvent): void {
 }
 
 function refreshNotebook(): void {
+  dex.refresh(currentDexView());
   const notebook = notebookViewForProgression(discoveryProgression);
   screens.updateNotebook(notebook);
   screens.updateAtlas(atlasViewForProgression(discoveryProgression));
@@ -2905,6 +3090,66 @@ function restartLesson(title: string, body: string): void {
 
 function isFieldTool(tool: ToolId): tool is 'nutrient' | 'toxin' | 'water' | 'salt' | 'acid' {
   return tool === 'nutrient' || tool === 'toxin' || tool === 'water' || tool === 'salt' || tool === 'acid';
+}
+
+// Dev server only (stripped from builds): lets QA scripts stage and read the
+// live dish, and stage a friend's ta-da for screenshots.
+if (import.meta.env.DEV) {
+  (window as unknown as { cdmDebug: { arena: () => Arena | null; reveal: (id: string) => boolean } }).cdmDebug = {
+    arena: () => arena,
+    reveal: (id) => {
+      const item = currentDexView().items.find((entry) => entry.id === id);
+      if (!item) return false;
+      showReveal(item, { x: window.innerWidth / 2, y: window.innerHeight / 2 });
+      return true;
+    },
+  };
+}
+
+// How long Dr. E beams at a repeat merge.
+const MERGE_DELIGHT_MS = 2600;
+
+// Forming merges fill a ring; locked ones are outlined as one organism.
+function mergeRingsFor(ar: Arena): MergeRing[] {
+  const { forming, locked } = ar.getMerges();
+  return [
+    ...forming.map((group) => ({ ...groupExtent(ar.state, group.members), progress: group.progress, locked: false })),
+    ...locked.map((form) => ({ ...groupExtent(ar.state, form.members), progress: 1, locked: true })),
+  ];
+}
+
+function announceMerge(merge: MergeEvent): void {
+  if (merge.kind === 'broke') {
+    screens.addTicker(`${merge.form.name} came apart.`, 'caution');
+    return;
+  }
+  // A locked form, or a very-rare behaviour earned by one: either way a friend.
+  const friendId: string = merge.kind === 'very-rare' && merge.veryRare ? merge.veryRare : merge.form.id;
+  const item = currentDexView().items.find((entry) => entry.id === friendId);
+  if (!item) return;
+  const number = `#${String(item.number).padStart(3, '0')}`;
+  const tier = item.tier === 'very-rare' ? 'Very rare' : 'Rare';
+  screens.addTicker(
+    merge.kind === 'very-rare' ? `${merge.form.name} became a ${item.name}! Friend ${number}.` : `Merged: ${item.name}, friend ${number}.`,
+    'discovery',
+  );
+  if (friendsSave.found[friendId]) {
+    uiAudio.play('experiment_ready');
+    haptics.play('discovery');
+    drE.react('delighted', MERGE_DELIGHT_MS);
+    fx.showUnlockBanner(merge.kind === 'very-rare' ? 'Very rare again' : 'Friend merged', item.name, `${number} · ${tier}`, item.tier === 'very-rare' ? 'amber' : 'bio');
+    return;
+  }
+  // First find: record it, then the ta-da rises from where it happened.
+  const fightIndex = run.getState().fightIndex;
+  const where = fightIndex < COMMON_COLD_CASE.trials.length ? `Trial ${fightIndex + 1}` : 'Open Lab';
+  friendsSave = recordFriend(runtimeStorage, friendsSave, friendId, where);
+  const found = currentDexView().items.find((entry) => entry.id === friendId)!;
+  const rect = canvas.getBoundingClientRect();
+  showReveal(found, {
+    x: rect.left + ((merge.center[0] + 0.5) / LX) * rect.width,
+    y: rect.top + ((merge.center[1] + 0.5) / LY) * rect.height,
+  });
 }
 
 function canvasEventToGridPos(event: PointerEvent): [number, number] {

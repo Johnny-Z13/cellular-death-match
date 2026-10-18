@@ -5,6 +5,7 @@ import {
   continueToMethodPicker,
   monitorRuntime,
   startFirstTrial,
+  dismissReveal,
 } from './helpers';
 
 interface TrialTiming {
@@ -22,7 +23,7 @@ async function openWithFreshStorageOnce(page: Page): Promise<void> {
 
 async function selectLifeform(page: Page, id: string): Promise<void> {
   const lifeform = page.locator(`[data-lifeform-id="${id}"]`);
-  if (!await lifeform.isVisible()) await page.locator('#mobile-lifeforms-toggle').click();
+  if (!await lifeform.isVisible()) await page.locator('[data-tool="egg"]').click();
   await expect(lifeform).toBeVisible();
   await expect(lifeform).toBeEnabled();
   await lifeform.click();
@@ -79,7 +80,7 @@ async function finishTrial(
       || await introduction.evaluate((element) => element.classList.contains('visible'))
       || await pick.evaluate((element) => element.classList.contains('visible'))
   )).toBe(true);
-  if (await reveal.getAttribute('aria-hidden') === 'false') await reveal.click();
+  await dismissReveal(page);
   if (trial === 2) {
     await expect(introduction).toHaveClass(/visible/);
     await expect(page.locator('#method-intro-title')).toHaveText('Right. You’re on your own now.');
@@ -107,7 +108,7 @@ test('plays the five-Trial Case, records discovery cadence, and resumes an Open 
   await finishTrial(page, 1, 'Culture Shock', startedAt, timings, testInfo);
 
   startedAt = await pickMethod(page);
-  await expect(page.locator('#coach-title')).toHaveText('Open Eggs. Choose Bloom Mass.');
+  await expect(page.locator('#coach-title')).toHaveText('Tap Egg. Choose Bloom Mass.');
   await selectLifeform(page, 'bloom_mass');
   await clickGuidedDish(page);
   await expect(page.locator('#coach-title')).toHaveText('Press Nutrient.');

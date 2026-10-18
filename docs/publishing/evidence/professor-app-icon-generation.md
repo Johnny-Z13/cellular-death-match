@@ -5,7 +5,7 @@
 - Master: `public/icon-1024.png`
 - Master SHA-256: `8b8835745093d9bae901f0a5bb341b0d6d0488913c6e1ac9699625abc9b26daf`
 - Output reference: `exec-6f490ec0-4635-4681-a937-eda0b26ab4e1.png`
-- Identity reference: `public/art/professor/professor-emergent-v1.png`
+- Identity reference: `professor-emergent-v1.png`, archived 2026-10-14 to `~/Projects/Archive/cellular-death-match-legacy-art-2026-10/` (last in the repo at commit `1667513`)
 - Style reference: former CDM specimen icon at Git commit `49942ab`, path `public/icon-1024.png`
 - Derived locally with Sharp: `icon-512.png`, `icon-192.png`, `apple-touch-icon.png`, `favicon.png`
 - Distribution status: provider-declared; named originality/brand approval pending

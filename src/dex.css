@@ -1,0 +1,459 @@
+/* The friends dex (ui/dexScreen.ts) and its chrome chip. Tier colours run
+   through every surface: common sea-grey, rare bio teal, very rare gold, and
+   Dr. E (origin) white. */
+
+:root {
+  --dex-common: #8fb3b1;
+  --dex-rare: #5be9d6;
+  --dex-very-rare: #f0c35a;
+  --dex-origin: #e7f6f4;
+}
+
+/* The chip: a tiny glowing cell and the count. */
+.dex-button {
+  right: calc(120px + env(safe-area-inset-right));
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 12px;
+}
+
+.dex-button__cell {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 38%, #c8fff6, var(--dex-rare) 45%, #13706a 100%);
+  box-shadow: 0 0 0 1.5px rgba(200, 255, 246, 0.5), 0 0 12px rgba(91, 233, 214, 0.55);
+}
+
+.dex-button__count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-dim, #8fb3b1);
+}
+
+.dex-button__count b {
+  color: var(--dex-rare);
+  font-weight: 600;
+}
+
+/* The screen. */
+.dex-screen {
+  position: fixed;
+  inset: 0;
+  /* Above the coach, the onboarding pointer and the paused badge. */
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background: rgba(2, 6, 8, 0.72);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.dex-screen[hidden] {
+  display: none;
+}
+
+.dex-card {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(1200px, 100%);
+  height: min(840px, 100%);
+  overflow: hidden;
+  border: 1px solid rgba(120, 196, 200, 0.22);
+  border-radius: 22px;
+  background:
+    radial-gradient(ellipse at 18% 0%, rgba(91, 233, 214, 0.08), transparent 55%),
+    rgba(5, 13, 15, 0.94);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+  color: var(--text, #e7f6f4);
+  animation: dex-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes dex-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.985); }
+}
+
+.dex-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "kicker tabs close" "title tabs close";
+  align-items: center;
+  gap: 4px 18px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid rgba(120, 196, 200, 0.14);
+}
+
+.dex-kicker {
+  grid-area: kicker;
+  margin: 0;
+  font-family: var(--font-display, 'Michroma', sans-serif);
+  font-size: 11px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--dex-rare);
+}
+
+.dex-title {
+  grid-area: title;
+  margin: 0;
+  white-space: nowrap;
+  font-family: var(--font-display, 'Michroma', sans-serif);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+.dex-title b {
+  font-size: 32px;
+  font-weight: 400;
+  color: var(--dex-rare);
+  text-shadow: 0 0 22px rgba(91, 233, 214, 0.35);
+}
+
+.dex-title span {
+  color: var(--dex-common);
+}
+
+.dex-tabs {
+  grid-area: tabs;
+  display: flex;
+  gap: 6px;
+}
+
+.dex-tab,
+.dex-close {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 40px;
+  padding: 10px 14px;
+  border: 1px solid rgba(120, 196, 200, 0.18);
+  border-radius: 999px;
+  background: rgba(12, 28, 32, 0.6);
+  color: var(--text, #e7f6f4);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dex-tab b {
+  font-weight: 500;
+  color: var(--dex-common);
+}
+
+.dex-tab[aria-selected="true"] {
+  border-color: var(--dex-rare);
+  box-shadow: inset 0 0 14px rgba(91, 233, 214, 0.12);
+}
+
+.dex-close {
+  grid-area: close;
+}
+
+.dex-tab:focus-visible,
+.dex-close:focus-visible,
+.dex-tile:focus-visible {
+  outline: 2px solid var(--dex-rare);
+  outline-offset: 2px;
+}
+
+.dex-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  min-height: 0;
+}
+
+.dex-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  align-content: start;
+  gap: 10px;
+  margin: 0;
+  padding: 18px;
+  overflow: auto;
+  list-style: none;
+}
+
+.dex-tile {
+  --tier: var(--dex-common);
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  gap: 4px;
+  width: 100%;
+  aspect-ratio: 0.82;
+  padding: 10px 8px 8px;
+  overflow: hidden;
+  border: 1px solid rgba(120, 196, 200, 0.14);
+  border-radius: 14px;
+  background: rgba(10, 24, 28, 0.55);
+  color: var(--text, #e7f6f4);
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.dex-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--tier);
+  opacity: 0.85;
+}
+
+.dex-tile[data-tier="origin"] { --tier: var(--dex-origin); }
+.dex-tile[data-tier="rare"] { --tier: var(--dex-rare); }
+.dex-tile[data-tier="very-rare"] { --tier: var(--dex-very-rare); }
+
+.dex-tile:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--tier) 55%, transparent);
+}
+
+.dex-tile[aria-pressed="true"] {
+  border-color: var(--tier);
+  background: rgba(14, 34, 38, 0.8);
+  box-shadow: 0 0 0 1px var(--tier), 0 10px 26px rgba(0, 0, 0, 0.35);
+}
+
+.dex-tile[data-shown="silhouette"] .dex-tile-name,
+.dex-tile[data-shown="mystery"] .dex-tile-name {
+  color: var(--dex-common);
+  letter-spacing: 0.2em;
+}
+
+.dex-tile[data-shown="mystery"] .dex-specimen {
+  opacity: 0.35;
+  filter: blur(1.5px);
+}
+
+.dex-tile-number {
+  justify-self: start;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: color-mix(in srgb, var(--tier) 70%, #8fb3b1);
+}
+
+:root canvas.dex-specimen {
+  z-index: auto;
+  width: 100%;
+  max-width: 96px;
+  height: auto;
+  max-height: none;
+  aspect-ratio: 1;
+  align-self: center;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  image-rendering: pixelated;
+}
+
+/* Names wrap onto a second centred line rather than losing their ends
+   ("Mortar and Pestle"); the specimen gives up the room. */
+.dex-tile-name {
+  display: -webkit-box;
+  max-width: 100%;
+  min-height: 2.4em;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: center;
+  align-content: center;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+:root .dex-tile canvas.dex-specimen {
+  max-width: 84px;
+}
+
+/* The page for the friend you picked. */
+.dex-detail {
+  --tier: var(--dex-common);
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 8px;
+  padding: 22px 22px 26px;
+  overflow: auto;
+  border-left: 1px solid rgba(120, 196, 200, 0.14);
+  background: radial-gradient(circle at 50% 22%, color-mix(in srgb, var(--tier) 10%, transparent), transparent 60%);
+  text-align: center;
+}
+
+.dex-detail:has([data-tier="origin"]) { --tier: var(--dex-origin); }
+.dex-detail:has(.dex-detail-tier[data-tier="rare"]) { --tier: var(--dex-rare); }
+.dex-detail:has(.dex-detail-tier[data-tier="very-rare"]) { --tier: var(--dex-very-rare); }
+
+:root .dex-detail-art canvas.dex-specimen {
+  width: min(220px, 70%);
+  max-width: 220px;
+}
+
+.dex-detail-number {
+  margin: 4px 0 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--dex-common);
+}
+
+.dex-detail-name {
+  margin: 0;
+  font-family: var(--font-display, 'Michroma', sans-serif);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+}
+
+.dex-detail-tier {
+  margin: 0;
+  padding: 4px 12px;
+  border: 1px solid var(--tier);
+  border-radius: 999px;
+  font-family: var(--font-display, 'Michroma', sans-serif);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--tier);
+}
+
+.dex-detail-strains {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dex-detail-strains li {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(12, 28, 32, 0.8);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--dex-common);
+}
+
+.dex-detail-bubble {
+  position: relative;
+  margin: 10px 0 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(120, 196, 200, 0.2);
+  border-radius: 16px;
+  background: rgba(12, 28, 32, 0.7);
+}
+
+.dex-line {
+  font-family: var(--font-notebook, 'Newsreader', Georgia, serif);
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.dex-detail-found {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--dex-common);
+}
+
+@media (max-width: 699px) {
+  .dex-screen {
+    padding: 0;
+  }
+
+  .dex-card {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+
+  .dex-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "kicker close" "title close" "tabs tabs";
+    padding: max(14px, env(safe-area-inset-top)) 16px 12px;
+  }
+
+  .dex-title {
+    font-size: 16px;
+  }
+
+  .dex-title b {
+    font-size: 26px;
+  }
+
+  /* Four filters in two even rows instead of a strip that cuts the last. */
+  .dex-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    padding-top: 8px;
+  }
+
+  .dex-tab {
+    justify-content: center;
+    min-height: 36px;
+    padding: 8px 10px;
+  }
+
+  :root .dex-tile canvas.dex-specimen {
+    max-width: 60px;
+  }
+
+  .dex-body {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .dex-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: 12px 16px;
+  }
+
+  .dex-detail {
+    grid-template-columns: 96px minmax(0, 1fr);
+    grid-template-areas: "art number" "art name" "art tier" "line line" "found found";
+    justify-items: start;
+    align-items: center;
+    gap: 2px 14px;
+    max-height: 42svh;
+    padding: 14px 16px max(16px, env(safe-area-inset-bottom));
+    border-top: 1px solid rgba(120, 196, 200, 0.14);
+    border-left: 0;
+    text-align: left;
+  }
+
+  .dex-detail-art { grid-area: art; }
+  :root .dex-detail-art canvas.dex-specimen { width: 96px; }
+  .dex-detail-number { grid-area: number; }
+  .dex-detail-name { grid-area: name; font-size: 18px; }
+  .dex-detail-tier { grid-area: tier; justify-self: start; }
+  .dex-detail-strains { display: none; }
+  .dex-detail-bubble { grid-area: line; margin-top: 8px; }
+  .dex-detail-found { grid-area: found; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dex-card { animation: none; }
+  .dex-tile { transition: none; }
+  .dex-tile:hover { transform: none; }
+}
+
+/* Presentation mode (F, or the full-screen button) is the dish alone. */
+.layout[data-screen="arena"].presentation-mode .dex-button,
+.layout[data-screen="arena"].presentation-mode .dish-labels,
+.layout[data-screen="arena"].presentation-mode .onboarding-professor-pointer,
+.layout[data-screen="arena"].presentation-mode .simulation-paused-badge,
+.layout[data-screen="arena"].presentation-mode .preview-exit {
+  display: none !important;
+}

@@ -1,0 +1,10 @@
+{
+  "version": "Alpha Build 2",
+  "id": "alpha-2",
+  "date": "2026-10-17",
+  "sourceCommit": "b24b05b0e6c9dcecc07fdd28d69cc47d708aa275",
+  "branch": "v1/friends-and-merges",
+  "description": "Egg tray: pick eggs by colour from the Egg tile; a UI pass so text fits, reads and lines up on every screen.",
+  "play": "/play/",
+  "platforms": "Any modern browser: Chrome, Edge, Safari or Firefox, on desktop, tablet or phone."
+}

@@ -190,12 +190,13 @@
   min-height: 0;
 }
 
+/* Dr. E's notes get three lines: two cut his longer bonus hints mid-word. */
 .layout[data-screen="arena"].hud-slot-docked.coach-active .coach:not(.coach-welcome):not(.coach-intro) .coach-body {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
 }
 
 /* ---- Phones: goal strip sits left of the chrome buttons ---------------- */
@@ -237,7 +238,8 @@
   (min-width: 600px) and (max-width: 899px) and (min-height: 521px) {
   .layout[data-screen="arena"] .hud,
   .layout[data-screen="arena"] .hud.visible {
-    right: 112px;
+    /* Clear of all three chrome buttons (friends, options, full screen). */
+    right: 172px;
     grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
     grid-template-rows: auto;
     gap: 0 10px;
@@ -258,7 +260,9 @@
 @media (min-width: 900px) {
   .layout[data-screen="arena"] .hud,
   .layout[data-screen="arena"] .hud.visible {
-    width: min(1040px, calc(100vw - 260px));
+    /* Centred, and clear of the three chrome buttons (friends, options,
+       full screen) on either side. */
+    width: min(1040px, calc(100vw - 440px));
     height: auto;
     min-height: 0;
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
@@ -338,7 +342,7 @@
     display: none;
   }
 
-  .layout[data-screen="arena"] .ticker-line {
+  .layout[data-screen="arena"] .ticker-line-text {
     display: -webkit-box;
     overflow: hidden;
     -webkit-box-orient: vertical;
@@ -743,13 +747,15 @@
   transform-origin: center;
 }
 
-/* Upgrade cards say when they improve a tool the player has not met yet. */
+/* Upgrade cards say when they improve a tool the player has not met yet.
+   A tag box (not a pill) so a note that wraps still reads as one label. */
 .pick-card-note {
-  justify-self: start;
+  align-self: flex-start;
   margin-top: 2px;
-  padding: 2px 8px;
+  padding: 3px 8px;
   border: 1px solid rgba(246, 211, 101, 0.45);
-  border-radius: 999px;
+  border-radius: 6px;
+  text-wrap: balance;
   color: #f6d365;
   font-family: var(--font-mono);
   font-size: var(--fs-min);
@@ -928,55 +934,6 @@
   max-height: 3lh;
 }
 
-/* Title pitch: the one-line promise a cold player reads before Run Trial. */
-.title-pitch {
-  max-width: 34ch;
-  margin: 6px auto 12px;
-  color: rgba(226, 250, 247, 0.86);
-  font-family: var(--font-serif);
-  font-size: var(--fs-lead);
-  line-height: 1.3;
-  text-align: center;
-  text-wrap: balance;
-}
-
-/* Title: the card grows upward from the bottom edge so the pitch line can
-   never push Run Trial off a phone screen. Short landscape drops the pitch. */
-@media (orientation: portrait) and (max-width: 899px), (orientation: portrait) and (min-width: 900px) and (max-height: 1100px) {
-  .screen-title-screen .title-card {
-    top: auto;
-    bottom: max(14px, calc(env(safe-area-inset-bottom) + 10px));
-  }
-}
-
-@media (max-width: 899px) and (orientation: portrait) {
-  #screen-title.screen-title-screen.visible {
-    align-items: end;
-  }
-
-  .screen-title-screen .title-card {
-    margin-top: 0;
-    align-self: end;
-  }
-
-  .title-pitch {
-    margin: 0 auto 4px;
-    font-size: var(--fs-body);
-  }
-}
-
-@media (max-width: 899px) and (max-height: 700px) and (orientation: portrait) {
-  #title-genome-lead {
-    display: none;
-  }
-}
-
-@media (orientation: landscape) and (max-height: 520px) {
-  .title-pitch {
-    display: none;
-  }
-}
-
 @media (max-width: 599px) {
   /* The finish tile is the one success action: two columns wide, so
      "Finish trial" reads in full and stands out from the tools. */
@@ -1047,10 +1004,27 @@
 }
 
 @media (max-width: 899px) and (orientation: portrait), (max-width: 899px) and (min-height: 521px) {
-  /* Both chrome buttons share the HUD's first line. */
+  /* All three chrome buttons share the HUD's first line. */
   .layout[data-screen="arena"] .options-button,
-  .layout[data-screen="arena"] .fullscreen-button {
+  .layout[data-screen="arena"] .fullscreen-button,
+  .layout[data-screen="arena"] .dex-button {
     top: calc(max(5px, env(safe-area-inset-top)) + 7px);
+  }
+
+  /* The friends chip is a 44px square here (the cell and the found count;
+     the total lives on the friends screen), so trial, time and balance fit
+     beside the three buttons on a 375px phone. */
+  .layout[data-screen="arena"] .dex-button {
+    right: calc(118px + env(safe-area-inset-right));
+    justify-content: center;
+    gap: 5px;
+    width: 44px;
+    min-width: 44px;
+    padding: 0;
+  }
+
+  .layout[data-screen="arena"] .dex-button #dex-count-total {
+    display: none;
   }
 
   /* Header row (trial · balance) is the button line; the goal sentence and
@@ -1062,7 +1036,7 @@
   }
 
   .layout[data-screen="arena"] .hud .hud-summary > .hud-equilibrium-row {
-    margin-right: 104px;
+    margin-right: 164px;
   }
 
   /* Header readouts stack label over value, like instrument dials, so trial,
@@ -1153,15 +1127,6 @@
   }
 }
 
-/* Title: the next-lead line wraps to two lines instead of cutting its clue. */
-.title-archive-strip #title-genome-lead {
-  display: -webkit-box;
-  white-space: normal;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-}
-
 /* Desktop egg list: each strain's role reads in full over two lines (the
    one-line teaser cut most of them mid-word). */
 @media (min-width: 900px) {
@@ -1178,6 +1143,11 @@
 /* Landscape phones: the HUD column is narrow, so header readouts stack like
    the portrait ones and a timed trial's clock never pushes past the panel. */
 @media (max-width: 899px) and (orientation: landscape) and (max-height: 520px) {
+  /* The friends chip sits on the same line as options and full screen. */
+  .layout[data-screen="arena"] .dex-button {
+    top: max(6px, env(safe-area-inset-top));
+  }
+
   .layout[data-screen="arena"] .hud .hud-summary {
     column-gap: 10px;
   }
@@ -1197,8 +1167,15 @@
 /* Notebook found entries: same minimum footprint, but a row grows to fit its
    longest card instead of clipping the recipe line; the status chip stays on
    one line and drops under the name when the card is narrow. */
+/* Rows take their tallest card's full height. (minmax(196px, auto) rows
+   cannot grow inside a full, fixed-height scroller, so the 196px minimum
+   lives on the card instead.) */
 .notebook-list {
-  grid-auto-rows: minmax(196px, auto);
+  grid-auto-rows: max-content;
+}
+
+.notebook-list > .notebook-entry {
+  min-height: 196px;
 }
 
 .notebook-entry-head {
@@ -1224,4 +1201,377 @@
       760px
     );
   }
+}
+
+/* Trial result strip (upgrade and trial-choice screens): the label and its
+   progress dots are one centred group under the centred heading, not two
+   ends of a strip. */
+.case-result-strip {
+  justify-content: center;
+  gap: 14px;
+}
+
+/* Title (phones): the lab name stays clear of the options gear. */
+@media (max-width: 899px) and (orientation: portrait) {
+  .screen-title-screen .title-eyebrow {
+    max-width: calc(100vw - 96px);
+    letter-spacing: 0.2em;
+  }
+}
+
+/* Upgrade cards: "Choose ›" never breaks its chevron onto a second line. */
+.pick-card-action {
+  white-space: nowrap;
+}
+
+/* Dr. E's step counter and state word are small meta labels: lifted to read
+   at the 11px floor (they sat near 4:1). */
+.layout[data-screen="arena"] .hud-director-head span:last-child,
+.layout[data-screen="arena"] .coach .coach-step {
+  color: rgba(216, 246, 242, 0.68);
+}
+
+/* ---- HUD typography: one grid (2026-10-18) --------------------------------
+   The goal and Dr. E read as two columns of the same three lines: a label
+   line, a headline and a detail line, on shared baselines. Dr. E looks the
+   same whether he is coaching (his card docks over the slot) or idle (the
+   director), so the bar never changes shape when he speaks. */
+:root {
+  --hud-label-lh: 14px;
+  --hud-row-gap: 4px;
+  --hud-headline: 18px;
+  --hud-headline-lh: 22px;
+  --hud-face: 56px;
+}
+
+/* Side-by-side HUD (tablets and up). */
+@media (min-width: 600px) and (min-height: 521px), (min-width: 600px) and (orientation: portrait) {
+  /* Left: GOAL and the trial readouts / the goal sentence / meter and %. */
+  .layout[data-screen="arena"] #hud .hud-summary {
+    grid-template-columns: 16px minmax(0, 1fr) max-content max-content max-content;
+    grid-template-rows: var(--hud-label-lh) auto auto;
+    grid-template-areas:
+      "key key trial window balance"
+      "mark line line line line"
+      "meter meter meter meter value";
+    align-content: start;
+    /* Spacing lives on the items, so a hidden readout (Time, or Balance in
+       Trial 1) leaves no empty gap and the group stays flush right. */
+    gap: var(--hud-row-gap) 0;
+    padding: 2px 4px 0;
+  }
+
+  .layout[data-screen="arena"] #hud .hud-summary > .hud-row {
+    margin-left: 14px;
+  }
+
+  /* The goal block spans the three rows as a subgrid (it keeps its own
+     box); its copy wrapper dissolves so GOAL and the sentence take rows. */
+  .layout[data-screen="arena"] #hud .hud-goal {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-row: 1 / 4;
+    grid-template-columns: subgrid;
+    grid-template-rows: subgrid;
+    grid-template-areas: none;
+    gap: inherit;
+  }
+
+  .layout[data-screen="arena"] #hud .hud-goal-copy {
+    display: contents;
+  }
+
+  .layout[data-screen="arena"] #hud .hud-goal-key {
+    grid-area: key;
+    line-height: var(--hud-label-lh);
+  }
+
+  .layout[data-screen="arena"] #hud .hud-summary > .hud-row {
+    align-items: baseline;
+    line-height: var(--hud-label-lh);
+  }
+
+  .layout[data-screen="arena"] #hud .hud-goal-mark {
+    grid-area: mark;
+    align-self: start;
+    margin-top: 5px;
+  }
+
+  .layout[data-screen="arena"] #hud .hud-goal-line {
+    grid-area: line;
+    margin-left: 8px;
+    font-size: var(--hud-headline);
+    line-height: var(--hud-headline-lh);
+  }
+
+  /* The meter runs the full width; its % sits at its end in the same row. */
+  .layout[data-screen="arena"] #hud .hud-goal-meter {
+    grid-area: 3 / 1 / 4 / -1;
+    align-self: center;
+    margin-right: calc(4ch + 10px);
+  }
+
+  .layout[data-screen="arena"] #hud .hud-goal-value {
+    grid-area: 3 / 1 / 4 / -1;
+    justify-self: end;
+    line-height: var(--hud-label-lh);
+  }
+
+  /* Right: Dr. E on the same three lines, idle... */
+  .layout[data-screen="arena"] #hud .hud-director {
+    grid-template-columns: var(--hud-face) minmax(0, 1fr);
+    align-items: center;
+    column-gap: 10px;
+    padding: 2px 0 0 12px;
+  }
+
+  .layout[data-screen="arena"] #hud .hud-director-portrait {
+    width: var(--hud-face);
+    height: var(--hud-face);
+  }
+
+  .layout[data-screen="arena"] #hud .hud-director-copy {
+    display: grid;
+    grid-template-rows: var(--hud-label-lh) auto auto;
+    row-gap: var(--hud-row-gap);
+    align-content: start;
+    align-self: start;
+    padding: 0 6px 0 0;
+  }
+
+  .layout[data-screen="arena"] #hud .hud-director-head {
+    line-height: var(--hud-label-lh);
+  }
+
+  .layout[data-screen="arena"] #hud .hud-director-title {
+    font-size: var(--hud-headline);
+    line-height: var(--hud-headline-lh);
+  }
+
+  .layout[data-screen="arena"] #hud .hud-director .hud-director-progress {
+    font-size: var(--fs-small);
+    line-height: 1.35;
+  }
+
+  /* ...and coaching: his card docks over the slot with the same metrics and
+     the same divider, no box of its own. */
+  .layout[data-screen="arena"].hud-slot-docked.coach-active #coach:not(.coach-welcome):not(.coach-intro) {
+    grid-template-columns: var(--hud-face) minmax(0, 1fr);
+    align-items: center;
+    column-gap: 10px;
+    padding: 2px 0 0 12px;
+    border: 0;
+    border-left: 1px solid rgba(120, 196, 200, 0.14);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Idle Dr. E drops the bright bar and black backing his coaching card does
+   not have; the column divider separates him from the goal. */
+.layout[data-screen="arena"] #hud .hud-director-portrait {
+  border-left: 0;
+  background: transparent;
+}
+
+/* Both Dr. E states, every layout that docks him: one card. */
+.layout[data-screen="arena"].hud-slot-docked.coach-active #coach:not(.coach-welcome):not(.coach-intro) .coach-portrait {
+  width: var(--hud-face);
+  height: var(--hud-face);
+  min-height: 0;
+  border-left: 0;
+  background: transparent;
+}
+
+.layout[data-screen="arena"].hud-slot-docked.coach-active #coach:not(.coach-welcome):not(.coach-intro) .coach-portrait canvas.dre-face {
+  width: var(--hud-face);
+}
+
+.layout[data-screen="arena"].hud-slot-docked.coach-active #coach:not(.coach-welcome):not(.coach-intro) .coach-copy {
+  grid-template-rows: var(--hud-label-lh) auto auto;
+  row-gap: var(--hud-row-gap);
+  align-content: start;
+  align-self: start;
+  height: auto;
+  min-height: 0;
+  padding: 0 6px 0 0;
+}
+
+.layout[data-screen="arena"].hud-slot-docked.coach-active #coach:not(.coach-welcome):not(.coach-intro) .coach-head {
+  line-height: var(--hud-label-lh);
+}
+
+.layout[data-screen="arena"].hud-slot-docked.coach-active #coach:not(.coach-welcome):not(.coach-intro) .coach-title {
+  font-size: var(--hud-headline);
+  line-height: var(--hud-headline-lh);
+}
+
+.layout[data-screen="arena"].hud-slot-docked.coach-active #coach:not(.coach-welcome):not(.coach-intro) .coach-body {
+  font-size: var(--fs-small);
+  line-height: 1.35;
+}
+
+/* Phones: the same card, a size down, with room for three lines of notes so
+   his longer hints never spill past the bar. */
+@media (max-width: 599px) and (orientation: portrait), (max-width: 599px) and (min-height: 521px) {
+  :root {
+    --hud-face: 44px;
+    --hud-headline: 16px;
+    --hud-headline-lh: 20px;
+  }
+
+  .layout[data-screen="arena"] #hud .hud-director {
+    grid-template-columns: var(--hud-face) minmax(0, 1fr);
+    align-items: center;
+    column-gap: 10px;
+    min-height: 92px;
+    padding: 6px 0 4px 8px;
+  }
+
+  .layout[data-screen="arena"] #hud .hud-director-portrait {
+    width: var(--hud-face);
+    height: var(--hud-face);
+  }
+
+  .layout[data-screen="arena"] #hud .hud-director-copy {
+    display: grid;
+    grid-template-rows: var(--hud-label-lh) auto auto;
+    row-gap: var(--hud-row-gap);
+    align-content: start;
+    align-self: start;
+    padding: 0 6px 0 0;
+  }
+
+  .layout[data-screen="arena"] #hud .hud-director-head {
+    line-height: var(--hud-label-lh);
+  }
+
+  .layout[data-screen="arena"] #hud .hud-director-title {
+    font-size: var(--hud-headline);
+    line-height: var(--hud-headline-lh);
+  }
+
+  .layout[data-screen="arena"] #hud .hud-director .hud-director-progress,
+  .layout[data-screen="arena"].hud-slot-docked.coach-active #coach:not(.coach-welcome):not(.coach-intro) .coach-body {
+    font-size: var(--fs-min);
+    line-height: 1.3;
+  }
+
+  .layout[data-screen="arena"].hud-slot-docked.coach-active #coach:not(.coach-welcome):not(.coach-intro) {
+    grid-template-columns: var(--hud-face) minmax(0, 1fr);
+    align-items: center;
+    column-gap: 10px;
+    padding: 6px 0 4px 8px;
+    border: 0;
+    border-top: 1px solid rgba(120, 196, 200, 0.14);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+/* Short phones (SE class): the dish's 320px floor wins, so the card is
+   tighter and his notes take two lines. */
+@media (max-width: 599px) and (max-height: 720px) and (orientation: portrait) {
+  :root {
+    --hud-headline-lh: 18px;
+    --hud-row-gap: 3px;
+  }
+
+  .layout[data-screen="arena"] #hud .hud-director {
+    min-height: 70px;
+    padding: 3px 0 2px 8px;
+  }
+
+  .layout[data-screen="arena"] #hud .hud-director .hud-director-progress,
+  .layout[data-screen="arena"].hud-slot-docked.coach-active #coach:not(.coach-welcome):not(.coach-intro) .coach-body {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    max-height: 2lh;
+  }
+
+  .layout[data-screen="arena"].hud-slot-docked.coach-active #coach:not(.coach-welcome):not(.coach-intro) {
+    padding: 3px 0 2px 8px;
+  }
+}
+
+/* Tablets (600-899): the HUD columns are narrow. Trial, time and balance
+   stack label-over-value in a taller label row, with GOAL and Dr. E's label
+   on its bottom line (still one shared baseline), and his card has room for
+   a two-line title and three lines of notes. */
+@media (min-width: 600px) and (max-width: 899px) and (orientation: portrait),
+  (min-width: 600px) and (max-width: 899px) and (min-height: 521px) {
+  :root {
+    --hud-label-lh: 26px;
+    --hud-face: 44px;
+    --hud-headline: 16px;
+    --hud-headline-lh: 20px;
+  }
+
+  .layout[data-screen="arena"] #hud .hud-summary > .hud-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    margin-left: 12px;
+    line-height: 1;
+  }
+
+  .layout[data-screen="arena"] #hud .hud-summary > .hud-equilibrium-row {
+    align-items: flex-end;
+  }
+
+  .layout[data-screen="arena"] #hud .hud-goal-key,
+  .layout[data-screen="arena"] #hud .hud-director-head,
+  .layout[data-screen="arena"].hud-slot-docked.coach-active #coach:not(.coach-welcome):not(.coach-intro) .coach-head {
+    align-self: end;
+    line-height: 14px;
+  }
+
+  .layout[data-screen="arena"] #hud .hud-director .hud-director-progress,
+  .layout[data-screen="arena"].hud-slot-docked.coach-active #coach:not(.coach-welcome):not(.coach-intro) .coach-body {
+    font-size: var(--fs-min);
+    line-height: 1.3;
+  }
+
+  /* Compact windows keep the dish first: two lines of notes. */
+  .layout[data-screen="arena"] #hud .hud-director {
+    min-height: 88px;
+  }
+
+  .layout[data-screen="arena"] #hud .hud-director .hud-director-progress,
+  .layout[data-screen="arena"].hud-slot-docked.coach-active #coach:not(.coach-welcome):not(.coach-intro) .coach-body {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    max-height: 2lh;
+  }
+}
+
+/* Tall portrait tablets have height to spare: Dr. E's card takes a
+   two-line title and his longest notes whole. */
+@media (min-width: 600px) and (max-width: 899px) and (orientation: portrait) and (min-height: 900px) {
+  .layout[data-screen="arena"] #hud .hud-director {
+    min-height: 136px;
+  }
+
+  .layout[data-screen="arena"] #hud .hud-director .hud-director-progress {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    max-height: 3lh;
+  }
+
+  .layout[data-screen="arena"].hud-slot-docked.coach-active #coach:not(.coach-welcome):not(.coach-intro) .coach-body {
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    max-height: 4lh;
+  }
+}
+
+/* Dr. E's face sits beside his name in both states. */
+.layout[data-screen="arena"] #hud .hud-director-portrait,
+.layout[data-screen="arena"].hud-slot-docked.coach-active #coach:not(.coach-welcome):not(.coach-intro) .coach-portrait {
+  align-self: start;
+  margin-top: 2px;
 }

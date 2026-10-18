@@ -4,6 +4,7 @@ import type { EnemyArchetype } from '../../src/content/enemies';
 import {
   createObjectiveRuntime,
   evaluateObjective,
+  updateObjectiveRuntime,
   type ObjectiveMetrics,
   type ObjectiveEvaluationContext,
   type ObjectiveRuntime,
@@ -126,6 +127,24 @@ describe('evaluateObjective procedural objectives', () => {
     expect(evaluateObjective(objective, metrics({ maxBreedDominance: 0.39 }), context(runtime)).complete).toBe(false);
     runtime.balanceTicks = 3;
     expect(evaluateObjective(objective, metrics({ maxBreedDominance: 0.39 }), context(runtime)).complete).toBe(true);
+  });
+
+  it('pauses balance and symbiosis clocks on a dip instead of resetting them', () => {
+    const objective: ObjectiveDef = {
+      kind: 'balance_keeper',
+      name: 'Even Spread',
+      description: 'No strain dominates.',
+      target: 'No strain > 40% for 30s',
+      maxDominance: 0.4,
+    };
+    const runtime = createObjectiveRuntime();
+    const even = metrics({ maxBreedDominance: 0.3, nearbyDifferentBreedPair: true });
+    const dip = metrics({ maxBreedDominance: 0.8, nearbyDifferentBreedPair: false });
+    for (let i = 0; i < 10; i++) updateObjectiveRuntime(runtime, even, objective);
+    for (let i = 0; i < 10; i++) updateObjectiveRuntime(runtime, dip, objective);
+    for (let i = 0; i < 5; i++) updateObjectiveRuntime(runtime, even, objective);
+    expect(runtime.balanceTicks).toBe(15);
+    expect(runtime.symbiosisTicks).toBe(15);
   });
 
   it('satisfies colony_founder with 5 cultures of one archetype', () => {

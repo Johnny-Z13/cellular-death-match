@@ -43,8 +43,8 @@ export const TOOL_TUNING = {
   water: { charges: 6, radius: 28, ttl: 60 * 6, cooldownTicks: 90 },
   salt: { charges: 4, radius: 18, ttl: 60 * 9, cooldownTicks: 180 },
   acid: { charges: 3, radius: 17, ttl: 60 * 5, cooldownTicks: 240 },
-  // Paste draws a trail: each charge buys a length of drawn path. Stamps are
-  // small, long-lived nutrient fields so colonies gently drift along the line.
+  // Paste draws an agar wall (game/agarWall.ts): each charge buys a length of
+  // drawn path. Fresh gel is also a small nutrient field along the line.
   paste: { charges: 3, radius: 9, ttl: 60 * 7, cooldownTicks: 180 } as const,
 } as const;
 
@@ -102,3 +102,39 @@ export const AGITATION_TUNING = {
   extraSpeed: 14,
   cooldownTicks: 300,
 } as const;
+
+// Life cycle for open dishes. 'arena' is the original death match: every
+// culture hunts until one remains. 'culture' is a food web. Grazers feed on
+// the agar in proportion to free space; hunters eat other strains until they
+// divide, then digest. Everything burns mass, and starved cultures dissolve.
+// Ratios are multiples of a culture's genome size (its spawn targetVol).
+export const LIFE_CYCLE_PROFILES = {
+  arena: null,
+  culture: {
+    // Snipers (suppressors) never engulf, so they feed on agar like grazers.
+    hunterRoles: ['predator', 'anchor', 'mimic'],
+    desperateBelow: 0.5,      // grazers hunt only under base × this
+    satedSpeed: 0.35,         // speed multiplier while not hunting
+    huntEngulfScale: 1,       // scales a hunter's engulf multiplier above 1
+    // Engulfing is charged per pixel transfer, and contact boundaries churn,
+    // so the arena's 0.5 gain / 0.6 drain bleeds a victim dry within seconds.
+    engulfGain: 0.2,
+    engulfDrain: 0.2,
+    bulletDrain: 0.2,
+    hunterMetabolismPerTick: 0.0008, // fraction of base burned per tick
+    grazerMetabolismPerTick: 0.0004,
+    // fraction of the gap to the agar ceiling regained per tick, × free space
+    agarGrowthPerTick: 0.0014,
+    agarCeiling: 2.2,
+    divideAt: 2.0,            // splits into two halves at base × this
+    digestTicks: 60 * 6,      // both halves rest after dividing
+    divideCheckTicks: 30,
+    starveBelow: 0.15,        // dissolves under base × this
+  },
+};
+
+export type LifeCycleProfileId = keyof typeof LIFE_CYCLE_PROFILES;
+export type LifeCycleProfile = NonNullable<(typeof LIFE_CYCLE_PROFILES)[LifeCycleProfileId]>;
+// Every dish after the coached onboarding runs the food web, the case trials
+// as well as the open lab: a cosy pace where living dishes can hold.
+export const DISH_LIFE_CYCLE: LifeCycleProfileId = 'culture';

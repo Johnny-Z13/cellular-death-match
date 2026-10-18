@@ -2,18 +2,20 @@
   "schemaVersion": 1,
   "project": "Cellular Death Match",
   "auditDate": "2026-08-28",
-  "scanRoots": ["public"],
+  "scanRoots": [
+    "public"
+  ],
   "assets": [
     {
       "path": "public/apple-touch-icon.png",
       "kind": "image",
-      "sha256": "d9bccdeba88a318d9d71f30259b57f1802f17891907b2a08b0975762f12df09c",
-      "status": "provider-declared",
-      "creator": "Z13 Labs (AI-assisted derivative)",
-      "provider": "OpenAI Image Generation + Sharp",
-      "credit": "Professor E. Mergent icon by Z13 Labs, generated with OpenAI and resized with Sharp.",
-      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
-      "evidence": "docs/publishing/evidence/professor-app-icon-generation.md"
+      "sha256": "d7944fde27f6361d3712686b8239dce91c6f5234ef1b58be4bc68d79d1ccb0e2",
+      "status": "cleared",
+      "creator": "Z13 Labs",
+      "provider": "Z13 Labs cellular Dr. E renderer",
+      "credit": "Dr. E cellular face from Cellular Death Match by Z13 Labs.",
+      "terms": "Deterministic render of the game-owned colony face; no external artwork or generated portrait.",
+      "evidence": "docs/assets/branding/dr-e-icons.md"
     },
     {
       "path": "public/art/chimera/bloom_mass.png",
@@ -104,25 +106,14 @@
       "evidence": "scripts/generate-chimera-art.mjs"
     },
     {
-      "path": "public/art/professor/professor-emergent-v1.png",
+      "path": "public/art/professor/dr-e-mergent-pixel.png",
       "kind": "image",
-      "sha256": "65db0f9ae845ae5066228f39469752c57200a1bfbbea0889c1fa30de9cbe5d7a",
+      "sha256": "c50b394b186536a17d698adc6a9a65b2295bc0b67c56dfbda050f0ef6bb3ac75",
       "status": "provider-declared",
-      "creator": "Z13 Labs (AI-generated)",
-      "provider": "OpenAI Image Generation",
-      "credit": "Professor E. Mergent character art by Z13 Labs, generated with OpenAI.",
-      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
-      "evidence": "docs/assets/professor/README.md"
-    },
-    {
-      "path": "public/art/professor/professor-emergent-v2.png",
-      "kind": "image",
-      "sha256": "81c3405ba8f7a47e2dcb670cbfd5c01e118c98cbb9c70c2a54d41920099ca3f8",
-      "status": "provider-declared",
-      "creator": "Z13 Labs (AI-generated, identity-preserving high-resolution edit)",
-      "provider": "OpenAI Image Generation",
-      "credit": "Professor E. Mergent high-resolution character art by Z13 Labs, generated with OpenAI.",
-      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
+      "creator": "Z13 Labs (AI-assisted, drawn in code)",
+      "provider": "scripts/draw-professor-pixel.mjs (written with Claude Code) + Sharp",
+      "credit": "Dr. E. Mergent pixel portrait by Z13 Labs, drawn in code with Claude Code.",
+      "terms": "No image model; pixels are placed by repository code. Named originality and distribution approval pending.",
       "evidence": "docs/assets/professor/README.md"
     },
     {
@@ -278,17 +269,6 @@
       "credit": "Vitric Anchor genome art by Z13 Labs, generated with OpenAI and palette-normalized with Sharp.",
       "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
       "evidence": "docs/assets/genomes/README.md"
-    },
-    {
-      "path": "public/art/title-keyart-1024.png",
-      "kind": "image",
-      "sha256": "4c4e182a3c417b0630c925fb65593793fa8b3c0951287d134d8ca4f020254356",
-      "status": "provider-declared",
-      "creator": "Z13 Labs (AI-generated)",
-      "provider": "Google Gemini API / gemini-2.5-flash-image",
-      "credit": "Cellular Death Match title art by Z13 Labs, generated with Google Gemini.",
-      "terms": "https://ai.google.dev/gemini-api/terms; named originality and distribution approval pending.",
-      "evidence": "scripts/generate-keyart.mjs"
     },
     {
       "path": "public/audio/generated/ambience_loop.mp3",
@@ -524,46 +504,101 @@
     {
       "path": "public/favicon.png",
       "kind": "image",
-      "sha256": "9e143e12a79c6caa13ccc79bcf9cee4e16fb174488f22cc971127649a41a4e90",
-      "status": "provider-declared",
-      "creator": "Z13 Labs (AI-assisted derivative)",
-      "provider": "OpenAI Image Generation + Sharp",
-      "credit": "Professor E. Mergent favicon by Z13 Labs, generated with OpenAI and resized with Sharp.",
-      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
-      "evidence": "docs/publishing/evidence/professor-app-icon-generation.md"
+      "sha256": "9ed2443d84cbdbf1fdc3936b3b74c9b0d518531169f30895bb45abc3ac8f44fb",
+      "status": "cleared",
+      "creator": "Z13 Labs",
+      "provider": "Z13 Labs cellular Dr. E renderer",
+      "credit": "Dr. E cellular face from Cellular Death Match by Z13 Labs.",
+      "terms": "Deterministic render of the game-owned colony face; no external artwork or generated portrait.",
+      "evidence": "docs/assets/branding/dr-e-icons.md"
     },
     {
       "path": "public/icon-1024.png",
       "kind": "image",
-      "sha256": "8b8835745093d9bae901f0a5bb341b0d6d0488913c6e1ac9699625abc9b26daf",
-      "status": "provider-declared",
-      "creator": "Z13 Labs (AI-generated)",
-      "provider": "OpenAI Image Generation",
-      "credit": "Professor E. Mergent app icon by Z13 Labs, generated with OpenAI.",
-      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
-      "evidence": "docs/publishing/evidence/professor-app-icon-generation.md"
+      "sha256": "e32c3bcb5f7b8840e37fc6d438b2b7c6299082a6af5243bd8397c3df1b282e4e",
+      "status": "cleared",
+      "creator": "Z13 Labs",
+      "provider": "Z13 Labs cellular Dr. E renderer",
+      "credit": "Dr. E cellular face from Cellular Death Match by Z13 Labs.",
+      "terms": "Deterministic render of the game-owned colony face; no external artwork or generated portrait.",
+      "evidence": "docs/assets/branding/dr-e-icons.md"
     },
     {
       "path": "public/icon-192.png",
       "kind": "image",
-      "sha256": "0b0557308e5f6302f77e708b81ebc41831aa0a8d6d21c19cd40f570b19c1aa94",
-      "status": "provider-declared",
-      "creator": "Z13 Labs (AI-assisted derivative)",
-      "provider": "OpenAI Image Generation + Sharp",
-      "credit": "Professor E. Mergent app icon by Z13 Labs, generated with OpenAI and resized with Sharp.",
-      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
-      "evidence": "docs/publishing/evidence/professor-app-icon-generation.md"
+      "sha256": "52df3e4557852e1300761c9b3475cf029bce87e5efd15a633e3abea5f4fd5b40",
+      "status": "cleared",
+      "creator": "Z13 Labs",
+      "provider": "Z13 Labs cellular Dr. E renderer",
+      "credit": "Dr. E cellular face from Cellular Death Match by Z13 Labs.",
+      "terms": "Deterministic render of the game-owned colony face; no external artwork or generated portrait.",
+      "evidence": "docs/assets/branding/dr-e-icons.md"
     },
     {
       "path": "public/icon-512.png",
       "kind": "image",
-      "sha256": "4e32d5435583972ee9c4b68ab1d4e12847b6229580c736be75aebfccab18305b",
+      "sha256": "72fedbab2662793d9ce44350beff154032a5f063ef1015a39a2f054906b10462",
+      "status": "cleared",
+      "creator": "Z13 Labs",
+      "provider": "Z13 Labs cellular Dr. E renderer",
+      "credit": "Dr. E cellular face from Cellular Death Match by Z13 Labs.",
+      "terms": "Deterministic render of the game-owned colony face; no external artwork or generated portrait.",
+      "evidence": "docs/assets/branding/dr-e-icons.md"
+    },
+    {
+      "path": "public/branding/z13-ident.mp3",
+      "kind": "audio",
+      "sha256": "2824f6eaa98c9f6f806177a4cd40af349afb090c96fb68316c07dbc8fc2684bf",
       "status": "provider-declared",
-      "creator": "Z13 Labs (AI-assisted derivative)",
-      "provider": "OpenAI Image Generation + Sharp",
-      "credit": "Professor E. Mergent app icon by Z13 Labs, generated with OpenAI and resized with Sharp.",
-      "terms": "https://openai.com/policies/row-terms-of-use/; named originality and distribution approval pending.",
-      "evidence": "docs/publishing/evidence/professor-app-icon-generation.md"
+      "creator": "Z13 Labs (AI-generated)",
+      "provider": "ElevenLabs Sound Effects",
+      "credit": "Z13 studio ident sound (take B) by Z13 Labs, generated with ElevenLabs Sound Effects.",
+      "terms": "https://elevenlabs.io/terms-of-use; Johnny approved reusing the studio ident in Z13 games on 2026-10-14; paid-plan eligibility at generation time pending.",
+      "evidence": "docs/assets/branding/README.md"
+    },
+    {
+      "path": "public/branding/z13-mark.png",
+      "kind": "image",
+      "sha256": "29602e8d194a6351d370a95645d526c9950d6075e008b12a8101254709a0bd72",
+      "status": "cleared",
+      "creator": "Z13 Labs",
+      "provider": "Z13 Labs studio mark",
+      "credit": "Z13 Labs studio mark.",
+      "terms": "Z13 Labs own mark, cropped from Johnny's z13-pixel.png.",
+      "evidence": "docs/assets/branding/README.md"
+    },
+    {
+      "path": "public/branding/z13-diamond-icon.svg",
+      "kind": "image",
+      "sha256": "30669cb9af6c9b7eb88e2650aa6429e1343a49df3da3d0aac8ef45d676b4c066",
+      "status": "cleared",
+      "creator": "Z13 Labs",
+      "provider": "Z13 Labs studio mark",
+      "credit": "Z13 Labs studio mark.",
+      "terms": "Z13 Labs own mark embedded unchanged in an SVG with its yellow diamond and a dark favicon background.",
+      "evidence": "docs/assets/branding/README.md"
+    },
+    {
+      "path": "public/favicon.ico",
+      "kind": "image",
+      "sha256": "f1ef05fdafc7255f0f1a841388a3ff37464ca8eb0d161060b8fb1ec926096ed9",
+      "status": "cleared",
+      "creator": "Z13 Labs",
+      "provider": "Z13 Labs cellular Dr. E renderer",
+      "credit": "Dr. E cellular face from Cellular Death Match by Z13 Labs.",
+      "terms": "Deterministic render of the game-owned colony face; no external artwork or generated portrait.",
+      "evidence": "docs/assets/branding/dr-e-icons.md"
+    },
+    {
+      "path": "public/favicon-32.png",
+      "kind": "image",
+      "sha256": "08687c98f01a45980a3133991bf0b3f8a47e7cfe80f788233aa91d498d706658",
+      "status": "cleared",
+      "creator": "Z13 Labs",
+      "provider": "Z13 Labs cellular Dr. E renderer",
+      "credit": "Dr. E cellular face from Cellular Death Match by Z13 Labs.",
+      "terms": "Deterministic render of the game-owned colony face; no external artwork or generated portrait.",
+      "evidence": "docs/assets/branding/dr-e-icons.md"
     }
   ]
 }

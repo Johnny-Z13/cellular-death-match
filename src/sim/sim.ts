@@ -54,6 +54,9 @@ export function createSim(opts: CreateSimOpts): SimState {
     events: [],
     rng: createRng(opts.seed),
     wrapBullets: opts.wrapBullets ?? true,
+    engulfGain: 0.5,
+    engulfDrain: 0.6,
+    bulletDrain: 1,
   };
 }
 

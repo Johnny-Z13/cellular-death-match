@@ -65,10 +65,10 @@ test('rendered text stays above 11px and uses one vocabulary', async ({ page }, 
   await page.waitForTimeout(800);
   offenders.push(...await smallText(page, 'open-lab'));
 
-  if (await page.locator('#mobile-lifeforms-toggle').isVisible()) {
-    await page.locator('#mobile-lifeforms-toggle').click();
-    offenders.push(...await smallText(page, 'strains-drawer'));
-    await page.locator('#mobile-lifeforms-toggle').click();
+  await page.locator('[data-tool="egg"]').click();
+  offenders.push(...await smallText(page, 'egg-tray'));
+  await page.locator('[data-tool="egg"]').click();
+  if (await page.locator('#mobile-log-toggle').isVisible()) {
     await page.locator('#mobile-log-toggle').click();
     offenders.push(...await smallText(page, 'log'));
     await page.locator('#mobile-log-toggle').click();

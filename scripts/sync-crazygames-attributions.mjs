@@ -20,7 +20,7 @@ if (writeMode === checkMode) {
 
 const mediaKinds = new Map([
   ['.aac', 'audio'], ['.avif', 'image'], ['.flac', 'audio'],
-  ['.gif', 'image'], ['.jpeg', 'image'], ['.jpg', 'image'],
+  ['.ico', 'image'], ['.gif', 'image'], ['.jpeg', 'image'], ['.jpg', 'image'],
   ['.m4a', 'audio'], ['.mov', 'video'], ['.mp3', 'audio'],
   ['.mp4', 'video'], ['.ogg', 'audio'], ['.png', 'image'],
   ['.svg', 'image'], ['.wav', 'audio'], ['.webm', 'video'],

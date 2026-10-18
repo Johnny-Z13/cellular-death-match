@@ -195,7 +195,7 @@ const options: LoadoutScreenOptions = {
   },
   artForStrain(strain) {
     return {
-      src: `/art/genomes/${strain}.png`,
+      src: `art/genomes/${strain}.png`,
       alt: `${strain} genome reconstruction`,
     };
   },
@@ -257,7 +257,7 @@ describe('renderLoadoutScreen', () => {
     const portrait = strainButton(root, 'needle_swarm').querySelector('.loadout-strain-portrait');
 
     expect(portrait?.tagName).toBe('img');
-    expect(portrait?.src).toBe('/art/genomes/needle_swarm.png');
+    expect(portrait?.src).toBe('art/genomes/needle_swarm.png');
     expect(portrait?.alt).toBe('needle_swarm genome reconstruction');
   });
 

@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>CDM itch cover</title>
+<link href="https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Specimen plate: the real dish bleeds off the right, the title stacks left.
+     Rendered at 1260x1000 (2x itch's 630x500). */
+  :root { --void: #04080a; --teal: #5be9d6; --text: #e7f6f4; --muted: #8fb3b1; --amber: #f0c35a; }
+  * { box-sizing: border-box; margin: 0; }
+  body { width: 1260px; height: 1000px; background: var(--void); overflow: hidden; position: relative; font-family: "IBM Plex Mono", monospace; color: var(--text); }
+  img.px { image-rendering: pixelated; position: absolute; left: 400px; top: -40px; width: 1080px; height: 1080px; }
+  .fade { position: absolute; inset: 0; background: linear-gradient(90deg, var(--void) 22%, rgba(4,8,10,.55) 42%, rgba(4,8,10,0) 58%); }
+  .eyebrow { position: absolute; left: 72px; top: 76px; font-size: 17px; letter-spacing: .32em; text-transform: uppercase; color: var(--teal); }
+  .title { position: absolute; left: 66px; top: 300px; font-family: "Michroma", sans-serif; line-height: .92; letter-spacing: -.01em; text-transform: uppercase; }
+  .title .s { display: block; font-size: 58px; color: var(--text); letter-spacing: .08em; margin-bottom: 18px; }
+  .title .l { display: block; font-size: 150px; color: var(--teal); -webkit-text-stroke: 10px var(--void); paint-order: stroke fill; text-shadow: 0 0 40px rgba(91,233,214,.28); }
+  .tag { position: absolute; display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 11px; border-radius: 999px; background: rgba(4,8,10,.86); border: 1.5px solid var(--c); font-size: 19px; font-weight: 500; white-space: nowrap; }
+  .tag::before { content: ""; width: 11px; height: 11px; border-radius: 50%; background: var(--c); box-shadow: 0 0 10px var(--c); }
+  .foot { position: absolute; left: 72px; bottom: 74px; font-size: 19px; color: var(--muted); line-height: 1.6; }
+  .foot b { color: var(--amber); font-weight: 500; }
+</style>
+</head>
+<body>
+  <img class="px" src="cover-dish.png" alt="">
+  <div class="fade"></div>
+  <p class="eyebrow">Dr. E. Mergent’s laboratory</p>
+  <h1 class="title"><span class="s">Cellular</span><span class="l">Death</span><span class="l">Match</span></h1>
+  <span class="tag" style="--c:#ffb648; left:920px; top:112px">Bruiser</span>
+  <span class="tag" style="--c:#4be38a; left:715px; top:246px">Splitter</span>
+  <span class="tag" style="--c:#b48cff; left:876px; top:700px">Mirror</span>
+  <span class="tag" style="--c:#ff3b45; left:990px; top:790px">◆ Control sample</span>
+  <p class="foot">Feed a culture and it mutates.<br>Find all <b>14 strains</b>. Keep the dish alive.</p>
+</body>
+</html>

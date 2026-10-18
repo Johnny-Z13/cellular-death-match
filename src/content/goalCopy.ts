@@ -21,6 +21,12 @@ function seconds(ticks: number | undefined, fallback: number): number {
   return Math.round((ticks ?? fallback * 60) / 60);
 }
 
+/** m:ss, for the minute-scale sustain goals. */
+function clock(ticks: number | undefined, fallbackSeconds: number): string {
+  const total = seconds(ticks, fallbackSeconds);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
 export function goalLineFor(def: ObjectiveDef): string {
   if (def.goal) return def.goal;
   switch (def.kind) {
@@ -62,6 +68,12 @@ export function goalLineFor(def: ObjectiveDef): string {
       return `Keep two strains side by side for ${seconds(def.sustainTicks, 30)}s`;
     case 'extinction_reversal':
       return `Let the dish crash, then regrow ${def.targetCount ?? 4} cultures`;
+    case 'hold_balance':
+      return `Hold the dish in balance for ${clock(def.sustainTicks, 120)}`;
+    case 'keep_alive':
+      return `Keep ${def.minCount ?? 5} strains alive for ${clock(def.sustainTicks, 180)}`;
+    case 'food_web':
+      return `Let hunter and prey share the dish for ${clock(def.sustainTicks, 180)}`;
     default: {
       const unhandled: never = def.kind;
       throw new Error(`Unhandled objective kind: ${unhandled}`);

@@ -7,6 +7,7 @@ import {
   selectSwarmlet,
   startFirstTrial,
   toolCharge,
+  dismissReveal,
 } from './helpers';
 
 async function openWithFreshStorageOnce(page: import('@playwright/test').Page): Promise<void> {
@@ -31,7 +32,7 @@ test.describe('reload-safe Case checkpoints', () => {
 
     await page.reload();
     await continueSavedCase(page);
-    await expect(page.locator('#coach-title')).toHaveText('Welcome to my lab.');
+    await expect(page.locator('#coach-title')).toHaveText('Oh! A visitor!');
     await page.locator('#coach-skip').click();
     await expect(page.locator('#coach-title')).toContainText('Press Egg.');
 
@@ -40,7 +41,7 @@ test.describe('reload-safe Case checkpoints', () => {
     await expect(page.locator('#coach-title')).toHaveText('Now press Nutrient.');
     await page.reload();
     await continueSavedCase(page);
-    await expect(page.locator('#coach-title')).toHaveText('Welcome to my lab.');
+    await expect(page.locator('#coach-title')).toHaveText('Oh! A visitor!');
     await expect(page.locator('[data-tool="egg"] [data-tool-count]')).toHaveText('8/8');
 
     await page.locator('#coach-skip').click();
@@ -48,7 +49,7 @@ test.describe('reload-safe Case checkpoints', () => {
     await expect(page.locator('#end-epoch-button')).toHaveClass(/end-action-ready/, { timeout: 25_000 });
     await page.reload();
     await continueSavedCase(page);
-    await expect(page.locator('#coach-title')).toHaveText('Welcome to my lab.');
+    await expect(page.locator('#coach-title')).toHaveText('Oh! A visitor!');
     await expect(page.locator('#hud-fight')).toHaveText('1 / 5');
 
     runtime.assertClean();
@@ -67,7 +68,7 @@ test.describe('reload-safe Case checkpoints', () => {
     await expect(page.locator('#title-trial-label')).toContainText('Trial 02');
     await continueSavedCase(page);
     await expect(page.locator('#fx-genome-title')).toHaveText('Bloom Mass');
-    await page.locator('#fx-genome').click();
+    await dismissReveal(page);
     await continueToMethodPicker(page);
 
     await page.reload();
@@ -76,9 +77,9 @@ test.describe('reload-safe Case checkpoints', () => {
     await expect(page.locator('#pick-choices .pick-card')).toHaveCount(3);
     await page.locator('#pick-choices .pick-card').first().click();
     await expect(page.locator('#hud-fight')).toHaveText('2 / 5');
-    await expect(page.locator('#coach-title')).toHaveText('Open Eggs. Choose Bloom Mass.');
+    await expect(page.locator('#coach-title')).toHaveText('Tap Egg. Choose Bloom Mass.');
 
-    await page.locator('#mobile-lifeforms-toggle').click();
+    await page.locator('[data-tool="egg"]').click();
     await page.locator('[data-lifeform-id="bloom_mass"]').click();
     await expect(page.locator('#coach-title')).toHaveText('Place it here.');
     const eggsBefore = await toolCharge(page, 'egg');
@@ -90,7 +91,7 @@ test.describe('reload-safe Case checkpoints', () => {
     await expect(page.locator('#title-trial-label')).toContainText('Trial 02');
     await continueSavedCase(page);
     await expect(page.locator('#hud-fight')).toHaveText('2 / 5');
-    await expect(page.locator('#coach-title')).toHaveText('Open Eggs. Choose Bloom Mass.');
+    await expect(page.locator('#coach-title')).toHaveText('Tap Egg. Choose Bloom Mass.');
     await page.screenshot({ path: testInfo.outputPath('trial-2-resumed-cleanly.png') });
 
     runtime.assertClean();
@@ -150,9 +151,7 @@ test.describe('reload-safe Case checkpoints', () => {
     await completeOpeningActions(page);
     await expect(page.locator('#end-epoch-button')).toHaveClass(/end-action-ready/, { timeout: 25_000 });
     await page.locator('#end-epoch-button').click();
-    if (await page.locator('#fx-genome').getAttribute('aria-hidden') === 'false') {
-      await page.locator('#fx-genome').click();
-    }
+    await dismissReveal(page);
     await continueToMethodPicker(page);
     await page.locator('#pick-choices .pick-card').first().click();
     await expect(page.locator('#hud-fight')).toHaveText('2 / 5');
@@ -182,7 +181,7 @@ test.describe('reload-safe Case checkpoints', () => {
     await expect(page.locator('.layout')).toHaveAttribute('data-screen', 'arena');
     await expect(page.locator('#hud-fight')).toHaveText('2 / 5');
     await expect(page.locator('#hud-director-title')).toHaveText('Bitter Medicine');
-    await expect(page.locator('#coach-title')).toHaveText('Open Eggs. Choose Bloom Mass.');
+    await expect(page.locator('#coach-title')).toHaveText('Tap Egg. Choose Bloom Mass.');
     runtime.assertClean();
   });
 });

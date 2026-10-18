@@ -7,11 +7,12 @@ import {
   type DirectedNotification,
   type NotificationPriority,
 } from './notificationDirector';
+import { createCatchStage, type CatchDeps, type CatchInfo } from './catchReveal';
 
 export type ToastKind = 'discovery' | 'catalyst' | 'lifeform';
 export type BannerAccent = 'bio' | 'amber' | 'violet';
 
-export interface GenomeRevealInfo {
+export interface GenomeRevealInfo extends CatchInfo {
   id: string;
   name: string;
   asset: string;
@@ -53,7 +54,9 @@ const reduceMotion = typeof window !== 'undefined'
   && typeof window.matchMedia === 'function'
   && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export function createFx(): Fx {
+/** `catchDeps` turns a one- or two-strain reveal into the catch sequence
+ *  (ui/catchReveal.ts); without it the reveal is the plain card. */
+export function createFx(catchDeps?: CatchDeps): Fx {
   const banner = document.getElementById('fx-banner');
   const bannerEyebrow = document.getElementById('fx-banner-eyebrow');
   const bannerTitle = document.getElementById('fx-banner-title');
@@ -73,8 +76,33 @@ export function createFx(): Fx {
   const mobileDirector = new NotificationDirector<MobileFxPayload>(4);
   const accentClasses = ['fx-banner-accent-bio', 'fx-banner-accent-amber', 'fx-banner-accent-violet'];
   let finishActiveGenome: (() => void) | null = null;
+  const catchStage = genomeReveal && catchDeps ? createCatchStage(genomeReveal, catchDeps) : null;
+  // Strains still waiting for their own catch in this reveal.
+  let catchQueue: GenomeRevealInfo[] = [];
+  let catchIndex = 0;
+  let catchCount = 0;
+  // Desktop toasts raised while a strain reveal or a banner owns the screen
+  // wait for it (on phones the notification director already queues them).
+  let heldDesktopToasts: Array<[ToastKind, string, string]> = [];
+  let desktopBannerUp = false;
 
-  genomeReveal?.addEventListener('click', () => finishActiveGenome?.());
+  // A tap during a catch jumps to its finished card; the next tap opens the
+  // next strain's egg, or continues once every strain has been caught.
+  genomeReveal?.addEventListener('click', advanceGenome);
+
+  function advanceGenome(): void {
+    if (catchStage && !catchStage.isSettled()) {
+      catchStage.settle();
+      return;
+    }
+    const next = catchQueue.shift();
+    if (next) {
+      catchIndex += 1;
+      showCatch(next);
+      return;
+    }
+    finishActiveGenome?.();
+  }
   wipe?.addEventListener('animationend', () => wipe.classList.remove('fx-wipe-play'));
 
   function isCompactMobile(): boolean {
@@ -133,8 +161,22 @@ export function createFx(): Fx {
     if (!setBannerContent(eyebrow, title, sub, accent)) return;
     toasts?.classList.add('fx-toasts-banner-active');
     window.clearTimeout(desktopBannerTimer);
+    desktopBannerUp = true;
     const bannerLife = reduceMotion ? (accent ? 1900 : 2600) : (accent ? 1900 : 3250);
-    desktopBannerTimer = window.setTimeout(hideBanner, bannerLife);
+    desktopBannerTimer = window.setTimeout(endDesktopBanner, bannerLife);
+  }
+
+  function endDesktopBanner(): void {
+    desktopBannerUp = false;
+    hideBanner();
+    flushHeldDesktopToasts();
+  }
+
+  function flushHeldDesktopToasts(): void {
+    if (finishActiveGenome || desktopBannerUp) return;
+    const held = heldDesktopToasts;
+    heldDesktopToasts = [];
+    for (const [kind, kicker, title] of held) playDesktopToast(kind, kicker, title);
   }
 
   function clearMobileVisual(): void {
@@ -147,10 +189,46 @@ export function createFx(): Fx {
   }
 
   function hideGenomeReveal(): void {
-    genomeReveal?.classList.remove('fx-genome-show', 'fx-genome-batch');
+    catchStage?.clear();
+    catchQueue = [];
+    genomeReveal?.classList.remove('fx-genome-show', 'fx-genome-batch', 'fx-genome-catch');
     genomeReveal?.setAttribute('aria-hidden', 'true');
     genomeReveal?.setAttribute('tabindex', '-1');
     finishActiveGenome = null;
+    flushHeldDesktopToasts();
+  }
+
+  function playDesktopToast(kind: ToastKind, kicker: string, title: string): void {
+    if (!toasts) return;
+    const el = createToastElement(kind, kicker, title);
+    toasts.append(el);
+    while (toasts.children.length > 3) toasts.firstElementChild?.remove();
+    const life = reduceMotion ? 2600 : 3200;
+    window.setTimeout(() => {
+      el.classList.add('fx-toast-out');
+      window.setTimeout(() => el.remove(), 460);
+    }, life);
+  }
+
+  function genomeImage(item: GenomeRevealInfo): HTMLImageElement {
+    const img = document.createElement('img');
+    img.src = item.asset;
+    img.alt = item.alt;
+    img.width = 384;
+    img.height = 384;
+    return img;
+  }
+
+  // One strain's catch: its name, art and colour, then the sequence.
+  function showCatch(item: GenomeRevealInfo): void {
+    if (!genomeReveal || !genomeEyebrow || !genomeTitle || !genomeSub || !genomeArt || !catchStage) return;
+    genomeEyebrow.textContent = catchCount > 1 ? `NEW STRAIN · ${catchIndex + 1} OF ${catchCount}` : 'NEW STRAIN';
+    genomeTitle.textContent = item.name;
+    genomeSub.textContent = item.archivePosition;
+    genomeArt.replaceChildren(genomeImage(item));
+    const [r, g, b] = item.primary;
+    genomeReveal.style.setProperty('--genome-color', `rgb(${r}, ${g}, ${b})`);
+    catchStage.start(item, reduceMotion);
   }
 
   function setGenomeContent(items: readonly GenomeRevealInfo[]): boolean {
@@ -158,26 +236,27 @@ export function createFx(): Fx {
       return false;
     }
     const batch = items.length > 2;
+    const catching = !batch && catchStage !== null;
     genomeEyebrow.textContent = batch ? 'NEW STRAINS' : 'NEW STRAIN';
     genomeTitle.textContent = batch ? `${items.length} STRAINS FOUND` : items[0]!.name;
     genomeSub.textContent = `${items[0]!.archivePosition} · NOW AVAILABLE AS EGGS`;
-    genomeArt.replaceChildren(...items.map((item) => {
-      const img = document.createElement('img');
-      img.src = item.asset;
-      img.alt = item.alt;
-      img.width = 384;
-      img.height = 384;
-      return img;
-    }));
+    genomeArt.replaceChildren(...items.map(genomeImage));
     const [r, g, b] = items[0]!.primary;
     genomeReveal.style.setProperty('--genome-color', `rgb(${r}, ${g}, ${b})`);
     genomeReveal.classList.toggle('fx-genome-batch', batch);
+    genomeReveal.classList.toggle('fx-genome-catch', catching);
     genomeReveal.classList.remove('fx-genome-show');
     void genomeReveal.offsetWidth;
     genomeReveal.classList.add('fx-genome-show');
     genomeReveal.setAttribute('aria-hidden', 'false');
     genomeReveal.setAttribute('tabindex', '0');
     genomeReveal.focus({ preventScroll: true });
+    if (catching) {
+      catchQueue = items.slice(1);
+      catchIndex = 0;
+      catchCount = items.length;
+      showCatch(items[0]!);
+    }
     return true;
   }
 
@@ -268,7 +347,7 @@ export function createFx(): Fx {
       window.clearTimeout(mobileExitTimer);
       activeMobileToast?.remove();
       activeMobileToast = null;
-      hideBanner();
+      endDesktopBanner();
       mobileDirector.clear();
     },
     showEpochBanner(eyebrow, title, sub = '') {
@@ -302,15 +381,11 @@ export function createFx(): Fx {
         enqueueMobile({ kind: 'toast', toastKind: kind, kicker, title }, priority);
         return;
       }
-      if (!toasts) return;
-      const el = createToastElement(kind, kicker, title);
-      toasts.append(el);
-      while (toasts.children.length > 3) toasts.firstElementChild?.remove();
-      const life = reduceMotion ? 2600 : 3200;
-      window.setTimeout(() => {
-        el.classList.add('fx-toast-out');
-        window.setTimeout(() => el.remove(), 460);
-      }, life);
+      if (finishActiveGenome || desktopBannerUp) {
+        heldDesktopToasts.push([kind, kicker, title]);
+        return;
+      }
+      playDesktopToast(kind, kicker, title);
     },
     playWipe() {
       if (!wipe || reduceMotion) return;

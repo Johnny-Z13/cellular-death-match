@@ -17,6 +17,8 @@ import {
   AGITATION_TUNING,
   ARENA_TIMING,
   ECOSYSTEM_LIMITS,
+  LIFE_CYCLE_PROFILES,
+  type LifeCycleProfileId,
   PASTE_TUNING,
   TOOL_EFFECT_TUNING,
   TOOL_TUNING,
@@ -42,8 +44,13 @@ import { mirrorStep } from './enemies/mirror';
 import { bossStep, type BossState } from './enemies/boss';
 import { displacementVec } from './geometry';
 import { clampReagentShift, getBreedProfile, getReagentShift, type BreedProfileId } from '../sim/breedProfiles';
-import { createHomeostasisTracker } from './homeostasis';
+import { classifyBiome, type BiomeRecord } from './homeostasis';
+import { BALANCE_TUNING, createBalanceMeter, HUNTER_ROLES, type BalanceReading } from './balance';
+import { createAgarWall } from './agarWall';
+import { applyAppetite, applyMetabolism, createLifeCycleState, readyToDivide } from './lifeCycle';
 import { getEscalation } from './escalation';
+import { createMergeTracker, MERGE_DETECTION, type FormingGroup, type LockedForm, type MergeEvent } from './mergeDetection';
+import type { FormFeed } from '../content/forms';
 import {
   createObjectiveRuntime,
   evaluateObjective,
@@ -84,12 +91,18 @@ export interface Arena {
   getStatus(): ArenaStatus;
   getEcology(): EcologyInfo;
   getEquilibrium(): EquilibriumInfo;
+  /** The dish's balance clocks (game/balance.ts). */
+  getBalance(): BalanceReading;
   getObjectiveProgress(): ObjectiveProgress;
   getToolStates(): Record<LabTool, ToolState>;
   getAgitationState(): AgitationState;
   getToolEffects(): ToolEffect[];
   getLastEggCellPos(): [number, number] | null;
   getDishEvents(): DishEventMarker[];
+  /** Groups forming a merge, and the locked forms now in the dish. */
+  getMerges(): { forming: readonly FormingGroup[]; locked: readonly LockedForm[] };
+  /** Merges that locked or came apart since the last call. */
+  drainMergeEvents(): MergeEvent[];
   applyTool(tool: LabTool, pos: [number, number], opts?: ApplyToolOpts): boolean;
   endPasteStroke(): void;
   agitate(): boolean;
@@ -108,7 +121,11 @@ export interface EquilibriumInfo {
   achieved: boolean;
   progress: number;
   biomeName: string | null;
+  /** The biome's leading strains, once the dish is stable. */
+  biomeStrains: string[];
 }
+
+export type { BalanceReading } from './balance';
 
 export interface EcologyInfo {
   tick: number;
@@ -196,6 +213,12 @@ export interface CreateArenaOpts {
   worldEventIntensity?: number;
   fightIndex?: number;
   knownBreedIds?: ReadonlySet<BreedId>;
+  lifeCycle?: LifeCycleProfileId;
+  /** False keeps the dish from evolving breeds (the title screen's dish must
+   *  not reveal strains the player has yet to find). */
+  breedDiscovery?: boolean;
+  /** False turns merges off: no forming, locking or bonds (the title dish). */
+  mergeDiscovery?: boolean;
 }
 
 const PLAYER_ID = 1;
@@ -287,9 +310,17 @@ export function createArena(opts: CreateArenaOpts): Arena {
   const effectiveAccidentInterval = Math.max(60, Math.round(ACCIDENT_INTERVAL_TICKS * esc.accidentIntervalMul));
   const effectiveOutbreakCount = esc.outbreakSeverity;
   const includeControlSample = opts.includeControlSample ?? true;
+  const breedDiscovery = opts.breedDiscovery ?? true;
+  const merges = mode === 'ecosystem' && (opts.mergeDiscovery ?? true) ? createMergeTracker() : null;
+  const mergeEvents: MergeEvent[] = [];
   // The first epoch with the control sample removed is the coach-driven
   // onboarding dish (Swarmlet + Nutrient only, tutorial owns its ending).
   const isOnboardingDish = fightIndex === 0 && !includeControlSample;
+  // The coached onboarding dish keeps its tuned death-match dynamics.
+  const lifeCycle = mode === 'ecosystem' && !isOnboardingDish
+    ? LIFE_CYCLE_PROFILES[opts.lifeCycle ?? 'arena']
+    : null;
+  const life = createLifeCycleState();
   const worldEventIntensity = clamp(opts.worldEventIntensity ?? WORLD_EVENT_TUNING.defaultIntensity, 0, 1);
   // Set by the shell while Dr. E is mid-instruction: a lesson should never be
   // interrupted by an unexplained disaster. Benign drift and mutation still run.
@@ -306,6 +337,11 @@ export function createArena(opts: CreateArenaOpts): Arena {
   });
 
   if (!includeControlSample) removeControlSample(state);
+  if (lifeCycle) {
+    state.engulfGain = lifeCycle.engulfGain;
+    state.engulfDrain = lifeCycle.engulfDrain;
+    state.bulletDrain = lifeCycle.bulletDrain;
+  }
 
   const archetypes = new Map<CellId, EnemySpawn>();
   const aiStates = new Map<CellId, AiState>();
@@ -335,6 +371,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
   const trailEffects: ToolEffect[] = [];
   let lastEggCellId: CellId | null = null;
   let lastTrailStamp: [number, number] | null = null;
+  // Paste also sets as an agar wall along the stroke (game/agarWall.ts).
+  const agarWall = createAgarWall(state.grid.LX, state.grid.LY);
   let pastePathRemaining = 0;
   const dishEvents: DishEventMarker[] = [];
   let nextDishEventId = 1;
@@ -359,7 +397,11 @@ export function createArena(opts: CreateArenaOpts): Arena {
   const discoveredNoteIds = new Set<DiscoveryNoteId>();
   const triggeredRecipeIds = new Set<ReactionRecipeId>();
   const discoveryMessages: string[] = [];
-  const homeostasisTracker = createHomeostasisTracker();
+  // Balance: 3+ strains, none over half the living mass. An unbroken minute
+  // of it makes the dish a stable ecosystem (game/balance.ts).
+  const balanceMeter = createBalanceMeter();
+  let stableBiome: BiomeRecord | null = null;
+  const isStable = () => balanceMeter.reading().stable;
   const objectiveRuntime = createObjectiveRuntime();
 
   function pushSignal(message: string): void {
@@ -393,7 +435,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       const marker = breedDiscoveryMarkerFor(id);
       addDishEvent(marker.kind, `NEW STRAIN: ${BREED_DEFS[id].name}`, sourceCell.center, marker.radius, marker.color);
     }
-    if (!sourceCell || sourceCell.vol <= 0 || archetypes.size >= ECOSYSTEM_MAX_POPULATION) return;
+    if (!sourceCell || sourceCell.vol <= 0 || livingCultureCount(state, archetypes) >= ECOSYSTEM_MAX_POPULATION) return;
     // A discovery is born beside its source, never on top of it. `addCell`
     // intentionally refuses to overwrite occupied pixels, so reusing the
     // source centre can create a zero-volume specimen (and dead-end Trial 1
@@ -435,6 +477,11 @@ export function createArena(opts: CreateArenaOpts): Arena {
     }
   }
 
+  function equilibriumProgress(): number {
+    const reading = balanceMeter.reading();
+    return reading.stable ? 1 : Math.min(1, reading.streakTicks / BALANCE_TUNING.stableAfterTicks);
+  }
+
   function currentObjectiveProgress(
     progressTick = tickNo,
     forceShowcase = false,
@@ -446,6 +493,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       discoveredBreedTicks,
       triggeredRecipeIds,
       runtime: objectiveRuntime,
+      balance: balanceMeter.reading(),
       forceShowcase,
     });
   }
@@ -515,7 +563,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         const complete = progress.latches ? objectiveAchieved : progress.met;
         // Equilibrium is visible and stable until the player banks it; it
         // pauses pressure without letting the normal objective deadline fire.
-        if (homeostasisTracker.isAchieved()) return 'running';
+        if (isStable()) return 'running';
         // Most studies are open dishes: they continue until the player banks
         // the evidence, reaches equilibrium, or the ecology collapses. Only a
         // specifically authored pressure experiment expires at its window.
@@ -624,6 +672,12 @@ export function createArena(opts: CreateArenaOpts): Arena {
         startToolCooldown('paste');
       }
     },
+    getMerges() {
+      return { forming: merges?.forming() ?? [], locked: merges?.locked() ?? [] };
+    },
+    drainMergeEvents() {
+      return mergeEvents.splice(0);
+    },
     getDishEvents(): DishEventMarker[] {
       return dishEvents.map((event) => ({
         ...event,
@@ -679,7 +733,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       }
 
       if (tool === 'paste') {
-        // Drawing a trail: stamp a small nutrient field, but only once the
+        // Drawing a wall: stamp gel and a small nutrient field, but only once the
         // pointer has travelled stampSpacing from the last stamp, so a drag
         // lays an even line. A charge is spent per unitsPerCharge of path.
         if (lastTrailStamp) {
@@ -701,6 +755,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
           pastePathRemaining = PASTE_TUNING.unitsPerCharge;
         }
         pasteStrokeStamped = true;
+        agarWall.add(lastTrailStamp ?? pos, pos);
+        state.wall = agarWall.mask();
         lastTrailStamp = [pos[0], pos[1]];
         const maxTtl = TOOL_TUNING.paste.ttl;
         trailEffects.push({
@@ -881,14 +937,39 @@ export function createArena(opts: CreateArenaOpts): Arena {
           const cell = state.cells.get(id);
           if (!cell || cell.vol === 0) continue;
           const target = mode === 'ecosystem'
-            ? chooseEcosystemTarget(cell, playerCell, state, archetypes)
+            ? chooseEcosystemTarget(cell, playerCell, state, archetypes, lifeCycle !== null)
             : playerCell;
           dispatchAi(cell, target, this);
         }
       }
 
+      if (lifeCycle) {
+        applyAppetite(state, archetypes, lifeCycle, life, tickNo);
+        applyMetabolism(state, archetypes, lifeCycle, life);
+        if (tickNo % lifeCycle.divideCheckTicks === 0) {
+          // Cultures mid-merge are busy becoming one organism: they do not
+          // divide until the merge locks or lets go. A locked form divides as
+          // normal; its daughters are simply not part of it.
+          const merging = new Set((merges?.forming() ?? []).flatMap((group) => group.members));
+          for (const id of readyToDivide(state, archetypes, lifeCycle, life)) {
+            if (merging.has(id)) continue;
+            if (livingCultureCount(state, archetypes) >= ECOSYSTEM_MAX_POPULATION) break;
+            const parent = state.cells.get(id)!;
+            const parentSpawn = archetypes.get(id)!;
+            const seedPos = findStableSeedPos(state, parent.center);
+            if (!seedPos) continue;
+            parent.targetVol /= 2;
+            const daughter = this.spawnEnemy({ spawn: { ...parentSpawn, traits: parentSpawn.traits?.slice() }, pos: seedPos });
+            state.cells.get(daughter)!.targetVol = parent.targetVol;
+            life.digestUntil.set(id, tickNo + lifeCycle.digestTicks);
+            life.digestUntil.set(daughter, tickNo + lifeCycle.digestTicks);
+            birthCount += 1;
+          }
+        }
+      }
+
       if (mode === 'ecosystem') {
-        const pressurePaused = homeostasisTracker.isAchieved();
+        const pressurePaused = isStable();
         const hazardsPaused = pressurePaused || hazardsHeld;
         applyToolEffects(state, toolEffects, archetypes);
         // Trail stamps pull + feed cells exactly like nutrient drops, so a drawn
@@ -998,9 +1079,11 @@ export function createArena(opts: CreateArenaOpts): Arena {
           accidentCount += 1;
           while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
         }
-        evaluateBreedDiscoveries(state, archetypes, toolEffects, new Set([...knownBreedIds, ...discoveredBreedIds]), (id, sourceCell) => {
-          discoverBreed(this, id, sourceCell);
-        }, isOnboardingDish);
+        if (breedDiscovery) {
+          evaluateBreedDiscoveries(state, archetypes, toolEffects, new Set([...knownBreedIds, ...discoveredBreedIds]), (id, sourceCell) => {
+            discoverBreed(this, id, sourceCell);
+          }, isOnboardingDish);
+        }
       }
       decayDishEvents();
 
@@ -1020,20 +1103,54 @@ export function createArena(opts: CreateArenaOpts): Arena {
         this.spawnEnemy({ spawn: swarmletSpawn, pos: [pos[0] + 3, pos[1]] });
       }
 
+      // Locked forms move as one; the sim reads their bonds while any exist.
+      if (merges) {
+        merges.steer(state);
+        state.bonds = merges.bonds.size() > 0 ? merges.bonds : undefined;
+      }
+
+      agarWall.tick();
+      state.wall = agarWall.mask();
       simTick(state, MC_STEPS_PER_TICK);
 
-      // Feed homeostasis with breed volume shares, not culture counts.
+      if (merges && tickNo % MERGE_DETECTION.scanTicks === 0) {
+        const strainOf = (id: CellId): string | null => {
+          if (id === PLAYER_ID) return 'control';
+          const spawn = archetypes.get(id);
+          return spawn ? spawn.breedId ?? spawn.archetype : null;
+        };
+        const fedBy = (id: CellId, feed: FormFeed): boolean => {
+          const cell = state.cells.get(id);
+          if (!cell) return false;
+          return overlapsEffect(state, cell, toolEffects, feed)
+            || (feed === 'nutrient' && overlapsEffect(state, cell, trailEffects, 'nutrient'));
+        };
+        for (const merge of merges.scan(state, strainOf, fedBy)) {
+          mergeEvents.push(merge);
+          if (merge.kind === 'locked') addDishEvent('discovery', `MERGED · ${merge.form.name.toUpperCase()}`, merge.center, merge.radius, 'cyan');
+          else if (merge.kind === 'very-rare') addDishEvent('discovery', `VERY RARE · ${merge.form.name.toUpperCase()}`, merge.center, merge.radius, 'amber');
+          else addDishEvent('caution', `${merge.form.name} came apart`, merge.center, merge.radius, 'amber');
+        }
+      }
+
+      // Feed the balance meter with breed volume shares, not culture counts.
       const breedVolumes = new Map<string, number>();
-      let totalVolume = 0;
       for (const [cellId, cell] of state.cells) {
         if (cell.vol <= 0) continue;
         const spawn = archetypes.get(cellId);
         if (!spawn) continue;
         const breed = spawn.breedId ?? spawn.archetype;
         breedVolumes.set(breed, (breedVolumes.get(breed) ?? 0) + cell.vol);
-        totalVolume += cell.vol;
       }
-      homeostasisTracker.tick({ breedVolumes, totalVolume });
+      const hunterStrains = new Set<string>();
+      for (const spawn of archetypes.values()) {
+        if ((HUNTER_ROLES as readonly string[]).includes(ARCHETYPE_ECOLOGY[spawn.archetype].role)) {
+          hunterStrains.add(spawn.breedId ?? spawn.archetype);
+        }
+      }
+      const wasStable = isStable();
+      balanceMeter.sample({ strainVolumes: breedVolumes, hunterStrains }, 1);
+      if (!wasStable && isStable()) stableBiome = classifyBiome(breedVolumes);
       if (mode === 'ecosystem') {
         updateObjectiveRuntime(objectiveRuntime, objectiveMetrics(state, archetypes), objective);
       }
@@ -1074,17 +1191,21 @@ export function createArena(opts: CreateArenaOpts): Arena {
       if (field && seededCell) discoverBreed(this, 'bloom_mass', seededCell);
     },
     getHomeostasisProgress(): number {
-      return homeostasisTracker.progress();
+      return equilibriumProgress();
     },
     getEquilibrium(): EquilibriumInfo {
       return {
-        achieved: homeostasisTracker.isAchieved(),
-        progress: homeostasisTracker.progress(),
-        biomeName: homeostasisTracker.getBiome()?.name ?? null,
+        achieved: isStable(),
+        progress: equilibriumProgress(),
+        biomeName: stableBiome?.name ?? null,
+        biomeStrains: stableBiome ? [...stableBiome.topBreeds] : [],
       };
     },
+    getBalance(): BalanceReading {
+      return balanceMeter.reading();
+    },
     isHomeostasisAchieved(): boolean {
-      return homeostasisTracker.isAchieved();
+      return isStable();
     },
     isEcosystemCollapsed(): boolean {
       // Collapsed if no living cells remain (excluding cell 0 / background).
@@ -1503,7 +1624,7 @@ function triggerWorldEvent(
         state.rng.randInt(state.grid.LX),
         state.rng.randInt(state.grid.LY),
       ];
-  const canSpawn = !!parentSpawn && archetypes.size < ECOSYSTEM_MAX_POPULATION;
+  const canSpawn = !!parentSpawn && livingCultureCount(state, archetypes) < ECOSYSTEM_MAX_POPULATION;
   if (canSpawn && state.rng.random() < WORLD_EVENT_TUNING.sporeDriftChance) {
     arena.spawnEnemy({ spawn: budSpawn(parentSpawn, state.rng.random()), pos });
     return {
@@ -1541,14 +1662,15 @@ function triggerPredatorOutbreak(
   archetypes: Map<CellId, EnemySpawn>,
   outbreakHunters?: number,
 ): { births: number; effect: ToolEffect } | null {
-  if (archetypes.size >= ECOSYSTEM_MAX_POPULATION) return null;
+  const livingCultures = livingCultureCount(state, archetypes);
+  if (livingCultures >= ECOSYSTEM_MAX_POPULATION) return null;
   const source = dominantOutbreakSource(state);
   if (!source) return null;
 
   const sourceArchetype = source.id === PLAYER_ID
     ? 'control_sample'
     : archetypes.get(source.id)?.archetype ?? 'culture';
-  const hunterCount = Math.min(outbreakHunters ?? OUTBREAK_HUNTER_COUNT, ECOSYSTEM_MAX_POPULATION - archetypes.size);
+  const hunterCount = Math.min(outbreakHunters ?? OUTBREAK_HUNTER_COUNT, ECOSYSTEM_MAX_POPULATION - livingCultures);
   let births = 0;
   for (let i = 0; i < hunterCount; i++) {
     const angle = (Math.PI * 2 * i) / hunterCount + state.rng.random() * 0.45;
@@ -2052,6 +2174,7 @@ function chooseEcosystemTarget(
   player: Cell,
   state: SimState,
   archetypes: Map<CellId, EnemySpawn>,
+  spareKin: boolean,
 ): Cell {
   const { LX, LY } = state.grid;
   // Only a living control sample is a threat worth reacting to — a dead one
@@ -2064,10 +2187,15 @@ function chooseEcosystemTarget(
 
   let best: Cell | null = null;
   let bestScore = Infinity;
-  const selfArchetype = archetypes.get(self.id)?.archetype;
+  const selfSpawn = archetypes.get(self.id);
+  const selfArchetype = selfSpawn?.archetype;
+  const selfStrain = selfSpawn?.breedId ?? selfArchetype;
   const profile = selfArchetype ? ARCHETYPE_ECOLOGY[selfArchetype] : undefined;
   for (const [id, candidate] of state.cells) {
     if (id === self.id || id === PLAYER_ID || candidate.vol <= 0) continue;
+    // Under a life cycle, a strain does not hunt its own kin.
+    const candidateSpawn = archetypes.get(id);
+    if (spareKin && (candidateSpawn?.breedId ?? candidateSpawn?.archetype) === selfStrain) continue;
     const v = displacementVec(self.center, candidate.center, LX, LY, state.grid.wrap);
     const dist = Math.hypot(v[0], v[1]);
     const targetArchetype = archetypes.get(id)?.archetype;
@@ -2384,7 +2512,7 @@ function activateCrisis(
   const ids = Object.keys(CRISES) as CrisisId[];
   const id = ids[state.rng.randInt(ids.length)] ?? 'heat_spike';
   let births = 0;
-  if (id === 'contamination_bloom' && archetypes.size < ECOSYSTEM_MAX_POPULATION) {
+  if (id === 'contamination_bloom' && livingCultureCount(state, archetypes) < ECOSYSTEM_MAX_POPULATION) {
     arena.spawnEnemy({
       spawn: {
         ...ARCHETYPE_DEFAULTS.swarmlet,
@@ -2449,7 +2577,7 @@ function reseedEcology(
   const living = Array.from(state.cells)
     .filter(([id, cell]) => id !== PLAYER_ID && cell.vol > 0)
     .sort((a, b) => b[1].vol - a[1].vol);
-  if (living.length >= ECOSYSTEM_MIN_POPULATION || archetypes.size >= ECOSYSTEM_MAX_POPULATION) return 0;
+  if (living.length >= ECOSYSTEM_MIN_POPULATION || livingCultureCount(state, archetypes) >= ECOSYSTEM_MAX_POPULATION) return 0;
 
   const parentEntry = living[0];
   const parentSpawn = parentEntry ? archetypes.get(parentEntry[0]) : undefined;
@@ -2491,6 +2619,17 @@ function eggSpawnFor(archetype: EnemyArchetype, roll: number): EnemySpawn {
   spawn.targetVol = clamp(spawn.targetVol * sizeJitter, 55, 620);
   spawn.instability = Math.max(spawn.instability ?? 1, (base.instability ?? 1) * 1.15);
   return spawn;
+}
+
+// The population cap counts cultures alive now. `archetypes` keeps every
+// culture ever born, so its size would close the dish to new life for good
+// once 28 had lived.
+function livingCultureCount(state: SimState, archetypes: Map<CellId, EnemySpawn>): number {
+  let living = 0;
+  for (const id of archetypes.keys()) {
+    if ((state.cells.get(id)?.vol ?? 0) > 0) living += 1;
+  }
+  return living;
 }
 
 function clamp(n: number, lo: number, hi: number): number {

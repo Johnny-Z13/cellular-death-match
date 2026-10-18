@@ -64,6 +64,22 @@ export interface SimState {
   events: SimEvent[];
   rng: import('./rng').Rng;
   wrapBullets: boolean;        // true: bullets wrap on grid edges (matches Python wrap_bullets=True)
+  engulfGain: number;          // targetVol an engulfer gains per pixel it takes
+  engulfDrain: number;         // targetVol its victim loses per pixel taken
+  bulletDrain: number;         // targetVol a bullet's victim loses per pixel hit
+  /** Bonded cultures (merged forms). Absent when nothing is bonded. */
+  bonds?: BondView;
+  /** Agar wall strength per pixel, 0..255, x-major like the grid
+   *  (game/agarWall.ts). Absent when no wall is drawn. */
+  wall?: Uint8Array;
+}
+
+/** How bonded cultures stick: each culture's partners with a strength 0..1,
+ *  and the energy per touching pixel pair at full strength. The game owns the
+ *  bonds; the sim only reads them. */
+export interface BondView {
+  partners(id: CellId): ReadonlyMap<CellId, number> | undefined;
+  adhesion: number;
 }
 
 // 8-connectivity neighbor directions (matches Python neighbor_dirs).

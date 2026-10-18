@@ -43,7 +43,7 @@ The exact coach and director rail must not issue competing instructions. Exact c
 - The compact top HUD omits `Dish · Open` for untimed objectives, keeps Trial and Equilibrium telemetry, and limits Dr. E to objective plus actionable progress. The longer Hint row remains available to desktop and assistive technology but is not a fourth visible mobile line.
 - Exact Dr. E messages sit at the top, directly below the telemetry strip and above the dish.
 - On short mobile screens, the compact message may hide body and step detail when the title is sufficient. The rack lesson keeps its body visible because it explains both the drag and button paths.
-- `Eggs` opens the specimen freezer as a blocking drawer.
+- The `Egg` tile opens the egg tray (strain swatches, anchored to the tile) once there is more than one strain. The tray holds the dish still while it is open.
 - The reagent rack is a native horizontally scrollable strip with scroll snapping.
 - A player can drag/swipe the rack horizontally or press its `›`/`‹` overflow control.
 - The mobile rack lesson appears only when the required reagent is outside the initially visible rack window.
@@ -59,7 +59,7 @@ The exact coach and director rail must not issue competing instructions. Exact c
 - Exact Dr. E messages use the compact lower-left transmission rail.
 - Trial telemetry and the director message remain in the top HUD.
 - The reagent panel is exposed as a desktop control rail; there is no drag-to-reveal lesson.
-- Specimen targets can point directly to the visible freezer card. Mobile instead points to `Eggs` until the drawer is open.
+- Specimen targets point to the `Egg` tile until the egg tray is open, then to the strain's swatch, the same as on mobile.
 - The central Trial banner remains suppressed to avoid duplicating the director message.
 
 ### Reduced motion and accessibility
@@ -115,7 +115,7 @@ Supported target vocabulary:
 | --- | --- |
 | `dish` | An authored point in the dish; after egg placement, later dish pointers track beside the most recent egg. |
 | `tool:<id>` | The matching reagent button, such as `tool:nutrient`. |
-| `lifeform:<id>` | Desktop: the visible specimen card. Mobile: `Eggs` until the freezer is open, then the specimen card. |
+| `lifeform:<id>` | Every layout: the `Egg` tile until the egg tray is open, then the strain's swatch in the tray. |
 | `end` | The Bank result / End control after exact-coach success. |
 
 Visibility rules:
@@ -239,7 +239,7 @@ There is no repeated full-screen welcome. The exact Dr. E message opens with the
 
 | Step | Kicker | Title | Body | Visible action | Trigger | Arrow target |
 | ---: | --- | --- | --- | --- | --- | --- |
-| 1 / 6 | `Dr. E · Next instruction` | `Open Eggs. Choose Bloom Mass.` | `Trial 2 — Bitter Medicine. Use the specimen we stabilized.` | `Open Eggs · choose Bloom Mass` | `lifeform:bloom_mass` | `lifeform:bloom_mass` |
+| 1 / 6 | `Dr. E · Next instruction` | `Tap Egg. Choose Bloom Mass.` | `Trial 2 — Bitter Medicine. Use the strain we grew.` | `Tap Egg · choose Bloom Mass` | `lifeform:bloom_mass` | `lifeform:bloom_mass` |
 | 2 / 6 | `Dr. E · Next instruction` | `Place it here.` | `Tap the marked point.` | `Tap the dish` | `egg-used` | `dish` |
 | 3 / 6 | `Dr. E · Next instruction` | `Press Nutrient.` | `Feed first. Order matters.` | `Press Nutrient` | `nutrient-selected` | `tool:nutrient` |
 | 4 / 6 | `Dr. E · Next instruction` | `Feed the culture.` | `Tap beside the Bloom Mass.` | `Tap the dish` | `nutrient-used` | `dish` |
@@ -311,7 +311,7 @@ After completion:
 While the lesson is active:
 
 - the new dish starts with Egg selected, regardless of the previous Trial's last reagent;
-- reagent activation, specimen selection, dish actions, Notebook, Log, Eggs, and Bank/Abandon are blocked at both the UI and gameplay-handler boundaries;
+- reagent activation, specimen selection, dish actions, Notebook, Log, the egg tray, and Bank/Abandon are blocked at both the UI and gameplay-handler boundaries;
 - the horizontal rack, `Show more reagents`, and Options remain available;
 - the simulation remains held, so learning the control cannot contaminate or advance the dish.
 

@@ -1,6 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, onTestFinished } from 'vitest';
 import { createArena, type Arena } from '../../src/game/arena';
-import { TOOL_TUNING, AGITATION_TUNING } from '../../src/content/ecologyTuning';
+import { BALANCE_TUNING } from '../../src/game/balance';
+import { TOOL_TUNING, AGITATION_TUNING, ARENA_TIMING, DISH_LIFE_CYCLE } from '../../src/content/ecologyTuning';
+import { ARCHETYPE_DEFAULTS } from '../../src/content/enemies';
 import { getCell, setCell, updateBoundaryAround } from '../../src/sim/grid';
 import { removePixel } from '../../src/sim/cell';
 
@@ -1741,6 +1743,92 @@ describe('arena ecosystem mode', () => {
     expect(bruiser.intent.vec[0]).toBeGreaterThan(0.9);
   });
 
+  it('evolves no breeds when breed discovery is off (the title screen dish)', () => {
+    for (const [breedDiscovery, discovers] of [[true, true], [false, false]] as const) {
+      const arena = createArena({
+        LX: 100,
+        LY: 100,
+        seed: 41,
+        player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+        // A sniper beside two swarmlets is the tool-free Needle Swarm recipe.
+        enemies: [
+          { archetype: 'sniper' as const, targetVol: 160, speed: 12, engulfMultiplier: 1 },
+          { archetype: 'swarmlet' as const, targetVol: 150, speed: 12, engulfMultiplier: 4 },
+          { archetype: 'swarmlet' as const, targetVol: 150, speed: 12, engulfMultiplier: 4 },
+        ],
+        wrap: false,
+        mode: 'ecosystem',
+        breedDiscovery,
+      });
+      for (let t = 0; t < 3; t++) arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+
+      expect(arena.getEcology().discoveries.breedIds.includes('needle_swarm')).toBe(discovers);
+      expect([...arena.archetypes.values()].some((spawn) => spawn.breedId)).toBe(discovers);
+    }
+  });
+
+  it('locks two fed cultures into a merge, and leaves the title dish without merges', () => {
+    const IDLE = { moveVec: [0, 0] as [number, number], shouldFire: false, shouldEngulf: false };
+    const outcome = (mergeDiscovery: boolean) => {
+      const arena = createArena({
+        LX: 100,
+        LY: 100,
+        seed: 9,
+        player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+        enemies: [],
+        wrap: false,
+        mode: 'ecosystem',
+        includeControlSample: false,
+        fightIndex: 5,
+        worldEventIntensity: 0,
+        lifeCycle: DISH_LIFE_CYCLE,
+        breedDiscovery: false,
+        mergeDiscovery,
+      });
+      arena.setHazardsHeld(true);
+      const still = { ...ARCHETYPE_DEFAULTS.swarmlet, speed: 0 };
+      arena.spawnEnemy({ spawn: still, pos: [48, 50] });
+      arena.spawnEnemy({ spawn: { ...still }, pos: [53, 50] });
+      const events = [];
+      for (let t = 0; t < 600; t++) {
+        if (t % 120 === 0) arena.applyTool('nutrient', [50.5, 50]);
+        arena.tick(IDLE);
+        events.push(...arena.drainMergeEvents());
+      }
+      return { events, merges: arena.getMerges(), bonded: !!arena.state.bonds };
+    };
+
+    const on = outcome(true);
+    expect(on.events.map((e) => [e.kind, e.form.id])).toContainEqual(['locked', 'puddle_pals']);
+    expect(on.merges.locked.map((form) => form.form.id)).toEqual(['puddle_pals']);
+    expect(on.bonded).toBe(true);
+
+    const off = outcome(false);
+    expect(off.events).toEqual([]);
+    expect(off.merges).toEqual({ forming: [], locked: [] });
+    expect(off.bonded).toBe(false);
+  });
+
+  it('keeps reseeding after more cultures have died than the population cap', () => {
+    const arena = createArena({
+      LX: 120,
+      LY: 120,
+      seed: 77,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: Array.from({ length: 28 }, () => ({ archetype: 'swarmlet' as const, targetVol: 60, speed: 0, engulfMultiplier: 1 })),
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 60,
+    });
+    for (const id of [...arena.archetypes.keys()]) killCell(arena, id);
+    for (let t = 0; t < ARENA_TIMING.reseedIntervalTicks; t++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+
+    const living = [...arena.archetypes.keys()].filter((id) => (arena.state.cells.get(id)?.vol ?? 0) > 0);
+    expect(living.length).toBeGreaterThan(0);
+  });
+
   it('forms a velvet prison when salt and toxin trap gelatinous anchors', () => {
     const arena = createArena({
       LX: 80,
@@ -2355,11 +2443,12 @@ describe('arena ecosystem mode', () => {
       wrap: true,
       mode: 'ecosystem',
       includeControlSample: false,
-      epochTicks: 60 * 21,
+      epochTicks: BALANCE_TUNING.stableAfterTicks + 60,
       worldEventIntensity: 0,
     });
 
-    for (let i = 0; i < 60 * 20; i++) {
+    // A stable ecosystem is an unbroken minute of balance (game/balance.ts).
+    for (let i = 0; i < BALANCE_TUNING.stableAfterTicks; i++) {
       arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     }
 
@@ -2382,6 +2471,11 @@ describe('arena ecosystem mode', () => {
   });
 
   it('marks a crisis-survivor objective if equilibrium cancels an active crisis', () => {
+    // A minute-long streak outlasts any crisis, so this check uses a shorter
+    // stable window to have one still running when stability lands.
+    const stableAfter = BALANCE_TUNING.stableAfterTicks;
+    BALANCE_TUNING.stableAfterTicks = 60 * 20;
+    onTestFinished(() => { BALANCE_TUNING.stableAfterTicks = stableAfter; });
     const arena = createArena({
       LX: 140,
       LY: 140,
@@ -2407,7 +2501,7 @@ describe('arena ecosystem mode', () => {
     });
 
     for (let i = 0; i < 60 * 11; i++) {
-      forceBreedVolumes(arena, { bloom_mass: 170, needle_swarm: 170, glass_antibody: 340 });
+      forceBreedVolumes(arena, { bloom_mass: 170, needle_swarm: 170, glass_antibody: 400 });
       arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     }
     for (let i = 0; i < 60 * 25; i++) {

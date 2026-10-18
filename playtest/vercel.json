@@ -1,0 +1,64 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "",
+  "installCommand": "",
+  "outputDirectory": ".",
+  "headers": [
+    { "source": "/favicon.ico", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+    { "source": "/favicon.png", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; img-src 'self' data:; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self'; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; img-src 'self' data:; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self'; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" }
+      ]
+    },
+    {
+      "source": "/play/(.*)",
+      "headers": [
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; media-src 'self' blob: data:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'" }
+      ]
+    },
+    {
+      "source": "/play/",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+    },
+    {
+      "source": "/play/index.html",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+    },
+    {
+      "source": "/release.json",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+    }
+  ],
+  "rewrites": [
+    {"source": "/favicon.ico", "destination": "/play/favicon.ico"},
+    {"source": "/favicon.png", "destination": "/play/favicon.png"},
+    {"source": "/favicon-32.png", "destination": "/play/favicon-32.png"},
+    {"source": "/apple-touch-icon.png", "destination": "/play/apple-touch-icon.png"},
+    {"source": "/icon-192.png", "destination": "/play/icon-192.png"},
+    {"source": "/icon-512.png", "destination": "/play/icon-512.png"},
+    {"source": "/icon-1024.png", "destination": "/play/icon-1024.png"},
+    {"source": "/manifest.json", "destination": "/play/manifest.json"}
+  ],
+  "redirects": [
+    { "source": "/", "destination": "/play/", "permanent": false },
+    { "source": "/index.html", "destination": "/play/", "permanent": false },
+    { "source": "/play", "destination": "/play/", "permanent": false }
+  ]
+}

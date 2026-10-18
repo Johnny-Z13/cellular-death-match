@@ -4,6 +4,7 @@ import {
   completeOpeningActions,
   monitorRuntime,
   startFirstTrial,
+  dismissReveal,
 } from './helpers';
 
 test('uses one meaningful Dr. E graduation without repeating it after every result', async ({ page }, testInfo: TestInfo) => {
@@ -46,7 +47,7 @@ test('uses one meaningful Dr. E graduation without repeating it after every resu
   ).toBe(true);
 
   await expect(page.locator('#fx-genome')).toBeFocused();
-  await page.locator('#fx-genome').click();
+  await dismissReveal(page);
   await expect(page.locator('#screen-method-intro')).not.toHaveClass(/visible/);
   await expect(page.locator('#screen-pick')).toHaveClass(/visible/);
   await expect(page.locator('#pick-choices .pick-card').first()).toBeFocused();
@@ -55,7 +56,7 @@ test('uses one meaningful Dr. E graduation without repeating it after every resu
 
   await page.locator('#pick-choices .pick-card').first().click();
   const bloom = page.locator('[data-lifeform-id="bloom_mass"]');
-  if (!await bloom.isVisible()) await page.locator('#mobile-lifeforms-toggle').click();
+  if (!await bloom.isVisible()) await page.locator('[data-tool="egg"]').click();
   await bloom.click();
   await clickDish(page);
   await page.locator('[data-tool="nutrient"]').click();
@@ -65,12 +66,12 @@ test('uses one meaningful Dr. E graduation without repeating it after every resu
   await expect(page.locator('#end-epoch-button')).toHaveClass(/end-action-ready/, { timeout: 10_000 });
   await page.locator('#end-epoch-button').click();
   await expect(page.locator('#fx-genome')).toHaveAttribute('aria-hidden', 'false');
-  await page.locator('#fx-genome').click();
+  await dismissReveal(page);
 
   await expect(page.locator('#screen-method-intro')).toHaveClass(/visible/);
   await expect(page.locator('#method-intro-title')).toHaveText('Right. You’re on your own now.');
   await expect(page.locator('.method-intro-copy > p:not(.method-intro-kicker)')).toHaveText(
-    'Run the next trials your way. I’ll check in from time to time.',
+    'Run the next trials your way. I’ll pop in now and then. And keep an eye out for my friends.',
   );
   await expect(page.locator('#method-intro-continue')).toBeFocused();
   await page.waitForTimeout(350);

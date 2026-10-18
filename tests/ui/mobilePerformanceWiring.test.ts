@@ -4,14 +4,16 @@ import { describe, expect, it } from 'vitest';
 
 const mainSource = readFileSync('src/main.ts', 'utf8');
 const renderSource = readFileSync('src/ui/render.ts', 'utf8');
-const titleSource = readFileSync('src/ui/titleAutomata.ts', 'utf8');
+const titleSource = readFileSync('src/ui/titleDish.ts', 'utf8');
 
 describe('mobile performance wiring', () => {
   it('keeps fixed simulation ticks while pacing presentation frames', () => {
     expect(mainSource).toContain('shouldRenderFrame(lastRenderAt, now, visualProfile.targetRenderFps)');
     expect(mainSource).toContain('const ticksToRun = holdingForFirstInstruction ? 0 : simClock.consumeTicks(now);');
     expect(mainSource).toContain('additiveBloom: visualProfile.additiveBloom');
-    expect(renderSource).toContain('if (additiveBloom) {');
+    // The additive pass lives in the bloom helper the dish shares with Dr. E.
+    expect(renderSource).toContain('drawBloomLayers(ctx, offscreen!, canvas.width, canvas.height, additiveBloom);');
+    expect(renderSource).toContain('if (additive) {');
   });
 
   it('resets wall-clock time and ambience when the page is backgrounded', () => {
@@ -21,9 +23,10 @@ describe('mobile performance wiring', () => {
     expect(mainSource).toContain('uiAudio.stopAmbience()');
   });
 
-  it('caps title animation drawing on mobile and skips hidden work', () => {
-    expect(titleSource).toContain("window.matchMedia('(max-width: 899px)').matches");
-    expect(titleSource).toContain('&& !document.hidden');
-    expect(titleSource).toContain('1000 / 30');
+  it('runs the title dish at half pace on a fixed clock and skips hidden work', () => {
+    expect(titleSource).toContain('ticksPerSecond: 30');
+    expect(titleSource).toContain('createFixedStepClock({ ticksPerSecond: T.ticksPerSecond');
+    expect(titleSource).toContain("if (!screen.classList.contains('visible') || document.hidden)");
+    expect(titleSource).toContain('additiveBloom: profile.additiveBloom');
   });
 });

@@ -25,6 +25,8 @@ function tryGit(cmd: string): string | null {
 }
 
 export default defineConfig({
+  // Relative asset URLs: itch.io serves HTML games from a subdirectory.
+  base: './',
   define: {
     __COMMIT_MESSAGE__: JSON.stringify(readCommitMessage()),
   },

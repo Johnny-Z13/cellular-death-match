@@ -51,6 +51,8 @@ export interface CrisisResolutionWindow {
 const CRISIS_GRACE_TICKS = 60 * 25;
 const MAX_CRISIS_DURATION_TICKS = Math.max(...Object.values(CRISES).map((crisis) => crisis.durationTicks));
 const ok = (uses: string): ObjectiveAvailability => ({ available: true, uses });
+// Strains that hunt in the food-web life cycle (game/balance.ts HUNTER_ROLES).
+const HUNTER_STRAINS = new Set(['bruiser', 'mirror', 'boss']);
 const no = (uses: string, reason: string): ObjectiveAvailability => ({ available: false, uses, reason });
 
 export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
@@ -100,7 +102,7 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
   {
     kind: 'balance_keeper',
     name: 'Even Spread',
-    description: 'Keep the dish balanced, with no strain above 40% of living matter, for 30 seconds.',
+    description: 'Keep the dish balanced, with no strain above 40% of living matter, for 30 seconds in all. A dip only pauses the clock.',
     target: 'No strain > 40% for 30s',
     hint: 'Use Toxin to check the leader and Nutrient to support the trailing culture.',
     maxDominance: 0.4,
@@ -165,7 +167,7 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
   {
     kind: 'symbiosis',
     name: 'Symbiosis',
-    description: 'Keep 2 different strains near each other for 30 seconds.',
+    description: 'Keep 2 different strains near each other for 30 seconds in all. A dip only pauses the clock.',
     target: '2 strains nearby for 30s',
     hint: 'Plant one of each strain with a stable border and support either side with Nutrient.',
     sustainTicks: 60 * 30,
@@ -174,6 +176,42 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
       && hasCharges(ctx, 'nutrient', 1)
       ? ok('2 different strains + Nutrient')
       : no('2 different strains + Nutrient', 'Two different strains are required.'),
+  },
+  {
+    kind: 'hold_balance',
+    name: 'Living Dish',
+    description: 'Hold the dish in balance for two minutes in all: 3 or more strains alive, none holding over half the dish. A dip only pauses the clock.',
+    target: 'Balance held 2:00',
+    hint: 'Plant three strains apart. Feed whoever is fading; slow whoever is taking over.',
+    sustainTicks: 60 * 120,
+    availability: (ctx) => distinctSeedables(ctx) >= 3 && hasCharges(ctx, 'egg', 3)
+      ? ok('3 different strains')
+      : no('3 different strains', 'Three different strains are required.'),
+  },
+  {
+    kind: 'keep_alive',
+    name: 'Full House',
+    description: 'Keep 5 different strains alive at once for three minutes in all. A dip only pauses the clock.',
+    target: '5 strains alive 3:00',
+    hint: 'Give each strain its own corner, and plant a new one when a strain fades.',
+    minCount: 5,
+    sustainTicks: 60 * 180,
+    availability: (ctx) => distinctSeedables(ctx) >= 5 && hasCharges(ctx, 'egg', 5)
+      ? ok('5 different strains')
+      : no('5 different strains', 'Five different strains are required.'),
+  },
+  {
+    kind: 'food_web',
+    name: 'Food Web',
+    description: 'Let a hunter and its prey share the dish for three minutes in all, neither taking over. A dip only pauses the clock.',
+    target: 'Hunter and prey together 3:00',
+    hint: 'Plant a Bruiser beside a few Swarmlets, and keep the Swarmlets fed so they outgrow the hunt.',
+    sustainTicks: 60 * 180,
+    availability: (ctx) => [...ctx.seedableLifeforms].some((id) => HUNTER_STRAINS.has(id))
+      && [...ctx.seedableLifeforms].some((id) => !HUNTER_STRAINS.has(id))
+      && hasCharges(ctx, 'egg', 3)
+      ? ok('A hunter strain + a prey strain')
+      : no('A hunter strain + a prey strain', 'A hunter (Bruiser, Mirror or Boss) and a prey strain are required.'),
   },
   {
     kind: 'extinction_reversal',
@@ -190,6 +228,11 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
   },
 ];
 
+/** Trials that reward holding a living dish over time. */
+export const SUSTAIN_KINDS: ReadonlySet<ObjectiveDef['kind']> = new Set([
+  'hold_balance', 'keep_alive', 'food_web', 'balance_keeper', 'symbiosis',
+]);
+
 export function drawObjectives(ctx: StudyCapabilities): StudyChoice[] {
   const available = OBJECTIVE_POOL.flatMap((objective): StudyChoice[] => {
     const result = objective.availability(ctx);
@@ -203,7 +246,14 @@ export function drawObjectives(ctx: StudyCapabilities): StudyChoice[] {
     pool[i] = pool[j]!;
     pool[j] = tmp!;
   }
-  return pool.slice(0, 2);
+  // Cosy pace: one of the two choices always asks the player to sustain a
+  // living dish, whenever such a trial is available.
+  const choices = pool.slice(0, 2);
+  if (!choices.some((choice) => SUSTAIN_KINDS.has(choice.kind))) {
+    const sustain = pool.find((choice) => SUSTAIN_KINDS.has(choice.kind));
+    if (sustain) choices[choices.length - 1] = sustain;
+  }
+  return choices;
 }
 
 export function isObjectiveFeasible(objective: ObjectiveDef, ctx: StudyCapabilities): boolean {

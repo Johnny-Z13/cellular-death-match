@@ -1,0 +1,87 @@
+/* Dr. E's cell face in its four slots (ui/drEPresence.ts). Each slot keeps
+   its box; the face sits in it at a size that reads as a face, never as a
+   poster. The canvas is transparent, so the dish or the glass shows round
+   him. */
+
+/* :root lifts this over the dish's generic canvas rules (black backing,
+   border, shadow, 100% height), which were written for the one canvas. */
+:root canvas.dre-face {
+  z-index: auto;
+  display: block;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+/* His line as he says it: the unsaid words keep their space. */
+.dre-unsaid {
+  visibility: hidden;
+}
+
+/* Coach rail: a face in the portrait column. */
+.layout[data-screen="arena"] .coach .coach-portrait {
+  background: transparent;
+}
+
+.layout[data-screen="arena"] .coach .coach-portrait canvas.dre-face {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(100%, 76px);
+  transform: translate(-50%, -50%);
+}
+
+/* The first-run welcome and the trial introductions: big, but at most a
+   third of the screen's height. */
+.layout[data-screen="arena"] .coach.coach-welcome .coach-portrait canvas.dre-face,
+.layout[data-screen="arena"] .coach.coach-intro .coach-portrait canvas.dre-face {
+  width: min(78%, 32svh, 300px);
+}
+
+/* HUD director. */
+.layout[data-screen="arena"] .hud-director-portrait {
+  background: transparent;
+}
+
+.layout[data-screen="arena"] .hud-director-portrait canvas.dre-face {
+  position: absolute;
+  inset: 0;
+  width: min(100%, 56px);
+  margin: auto;
+}
+
+/* Method intro: the face above the copy on phones, beside it on wider
+   screens. */
+.method-intro-professor {
+  display: grid;
+  place-items: start center;
+  padding-top: max(10svh, 48px);
+}
+
+.method-intro-professor canvas.dre-face {
+  width: min(34svh, 52vw, 320px);
+}
+
+@media (min-width: 900px) {
+  .method-intro-professor {
+    place-items: center start;
+    padding: 0 0 0 max(8vw, 48px);
+  }
+
+  .method-intro-professor canvas.dre-face {
+    width: min(42svh, 30vw, 380px);
+  }
+}
+
+/* The onboarding pointer: Dr. E himself, small, above his arrow. */
+.onboarding-professor-pointer canvas.dre-face {
+  width: 100%;
+  filter: drop-shadow(0 0 10px rgba(91, 233, 214, 0.35));
+}

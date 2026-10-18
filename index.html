@@ -7,20 +7,39 @@
     <meta name="theme-color" content="#04080a" />
     <meta name="application-name" content="Cellular Death Match" />
     <meta name="apple-mobile-web-app-title" content="Cellular Death Match" />
-    <link rel="icon" type="image/png" sizes="48x48" href="/favicon.png?v=3" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=3" />
-    <link rel="manifest" href="/manifest.json?v=4" />
+    <link rel="icon" type="image/x-icon" sizes="16x16 32x32 48x48" href="/favicon.ico?v=4" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=4" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon.png?v=4" />
+    <meta property="og:title" content="Cellular Death Match" />
+    <meta property="og:description" content="Grow a living dish. Find Dr. E’s lost friends." />
+    <meta property="og:image" content="https://cellular-death-match.vercel.app/play/icon-512.png?v=4" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=4" />
+    <link rel="manifest" href="/manifest.json?v=6" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/src/styles.css?v=20261009-legibility-1" />
+    <link rel="stylesheet" href="/src/styles.css?v=20261018-living-dish-1" />
     <link rel="stylesheet" href="/src/arena-layout.css?v=20261009-legibility-1" />
-    <link rel="stylesheet" href="/src/legibility.css?v=20261009-polish-2" />
+    <link rel="stylesheet" href="/src/legibility.css?v=20261018-hud-grid-1" />
+    <link rel="stylesheet" href="/src/wide-layout.css?v=20261018-ui-pass-1" />
+    <link rel="stylesheet" href="/src/dr-e.css?v=20261015-face-1" />
+    <link rel="stylesheet" href="/src/dex.css?v=20261018-ui-pass-1" />
+    <link rel="stylesheet" href="/src/reveal.css?v=20261018-catch-1" />
+    <link rel="stylesheet" href="/src/egg-tray.css?v=20261018-ui-pass-1" />
+    <style>
+      /* Z13 boot ident plate: painted before scripts run so the title never
+         flashes; the failsafe clears it if the ident script never runs. */
+      #z13-ident { position: fixed; inset: 0; z-index: 2147483000; background: #000; animation: z13-ident-failsafe 7s step-end forwards; }
+      @keyframes z13-ident-failsafe { to { visibility: hidden; pointer-events: none; } }
+    </style>
   </head>
   <body>
+    <div id="z13-ident" aria-hidden="true"></div>
     <main class="layout" data-screen="title">
       <div class="dish-stage">
         <div class="dish-frame" aria-hidden="true"></div>
@@ -42,7 +61,7 @@
       </div>
       <span id="simulation-paused-badge" class="simulation-paused-badge" role="status" aria-live="polite" aria-hidden="true">Culture paused</span>
       <div id="onboarding-guide-pointer" class="onboarding-professor-pointer" aria-hidden="true">
-        <img src="/art/professor/professor-emergent-v2.png" width="1143" height="1376" alt="" />
+        <canvas class="dre-face" data-dre-slot="pointer" aria-hidden="true"></canvas>
         <span aria-hidden="true"></span>
       </div>
       <button id="options-button" class="chrome-button options-button" type="button" aria-label="Open options" title="Options" aria-haspopup="dialog" aria-expanded="false">
@@ -50,6 +69,10 @@
           <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.73v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.73l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z" />
           <circle cx="12" cy="12" r="3" />
         </svg>
+      </button>
+      <button id="dex-button" class="chrome-button dex-button" type="button" aria-label="Open your friends" title="Friends" aria-haspopup="dialog" aria-expanded="false">
+        <span class="dex-button__cell" aria-hidden="true"></span>
+        <span class="dex-button__count"><b id="dex-count">1</b><span id="dex-count-total">/32</span></span>
       </button>
       <button id="fullscreen-button" class="chrome-button fullscreen-button" type="button" aria-label="Enter full screen" title="Enter full screen">
         <span class="fullscreen-button__label">Full screen</span>
@@ -61,7 +84,6 @@
         </svg>
       </button>
       <div id="mobile-shell" class="mobile-shell" role="group" aria-label="Mobile dish controls">
-        <button id="mobile-lifeforms-toggle" class="mobile-shell-button" type="button" aria-expanded="false" aria-controls="life-panel">Eggs</button>
         <div id="mobile-tool-readout" class="mobile-tool-readout" aria-live="polite">
           <strong id="mobile-tool-name">Egg</strong>
           <span id="mobile-tool-summary">plants the selected strain</span>
@@ -73,10 +95,11 @@
           <h2 class="toolbox-title">Tools</h2>
           <p id="tool-summary" class="tool-summary">Egg - plants the selected strain in open dish space.</p>
         </div>
-        <button class="tool-button selected" type="button" data-tool="egg" aria-haspopup="true" aria-expanded="false" aria-controls="life-panel">
+        <button class="tool-button selected" type="button" data-tool="egg" aria-haspopup="dialog" aria-expanded="false" aria-controls="life-panel">
+          <span class="egg-tool-tab" aria-hidden="true">Egg</span>
           <span class="tool-icon egg-icon"></span>
           <span>
-            <strong>Egg</strong>
+            <strong id="egg-tool-strain">Egg</strong>
             <small>seed new life</small>
           </span>
           <b data-tool-count>8/8</b>
@@ -93,7 +116,7 @@
           <span class="tool-icon paste-icon"></span>
           <span>
             <strong>Paste</strong>
-            <small>draw a trail</small>
+            <small>draw a wall</small>
           </span>
           <b data-tool-count>3/3</b>
         </button>
@@ -184,6 +207,7 @@
         <section class="debug-block">
           <h3 class="debug-subtitle">laboratory</h3>
           <button id="audio-button" class="debug-option-button" type="button" aria-label="Mute audio" aria-pressed="false">Sound — On</button>
+          <button id="voice-button" class="debug-option-button" type="button" aria-label="Silence Dr. E's voice" aria-pressed="false">Dr. E’s voice — On</button>
           <button id="haptics-button" class="debug-option-button" type="button" aria-label="Disable haptics" aria-pressed="false" hidden>Haptics — On</button>
           <button id="labels-button" class="debug-option-button" type="button" aria-label="Hide dish labels" aria-pressed="false">Dish labels — On</button>
           <div class="debug-help debug-only">select a lab tool</div>
@@ -230,17 +254,13 @@
 
       <!-- Overlay screens. Hidden by default; shown by .visible. -->
       <div id="screen-title" class="screen screen-title-screen visible">
-        <canvas id="title-automata" class="title-automata" data-palette="egg-duotone" aria-hidden="true"></canvas>
-        <div class="title-art" aria-hidden="true"></div>
-        <div class="title-vignette" aria-hidden="true"></div>
-        <figure class="title-professor">
-          <img src="/art/professor/professor-emergent-v2.png" width="1143" height="1376" alt="Dr. E. Mergent, wild-haired director of the cellular laboratory" />
-          <figcaption>“A petri dish never lies. It does occasionally explode.”</figcaption>
-        </figure>
+        <canvas id="title-dish" class="title-dish" aria-hidden="true"></canvas>
+        <div class="title-fade" aria-hidden="true"></div>
+        <div id="title-dish-tags" class="title-dish-tags" aria-hidden="true"></div>
         <div class="screen-card title-card">
-          <p class="title-eyebrow">Dr. E. Mergent’s Cellular Laboratory</p>
-          <h1 class="screen-title title-wordmark">Cellular<br /><span>Death Match</span></h1>
-          <p class="title-pitch">Feed a culture and it mutates. Find all 14 strains — and keep the dish alive.</p>
+          <p class="title-eyebrow">Dr. E. Mergent’s laboratory</p>
+          <h1 class="screen-title title-wordmark"><span>Cellular</span> <span>Death</span> <span>Match</span></h1>
+          <p class="title-pitch">Feed a culture and it mutates.<br />Find all <b>14 strains</b>. Keep the dish alive.</p>
           <section class="case-docket" aria-labelledby="case-docket-title">
             <div class="case-docket-head">
               <span>Trials 1–5 · Persistent Sniffles</span>
@@ -283,13 +303,13 @@
 
       <div id="screen-method-intro" class="screen method-intro-screen" role="dialog" aria-modal="true" aria-labelledby="method-intro-title">
         <figure class="method-intro-professor" aria-hidden="true">
-          <img src="/art/professor/professor-emergent-v2.png" width="1143" height="1376" alt="" />
+          <canvas class="dre-face" data-dre-slot="intro" aria-hidden="true"></canvas>
         </figure>
         <div class="method-intro-vignette" aria-hidden="true"></div>
         <section class="method-intro-copy">
-          <p class="method-intro-kicker">Dr. E. Mergent · Briefing complete</p>
+          <p class="method-intro-kicker">Dr. E · Briefing complete</p>
           <h2 id="method-intro-title">Right. You’re on your own now.</h2>
-          <p>Run the next trials your way. I’ll check in from time to time.</p>
+          <p>Run the next trials your way. I’ll pop in now and then. And keep an eye out for my friends.</p>
           <button id="method-intro-continue" class="screen-button method-intro-continue" type="button">Choose an upgrade ›</button>
         </section>
       </div>
@@ -357,7 +377,7 @@
         <div class="hud-summary" aria-label="Trial telemetry">
           <div class="hud-row"><span id="hud-fight-key" class="hud-key">Trial</span><span id="hud-fight" class="hud-val">1 / 5</span></div>
           <div class="hud-row hud-window-row"><span id="hud-time-key" class="hud-key">Time</span><span id="hud-progress" class="hud-val">Open</span></div>
-          <div class="hud-row hud-equilibrium-row" title="Balance: keep 3 or more strains steady for 20 seconds and you may finish the trial."><span class="hud-key">Balance</span><span id="hud-equilibrium" class="hud-val">0%</span></div>
+          <div class="hud-row hud-equilibrium-row" title="Balance: time held with 3 or more strains alive and none over half the dish. A dip only pauses the clock; a minute unbroken records a biome."><span class="hud-key">Balance</span><span id="hud-equilibrium" class="hud-val">0:00</span></div>
           <div id="hud-goal" class="hud-goal" role="group" aria-label="Current goal">
             <span class="hud-goal-mark" aria-hidden="true"></span>
             <span class="hud-goal-copy">
@@ -370,7 +390,7 @@
         </div>
         <div id="hud-director" class="hud-director">
           <div class="hud-director-portrait" aria-hidden="true">
-            <img src="/art/professor/professor-emergent-v2.png" width="1143" height="1376" alt="" />
+            <canvas class="dre-face" data-dre-slot="director" aria-hidden="true"></canvas>
           </div>
           <div class="hud-director-copy">
             <div class="hud-director-head"><span id="hud-director-kicker">Dr. E</span><span id="hud-director-state">Live</span></div>
@@ -385,7 +405,8 @@
         <div class="hud-row" id="hud-upgrades-row"><span class="hud-key">Build</span><span id="hud-upgrades" class="hud-val">none</span></div>
       </div>
 
-      <aside id="life-panel" class="life-panel" aria-label="Eggs">
+      <div id="egg-tray-scrim" class="egg-tray-scrim" aria-hidden="true"></div>
+      <aside id="life-panel" class="life-panel" role="dialog" aria-label="Choose an egg">
         <div class="life-panel-head">
           <div class="life-panel-title-row">
             <h2 class="life-panel-title">Eggs</h2>
@@ -414,26 +435,88 @@
       <div id="fx-toasts" class="fx-toasts" aria-live="polite" aria-atomic="true" aria-relevant="additions"></div>
       <button id="fx-genome" class="fx-genome" type="button" aria-hidden="true" tabindex="-1">
         <span class="fx-genome-scan" aria-hidden="true"></span>
+        <span class="catch-flash" aria-hidden="true"></span>
         <span class="fx-genome-inner">
           <span id="fx-genome-eyebrow" class="fx-genome-eyebrow">NEW STRAIN</span>
-          <span id="fx-genome-art" class="fx-genome-art"></span>
+          <span class="catch-stage">
+            <span class="catch-rays" aria-hidden="true"></span>
+            <span class="catch-egg" aria-hidden="true">
+              <img class="catch-egg-silhouette" alt="" width="384" height="384" />
+              <span class="catch-egg-shine"></span>
+              <span class="catch-egg-crack"></span>
+            </span>
+            <span class="catch-cells" aria-hidden="true"></span>
+            <span id="fx-genome-art" class="fx-genome-art"></span>
+          </span>
           <strong id="fx-genome-title" class="fx-genome-title">SPLITTER</strong>
           <span id="fx-genome-sub" class="fx-genome-sub">NOW AVAILABLE AS AN EGG</span>
+          <span class="catch-card">
+            <span class="catch-card-head"><b id="catch-number">#000</b><span class="catch-card-kicker">New friend</span><span id="catch-count" class="catch-count"></span></span>
+            <span id="catch-role" class="catch-role"></span>
+            <span id="catch-behavior" class="catch-behavior"></span>
+            <span class="catch-tray"><i class="catch-tray-egg" aria-hidden="true"></i>Now in your Egg tray</span>
+          </span>
+          <span class="catch-dre">
+            <canvas class="dre-face" data-dre-slot="catch" aria-hidden="true"></canvas>
+            <span class="catch-bubble"><strong id="catch-line" class="catch-line"></strong></span>
+          </span>
           <span class="fx-genome-skip">Tap or press to continue</span>
         </span>
       </button>
       <div id="fx-wipe" class="fx-wipe" aria-hidden="true"></div>
 
+      <div id="friend-reveal" class="friend-reveal" role="dialog" aria-modal="true" aria-labelledby="reveal-name" tabindex="-1" hidden>
+        <div class="reveal-veil" aria-hidden="true"></div>
+        <div class="reveal-stage">
+          <div class="reveal-drop" aria-hidden="true">
+            <span class="reveal-ring"></span>
+            <canvas id="reveal-canvas" class="dex-specimen reveal-specimen"></canvas>
+          </div>
+          <p id="reveal-stamp" class="reveal-stamp">Rare</p>
+          <p class="reveal-kicker">Friend rescued</p>
+          <h2 id="reveal-name" class="reveal-name">Friend</h2>
+          <p id="reveal-number" class="reveal-number">#000</p>
+          <div class="reveal-dre">
+            <canvas class="dre-face" data-dre-slot="reveal" aria-hidden="true"></canvas>
+            <p class="reveal-bubble"><strong id="reveal-line" class="reveal-line"></strong></p>
+          </div>
+          <button id="reveal-continue" class="reveal-continue" type="button">Into the dex ›</button>
+        </div>
+      </div>
+
+      <div id="screen-dex" class="dex-screen" role="dialog" aria-modal="true" aria-labelledby="dex-title" hidden>
+        <section class="dex-card">
+          <header class="dex-head">
+            <p class="dex-kicker">Dr. E’s friends</p>
+            <h2 id="dex-title" class="dex-title">Friends found <b id="dex-found">1</b><span id="dex-total"> / 32</span></h2>
+            <div id="dex-tabs" class="dex-tabs" role="tablist" aria-label="Show friends by rarity"></div>
+            <button id="dex-close" class="dex-close" type="button" aria-label="Close friends">Close</button>
+          </header>
+          <div class="dex-body">
+            <ol id="dex-grid" class="dex-grid" aria-label="Friends"></ol>
+            <article id="dex-detail" class="dex-detail" aria-live="polite">
+              <div class="dex-detail-art"><canvas id="dex-detail-canvas" class="dex-specimen" aria-hidden="true"></canvas></div>
+              <p id="dex-detail-number" class="dex-detail-number">#000</p>
+              <h3 id="dex-detail-name" class="dex-detail-name">Dr. E</h3>
+              <p id="dex-detail-tier" class="dex-detail-tier">Origin</p>
+              <ul id="dex-detail-strains" class="dex-detail-strains" aria-label="Made of"></ul>
+              <p class="dex-detail-bubble"><strong id="dex-line" class="dex-line"></strong></p>
+              <p id="dex-detail-found" class="dex-detail-found"></p>
+            </article>
+          </div>
+        </section>
+      </div>
+
       <aside id="coach" class="coach" aria-hidden="true" aria-live="polite" aria-label="Dr. E. Mergent's guidance">
         <div class="coach-portrait" aria-hidden="true">
-          <img src="/art/professor/professor-emergent-v2.png" width="1143" height="1376" alt="" />
+          <canvas class="dre-face" data-dre-slot="coach" aria-hidden="true"></canvas>
         </div>
         <div class="coach-copy">
           <div class="coach-head">
             <span id="coach-kicker" class="coach-kicker">Dr. E. Mergent · Trial director</span>
             <span id="coach-step" class="coach-step"></span>
           </div>
-          <strong id="coach-title" class="coach-title">Welcome to my lab.</strong>
+          <strong id="coach-title" class="coach-title">Oh! A visitor!</strong>
           <p id="coach-body" class="coach-body">Let me show you the ropes. We’ll start with one egg and one feed.</p>
           <span id="coach-action" class="coach-action" aria-hidden="true"></span>
           <button id="coach-skip" class="coach-skip" type="button">Tap to continue</button>

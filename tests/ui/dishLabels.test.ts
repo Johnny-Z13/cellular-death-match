@@ -62,6 +62,21 @@ function coversCulture(label: PlannedLabel, c: LabelCulture): boolean {
 }
 
 describe('planDishLabels', () => {
+  it('places tags on a wide 16:9 dish at their culture\'s height, not its width', () => {
+    // A 213 x 120 dish drawn 852 x 480: a culture near the bottom keeps its tag near the bottom.
+    const plan = planDishLabels(input({
+      cultures: [culture({ id: 2, center: [100, 100], vol: 120 })],
+      gridSize: 213,
+      dishPx: 852,
+      dishHeightPx: 480,
+    }));
+    const tag = plan[0]!;
+    const anchorY = (tag.yPct / 100) * 480;
+    const cultureY = 100 * (852 / 213);
+    // Beside its culture (radius plus gap); the old width-based y put it ~170px off.
+    expect(Math.abs(anchorY - cultureY)).toBeLessThan(60);
+  });
+
   it('tags each strain once, on its largest living culture', () => {
     const plan = planDishLabels(input({
       cultures: [

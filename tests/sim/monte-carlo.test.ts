@@ -39,6 +39,9 @@ function makeStateWithTwoBlobs(): SimState {
     events: [],
     rng: createRng(42),
     wrapBullets: true,
+    engulfGain: 0.5,
+    engulfDrain: 0.6,
+    bulletDrain: 1,
   };
 }
 
@@ -144,6 +147,9 @@ function makeTwoPixelPenaltyState(): SimState {
       random: () => 0.5,
     },
     wrapBullets: true,
+    engulfGain: 0.5,
+    engulfDrain: 0.6,
+    bulletDrain: 1,
   };
 }
 
@@ -229,6 +235,9 @@ function makeStateWithTwoBlobsAt(
     events: [],
     rng: createRng(seed),
     wrapBullets: true,
+    engulfGain: 0.5,
+    engulfDrain: 0.6,
+    bulletDrain: 1,
   };
   mutate(state);
   return state;

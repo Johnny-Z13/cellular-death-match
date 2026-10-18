@@ -57,9 +57,9 @@ test('capture legibility evidence', async ({ page }, testInfo) => {
     await shot(page, project, '05-log-open');
     await logToggle.click();
   }
-  const strainsToggle = page.locator('#mobile-lifeforms-toggle');
-  if (await strainsToggle.isVisible()) {
-    await strainsToggle.click();
+  // The Egg tile opens the egg tray once there is more than one strain.
+  await page.locator('[data-tool="egg"]').click();
+  if (await page.locator('.layout').getAttribute('data-mobile-drawer') === 'lifeforms') {
     await page.waitForTimeout(500);
     await shot(page, project, '06-strains-open');
   }

@@ -193,8 +193,8 @@ describe('chimera reframe', () => {
     expect(breedEntries.length).toBeGreaterThan(0);
     for (const entry of breedEntries) {
       expect(entry.chimeraSplice).toMatch(/ × /); // "Real × Fantastical"
-      expect(entry.chimeraPortrait).toContain('/art/chimera/');
-      expect(entry.genomePortrait).toContain('/art/genomes/');
+      expect(entry.chimeraPortrait).toContain('art/chimera/');
+      expect(entry.genomePortrait).toContain('art/genomes/');
       expect(entry.genomeAlt.length).toBeGreaterThan(30);
       expect(entry.eggSynthesisAvailable).toBe(true);
       expect(entry.displayNotes.length).toBeGreaterThan(20);
@@ -203,7 +203,7 @@ describe('chimera reframe', () => {
     const starter = view.entries.find((e) => e.id === 'lifeform_swarmlet');
     expect(starter?.chimeraSplice).toBeNull();
     expect(starter?.chimeraPortrait).toBeNull();
-    expect(starter?.genomePortrait).toBe('/art/genomes/swarmlet.png');
+    expect(starter?.genomePortrait).toBe('art/genomes/swarmlet.png');
     expect(starter?.eggSynthesisAvailable).toBe(true);
     expect(starter?.isReferenceGenome).toBe(true);
     expect(view.entries.find((entry) => entry.id === 'lifeform_quill_bloom')?.genomeLineage)
@@ -223,7 +223,7 @@ describe('chimera reframe', () => {
     expect(observedEntry?.researchStage).toBe('observed');
     expect(observedEntry?.researchStateLabel).toBe('Strain spotted');
     expect(observedEntry?.researchNextAction).toContain('finish a trial');
-    expect(observedEntry?.genomePortrait).toBe('/art/genomes/bloom_mass.png');
+    expect(observedEntry?.genomePortrait).toBe('art/genomes/bloom_mass.png');
     expect(observedEntry?.eggSynthesisAvailable).toBe(false);
     expect(observedEntry?.displayRecipe).toBe('Egg: not available yet');
   });
@@ -257,7 +257,7 @@ describe('notebook atlas (progression map)', () => {
     const lifeforms = atlas.groups.find((g) => g.key === 'lifeform');
     expect(lifeforms?.nodes.every((n) => n.state === 'stabilized')).toBe(true);
     expect(lifeforms?.nodes.every((n) => Array.isArray(n.color))).toBe(true);
-    expect(lifeforms?.nodes.every((n) => n.decoded && n.genomePortrait?.startsWith('/art/genomes/'))).toBe(true);
+    expect(lifeforms?.nodes.every((n) => n.decoded && n.genomePortrait?.startsWith('art/genomes/'))).toBe(true);
     expect(lifeforms?.decoded).toBe(14);
   });
 });

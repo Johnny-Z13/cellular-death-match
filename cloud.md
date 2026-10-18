@@ -43,9 +43,32 @@ Install command: npm install
 Node version: 20 or newer
 ```
 
+## itch.io
+
+itch.io serves HTML games from a subdirectory of its CDN and requires relative
+paths. The build uses `base: './'` and relative runtime asset strings
+(`art/…`, `audio/…`), so `dist/` runs from any folder. Keep new asset
+references relative: a leading `/` 404s on itch.
+
+```bash
+npm run build
+cd dist && zip -r ../cellular-death-match-itch.zip . && cd ..
+```
+
+`index.html` must sit at the zip root. Upload it as an HTML project ("This file
+will be played in the browser"). The build is far inside itch's limits of
+1,000 files and 500 MB. Turn on "Mobile friendly", since phones then launch it
+in fullscreen. Fill in the AI disclosure: the shipped art, audio and code
+include generative-AI output (see `public/ASSET_CREDITS.txt`).
+
+To check a build the way itch serves it, copy `dist/` into a nested folder (for
+example `html/123/`) under a static server and open `/html/123/index.html`.
+
 ## Vercel
 
-Vercel can auto-detect the Vite project. If configuring manually:
+The public tester link, https://cellular-death-match.vercel.app, serves the tester portal with the game at `/play/`. It is deployed by hand from `playtest/` (see `playtest/README.md`), not built from `main`.
+
+For a plain game deployment, Vercel can auto-detect the Vite project. If configuring manually:
 
 ```text
 Framework preset: Vite

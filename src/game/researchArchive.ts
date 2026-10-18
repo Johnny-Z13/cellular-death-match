@@ -81,6 +81,8 @@ export const RESEARCH_SEALS: readonly ResearchSealDef[] = [
 export interface BiomeArchiveRecord {
   name: string;
   recordedAt: string;
+  /** Its leading strains, for the biome card's colours. */
+  strains?: string[];
 }
 
 export interface ResearchArchiveState {
@@ -102,6 +104,7 @@ export interface ResearchEvidence {
   peakBiodiversity?: number;
   stabilitySeconds?: number;
   biomeName?: string | null;
+  biomeStrains?: readonly string[];
 }
 
 export interface ResearchArchiveUpdate {
@@ -174,7 +177,11 @@ export function recordResearchEvidence(
   let newBiome = false;
   const biomeName = normalizedBiomeName(evidence.biomeName);
   if (biomeName && !next.biomeRecords.some((record) => record.name === biomeName)) {
-    next.biomeRecords.push({ name: biomeName, recordedAt });
+    next.biomeRecords.push({
+      name: biomeName,
+      recordedAt,
+      ...(evidence.biomeStrains?.length ? { strains: [...evidence.biomeStrains].slice(0, 3) } : {}),
+    });
     // Current content has fewer than 200 possible biome names. Keep generous
     // expansion headroom while bounding an archive forever: at the boundary,
     // compact the oldest entry and preserve the newly observed biome.
@@ -238,9 +245,13 @@ export function canonicalResearchArchive(value: unknown): ResearchArchiveState {
       if (!isObject(record)) return [];
       const name = normalizedBiomeName(record.name);
       if (!name) return [];
+      const strains = Array.isArray(record.strains)
+        ? record.strains.filter((strain): strain is string => typeof strain === 'string').slice(0, 3)
+        : [];
       return [{
         name,
         recordedAt: validTimestamp(record.recordedAt),
+        ...(strains.length > 0 ? { strains } : {}),
       }];
     })
       .filter((record, index, records) => records.findIndex((candidate) => candidate.name === record.name) === index)

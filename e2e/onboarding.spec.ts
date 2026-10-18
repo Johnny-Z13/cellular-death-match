@@ -7,6 +7,7 @@ import {
   openFreshApp,
   startFirstTrial,
   toolCharge,
+  dismissReveal,
 } from './helpers';
 
 test.describe('first discovery progression', () => {
@@ -45,7 +46,7 @@ test.describe('first discovery progression', () => {
     await expect(page.locator('#fx-genome-art img')).toHaveCount(1);
     await page.screenshot({ path: testInfo.outputPath('bloom-genome-decoded.png') });
 
-    await reveal.click();
+    await dismissReveal(page);
     await continueToMethodPicker(page);
     await expect(page.locator('#pick-choices .pick-card')).toHaveCount(3);
     const methodCard = page.locator('#pick-choices .pick-card').first();
@@ -54,10 +55,10 @@ test.describe('first discovery progression', () => {
 
     await expect(page.locator('.layout')).toHaveAttribute('data-screen', 'arena');
     await expect(page.locator('#hud-fight')).toHaveText('2 / 5');
-    await expect(page.locator('#coach-title')).toHaveText('Open Eggs. Choose Bloom Mass.');
-    await expect(page.locator('#mobile-lifeforms-toggle')).toBeFocused();
+    await expect(page.locator('#coach-title')).toHaveText('Tap Egg. Choose Bloom Mass.');
+    await expect(page.locator('[data-tool="egg"]')).toBeFocused();
 
-    await page.locator('#mobile-lifeforms-toggle').click();
+    await page.locator('[data-tool="egg"]').click();
     await expect(page.locator('#life-count')).toHaveText('2 strains ready');
     const bloom = page.locator('[data-lifeform-id="bloom_mass"]');
     await expect(bloom).toBeVisible();

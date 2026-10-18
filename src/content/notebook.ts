@@ -400,7 +400,9 @@ function rareLifeformEntry(id: BreedId): NotebookEntry {
     id: `lifeform_${id}`,
     category: 'lifeform',
     title: identity.name,
-    body: `${identity.role}. ${identity.behavior} ${note.body}`,
+    // The discovery note restates the identity's behaviour line, so a rare
+    // strain reads like a common one: role, then behaviour, once.
+    body: `${identity.role}. ${identity.behavior}`,
     clue: BREED_DEFS[id].discoveryTrigger,
     caution: note.caution,
     unlock: { breedId: id },
@@ -423,7 +425,7 @@ function noteEntry(category: Exclude<NotebookCategory, 'lifeform'>, noteId: Disc
 function clueForNote(noteId: DiscoveryNoteId, category: NotebookCategory): string {
   if (noteId === 'water_carries') return 'Try Water on Nutrient fields near budding cultures.';
   if (noteId === 'water_dilutes') return 'Try Water after Acid or Toxin if the dish is getting too sharp.';
-  if (noteId === 'paste_catalysed') return 'Draw a Paste trail, then drop Acid or Water onto the line.';
+  if (noteId === 'paste_catalysed') return 'Draw a Paste wall, then drop Acid or Water onto the fresh gel.';
   if (noteId === 'recipe_nutrient_conduit') return 'Water plus Nutrient carries food through budding cultures.';
   if (noteId === 'recipe_bitter_bloom') return 'Feed a budding culture, then sour it with Toxin.';
   if (noteId === 'recipe_pressure_bloom') return 'Put Toxin pressure into a resistant fed culture.';

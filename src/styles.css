@@ -25,7 +25,9 @@
   /* Text */
   --ink: #e7f6f4;
   --ink-dim: #9fc3c2;
-  --ink-faint: #6f8b8d;
+  /* Lifted from #6f8b8d (about 5:1 on the panel) to about 7:1: the faint
+     tier carries hints, conditions and meta lines at the 11px floor. */
+  --ink-faint: #8aa6a8;
 
   /* Type */
   --font-display: "Michroma", ui-sans-serif, system-ui, sans-serif;
@@ -636,27 +638,33 @@ canvas {
   animation: button-hint-breathe 1.2s ease-in-out infinite;
 }
 
+/* The sheen sweeps its gradient across a box the exact size of the button,
+   so it can never travel past the button's edge, even on a tile that lets
+   other content overflow (the Egg tile's tab). */
 .button-hint-pulse::after,
 .button-ready-pulse::after {
   content: "";
   position: absolute;
-  inset: -2px;
+  inset: 0;
   z-index: 0;
+  border-radius: inherit;
   pointer-events: none;
-  background: linear-gradient(
+  background-image: linear-gradient(
     110deg,
     transparent 0 34%,
     rgba(255, 255, 255, 0.45) 47%,
     rgba(91, 233, 214, 0.38) 56%,
     transparent 70% 100%
   );
-  transform: translateX(-135%);
+  background-repeat: no-repeat;
+  background-size: 250% 100%;
+  background-position: 125% 0;
   mix-blend-mode: screen;
   animation: button-hint-sheen 1.55s ease-in-out infinite;
 }
 
 .button-ready-pulse::after {
-  background: linear-gradient(
+  background-image: linear-gradient(
     110deg,
     transparent 0 34%,
     rgba(255, 255, 255, 0.5) 47%,
@@ -682,10 +690,10 @@ canvas {
 }
 
 @keyframes button-hint-sheen {
-  0% { transform: translateX(-135%); opacity: 0; }
+  0% { background-position: 125% 0; opacity: 0; }
   18% { opacity: 0.9; }
-  54% { transform: translateX(135%); opacity: 0; }
-  100% { transform: translateX(135%); opacity: 0; }
+  54% { background-position: -20% 0; opacity: 0; }
+  100% { background-position: -20% 0; opacity: 0; }
 }
 
 .tool-button strong,
@@ -835,18 +843,21 @@ canvas {
 .end-action.end-action-ready::after {
   content: "";
   position: absolute;
-  inset: -2px;
+  inset: 0;
   z-index: 0;
+  border-radius: inherit;
   pointer-events: none;
-  background: linear-gradient(
+  background-image: linear-gradient(
     110deg,
     transparent 0 34%,
     rgba(255, 255, 255, 0.72) 46%,
     rgba(91, 233, 214, 0.58) 54%,
     transparent 68% 100%
   );
+  background-repeat: no-repeat;
+  background-size: 250% 100%;
+  background-position: 125% 0;
   mix-blend-mode: screen;
-  transform: translateX(-135%);
   animation: end-ready-flash 1.35s ease-in-out infinite;
 }
 
@@ -865,9 +876,9 @@ canvas {
 }
 
 @keyframes end-ready-flash {
-  0%, 58% { transform: translateX(-135%); opacity: 0; }
+  0%, 58% { background-position: 125% 0; opacity: 0; }
   66% { opacity: 0.96; }
-  86%, 100% { transform: translateX(135%); opacity: 0; }
+  86%, 100% { background-position: -20% 0; opacity: 0; }
 }
 
 /* HUD objective line picks up the bio accent when the experiment is complete. */
@@ -888,6 +899,13 @@ canvas {
 .hud-equilibrium-achieved .hud-equilibrium-row .hud-val {
   color: var(--bio);
   text-shadow: 0 0 15px rgba(91, 233, 214, 0.42);
+}
+
+/* Balance is a clock of time held: it lights while the dish is in balance
+   and dims (paused, never reset) through a dip. */
+.hud-equilibrium-row.is-balanced .hud-val {
+  color: var(--bio);
+  text-shadow: 0 0 12px rgba(91, 233, 214, 0.32);
 }
 
 .dish-shake {
@@ -2871,120 +2889,6 @@ canvas {
 }
 
 /* ---- Title screen ------------------------------------------------------ */
-.screen-title-screen {
-  isolation: isolate;
-  overflow: hidden;
-  background: #020607;
-}
-
-.screen-title-screen.visible {
-  display: grid;
-  grid-template-columns: minmax(260px, 360px) minmax(480px, 620px);
-  gap: clamp(8px, 2.4vw, 34px);
-}
-
-.title-professor {
-  position: relative;
-  align-self: end;
-  width: min(32vw, 360px);
-  height: min(82svh, 720px);
-  margin: 0;
-  animation: title-professor-arrive 620ms cubic-bezier(0.18, 0.9, 0.22, 1);
-}
-
-.title-professor img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 52% 20%;
-  filter: saturate(0.88) contrast(1.08);
-  -webkit-mask-image: linear-gradient(180deg, #000 65%, transparent 100%);
-  mask-image: linear-gradient(180deg, #000 65%, transparent 100%);
-}
-
-.title-professor figcaption {
-  position: absolute;
-  left: -4px;
-  right: 4px;
-  bottom: 28px;
-  padding: 12px 14px;
-  border-left: 2px solid var(--amber);
-  background: rgba(4, 10, 12, 0.84);
-  color: var(--ink);
-  font-family: var(--font-serif);
-  font-size: 17px;
-  font-style: italic;
-  line-height: 1.3;
-  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.42);
-}
-
-@keyframes title-professor-arrive {
-  from { opacity: 0; transform: translateX(-60px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-.title-automata {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -3;
-  pointer-events: auto;
-}
-
-.title-vignette {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 50% 46%, transparent 8%, rgba(2, 6, 7, 0.12) 48%, rgba(2, 5, 6, 0.88) 100%),
-    linear-gradient(90deg, rgba(2, 5, 6, 0.58), transparent 32%, transparent 68%, rgba(2, 5, 6, 0.58));
-}
-
-.title-art {
-  position: absolute;
-  inset: 0;
-  z-index: -2;
-  background-image: url("/art/title-keyart-1024.png");
-  background-size: cover;
-  background-position: center;
-  opacity: 0.14;
-  filter: saturate(130%) contrast(115%);
-  -webkit-mask-image: radial-gradient(closest-side, #000 35%, transparent 78%);
-  mask-image: radial-gradient(closest-side, #000 35%, transparent 78%);
-  animation: title-art-drift 26s ease-in-out infinite alternate;
-  pointer-events: none;
-}
-
-@keyframes title-art-drift {
-  from { transform: scale(1.02) rotate(0deg); }
-  to { transform: scale(1.1) rotate(2.5deg); }
-}
-
-.title-card {
-  position: relative;
-  z-index: 1;
-  background: linear-gradient(165deg, rgba(7, 15, 18, 0.82), rgba(2, 7, 9, 0.72));
-  border: 1px solid rgba(72, 201, 255, 0.22);
-  border-radius: 18px;
-  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.36), inset 0 0 40px rgba(72, 201, 255, 0.025);
-  -webkit-backdrop-filter: blur(5px);
-  backdrop-filter: blur(5px);
-  width: min(54vw, 620px);
-  max-width: 620px;
-  padding-inline: 38px;
-  text-align: left;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .title-art { animation: none; }
-}
-
-.title-card::before {
-  display: none;
-}
-
 .title-eyebrow {
   margin: 0 0 14px;
   font-family: var(--font-display);
@@ -2992,20 +2896,6 @@ canvas {
   letter-spacing: 0.4em;
   color: var(--bio);
   text-shadow: 0 0 18px rgba(91, 233, 214, 0.5);
-}
-
-.title-wordmark {
-  font-size: clamp(30px, 8vw, 52px);
-  line-height: 1.04;
-  letter-spacing: 0.01em;
-  margin-bottom: 18px;
-  text-shadow: 0 2px 8px #020607, 0 0 40px rgba(91, 233, 214, 0.28);
-}
-
-.title-card .title-wordmark,
-.title-card > .title-eyebrow,
-.title-card > .commit-debug {
-  text-align: center;
 }
 
 .case-docket {
@@ -3106,8 +2996,6 @@ canvas {
 
 .active-hypothesis span { color: var(--bio); font-size: var(--fs-min); letter-spacing: 0.1em; text-transform: uppercase; }
 .active-hypothesis strong { color: var(--ink); font: 400 13px/1.35 var(--font-serif); }
-.title-card .title-start-button { display: flex; margin-inline: auto; }
-
 .method-card { width: min(calc(100vw - 36px), 680px); }
 .method-sub { margin: -4px auto 4px; color: var(--ink-dim); font-size: 11px; line-height: 1.4; }
 .case-result-strip { margin: 0 auto 15px; max-width: 430px; }
@@ -3118,23 +3006,11 @@ canvas {
 .case-result-dots i.is-lapsed { border-color: var(--danger); }
 
 @media (prefers-reduced-motion: reduce) {
-  .coach.coach-show,
-  .title-professor { animation: none; }
+  .coach.coach-show { animation: none; }
 }
 
 @media (forced-colors: active) {
   html, body { scrollbar-color: auto; }
-}
-
-.title-wordmark span {
-  color: var(--bio);
-  text-shadow: 0 2px 8px #020607, 0 0 34px rgba(91, 233, 214, 0.55);
-}
-
-.title-start-button {
-  margin-top: 4px;
-  font-size: 14px;
-  padding: 15px 32px;
 }
 
 .end-eyebrow {
@@ -3854,8 +3730,10 @@ canvas {
   line-height: 1.25;
 }
 
-.research-seal-locked {
-  opacity: 0.56;
+/* A locked badge keeps its condition readable; only its marker greys out
+   (the dashed border already says "not yet"). */
+.research-seal-locked .research-seal-marker {
+  opacity: 0.5;
   filter: grayscale(0.8);
 }
 
@@ -3886,6 +3764,45 @@ canvas {
 
 .research-records small {
   color: var(--ink-faint);
+}
+
+/* Biome cards: each stable ecosystem held for a minute, with its strains. */
+.research-biomes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.research-biome {
+  display: grid;
+  gap: 5px;
+  align-content: start;
+  padding: 9px 10px;
+  border: 1px solid rgba(91, 233, 214, 0.3);
+  border-radius: 10px;
+  background: rgba(11, 17, 19, 0.5);
+}
+
+.research-records .research-biome strong {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.research-biome-strains {
+  display: flex;
+  gap: 5px;
+}
+
+.research-biome-strains i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor, inset 0 0 0 1px rgba(255, 255, 255, 0.25);
 }
 
 .debug-only {
@@ -4180,14 +4097,6 @@ canvas {
 
 .objective-card-hint {
   color: var(--ink-faint);
-}
-
-.title-save-note {
-  margin: 8px 0 0;
-  color: var(--ink-faint);
-  font-size: var(--fs-min);
-  line-height: 1.4;
-  text-align: center;
 }
 
 .sr-only {
@@ -5971,17 +5880,6 @@ canvas {
    contract so they can adapt the new surfaces without becoming the owner of
    the game's core mobile layout. */
 @media (max-width: 899px) and (orientation: portrait) {
-  .screen-title-screen.visible {
-    display: flex;
-    overflow-y: auto;
-    align-items: flex-start;
-    padding-top: max(14px, env(safe-area-inset-top));
-    padding-bottom: max(14px, env(safe-area-inset-bottom));
-  }
-
-  .title-professor { display: none; }
-  .title-card { position: relative; left: auto; right: auto; width: min(calc(100vw - 24px), 560px); padding: 22px 18px; }
-  .title-wordmark { font-size: clamp(27px, 9vw, 40px); margin-bottom: 14px; }
   .title-eyebrow { margin-bottom: 10px; font-size: var(--fs-min); letter-spacing: 0.26em; }
   .case-docket { padding: 11px; gap: 8px; }
   .case-trial-rail span { display: none; }
@@ -6015,13 +5913,9 @@ canvas {
 }
 
 @media (max-width: 899px) and (max-height: 700px) {
-  .title-card { position: relative; left: auto; right: auto; padding: 14px 16px; }
-  .title-card .title-wordmark { font-size: 26px; margin-bottom: 9px; }
-  .title-card > .title-eyebrow { display: none; }
   .case-docket { margin-bottom: 10px; padding: 9px; }
   .case-docket > p { display: none; }
   .active-hypothesis { padding: 7px 8px; }
-  .title-start-button { padding: 11px 22px; }
   .commit-debug { margin-top: 8px; }
   .coach {
     bottom: calc(146px + env(safe-area-inset-bottom));
@@ -6055,74 +5949,7 @@ canvas {
   }
 }
 
-/* The Doctor remains the mobile front-door brand. This lives after the
-   campaign responsive layer so the portrait cannot be hidden downstream. */
-@media (max-width: 899px) and (orientation: portrait) {
-  #screen-title.screen-title-screen.visible {
-    display: grid;
-    grid-template-columns: 1fr;
-    grid-template-rows: clamp(190px, 32svh, 260px) auto;
-    align-content: start;
-    justify-items: center;
-    overflow-x: hidden;
-    overflow-y: auto;
-  }
-
-  .screen-title-screen .title-professor {
-    display: block;
-    grid-row: 1;
-    align-self: end;
-    width: min(82vw, 330px);
-    height: clamp(210px, 34svh, 280px);
-    z-index: 0;
-  }
-
-  .screen-title-screen .title-professor img {
-    object-fit: cover;
-    object-position: 50% 15%;
-    opacity: 0.88;
-    filter: grayscale(0.44) saturate(0.7) brightness(0.72) contrast(1.28);
-    -webkit-mask-image: linear-gradient(180deg, #000 0 66%, rgba(0, 0, 0, 0.72) 82%, transparent 100%);
-    mask-image: linear-gradient(180deg, #000 0 66%, rgba(0, 0, 0, 0.72) 82%, transparent 100%);
-  }
-
-  .screen-title-screen .title-professor figcaption {
-    left: 6px;
-    right: 6px;
-    bottom: 12px;
-    padding: 8px 10px;
-    font-size: 12px;
-  }
-
-  .screen-title-screen .title-card {
-    grid-row: 2;
-    z-index: 1;
-    margin-top: -24px;
-  }
-}
-
-@media (max-width: 899px) and (orientation: portrait) and (max-height: 700px) {
-  #screen-title.screen-title-screen.visible {
-    grid-template-rows: 168px auto;
-  }
-
-  .screen-title-screen .title-professor {
-    width: min(74vw, 280px);
-    height: 188px;
-  }
-
-  .screen-title-screen .title-professor figcaption {
-    display: none;
-  }
-
-  .screen-title-screen .title-card {
-    margin-top: -18px;
-  }
-}
-
-/* ---- Minimal cinematic front door --------------------------------------
-   The Doctor is the brand. Keep the title screen to the portrait, wordmark,
-   and one unambiguous action; progression detail belongs after the tap. */
+/* ---- Title screen chrome ---------------------------------------------- */
 .layout[data-screen="title"] .fullscreen-button {
   opacity: 0;
   pointer-events: none;
@@ -6139,9 +5966,20 @@ canvas {
   background: rgba(2, 10, 13, 0.54);
 }
 
+/* The title is the dish. The live culture fills the screen edge to edge; the
+   wordmark sits in the middle of it with cultures crawling round and behind
+   the cut letters, over a dark lens that keeps the type clear. Run Trial sits
+   under the title; the strain track and the save note hold the corners. */
 #screen-title.screen-title-screen {
+  --title-small: clamp(11px, 1.05svh, 14px);
+  --title-pad-x: clamp(16px, 4vw, 64px);
+  --title-pad-y: clamp(16px, 4.5svh, 48px);
+  /* DEATH and MATCH; CELLULAR and the pitch scale from it. */
+  --title-word: min(15svh, 11.5vw);
   padding: 0;
-  background: #010405;
+  background: var(--void);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   z-index: 9 !important;
 }
 
@@ -6150,100 +5988,225 @@ canvas {
   overflow: hidden;
 }
 
-.screen-title-screen .title-professor {
+.screen-title-screen .title-dish {
   position: absolute;
   inset: 0;
   z-index: 0;
-  display: block;
   width: 100%;
   height: 100%;
+  max-width: none;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.screen-title-screen .title-fade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    radial-gradient(ellipse 44% 34% at 50% 48%, rgba(4, 8, 10, 0.86) 0%, rgba(4, 8, 10, 0.6) 58%, rgba(4, 8, 10, 0) 100%),
+    linear-gradient(0deg, rgba(4, 8, 10, 0.95) 0, rgba(4, 8, 10, 0.8) 9%, rgba(4, 8, 10, 0) 22%),
+    linear-gradient(180deg, rgba(4, 8, 10, 0.9) 0, rgba(4, 8, 10, 0.6) 7%, rgba(4, 8, 10, 0) 16%);
+  pointer-events: none;
+}
+
+.title-dish-tags {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.title-dish-tag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55em;
+  padding: 0.34em 0.8em 0.34em 0.62em;
+  border: 1.5px solid var(--tag-color);
+  border-radius: 999px;
+  background: rgba(4, 8, 10, 0.86);
+  color: var(--ink);
+  font: 500 clamp(11px, 1.5svh, 14px)/1 var(--font-mono);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 420ms ease;
+}
+
+.title-dish-tag.is-shown { opacity: 1; }
+
+.title-dish-tag i {
+  width: 0.62em;
+  height: 0.62em;
+  border-radius: 50%;
+  background: var(--tag-color);
+  box-shadow: 0 0 0.6em var(--tag-color);
+}
+
+.screen-title-screen .title-card {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto auto auto 1.15fr auto;
+  grid-template-areas:
+    "eyebrow eyebrow"
+    ". ."
+    "word word"
+    "pitch pitch"
+    "cta cta"
+    ". ."
+    "strip note";
+  width: auto;
+  max-width: none;
   margin: 0;
-  animation: title-professor-arrive 720ms cubic-bezier(0.18, 0.9, 0.22, 1);
+  padding:
+    max(var(--title-pad-y), calc(env(safe-area-inset-top) + 12px))
+    var(--title-pad-x)
+    max(var(--title-pad-y), calc(env(safe-area-inset-bottom) + 12px));
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  text-align: center;
+  pointer-events: none;
+  animation: title-lockup-arrive 640ms 80ms cubic-bezier(0.18, 0.9, 0.22, 1) both;
 }
 
-.screen-title-screen .title-professor img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 50% 50%;
-  opacity: 1;
-  filter: saturate(1.04) contrast(1.08) brightness(0.86);
-  transform-origin: 50% 38%;
-  animation: title-professor-camera-drift 72s ease-in-out 720ms infinite alternate both;
-  will-change: transform;
-  -webkit-mask-image: none;
-  mask-image: none;
-}
+.screen-title-screen .title-card > * { pointer-events: auto; }
+.screen-title-screen .title-card::before { display: none; }
 
-.screen-title-screen .title-professor figcaption,
-.screen-title-screen .title-eyebrow,
 .screen-title-screen .case-docket,
 .screen-title-screen .commit-debug {
   display: none;
 }
 
-.screen-title-screen .title-art {
-  display: block;
-  inset: -8%;
-  z-index: 1;
-  opacity: 0.13;
-  background-size: min(112vmax, 1400px) min(112vmax, 1400px);
-  background-repeat: no-repeat;
-  background-position: 50% 36%;
-  filter: saturate(125%) contrast(128%) brightness(0.72);
-  mix-blend-mode: screen;
-  -webkit-mask-image: radial-gradient(ellipse at 50% 40%, #000 0 38%, rgba(0, 0, 0, 0.76) 60%, transparent 84%);
-  mask-image: radial-gradient(ellipse at 50% 40%, #000 0 38%, rgba(0, 0, 0, 0.76) 60%, transparent 84%);
-  animation: title-ca-wallpaper-drift 108s ease-in-out infinite alternate;
-}
-
-.screen-title-screen .title-automata {
-  z-index: 2;
-  opacity: 0.08;
-  pointer-events: none;
-  mix-blend-mode: screen;
-}
-
-.screen-title-screen .title-vignette {
-  z-index: 3;
-  background:
-    linear-gradient(180deg, rgba(0, 5, 7, 0.03) 0%, rgba(0, 5, 7, 0.04) 42%, rgba(0, 4, 6, 0.5) 62%, rgba(0, 3, 5, 0.9) 100%),
-    radial-gradient(ellipse at 50% 31%, transparent 20%, rgba(0, 3, 5, 0.12) 54%, rgba(0, 3, 5, 0.72) 110%);
-}
-
-.screen-title-screen .title-card {
-  position: absolute;
-  left: 50%;
-  right: auto;
-  bottom: max(28px, calc(env(safe-area-inset-bottom) + 18px));
-  z-index: 4;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: clamp(10px, 1.8svh, 18px);
-  width: min(92vw, 760px);
-  max-width: none;
+.screen-title-screen .title-eyebrow {
+  grid-area: eyebrow;
+  justify-self: start;
   margin: 0;
-  padding: 0;
-  transform: translateX(-50%);
+  color: var(--bio);
+  font: 400 clamp(11px, 1.5svh, 14px)/1.2 var(--font-mono);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  text-shadow: none;
+}
+
+.screen-title-screen .title-wordmark {
+  grid-area: word;
+  justify-self: center;
+  margin: 0;
+  color: var(--bio);
+  font-family: var(--font-display);
+  font-size: var(--title-word);
+  font-weight: 400;
+  line-height: 0.92;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  text-align: center;
+  overflow-wrap: normal;
+}
+
+.screen-title-screen .title-wordmark span {
+  display: block;
+  width: fit-content;
+  margin-inline: auto;
+  -webkit-text-stroke: 0.066em var(--void);
+  paint-order: stroke fill;
+  text-shadow: 0 0 0.27em rgba(91, 233, 214, 0.32);
+}
+
+.screen-title-screen .title-wordmark span:first-child {
+  margin-bottom: 0.31em;
+  color: var(--ink);
+  font-size: 0.387em;
+  letter-spacing: 0.3em;
+  -webkit-text-stroke: 0;
+  text-shadow: 0 0 12px rgba(4, 8, 10, 0.9);
+}
+
+.screen-title-screen .title-pitch {
+  grid-area: pitch;
+  justify-self: center;
+  max-width: none;
+  margin: calc(var(--title-word) * 0.3) 0 0;
+  color: #b6d4d2;
+  font: 400 clamp(12px, calc(var(--title-word) * 0.12), 18px)/1.6 var(--font-mono);
+  text-align: center;
+  text-shadow: 0 1px 8px var(--void);
+}
+
+.screen-title-screen .title-pitch b {
+  color: var(--amber);
+  font-weight: 500;
+}
+
+.screen-title-screen .title-start-button {
+  grid-area: cta;
+  justify-self: center;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: clamp(260px, 26vw, 380px);
+  min-height: 56px;
+  margin: clamp(16px, 3svh, 30px) 0 0;
+  padding: 0 22px;
   border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  animation: title-lockup-arrive 720ms 90ms cubic-bezier(0.18, 0.9, 0.22, 1) both;
+  border-radius: 4px;
+  background: var(--bio);
+  color: var(--void);
+  font: 400 clamp(14px, 2svh, 17px)/1 var(--font-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  box-shadow: 0 0 0 1px rgba(143, 247, 230, 0.6), 0 0 40px rgba(91, 233, 214, 0.35);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.screen-title-screen .title-start-button::after {
+  content: "→";
+  font-family: var(--font-mono);
+  font-size: 1.35em;
+}
+
+.screen-title-screen .title-start-button:hover,
+.screen-title-screen .title-start-button:focus-visible {
+  background: #8ff7e6;
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 1px #c8fff6, 0 0 52px rgba(91, 233, 214, 0.55);
+}
+
+.screen-title-screen .title-start-button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.screen-title-screen .title-start-button:active {
+  transform: scale(0.99);
+}
+
+.screen-title-screen .title-start-button .screen-button-glyph {
+  display: none;
 }
 
 .screen-title-screen .title-archive-strip {
+  grid-area: strip;
+  justify-self: start;
+  align-self: end;
   box-sizing: border-box;
-  width: min(86vw, 600px);
-  padding: 8px 11px;
-  border: 1px solid rgba(91, 233, 214, 0.28);
-  border-radius: 10px;
-  background: rgba(2, 13, 17, 0.72);
-  box-shadow: inset 0 0 22px rgba(91, 233, 214, 0.045);
+  width: min(100%, 340px);
   color: var(--ink-dim);
+  font-family: var(--font-mono);
+  text-align: left;
 }
 
 .title-archive-head {
@@ -6251,8 +6214,8 @@ canvas {
   justify-content: space-between;
   gap: 10px;
   color: var(--bio);
-  font-size: var(--fs-min);
-  letter-spacing: 0.11em;
+  font-size: var(--title-small);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
@@ -6266,196 +6229,102 @@ canvas {
   display: grid;
   grid-template-columns: repeat(var(--genome-total, 1), minmax(4px, 1fr));
   gap: 3px;
-  margin-top: 6px;
+  margin-top: 7px;
 }
 
 .title-genome-track i {
   height: 4px;
-  border-radius: 2px;
-  background: rgba(123, 158, 166, 0.18);
+  border-radius: 1px;
+  background: rgba(123, 158, 166, 0.28);
 }
 
 .title-genome-track i.is-decoded { background: var(--bio); box-shadow: 0 0 7px rgba(91, 233, 214, 0.55); }
 .title-genome-track i.is-observed { background: var(--amber); }
 
+/* The next-lead line wraps to two lines instead of cutting its clue. */
 .title-archive-strip p {
-  margin: 6px 0 0;
+  display: -webkit-box;
+  margin: 7px 0 0;
   overflow: hidden;
   color: var(--ink-faint);
-  font-size: var(--fs-min);
-  line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: var(--title-small);
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .screen-title-screen .title-save-note {
-  width: min(86vw, 600px);
-  margin: -3px 0 0;
-  color: rgba(211, 239, 243, 0.62);
-  text-shadow: 0 1px 3px #000;
-}
-
-.screen-title-screen .title-card::before {
-  display: none;
-}
-
-.screen-title-screen .title-card .title-wordmark {
+  grid-area: note;
+  justify-self: end;
+  align-self: end;
   margin: 0;
-  color: #f8ffff;
-  font-size: clamp(40px, 10.5vw, 82px);
-  font-weight: 400;
-  line-height: 1.08;
-  letter-spacing: -0.035em;
-  text-align: center;
-  text-shadow:
-    0 2px 5px rgba(0, 0, 0, 0.98),
-    0 0 8px rgba(236, 255, 255, 0.86),
-    0 0 28px rgba(107, 207, 232, 0.34);
-}
-
-.screen-title-screen .title-card .title-wordmark span {
-  display: inline-block;
-  max-width: 100%;
-  font-size: 0.9em;
-  white-space: nowrap;
-  color: #55f1f2;
-  text-shadow:
-    0 2px 5px rgba(0, 0, 0, 0.98),
-    0 0 8px rgba(85, 241, 242, 0.95),
-    0 0 30px rgba(0, 225, 235, 0.7);
-}
-
-.screen-title-screen .title-start-button {
-  box-sizing: border-box;
-  display: grid;
-  place-items: center;
-  width: min(69vw, 520px);
-  min-width: 250px;
-  height: clamp(76px, 11.6svh, 148px);
-  margin: 0;
-  padding: 0 24px;
-  overflow: hidden;
-  border: 2px solid rgba(217, 255, 255, 0.94);
-  border-radius: clamp(16px, 3.2vw, 28px);
-  background:
-    linear-gradient(180deg, rgba(55, 211, 221, 0.22), rgba(2, 30, 36, 0.76)),
-    rgba(2, 12, 16, 0.62);
-  color: #f7ffff;
-  font-size: clamp(18px, 4.2vw, 34px);
-  font-weight: 400;
-  letter-spacing: 0.02em;
-  box-shadow:
-    0 0 0 5px rgba(34, 230, 235, 0.2),
-    0 0 10px rgba(225, 255, 255, 0.92),
-    0 0 34px rgba(20, 232, 237, 0.7),
-    inset 0 0 22px rgba(64, 234, 239, 0.18);
-  text-shadow: 0 0 12px rgba(232, 255, 255, 0.76);
-  -webkit-tap-highlight-color: transparent;
-}
-
-.screen-title-screen .title-start-button::before {
-  content: "";
-  position: absolute;
-  inset: 8px;
-  border: 1px solid rgba(91, 247, 246, 0.72);
-  border-radius: calc(clamp(16px, 3.2vw, 28px) - 7px);
-  pointer-events: none;
-}
-
-.screen-title-screen .title-start-button:hover,
-.screen-title-screen .title-start-button:focus-visible {
-  border-color: #ffffff;
-  background:
-    linear-gradient(180deg, rgba(74, 239, 240, 0.34), rgba(4, 50, 57, 0.82)),
-    rgba(2, 12, 16, 0.68);
-  transform: translateY(-2px);
-  box-shadow:
-    0 0 0 5px rgba(34, 230, 235, 0.28),
-    0 0 13px rgba(235, 255, 255, 1),
-    0 0 42px rgba(20, 232, 237, 0.82),
-    inset 0 0 24px rgba(64, 234, 239, 0.24);
-}
-
-.screen-title-screen .title-start-button:active {
-  transform: scale(0.985);
-}
-
-.screen-title-screen .title-start-button .screen-button-glyph {
-  display: none;
+  color: var(--ink-faint);
+  font: 400 var(--title-small)/1.4 var(--font-mono);
+  text-align: right;
 }
 
 @keyframes title-lockup-arrive {
-  from { opacity: 0; transform: translate(-50%, 18px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes title-professor-camera-drift {
-  0% { transform: scale(1.025) translate3d(-0.25%, 0.2%, 0); }
-  48% { transform: scale(1.045) translate3d(0.35%, -0.35%, 0); }
-  100% { transform: scale(1.065) translate3d(-0.15%, -0.8%, 0); }
+/* Short landscape (phones on their side): drop the eyebrow and the small print. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .screen-title-screen .title-eyebrow,
+  .screen-title-screen .title-archive-strip p,
+  .screen-title-screen .title-save-note {
+    display: none;
+  }
+
+  .screen-title-screen .title-start-button {
+    min-height: 46px;
+    margin-top: 12px;
+  }
 }
 
-@keyframes title-ca-wallpaper-drift {
-  from { transform: scale(1.01) translate3d(-0.4%, 0.25%, 0); }
-  to { transform: scale(1.055) translate3d(0.55%, -0.45%, 0); }
-}
-
+/* Portrait: one column; the strain track spans the foot. */
 @media (orientation: portrait) {
-  .screen-title-screen .title-card {
-    top: 61.5svh;
-    bottom: auto;
+  #screen-title.screen-title-screen {
+    --title-pad-x: 6vw;
+    --title-word: min(15.5vw, 9svh);
   }
 
-  .screen-title-screen .title-card .title-wordmark {
-    font-size: clamp(40px, 11.5vw, 82px);
+  .screen-title-screen .title-card {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "eyebrow"
+      "."
+      "word"
+      "pitch"
+      "cta"
+      "."
+      "strip";
   }
+
+  .screen-title-screen .title-fade {
+    background:
+      radial-gradient(ellipse 70% 30% at 50% 50%, rgba(4, 8, 10, 0.86) 0%, rgba(4, 8, 10, 0.6) 58%, rgba(4, 8, 10, 0) 100%),
+      linear-gradient(0deg, rgba(4, 8, 10, 0.96) 0, rgba(4, 8, 10, 0.86) 15%, rgba(4, 8, 10, 0) 30%),
+      linear-gradient(180deg, rgba(4, 8, 10, 0.9) 0, rgba(4, 8, 10, 0.6) 10%, rgba(4, 8, 10, 0) 20%);
+  }
+
+  .screen-title-screen .title-archive-strip { width: 100%; }
+  .screen-title-screen .title-save-note { display: none; }
+  .screen-title-screen .title-start-button { width: min(100%, 380px); }
 }
 
-@media (max-height: 700px) and (orientation: portrait) {
-  .screen-title-screen .title-card {
-    top: 60svh;
-    gap: 7px;
-  }
-
-  .screen-title-screen .title-card .title-wordmark {
-    font-size: clamp(37px, 10.7vw, 48px);
-  }
-
-  .screen-title-screen .title-start-button {
-    height: clamp(72px, 11.6svh, 82px);
-  }
-
-  .screen-title-screen .title-archive-strip { padding-block: 6px; }
-  .screen-title-screen .title-archive-strip p { margin-top: 4px; }
-}
-
-@media (min-width: 900px) and (orientation: landscape) {
-  .screen-title-screen .title-professor img {
-    object-position: 50% 18%;
-  }
-
-  .screen-title-screen .title-card {
-    gap: clamp(18px, 3.2svh, 32px);
-  }
-
-  .screen-title-screen .title-start-button {
-    width: min(40vw, 480px);
-    min-width: 360px;
+/* Short phones: no small print laid over the dish. */
+@media (orientation: portrait) and (max-height: 700px) {
+  .screen-title-screen .title-eyebrow,
+  .screen-title-screen .title-archive-strip p {
+    display: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .screen-title-screen .title-professor,
-  .screen-title-screen .title-card {
-    animation: none;
-  }
-
-  .screen-title-screen .title-professor img,
-  .screen-title-screen .title-art {
-    animation: none;
-    transform: none;
-    will-change: auto;
-  }
+  .screen-title-screen .title-card { animation: none; }
+  .title-dish-tag { transition: none; }
 }
 
 /* ---- Surgical Trial 1 timing -------------------------------------------
@@ -7823,7 +7692,10 @@ canvas {
     padding-inline: max(6vw, 48px);
   }
 
-  .method-intro-professor img { object-position: 30% 18%; }
+  .method-intro-professor img {
+    object-fit: contain;
+    object-position: 4% 100%;
+  }
 
   .method-intro-vignette {
     background:
@@ -7935,10 +7807,6 @@ canvas {
 
 /* ---- Consistent Professor portrait grade ------------------------------ */
 /* Preserve the cyan/amber identity and lift the face at icon scale. */
-.screen-title-screen .title-professor img {
-  filter: saturate(1.16) contrast(1.2) brightness(0.98);
-}
-
 .layout[data-screen="arena"] .coach:not(.coach-welcome) .coach-portrait img {
   opacity: 1;
   filter: saturate(1.18) contrast(1.2) brightness(1.22);

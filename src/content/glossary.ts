@@ -2,7 +2,7 @@
 //
 //   Culture  — one living mass in the dish
 //   Strain   — a kind of culture (Swarmlet, Bloom Mass, a hybrid…)
-//   Egg      — the tool that plants a strain; "Eggs" lists the plantable strains
+//   Egg      — the tool that plants a strain; its tray lists the plantable strains
 //   Tool     — anything applied to the dish (Nutrient, Paste, Toxin, Water…)
 //   Reaction — chemistry that fires when tools and strains combine
 //   Trial    — one dish round; the Open Lab continues the numbering
