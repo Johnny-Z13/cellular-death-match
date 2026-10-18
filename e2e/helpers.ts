@@ -73,6 +73,19 @@ export async function completeOpeningActions(page: Page): Promise<void> {
   await clickDish(page, 0.55, 0.53);
 }
 
+/** A new strain's catch takes two activations (the first finishes the
+ *  sequence, the next continues; a second strain takes two more). Activate
+ *  the reveal until it closes. */
+export async function dismissReveal(page: Page, key?: 'Enter'): Promise<void> {
+  const reveal = page.locator('#fx-genome');
+  for (let i = 0; i < 6 && await reveal.getAttribute('aria-hidden') === 'false'; i += 1) {
+    if (key) await reveal.press(key);
+    else await reveal.click();
+    await page.waitForTimeout(80);
+  }
+  await expect(reveal).toHaveAttribute('aria-hidden', 'true');
+}
+
 export async function continueToMethodPicker(page: Page): Promise<void> {
   const introduction = page.locator('#screen-method-intro');
   const picker = page.locator('#screen-pick');

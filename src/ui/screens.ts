@@ -14,6 +14,7 @@ import type { ResearchCaseDef, ResearchTrialDef } from '../content/researchCases
 import type { ResearchNotebookView } from '../game/researchNotebook';
 import type { StudyChoice } from '../game/objectivePool';
 import { isRackExitVisible, type DishExitState } from '../game/dishExitAction';
+import { formatHeld } from '../game/balance';
 
 type ScreenName = 'title' | 'method-intro' | 'pick' | 'end' | 'hud' | 'notebook';
 type AppScreenName = ScreenName | 'loadout' | 'objective';
@@ -111,7 +112,8 @@ export interface Screens {
   onLifeformSelect(handler: (id: string) => boolean | void): void;
   setSelectedLifeform(id: string | null): void;
   updateHud(info: HudInfo): void;
-  setEquilibrium(info: EquilibriumInfo): void;
+  /** The Balance readout: time held (m:ss), lit while the dish is in balance. */
+  setEquilibrium(info: EquilibriumInfo & { balance?: { balanced: boolean; heldTicks: number } }): void;
   updateNotebook(view: NotebookView): void;
   updateResearchNotebook(view: ResearchNotebookView): void;
   updateAtlas(view: AtlasView): void;
@@ -220,6 +222,7 @@ export function createScreens(): Screens {
   const hudHint      = get('hud-hint');
   const hudUpgrades  = get('hud-upgrades');
   const hudGoal      = get('hud-goal');
+  const hudEquilibriumRow = hudEquilibrium.closest<HTMLElement>('.hud-equilibrium-row') ?? hudEquilibrium;
   const hudGoalLine  = get('hud-goal-line');
   const hudGoalValue = get('hud-goal-value');
   const hudGoalFill  = get('hud-goal-fill');
@@ -944,10 +947,11 @@ export function createScreens(): Screens {
       hudUpgrades.textContent = info.upgrades.length === 0 ? 'none' : info.upgrades.join(', ');
     },
     setEquilibrium(info) {
-      hudEquilibrium.textContent = info.achieved
-        ? 'Balanced'
+      hudEquilibrium.textContent = info.balance
+        ? formatHeld(info.balance.heldTicks)
         : `${Math.round(Math.max(0, Math.min(1, info.progress)) * 100)}%`;
       hudEquilibrium.title = info.achieved && info.biomeName ? `Biome: ${info.biomeName}` : '';
+      hudEquilibriumRow.classList.toggle('is-balanced', info.balance?.balanced === true);
       hud.classList.toggle('hud-equilibrium-achieved', info.achieved);
     },
     updateNotebook(view) {
@@ -1144,10 +1148,36 @@ export function createScreens(): Screens {
       const recordsCopy = document.createElement('p');
       recordsCopy.textContent = `${view.records.biomeCount} biomes · ${view.records.peakBiodiversity} peak families · ${view.records.maxReactions} reaction chain · ${view.records.longestStabilitySeconds}s stability`;
       records.append(recordsTitle, recordsCopy);
-      if (view.records.biomeNames.length > 0) {
-        const biomeList = document.createElement('small');
-        biomeList.textContent = view.records.biomeNames.join(' · ');
-        records.append(biomeList);
+      // Biome cards, newest first: each stable ecosystem the player held,
+      // with the strains that made it.
+      if (view.records.biomes.length > 0) {
+        const biomeGrid = document.createElement('div');
+        biomeGrid.className = 'research-biomes';
+        for (const biome of [...view.records.biomes].reverse()) {
+          const card = document.createElement('article');
+          card.className = 'research-biome';
+          const name = document.createElement('strong');
+          name.textContent = biome.name;
+          const dots = document.createElement('span');
+          dots.className = 'research-biome-strains';
+          const strainNames: string[] = [];
+          for (const strain of biome.strains) {
+            const identity = LIFEFORM_IDENTITIES[strain as LifeformIdentityId];
+            if (!identity) continue;
+            const dot = document.createElement('i');
+            dot.style.color = rgb(identity.colors.primary);
+            dots.append(dot);
+            strainNames.push(identity.name);
+          }
+          const members = document.createElement('small');
+          members.textContent = strainNames.join(' · ');
+          const date = new Date(biome.recordedAt);
+          const when = document.createElement('small');
+          when.textContent = Number.isNaN(date.getTime()) ? '' : `Recorded ${date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`;
+          card.append(name, dots, members, when);
+          biomeGrid.append(card);
+        }
+        records.append(biomeGrid);
       }
       sealSection.append(records);
       notebookStudy.append(sealSection);
@@ -1599,7 +1629,7 @@ function updateToolSummary(
     water: 'Water - dilutes pressure, spreads reactions, and pushes cultures outward.',
     salt: 'Salt - slows local movement and dries cultures into brittle patterns.',
     acid: 'Acid - burns tissue quickly and can trigger volatile reactions.',
-    paste: 'Paste - drag to draw a nutrient trail; cultures drift along the line you paint.',
+    paste: 'Paste - drag to draw an agar wall. Cultures can\'t cross it; it dissolves in about 20 seconds.',
   };
   el.textContent = summaries[tool];
 }
@@ -1629,7 +1659,7 @@ function updateMobileToolReadout(
     water: 'dilute and spread',
     salt: 'slow and dry',
     acid: 'burn tissue',
-    paste: 'draw a trail',
+    paste: 'draw a wall',
   };
   nameEl.textContent = names[tool];
   summaryEl.textContent = summaries[tool];

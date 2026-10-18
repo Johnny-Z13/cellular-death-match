@@ -44,7 +44,9 @@ import { mirrorStep } from './enemies/mirror';
 import { bossStep, type BossState } from './enemies/boss';
 import { displacementVec } from './geometry';
 import { clampReagentShift, getBreedProfile, getReagentShift, type BreedProfileId } from '../sim/breedProfiles';
-import { createHomeostasisTracker } from './homeostasis';
+import { classifyBiome, type BiomeRecord } from './homeostasis';
+import { BALANCE_TUNING, createBalanceMeter, HUNTER_ROLES, type BalanceReading } from './balance';
+import { createAgarWall } from './agarWall';
 import { applyAppetite, applyMetabolism, createLifeCycleState, readyToDivide } from './lifeCycle';
 import { getEscalation } from './escalation';
 import { createMergeTracker, MERGE_DETECTION, type FormingGroup, type LockedForm, type MergeEvent } from './mergeDetection';
@@ -89,6 +91,8 @@ export interface Arena {
   getStatus(): ArenaStatus;
   getEcology(): EcologyInfo;
   getEquilibrium(): EquilibriumInfo;
+  /** The dish's balance clocks (game/balance.ts). */
+  getBalance(): BalanceReading;
   getObjectiveProgress(): ObjectiveProgress;
   getToolStates(): Record<LabTool, ToolState>;
   getAgitationState(): AgitationState;
@@ -117,7 +121,11 @@ export interface EquilibriumInfo {
   achieved: boolean;
   progress: number;
   biomeName: string | null;
+  /** The biome's leading strains, once the dish is stable. */
+  biomeStrains: string[];
 }
+
+export type { BalanceReading } from './balance';
 
 export interface EcologyInfo {
   tick: number;
@@ -363,6 +371,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
   const trailEffects: ToolEffect[] = [];
   let lastEggCellId: CellId | null = null;
   let lastTrailStamp: [number, number] | null = null;
+  // Paste also sets as an agar wall along the stroke (game/agarWall.ts).
+  const agarWall = createAgarWall(state.grid.LX, state.grid.LY);
   let pastePathRemaining = 0;
   const dishEvents: DishEventMarker[] = [];
   let nextDishEventId = 1;
@@ -387,7 +397,11 @@ export function createArena(opts: CreateArenaOpts): Arena {
   const discoveredNoteIds = new Set<DiscoveryNoteId>();
   const triggeredRecipeIds = new Set<ReactionRecipeId>();
   const discoveryMessages: string[] = [];
-  const homeostasisTracker = createHomeostasisTracker();
+  // Balance: 3+ strains, none over half the living mass. An unbroken minute
+  // of it makes the dish a stable ecosystem (game/balance.ts).
+  const balanceMeter = createBalanceMeter();
+  let stableBiome: BiomeRecord | null = null;
+  const isStable = () => balanceMeter.reading().stable;
   const objectiveRuntime = createObjectiveRuntime();
 
   function pushSignal(message: string): void {
@@ -463,6 +477,11 @@ export function createArena(opts: CreateArenaOpts): Arena {
     }
   }
 
+  function equilibriumProgress(): number {
+    const reading = balanceMeter.reading();
+    return reading.stable ? 1 : Math.min(1, reading.streakTicks / BALANCE_TUNING.stableAfterTicks);
+  }
+
   function currentObjectiveProgress(
     progressTick = tickNo,
     forceShowcase = false,
@@ -474,6 +493,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       discoveredBreedTicks,
       triggeredRecipeIds,
       runtime: objectiveRuntime,
+      balance: balanceMeter.reading(),
       forceShowcase,
     });
   }
@@ -543,7 +563,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         const complete = progress.latches ? objectiveAchieved : progress.met;
         // Equilibrium is visible and stable until the player banks it; it
         // pauses pressure without letting the normal objective deadline fire.
-        if (homeostasisTracker.isAchieved()) return 'running';
+        if (isStable()) return 'running';
         // Most studies are open dishes: they continue until the player banks
         // the evidence, reaches equilibrium, or the ecology collapses. Only a
         // specifically authored pressure experiment expires at its window.
@@ -713,7 +733,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       }
 
       if (tool === 'paste') {
-        // Drawing a trail: stamp a small nutrient field, but only once the
+        // Drawing a wall: stamp gel and a small nutrient field, but only once the
         // pointer has travelled stampSpacing from the last stamp, so a drag
         // lays an even line. A charge is spent per unitsPerCharge of path.
         if (lastTrailStamp) {
@@ -735,6 +755,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
           pastePathRemaining = PASTE_TUNING.unitsPerCharge;
         }
         pasteStrokeStamped = true;
+        agarWall.add(lastTrailStamp ?? pos, pos);
+        state.wall = agarWall.mask();
         lastTrailStamp = [pos[0], pos[1]];
         const maxTtl = TOOL_TUNING.paste.ttl;
         trailEffects.push({
@@ -947,7 +969,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       }
 
       if (mode === 'ecosystem') {
-        const pressurePaused = homeostasisTracker.isAchieved();
+        const pressurePaused = isStable();
         const hazardsPaused = pressurePaused || hazardsHeld;
         applyToolEffects(state, toolEffects, archetypes);
         // Trail stamps pull + feed cells exactly like nutrient drops, so a drawn
@@ -1087,6 +1109,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
         state.bonds = merges.bonds.size() > 0 ? merges.bonds : undefined;
       }
 
+      agarWall.tick();
+      state.wall = agarWall.mask();
       simTick(state, MC_STEPS_PER_TICK);
 
       if (merges && tickNo % MERGE_DETECTION.scanTicks === 0) {
@@ -1109,18 +1133,24 @@ export function createArena(opts: CreateArenaOpts): Arena {
         }
       }
 
-      // Feed homeostasis with breed volume shares, not culture counts.
+      // Feed the balance meter with breed volume shares, not culture counts.
       const breedVolumes = new Map<string, number>();
-      let totalVolume = 0;
       for (const [cellId, cell] of state.cells) {
         if (cell.vol <= 0) continue;
         const spawn = archetypes.get(cellId);
         if (!spawn) continue;
         const breed = spawn.breedId ?? spawn.archetype;
         breedVolumes.set(breed, (breedVolumes.get(breed) ?? 0) + cell.vol);
-        totalVolume += cell.vol;
       }
-      homeostasisTracker.tick({ breedVolumes, totalVolume });
+      const hunterStrains = new Set<string>();
+      for (const spawn of archetypes.values()) {
+        if ((HUNTER_ROLES as readonly string[]).includes(ARCHETYPE_ECOLOGY[spawn.archetype].role)) {
+          hunterStrains.add(spawn.breedId ?? spawn.archetype);
+        }
+      }
+      const wasStable = isStable();
+      balanceMeter.sample({ strainVolumes: breedVolumes, hunterStrains }, 1);
+      if (!wasStable && isStable()) stableBiome = classifyBiome(breedVolumes);
       if (mode === 'ecosystem') {
         updateObjectiveRuntime(objectiveRuntime, objectiveMetrics(state, archetypes), objective);
       }
@@ -1161,17 +1191,21 @@ export function createArena(opts: CreateArenaOpts): Arena {
       if (field && seededCell) discoverBreed(this, 'bloom_mass', seededCell);
     },
     getHomeostasisProgress(): number {
-      return homeostasisTracker.progress();
+      return equilibriumProgress();
     },
     getEquilibrium(): EquilibriumInfo {
       return {
-        achieved: homeostasisTracker.isAchieved(),
-        progress: homeostasisTracker.progress(),
-        biomeName: homeostasisTracker.getBiome()?.name ?? null,
+        achieved: isStable(),
+        progress: equilibriumProgress(),
+        biomeName: stableBiome?.name ?? null,
+        biomeStrains: stableBiome ? [...stableBiome.topBreeds] : [],
       };
     },
+    getBalance(): BalanceReading {
+      return balanceMeter.reading();
+    },
     isHomeostasisAchieved(): boolean {
-      return homeostasisTracker.isAchieved();
+      return isStable();
     },
     isEcosystemCollapsed(): boolean {
       // Collapsed if no living cells remain (excluding cell 0 / background).

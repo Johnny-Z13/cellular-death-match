@@ -10,7 +10,7 @@ import { writeFileSync } from 'node:fs';
 import { createRun } from '../src/game/run';
 import { createArena, type Arena } from '../src/game/arena';
 import { ARCHETYPE_DEFAULTS, type EnemyArchetype } from '../src/content/enemies';
-import { OPEN_LAB_LIFE_CYCLE } from '../src/content/ecologyTuning';
+import { DISH_LIFE_CYCLE } from '../src/content/ecologyTuning';
 import { COMMON_COLD_CASE } from '../src/content/researchCases';
 import { TITLE_DISH_TUNING } from '../src/ui/titleDish';
 import { buildContactGraph, canonicalShape, connectedSubsets, contactComponents } from '../src/game/contactGraph';
@@ -43,7 +43,7 @@ function openDish(dish: DishId, seed: number): Arena {
       LX: 219, LY: 137, seed, player: createRun(seed).getPlayerConfig(),
       enemies: TITLE_DISH_TUNING.strains.map((a) => ({ ...ARCHETYPE_DEFAULTS[a] })),
       wrap: false, mode: 'ecosystem', includeControlSample: true, fightIndex: COMMON_COLD_CASE.trials.length,
-      worldEventIntensity: 0, knownBreedIds: new Set(), lifeCycle: OPEN_LAB_LIFE_CYCLE, breedDiscovery: false,
+      worldEventIntensity: 0, knownBreedIds: new Set(), lifeCycle: DISH_LIFE_CYCLE, breedDiscovery: false,
     });
     arena.setHazardsHeld(true);
     return arena;
@@ -58,7 +58,7 @@ function openDish(dish: DishId, seed: number): Arena {
     enemies: onboarding ? run.getOnboardingSpawnList() : run.getEpochSpawnList(),
     wrap: false, mode: 'ecosystem', includeControlSample: !onboarding, objective: run.getObjective(),
     fightIndex, knownBreedIds: new Set(),
-    lifeCycle: fightIndex >= COMMON_COLD_CASE.trials.length ? OPEN_LAB_LIFE_CYCLE : 'arena',
+    lifeCycle: DISH_LIFE_CYCLE,
   });
   // Open the dish like a player: six eggs in a ring, honouring cooldowns; an
   // egg the dish refuses is skipped after 15 s.

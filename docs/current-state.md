@@ -7,13 +7,14 @@ Last updated: 2026-10-09 (legibility overhaul, branch `ux/legibility-overhaul`)
 Cellular Death Match is a mobile-first Petri dish ecosystem roguelike. Runs are open-ended with escalating pressure:
 
 - 3-beat guided onboarding epoch (~30s), 2 fixed progression epochs, then open-ended mid-game.
-- Runs fail via ecosystem collapse; homeostasis now latches as a visible equilibrium state that pauses pressure until the player ends the trial.
+- Runs fail via ecosystem collapse. Balance is a clock of time held (3+ strains alive, none over half the living mass); a minute unbroken makes the dish a stable ecosystem that pauses pressure, records its biome and lets the player end the trial.
+- Cosy pace: every dish after the coached onboarding runs the `culture` food web (`DISH_LIFE_CYCLE` in `src/content/ecologyTuning.ts`), case trials included. Sustain trials (Living Dish, Full House, Food Web, Even Spread, Symbiosis) pause on a dip rather than resetting, and the open-lab draw always offers one.
 - Per-breed CPM energy profiles: each breed has distinct Ising/volume/movement/engulf multipliers, resolved by the arena into sim-neutral cell profiles.
 - Reagent energy shifts: reagents modify CPM coefficients within field radius (salt hardens, acid fragments, etc.).
-- Strain library: discovered breeds banked across runs; players choose egg loadouts before each run.
+- Strain library: discovered breeds banked across runs; players choose egg loadouts before each run. Loadouts start at 2 strains and each new biome adds a slot (up to 6).
 - Procedural objective pool: mid-game epochs offer 2 objectives to choose from.
 - Escalating pressure: hazard intervals shorten, outbreaks grow, mutations intensify per epoch.
-- Biome classification: homeostasis states are named based on dominant breed composition.
+- Biome classification: stable ecosystems are named from their leading strains and kept as biome cards in the Notebook's Trial tab.
 - Catalytic reactions, rare breed discovery, and cross-breeding of hybrids.
 - Pixel-bloom dish rendering: every culture's own pixels glow in their color.
 - Mobile portrait touch shell: Lifeforms/Log drawers, tool readout, bottom tool bar.
@@ -39,7 +40,8 @@ Details, evidence and open questions: [`docs/ux-legibility/README.md`](./ux-legi
 - Simulation: cellular Potts model in `src/sim/`. Cells store generic energy coefficients; breed profile lookup stays outside the low-level sim.
 - Arena: ecosystem tick loop, objective evaluation, tool effects, mutation, reseeding, homeostasis tracking, escalation, and resupply in `src/game/arena.ts`.
 - Run state: open-ended state machine with homeostasis/collapse end states in `src/game/run.ts`.
-- Homeostasis: volume-share equilibrium detection and biome classification in `src/game/homeostasis.ts`.
+- Balance: time-held and stable-ecosystem clocks, plus the sustain-trial clocks, in `src/game/balance.ts`; biome naming in `src/game/homeostasis.ts`.
+- Agar wall: Paste's gel line in `src/game/agarWall.ts`; the sim reads its mask (`SimState.wall`) in `mcStep`.
 - Escalation: per-epoch pressure scaling in `src/game/escalation.ts`.
 - Objective pool: procedural mid-game objectives in `src/game/objectivePool.ts`.
 - Strain library: persistent strain bank and loadout in `src/game/strainLibrary.ts`.
@@ -68,7 +70,7 @@ Details, evidence and open questions: [`docs/ux-legibility/README.md`](./ux-legi
 5. During each epoch, select an egg strain or lab tool and tap the dish to seed life, feed growth, repel colonies, or trigger reactions.
 6. Satisfy the objective: creation objectives latch once achieved; balance objectives reflect live state.
 7. Pick an upgrade between epochs.
-8. If the dish reaches volume-share stability across 3+ breeds for 20s, the HUD surfaces Equilibrium, pressure pauses, and the player can keep observing or end the trial.
+8. The HUD's Balance clock counts time held. After a minute of unbroken balance the dish is a stable ecosystem: a biome banner shows, the biome is recorded, pressure pauses, and the player can keep observing or end the trial.
 9. Collapse still ends the run as a failure if all cultures die.
 10. Lab Report summarizes discoveries, hybrids, reactions, biome state, ecosystem stats, notebook progress, and strains banked.
 11. Strains discovered during the run are banked to the strain library for future runs.
@@ -96,7 +98,7 @@ Hybrid breeds (cross-bred from two discovered base breeds under a nutrient field
 
 - Egg: places the selected lifeform strain.
 - Nutrient: attracts nearby lifeforms and strongly increases their target volume.
-- Paste: drag on the dish to draw a continuous nutrient trail (a chain of small, long-lived nutrient-type stamps). Colonies gently drift and feed along the painted line, so you can steer them, link clusters, or surround one lifeform with another. Unlocked from the start; one charge buys a length of drawn path. Trail stamps live in their own budget in `arena.ts` so a long line never evicts catalysis effects. Drawing is wired via pointer capture in `main.ts` (`endPasteStroke` resets between strokes).
+- Paste: drag on the dish to draw an agar wall. Cultures can't grow into the gel, so a wall fences a strain off, gives prey a refuge or pens cultures together for a merge; a culture caught under fresh gel is squeezed out. The wall holds about 13s, leaks as it dissolves and is gone at 20s (`AGAR_TUNING`). Fresh gel is also a small nutrient field, and reagents dropped on it react along the line. One charge buys a length of drawn path; each stamp rasterises back to the last so fast strokes leave no gaps. Drawing is wired via pointer capture in `main.ts` (`endPasteStroke` resets between strokes).
 - Toxin: pushes nearby lifeforms away, shrinking and eroding matter in its radius.
 - Water, Salt, Acid: research-unlocked reagents that drive further reactions.
 - Agitate: spreads active fields and can fold overlapping reactions into a fault.

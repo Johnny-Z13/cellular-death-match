@@ -10,8 +10,10 @@ const css = readFileSync('src/styles.css', 'utf8');
 describe('equilibrium HUD state', () => {
   it('adds a HUD row and createScreens API for equilibrium progress', () => {
     expect(html).toContain('id="hud-equilibrium"');
-    expect(screensSource).toContain('setEquilibrium(info: EquilibriumInfo): void;');
-    expect(screensSource).toContain("? 'Balanced'");
+    expect(screensSource).toContain('setEquilibrium(info: EquilibriumInfo & { balance?: { balanced: boolean; heldTicks: number } }): void;');
+    // Balance reads as time held (m:ss), lit while the dish is in balance.
+    expect(screensSource).toContain('formatHeld(info.balance.heldTicks)');
+    expect(screensSource).toContain("hudEquilibriumRow.classList.toggle('is-balanced', info.balance?.balanced === true);");
     expect(screensSource).toContain('Biome: ${info.biomeName}');
     expect(screensSource).toContain('`${Math.round(Math.max(0, Math.min(1, info.progress)) * 100)}%`');
     expect(screensSource).toContain("hud.classList.toggle('hud-equilibrium-achieved'");
@@ -19,7 +21,7 @@ describe('equilibrium HUD state', () => {
 
   it('updates equilibrium from main without immediately ending the run', () => {
     expect(mainSource).toContain('const equilibrium = arena.getEquilibrium();');
-    expect(mainSource).toContain('screens.setEquilibrium(equilibrium);');
+    expect(mainSource).toContain('screens.setEquilibrium({ ...equilibrium, balance: arena.getBalance() });');
     expect(mainSource).toContain('didAnnounceEquilibrium');
     expect(mainSource).not.toContain('arena.isHomeostasisAchieved()) {\n    persistArenaDiscoveries(arena);');
   });
@@ -34,6 +36,7 @@ describe('equilibrium HUD state', () => {
   it('styles the equilibrium row with the calm bio glow', () => {
     expect(css).toContain('.hud-equilibrium-row .hud-val');
     expect(css).toContain('.hud-equilibrium-achieved .hud-equilibrium-row .hud-val');
+    expect(css).toContain('.hud-equilibrium-row.is-balanced .hud-val');
     expect(css).toContain('rgba(91, 233, 214');
   });
 

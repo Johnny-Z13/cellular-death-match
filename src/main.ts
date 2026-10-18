@@ -3,7 +3,7 @@ import { createArena, toolRadiusFor, type Arena, type ArenaStatus } from './game
 import { createRenderer, type MergeRing, type Renderer } from './ui/render';
 import { createDebugPanel } from './ui/debug';
 import { createScreens, type ToolId } from './ui/screens';
-import { AGITATION_TUNING, OPEN_LAB_LIFE_CYCLE, SIM_SPEED_TUNING, TOOL_TUNING } from './content/ecologyTuning';
+import { AGITATION_TUNING, DISH_LIFE_CYCLE, SIM_SPEED_TUNING, TOOL_TUNING } from './content/ecologyTuning';
 import { renderLoadoutScreen } from './ui/loadoutScreen';
 import { getUpgradeDef, upgradeToolNote } from './content/upgrades';
 import { goalLineFor } from './content/goalCopy';
@@ -216,7 +216,15 @@ if (
   identPlate?.remove();
 }
 const haptics = createHaptics();
-const fx = createFx();
+// A new strain's reveal plays as a catch: the egg wobbles and ticks, bursts
+// with the win fanfare and a haptic, and Dr. E cheers (ui/catchReveal.ts).
+const fx = createFx({
+  cue: (cue, step) => uiAudio.playCatchCue(cue, step),
+  fanfare: () => uiAudio.play('epoch_win'),
+  haptic: (cue) => haptics.play(cue),
+  cheer: () => drE.react('delighted', 4200),
+  stopSpeech: () => speech.finish(),
+});
 const coach = createCoach(runtimeStorage);
 
 // Publish the HUD's live bottom edge so the Professor's transmission rail can
@@ -1249,6 +1257,11 @@ function finishGenomeReveal(): void {
 
 function genomeRevealInfo(genome: GenomeArtIdentity) {
   const archive = notebookViewForProgression(discoveryProgression).archive;
+  // The catch's dex card: the strain's friend number, what it does, and the
+  // friends count it just raised.
+  const view = currentDexView();
+  const friend = view.items.find((item) => item.id === genome.id);
+  const identity = genome.id in LIFEFORM_IDENTITIES ? LIFEFORM_IDENTITIES[genome.id as LifeformIdentityId] : null;
   return {
     id: genome.id,
     name: genome.name,
@@ -1256,6 +1269,12 @@ function genomeRevealInfo(genome: GenomeArtIdentity) {
     alt: genome.alt,
     primary: genome.primary,
     archivePosition: `${archive.decodedGenomes} / ${archive.totalGenomes} STRAINS FOUND`,
+    number: friend?.number,
+    role: identity?.role,
+    behavior: identity?.behavior,
+    note: friend?.note,
+    found: view.found,
+    total: view.total,
   };
 }
 
@@ -1465,8 +1484,9 @@ function startNewFight() {
     objective: run.getObjective(),
     fightIndex: runState.fightIndex,
     knownBreedIds: new Set(discoveryProgression.discoveredBreedIds),
-    // The authored case keeps the death match; the open lab is the sandbox.
-    lifeCycle: runState.fightIndex >= COMMON_COLD_CASE.trials.length ? OPEN_LAB_LIFE_CYCLE : 'arena',
+    // The food web for the case and the open lab (the onboarding dish keeps
+    // its own tuning inside the arena).
+    lifeCycle: DISH_LIFE_CYCLE,
   });
   renderer = createRenderer(canvas, PALETTE_SIZE, {
     additiveBloom: visualProfile.additiveBloom,
@@ -1729,7 +1749,7 @@ function loop() {
   const ecology = arena.getEcology();
   const equilibrium = arena.getEquilibrium();
   const equilibriumCanEndRun = !isOnboardingEpoch(run.getState().fightIndex);
-  screens.setEquilibrium(equilibrium);
+  screens.setEquilibrium({ ...equilibrium, balance: arena.getBalance() });
   sampleRunTelemetryFromArena(arena);
 
   // HUD update.
@@ -1840,6 +1860,7 @@ function bankCompletedStudy(
       peakBiodiversity,
       stabilitySeconds: Math.round(longestStabilityStreak / 60),
       biomeName: terminalOutcome === 'won' ? arena.getEquilibrium().biomeName : undefined,
+      biomeStrains: terminalOutcome === 'won' ? arena.getEquilibrium().biomeStrains : undefined,
     },
     completedStudy,
     terminalOutcome,
@@ -2023,7 +2044,7 @@ function advanceDiscoveryProgression(
   return true;
 }
 
-function syncResearchArchive(biomeName?: string | null): void {
+function syncResearchArchive(biomeName?: string | null, biomeStrains?: readonly string[]): void {
   const stabilizedBreedRecords = discoveryProgression.breedDiscoveryRecords.filter(
     (record) => record.stage === 'stabilized',
   );
@@ -2039,6 +2060,7 @@ function syncResearchArchive(biomeName?: string | null): void {
     peakBiodiversity,
     stabilitySeconds: Math.round(longestStabilityStreak / 60),
     biomeName,
+    biomeStrains,
   });
   const archiveSave = saveResearchArchiveVerified(discoveryStorage, result.state);
   if (archiveSave.status !== 'saved') {
@@ -2049,6 +2071,9 @@ function syncResearchArchive(biomeName?: string | null): void {
   if (result.newBiome) {
     newBiomeThisRun = true;
     strainLibrary.incrementBiomeCount();
+    // Holding a living dish is what grows the loadout: one more strain per
+    // new biome.
+    strainLibrary.addLoadoutSlot();
     strainLibrary.save();
   }
   for (const sealId of result.newSealIds) {
@@ -2482,13 +2507,22 @@ function announceEpochCompletion(complete: boolean): void {
   }
 }
 
-function announceEquilibrium(info: { achieved: boolean; progress: number; biomeName: string | null }): void {
+// A minute of unbroken balance: the dish is a stable ecosystem. Its biome is
+// recorded straight away (a card in the Notebook), crises calm, and the
+// trial may finish whenever the player likes.
+function announceEquilibrium(info: { achieved: boolean; progress: number; biomeName: string | null; biomeStrains: string[] }): void {
   if (!info.achieved || didAnnounceEquilibrium || isOnboardingEpoch(run.getState().fightIndex)) return;
   didAnnounceEquilibrium = true;
   uiAudio.play('epoch_win');
   haptics.play('success');
-  fx.showToast('discovery', 'Stable Ecosystem', info.biomeName ?? 'Balance');
-  screens.addTicker('Balance reached: pressure paused. Finish when ready, or keep watching.', 'discovery');
+  fx.showUnlockBanner('Biome recorded', info.biomeName ?? 'Stable ecosystem', 'A minute in balance · crises calm', 'bio');
+  screens.addTicker(`Stable ecosystem: ${info.biomeName ?? 'a living dish'}. Crises calm; the biome is in your Notebook.`, 'discovery');
+  // Badge and loadout toasts raised by recording the biome queue behind the
+  // banner.
+  const slotsBefore = strainLibrary.getLoadoutSlots();
+  syncResearchArchive(info.biomeName, info.biomeStrains);
+  const slots = strainLibrary.getLoadoutSlots();
+  if (slots > slotsBefore) fx.showToast('discovery', 'New biome · loadout +1', `You can now bring ${slots} strains`);
 }
 
 function labelForStrain(strain: string): string {

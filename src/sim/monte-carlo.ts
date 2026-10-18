@@ -4,6 +4,7 @@ import {
   NEIGHBOR_DIRS,
 } from './types';
 import {
+  idx,
   xy,
   getCell,
   setCell,
@@ -40,6 +41,15 @@ export function mcStep(state: SimState): boolean {
   const sourceVal = getCell(grid, xS, yS);
   const targetVal = getCell(grid, xT, yT);
   if (sourceVal === targetVal) return false;
+
+  // Agar wall: a culture can't grow into gel; a dissolving wall leaks in
+  // proportion to its fading strength. The medium may still take gel pixels,
+  // so a culture caught under fresh gel is squeezed out, not pinned.
+  const wall = state.wall;
+  if (wall && sourceVal !== 0) {
+    const gel = wall[idx(grid, xT, yT)]!;
+    if (gel > 0 && rng.randInt(255) < gel) return false;
+  }
 
   // Look up the source cell's breed profile for per-cell beta scaling.
   const sourceCell = sourceVal !== 0 ? state.cells.get(sourceVal) : undefined;

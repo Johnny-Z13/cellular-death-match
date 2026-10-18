@@ -35,7 +35,7 @@ describe('unified mobile Director rail', () => {
     expect(screens).toContain("info.objectiveComplete ? 'Dr. E · Result' : 'Dr. E'");
     expect(screens).toContain("hud.classList.toggle('hud-objective-timed', info.objectiveTimed)");
     expect(screens).toContain("if (info.objectiveComplete && hudDirector.classList.contains('hud-director-intro'))");
-    expect(screens).toContain("? 'Balanced'");
+    expect(screens).toContain('formatHeld(info.balance.heldTicks)');
     expect(screens).toContain('info.objectiveHint || info.objectiveSummary');
   });
 

@@ -595,8 +595,8 @@ export const DISCOVERY_NOTES: Record<DiscoveryNoteId, DiscoveryNote> = {
   },
   paste_catalysed: {
     id: 'paste_catalysed',
-    title: 'Reactive Trail',
-    body: 'Drop a tool onto a drawn Paste trail and the reaction runs along the painted line — steer life, then spark the path.',
+    title: 'Reactive Gel',
+    body: 'Drop a tool onto a fresh Paste wall and the reaction runs along the gel — fence life in, then spark the line.',
     caution: 'volatile',
   },
 };

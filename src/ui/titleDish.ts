@@ -8,7 +8,7 @@ import { createRun } from '../game/run';
 import { createFixedStepClock } from '../game/simClock';
 import { ARCHETYPE_DEFAULTS, type EnemyArchetype, type EnemySpawn } from '../content/enemies';
 import { lifeformIdentityForSpawn } from '../content/lifeformIdentity';
-import { OPEN_LAB_LIFE_CYCLE } from '../content/ecologyTuning';
+import { DISH_LIFE_CYCLE } from '../content/ecologyTuning';
 import { COMMON_COLD_CASE } from '../content/researchCases';
 import { createRenderer, displayColorForSpawn, type Renderer } from './render';
 import type { VisualPerformanceProfile } from './mobilePerformance';
@@ -84,7 +84,7 @@ export function createTitleDish(profile: VisualPerformanceProfile, paletteSize: 
       fightIndex: COMMON_COLD_CASE.trials.length,
       worldEventIntensity: 0,
       knownBreedIds: new Set(),
-      lifeCycle: OPEN_LAB_LIFE_CYCLE,
+      lifeCycle: DISH_LIFE_CYCLE,
       breedDiscovery: false,
       mergeDiscovery: false,
     });

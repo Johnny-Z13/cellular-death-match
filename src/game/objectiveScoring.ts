@@ -2,6 +2,7 @@ import { ARCHETYPE_INFO, type EnemyArchetype } from '../content/enemies';
 import { BREED_DEFS, REACTION_RECIPES, type BreedId, type ReactionRecipeId } from '../content/catalysis';
 import { OBJECTIVE_TUNING } from '../content/ecologyTuning';
 import type { ObjectiveDef } from '../content/objectives';
+import { formatHeld, type BalanceReading } from './balance';
 
 export type ObjectiveStatus = 'running' | 'satisfied' | 'failed';
 
@@ -57,6 +58,8 @@ export interface ObjectiveEvaluationContext {
   discoveredBreedTicks: ReadonlyMap<BreedId, number>;
   triggeredRecipeIds: ReadonlySet<ReactionRecipeId>;
   runtime: ObjectiveRuntime;
+  /** The dish's balance clocks, for the sustain goals. */
+  balance?: BalanceReading;
   forceShowcase?: boolean;
 }
 
@@ -65,6 +68,9 @@ const MEGA_CULTURE_VOLUME = 800;
 const REACTION_CHAIN_COUNT = 3;
 const BALANCE_KEEPER_MAX_DOMINANCE = 0.4;
 const SUSTAIN_30_SECONDS = 60 * 30;
+const SUSTAIN_2_MINUTES = 60 * 120;
+const SUSTAIN_3_MINUTES = 60 * 180;
+const KEEP_ALIVE_STRAINS = 5;
 const CRISIS_SURVIVOR_MIN_CULTURES = 3;
 const COLONY_FOUNDER_COUNT = 5;
 const EXTINCTION_RECOVERY_COUNT = 4;
@@ -94,8 +100,10 @@ export function updateObjectiveRuntime(
     ? objective.minCount ?? 2
     : 2;
   const balanced = metrics.livingLifeforms >= balanceMinCount && metrics.maxBreedDominance <= balanceMax;
-  runtime.balanceTicks = balanced ? runtime.balanceTicks + 1 : 0;
-  runtime.symbiosisTicks = metrics.nearbyDifferentBreedPair ? runtime.symbiosisTicks + 1 : 0;
+  // Sustain clocks pause on a dip rather than resetting: a cosy dish is
+  // rewarded for time held, not punished for one bad moment.
+  if (balanced) runtime.balanceTicks += 1;
+  if (metrics.nearbyDifferentBreedPair) runtime.symbiosisTicks += 1;
   if (metrics.livingLifeforms <= 1) runtime.sawExtinctionLow = true;
   if (events.hybridDiscovered) runtime.hybridDiscovered = true;
   if (events.survivedCrisis) runtime.survivedCrisis = true;
@@ -258,6 +266,31 @@ export function evaluateObjective(
         ? `${metrics.livingLifeforms} / ${targetCount} recovered cultures`
         : 'Dish has not dropped to extinction threshold',
         context.runtime.sawExtinctionLow ? 0.5 + ratio(metrics.livingLifeforms, targetCount) / 2 : 0);
+    }
+    case 'hold_balance': {
+      const sustainTicks = objective.sustainTicks ?? SUSTAIN_2_MINUTES;
+      const held = context.balance?.heldTicks ?? 0;
+      const ok = held >= sustainTicks;
+      return progress(objective, ok, true, deadline && !ok, urgency,
+        `${formatHeld(Math.min(held, sustainTicks))} / ${formatHeld(sustainTicks)} in balance`,
+        ratio(held, sustainTicks));
+    }
+    case 'keep_alive': {
+      const minCount = objective.minCount ?? KEEP_ALIVE_STRAINS;
+      const sustainTicks = objective.sustainTicks ?? SUSTAIN_3_MINUTES;
+      const held = context.balance?.aliveTicks.get(Math.min(6, Math.max(3, minCount))) ?? 0;
+      const ok = held >= sustainTicks;
+      return progress(objective, ok, true, deadline && !ok, urgency,
+        `${context.balance?.strains ?? 0} strains alive · ${formatHeld(Math.min(held, sustainTicks))} / ${formatHeld(sustainTicks)}`,
+        ratio(held, sustainTicks));
+    }
+    case 'food_web': {
+      const sustainTicks = objective.sustainTicks ?? SUSTAIN_3_MINUTES;
+      const held = context.balance?.foodWebTicks ?? 0;
+      const ok = held >= sustainTicks;
+      return progress(objective, ok, true, deadline && !ok, urgency,
+        `${formatHeld(Math.min(held, sustainTicks))} / ${formatHeld(sustainTicks)} hunter and prey together`,
+        ratio(held, sustainTicks));
     }
     default:
       return assertNever(objective.kind);

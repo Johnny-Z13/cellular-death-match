@@ -6,6 +6,7 @@ import {
   monitorRuntime,
   openFreshApp,
   toolCharge,
+  dismissReveal,
 } from './helpers';
 
 const CORE_PROJECTS = new Set(['phone', 'small-phone', 'desktop']);
@@ -33,7 +34,7 @@ async function reachTrialTwo(page: Page): Promise<void> {
   await page.waitForTimeout(3_100);
   await expect(page.locator('#fx-genome')).toHaveAttribute('aria-hidden', 'false');
   await expect(page.locator('#screen-method-intro')).not.toHaveClass(/visible/);
-  await page.locator('#fx-genome').press('Enter');
+  await dismissReveal(page, 'Enter');
   await continueToMethodPicker(page);
   await page.locator('#pick-choices .pick-card').first().dblclick();
   await expect(page.locator('#hud-fight')).toHaveText('2 / 5');
@@ -113,7 +114,7 @@ test('keeps Trial 2 recoverable through wrong specimens, wrong reagents, and rap
   await expect(page.locator('#coach-title')).toHaveText('Place it here.');
   await expect(page.locator('[data-lifeform-id="bloom_mass"]')).toHaveAttribute('aria-selected', 'true');
   // A tap outside the egg tray only dismisses it; it never spends an egg.
-  await clickDish(page);
+  await page.locator('#egg-tray-scrim').click({ position: { x: 12, y: 12 } });
   await expect(page.locator('.layout')).not.toHaveAttribute('data-mobile-drawer', 'lifeforms');
   await expect(page.locator('#coach-title')).toHaveText('Place it here.');
 
