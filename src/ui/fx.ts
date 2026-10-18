@@ -81,8 +81,10 @@ export function createFx(catchDeps?: CatchDeps): Fx {
   let catchQueue: GenomeRevealInfo[] = [];
   let catchIndex = 0;
   let catchCount = 0;
-  // Desktop toasts raised while a strain reveal owns the screen wait for it.
+  // Desktop toasts raised while a strain reveal or a banner owns the screen
+  // wait for it (on phones the notification director already queues them).
   let heldDesktopToasts: Array<[ToastKind, string, string]> = [];
+  let desktopBannerUp = false;
 
   // A tap during a catch jumps to its finished card; the next tap opens the
   // next strain's egg, or continues once every strain has been caught.
@@ -159,8 +161,22 @@ export function createFx(catchDeps?: CatchDeps): Fx {
     if (!setBannerContent(eyebrow, title, sub, accent)) return;
     toasts?.classList.add('fx-toasts-banner-active');
     window.clearTimeout(desktopBannerTimer);
+    desktopBannerUp = true;
     const bannerLife = reduceMotion ? (accent ? 1900 : 2600) : (accent ? 1900 : 3250);
-    desktopBannerTimer = window.setTimeout(hideBanner, bannerLife);
+    desktopBannerTimer = window.setTimeout(endDesktopBanner, bannerLife);
+  }
+
+  function endDesktopBanner(): void {
+    desktopBannerUp = false;
+    hideBanner();
+    flushHeldDesktopToasts();
+  }
+
+  function flushHeldDesktopToasts(): void {
+    if (finishActiveGenome || desktopBannerUp) return;
+    const held = heldDesktopToasts;
+    heldDesktopToasts = [];
+    for (const [kind, kicker, title] of held) playDesktopToast(kind, kicker, title);
   }
 
   function clearMobileVisual(): void {
@@ -179,9 +195,7 @@ export function createFx(catchDeps?: CatchDeps): Fx {
     genomeReveal?.setAttribute('aria-hidden', 'true');
     genomeReveal?.setAttribute('tabindex', '-1');
     finishActiveGenome = null;
-    const held = heldDesktopToasts;
-    heldDesktopToasts = [];
-    for (const [kind, kicker, title] of held) playDesktopToast(kind, kicker, title);
+    flushHeldDesktopToasts();
   }
 
   function playDesktopToast(kind: ToastKind, kicker: string, title: string): void {
@@ -333,7 +347,7 @@ export function createFx(catchDeps?: CatchDeps): Fx {
       window.clearTimeout(mobileExitTimer);
       activeMobileToast?.remove();
       activeMobileToast = null;
-      hideBanner();
+      endDesktopBanner();
       mobileDirector.clear();
     },
     showEpochBanner(eyebrow, title, sub = '') {
@@ -367,7 +381,7 @@ export function createFx(catchDeps?: CatchDeps): Fx {
         enqueueMobile({ kind: 'toast', toastKind: kind, kicker, title }, priority);
         return;
       }
-      if (finishActiveGenome) {
+      if (finishActiveGenome || desktopBannerUp) {
         heldDesktopToasts.push([kind, kicker, title]);
         return;
       }

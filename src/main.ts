@@ -2515,16 +2515,14 @@ function announceEquilibrium(info: { achieved: boolean; progress: number; biomeN
   didAnnounceEquilibrium = true;
   uiAudio.play('epoch_win');
   haptics.play('success');
+  fx.showUnlockBanner('Biome recorded', info.biomeName ?? 'Stable ecosystem', 'A minute in balance · crises calm', 'bio');
+  screens.addTicker(`Stable ecosystem: ${info.biomeName ?? 'a living dish'}. Crises calm; the biome is in your Notebook.`, 'discovery');
+  // Badge and loadout toasts raised by recording the biome queue behind the
+  // banner.
   const slotsBefore = strainLibrary.getLoadoutSlots();
   syncResearchArchive(info.biomeName, info.biomeStrains);
   const slots = strainLibrary.getLoadoutSlots();
-  fx.showUnlockBanner(
-    'Biome recorded',
-    info.biomeName ?? 'Stable ecosystem',
-    slots > slotsBefore ? `New biome · you can now bring ${slots} strains` : 'A minute in balance · crises calm',
-    'bio',
-  );
-  screens.addTicker(`Stable ecosystem: ${info.biomeName ?? 'a living dish'}. Crises calm; the biome is in your Notebook.`, 'discovery');
+  if (slots > slotsBefore) fx.showToast('discovery', 'New biome · loadout +1', `You can now bring ${slots} strains`);
 }
 
 function labelForStrain(strain: string): string {
