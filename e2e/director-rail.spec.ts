@@ -29,8 +29,9 @@ test('keeps objective status in Dr. E’s rail when authored coaching is inactiv
   expect(hudBox).not.toBeNull();
   expect(dishBox).not.toBeNull();
   // Goal strip + Dr. E channel. The budget grew with the always-visible goal,
-  // then with the header row that shares the chrome buttons' 44px line.
-  expect(hudBox!.height).toBeLessThanOrEqual(200);
+  // with the header row that shares the chrome buttons' 44px line, and with
+  // room for three lines of Dr. E's notes.
+  expect(hudBox!.height).toBeLessThanOrEqual(228);
   const optionsBox = (await page.locator('#options-button').boundingBox())!;
   const fullscreenBox = (await page.locator('#fullscreen-button').boundingBox())!;
   const goalBox = (await page.locator('#hud-goal').boundingBox())!;
@@ -83,7 +84,7 @@ test('keeps objective status in Dr. E’s rail when authored coaching is inactiv
   await expect(page.locator('#hud-hint')).toBeHidden();
   expect(textFit.viewport.scrollWidth).toBeLessThanOrEqual(textFit.viewport.clientWidth);
   const longHudBox = await page.locator('#hud').boundingBox();
-  expect(longHudBox!.height).toBeLessThanOrEqual(200);
+  expect(longHudBox!.height).toBeLessThanOrEqual(228);
   await page.screenshot({ path: testInfo.outputPath('long-director-status.png') });
 
   runtime.assertClean();

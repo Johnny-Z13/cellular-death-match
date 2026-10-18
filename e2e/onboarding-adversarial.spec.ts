@@ -114,7 +114,7 @@ test('keeps Trial 2 recoverable through wrong specimens, wrong reagents, and rap
   await expect(page.locator('#coach-title')).toHaveText('Place it here.');
   await expect(page.locator('[data-lifeform-id="bloom_mass"]')).toHaveAttribute('aria-selected', 'true');
   // A tap outside the egg tray only dismisses it; it never spends an egg.
-  await clickDish(page);
+  await page.locator('#egg-tray-scrim').click({ position: { x: 12, y: 12 } });
   await expect(page.locator('.layout')).not.toHaveAttribute('data-mobile-drawer', 'lifeforms');
   await expect(page.locator('#coach-title')).toHaveText('Place it here.');
 
