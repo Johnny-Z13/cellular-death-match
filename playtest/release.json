@@ -1,10 +1,10 @@
 {
-  "version": "Alpha Build 2",
-  "id": "alpha-2",
-  "date": "2026-10-17",
-  "sourceCommit": "b24b05b0e6c9dcecc07fdd28d69cc47d708aa275",
-  "branch": "v1/friends-and-merges",
-  "description": "Egg tray: pick eggs by colour from the Egg tile; a UI pass so text fits, reads and lines up on every screen.",
+  "version": "Alpha Build 3",
+  "id": "alpha-3",
+  "date": "2026-10-18",
+  "sourceCommit": "8fd08a5c18efd126f0f5272e313602f7b7c660ea",
+  "branch": "main",
+  "description": "Living dish: a Balance clock and biome cards, sustain trials, Paste as an agar wall, a cosy food-web pace and the catch reveal.",
   "play": "/play/",
   "platforms": "Any modern browser: Chrome, Edge, Safari or Firefox, on desktop, tablet or phone."
 }
