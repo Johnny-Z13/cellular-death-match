@@ -25,6 +25,9 @@ const EVERY_KIND: Record<ObjectiveKind, ObjectiveDef> = {
   colony_founder: { kind: 'colony_founder', name: '', description: '', target: '', targetCount: 5 },
   symbiosis: { kind: 'symbiosis', name: '', description: '', target: '', sustainTicks: 60 * 30 },
   extinction_reversal: { kind: 'extinction_reversal', name: '', description: '', target: '', targetCount: 4 },
+  hold_balance: { kind: 'hold_balance', name: '', description: '', target: '', sustainTicks: 60 * 120 },
+  keep_alive: { kind: 'keep_alive', name: '', description: '', target: '', minCount: 5, sustainTicks: 60 * 180 },
+  food_web: { kind: 'food_web', name: '', description: '', target: '', sustainTicks: 60 * 180 },
 };
 
 describe('goalLineFor', () => {

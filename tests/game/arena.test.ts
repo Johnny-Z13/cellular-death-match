@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, onTestFinished } from 'vitest';
 import { createArena, type Arena } from '../../src/game/arena';
+import { BALANCE_TUNING } from '../../src/game/balance';
 import { TOOL_TUNING, AGITATION_TUNING, ARENA_TIMING, OPEN_LAB_LIFE_CYCLE } from '../../src/content/ecologyTuning';
 import { ARCHETYPE_DEFAULTS } from '../../src/content/enemies';
 import { getCell, setCell, updateBoundaryAround } from '../../src/sim/grid';
@@ -2442,11 +2443,12 @@ describe('arena ecosystem mode', () => {
       wrap: true,
       mode: 'ecosystem',
       includeControlSample: false,
-      epochTicks: 60 * 21,
+      epochTicks: BALANCE_TUNING.stableAfterTicks + 60,
       worldEventIntensity: 0,
     });
 
-    for (let i = 0; i < 60 * 20; i++) {
+    // A stable ecosystem is an unbroken minute of balance (game/balance.ts).
+    for (let i = 0; i < BALANCE_TUNING.stableAfterTicks; i++) {
       arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     }
 
@@ -2469,6 +2471,11 @@ describe('arena ecosystem mode', () => {
   });
 
   it('marks a crisis-survivor objective if equilibrium cancels an active crisis', () => {
+    // A minute-long streak outlasts any crisis, so this check uses a shorter
+    // stable window to have one still running when stability lands.
+    const stableAfter = BALANCE_TUNING.stableAfterTicks;
+    BALANCE_TUNING.stableAfterTicks = 60 * 20;
+    onTestFinished(() => { BALANCE_TUNING.stableAfterTicks = stableAfter; });
     const arena = createArena({
       LX: 140,
       LY: 140,
@@ -2494,7 +2501,7 @@ describe('arena ecosystem mode', () => {
     });
 
     for (let i = 0; i < 60 * 11; i++) {
-      forceBreedVolumes(arena, { bloom_mass: 170, needle_swarm: 170, glass_antibody: 340 });
+      forceBreedVolumes(arena, { bloom_mass: 170, needle_swarm: 170, glass_antibody: 400 });
       arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     }
     for (let i = 0; i < 60 * 25; i++) {

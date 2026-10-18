@@ -56,7 +56,8 @@ export interface ResearchSealView {
 
 export interface ResearchRecordsView {
   biomeCount: number;
-  biomeNames: string[];
+  /** Recorded biomes, newest last, for the Notebook's biome cards. */
+  biomes: Array<{ name: string; strains: string[]; recordedAt: string }>;
   peakBiodiversity: number;
   maxReactions: number;
   longestStabilitySeconds: number;
@@ -82,6 +83,9 @@ const QUESTIONS: Record<ObjectiveKind, string> = {
   colony_founder: 'Can one strain hold several living cultures at once?',
   symbiosis: 'Can two different strains remain neighbours without consuming each other?',
   extinction_reversal: 'Can a culture at the edge of extinction be brought back?',
+  hold_balance: 'Can the dish keep itself alive, with no strain owning it, for minutes at a time?',
+  keep_alive: 'How many strains can one dish keep alive at once?',
+  food_web: 'Can a hunter and its prey share one dish without the hunt ending it?',
 };
 
 const OBSERVATION_NOTES: Record<ObjectiveKind, string> = {
@@ -104,6 +108,9 @@ const OBSERVATION_NOTES: Record<ObjectiveKind, string> = {
   colony_founder: 'Several small fertile sites are safer than one crowded site.',
   symbiosis: 'A stable border is stronger evidence than brief contact.',
   extinction_reversal: 'Remove immediate pressure first; feed second.',
+  hold_balance: 'Small corrections early beat a rescue late.',
+  keep_alive: 'Give each strain room of its own before the dish fills.',
+  food_web: 'Prey that is well fed outgrows the hunt.',
 };
 
 export function researchNotebookView(
@@ -135,7 +142,7 @@ export function researchNotebookView(
     })),
     records: {
       biomeCount: archive.biomeRecords.length,
-      biomeNames: archive.biomeRecords.map((record) => record.name),
+      biomes: archive.biomeRecords.map((record) => ({ name: record.name, strains: record.strains ?? [], recordedAt: record.recordedAt })),
       peakBiodiversity: archive.records.peakBiodiversity,
       maxReactions: archive.records.maxReactions,
       longestStabilitySeconds: archive.records.longestStabilitySeconds,

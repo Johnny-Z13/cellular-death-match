@@ -36,6 +36,7 @@ describe('research notebook goal structure', () => {
       stabilizedBreedCount: 1,
       reactions: 3,
       biomeName: 'Coral Basin',
+      biomeStrains: ['bloom_mass', 'swarmlet', 'bruiser'],
       peakBiodiversity: 6,
     }).state;
     const view = researchNotebookView(
@@ -46,7 +47,7 @@ describe('research notebook goal structure', () => {
 
     expect(view.seals.find((seal) => seal.id === 'first_specimen')?.earned).toBe(true);
     expect(view.seals.find((seal) => seal.id === 'chain_reaction')?.earned).toBe(true);
-    expect(view.records.biomeNames).toEqual(['Coral Basin']);
+    expect(view.records.biomes).toMatchObject([{ name: 'Coral Basin', strains: ['bloom_mass', 'swarmlet', 'bruiser'] }]);
     expect(view.records.peakBiodiversity).toBe(6);
   });
 

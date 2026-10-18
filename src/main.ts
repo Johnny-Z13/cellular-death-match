@@ -1748,7 +1748,7 @@ function loop() {
   const ecology = arena.getEcology();
   const equilibrium = arena.getEquilibrium();
   const equilibriumCanEndRun = !isOnboardingEpoch(run.getState().fightIndex);
-  screens.setEquilibrium(equilibrium);
+  screens.setEquilibrium({ ...equilibrium, balance: arena.getBalance() });
   sampleRunTelemetryFromArena(arena);
 
   // HUD update.
@@ -1859,6 +1859,7 @@ function bankCompletedStudy(
       peakBiodiversity,
       stabilitySeconds: Math.round(longestStabilityStreak / 60),
       biomeName: terminalOutcome === 'won' ? arena.getEquilibrium().biomeName : undefined,
+      biomeStrains: terminalOutcome === 'won' ? arena.getEquilibrium().biomeStrains : undefined,
     },
     completedStudy,
     terminalOutcome,
@@ -2042,7 +2043,7 @@ function advanceDiscoveryProgression(
   return true;
 }
 
-function syncResearchArchive(biomeName?: string | null): void {
+function syncResearchArchive(biomeName?: string | null, biomeStrains?: readonly string[]): void {
   const stabilizedBreedRecords = discoveryProgression.breedDiscoveryRecords.filter(
     (record) => record.stage === 'stabilized',
   );
@@ -2058,6 +2059,7 @@ function syncResearchArchive(biomeName?: string | null): void {
     peakBiodiversity,
     stabilitySeconds: Math.round(longestStabilityStreak / 60),
     biomeName,
+    biomeStrains,
   });
   const archiveSave = saveResearchArchiveVerified(discoveryStorage, result.state);
   if (archiveSave.status !== 'saved') {
@@ -2501,13 +2503,17 @@ function announceEpochCompletion(complete: boolean): void {
   }
 }
 
-function announceEquilibrium(info: { achieved: boolean; progress: number; biomeName: string | null }): void {
+// A minute of unbroken balance: the dish is a stable ecosystem. Its biome is
+// recorded straight away (a card in the Notebook), crises calm, and the
+// trial may finish whenever the player likes.
+function announceEquilibrium(info: { achieved: boolean; progress: number; biomeName: string | null; biomeStrains: string[] }): void {
   if (!info.achieved || didAnnounceEquilibrium || isOnboardingEpoch(run.getState().fightIndex)) return;
   didAnnounceEquilibrium = true;
   uiAudio.play('epoch_win');
   haptics.play('success');
-  fx.showToast('discovery', 'Stable Ecosystem', info.biomeName ?? 'Balance');
-  screens.addTicker('Balance reached: pressure paused. Finish when ready, or keep watching.', 'discovery');
+  fx.showUnlockBanner('Biome recorded', info.biomeName ?? 'Stable ecosystem', 'A minute in balance · crises calm', 'bio');
+  screens.addTicker(`Stable ecosystem: ${info.biomeName ?? 'a living dish'}. Crises calm; the biome is in your Notebook.`, 'discovery');
+  syncResearchArchive(info.biomeName, info.biomeStrains);
 }
 
 function labelForStrain(strain: string): string {
