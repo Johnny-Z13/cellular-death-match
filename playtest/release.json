@@ -1,10 +1,10 @@
 {
-  "version": "Alpha Build 3",
-  "id": "alpha-3",
+  "version": "Alpha Build 4",
+  "id": "alpha-4",
   "date": "2026-10-18",
-  "sourceCommit": "8fd08a5c18efd126f0f5272e313602f7b7c660ea",
+  "sourceCommit": "352880e9814dfd93e523b280a60ff85f6e4c74b8",
   "branch": "main",
-  "description": "Living dish: a Balance clock and biome cards, sustain trials, Paste as an agar wall, a cosy food-web pace and the catch reveal.",
+  "description": "Membrane: draw a wall to pen cultures, or draw through a culture to pinch it in two.",
   "play": "/play/",
   "platforms": "Any modern browser: Chrome, Edge, Safari or Firefox, on desktop, tablet or phone."
 }
