@@ -1629,7 +1629,7 @@ function updateToolSummary(
     water: 'Water - dilutes pressure, spreads reactions, and pushes cultures outward.',
     salt: 'Salt - slows local movement and dries cultures into brittle patterns.',
     acid: 'Acid - burns tissue quickly and can trigger volatile reactions.',
-    paste: 'Paste - drag to draw a nutrient trail; cultures drift along the line you paint.',
+    paste: 'Paste - drag to draw an agar wall. Cultures can\'t cross it; it dissolves in about 20 seconds.',
   };
   el.textContent = summaries[tool];
 }
@@ -1659,7 +1659,7 @@ function updateMobileToolReadout(
     water: 'dilute and spread',
     salt: 'slow and dry',
     acid: 'burn tissue',
-    paste: 'draw a trail',
+    paste: 'draw a wall',
   };
   nameEl.textContent = names[tool];
   summaryEl.textContent = summaries[tool];

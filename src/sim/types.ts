@@ -69,6 +69,9 @@ export interface SimState {
   bulletDrain: number;         // targetVol a bullet's victim loses per pixel hit
   /** Bonded cultures (merged forms). Absent when nothing is bonded. */
   bonds?: BondView;
+  /** Agar wall strength per pixel, 0..255, x-major like the grid
+   *  (game/agarWall.ts). Absent when no wall is drawn. */
+  wall?: Uint8Array;
 }
 
 /** How bonded cultures stick: each culture's partners with a strength 0..1,

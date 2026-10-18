@@ -173,6 +173,7 @@ export function createRenderer(
     ) {
       frame += 1;
       const { LX, LY, cells, boundary } = state.grid;
+      const wall = state.wall;
       const base = buildRenderPalette(nCells, state.cells, archetypes, fallbackBase);
       const boundaryColors = base.map((c) => lighten(c, 0.3));
       // Lazy init when we know the grid size.
@@ -200,6 +201,20 @@ export function createRenderer(
           const color = palette ?? base[0]!;
 
           const pixIdx = (y * LX + x) * 4;
+          const gel = id === 0 && wall ? wall[cellIdx]! : 0;
+          if (gel > 0) {
+            // Agar wall: a translucent gel with a crisp rim, fading as it
+            // dissolves.
+            const rim = x === 0 || y === 0 || x === LX - 1 || y === LY - 1
+              || wall![cellIdx - LY] === 0 || wall![cellIdx + LY] === 0
+              || wall![cellIdx - 1] === 0 || wall![cellIdx + 1] === 0;
+            const gelColor = rim ? AGAR_GEL.rim : AGAR_GEL.core;
+            data[pixIdx]     = gelColor[0];
+            data[pixIdx + 1] = gelColor[1];
+            data[pixIdx + 2] = gelColor[2];
+            data[pixIdx + 3] = (gel * (rim ? AGAR_GEL.rimAlpha : AGAR_GEL.coreAlpha) / 255) | 0;
+            continue;
+          }
           data[pixIdx]     = color[0]!;
           data[pixIdx + 1] = color[1]!;
           data[pixIdx + 2] = color[2]!;
@@ -258,6 +273,16 @@ export function createRenderer(
   };
 }
 
+
+// Agar wall (Paste): a pale gel line. A translucent core and a crisp rim so it
+// reads as gel, never as a culture; alpha follows the wall's strength as it
+// dissolves.
+const AGAR_GEL = {
+  core: [160, 206, 132] as const,
+  coreAlpha: 60,
+  rim: [214, 246, 178] as const,
+  rimAlpha: 200,
+};
 
 // Agar substrate behind the cultures: a dark medium with a faint centre
 // glow, fine grain and a meniscus at the rim, so an empty dish reads as a

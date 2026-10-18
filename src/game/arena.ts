@@ -46,6 +46,7 @@ import { displacementVec } from './geometry';
 import { clampReagentShift, getBreedProfile, getReagentShift, type BreedProfileId } from '../sim/breedProfiles';
 import { classifyBiome, type BiomeRecord } from './homeostasis';
 import { BALANCE_TUNING, createBalanceMeter, HUNTER_ROLES, type BalanceReading } from './balance';
+import { createAgarWall } from './agarWall';
 import { applyAppetite, applyMetabolism, createLifeCycleState, readyToDivide } from './lifeCycle';
 import { getEscalation } from './escalation';
 import { createMergeTracker, MERGE_DETECTION, type FormingGroup, type LockedForm, type MergeEvent } from './mergeDetection';
@@ -370,6 +371,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
   const trailEffects: ToolEffect[] = [];
   let lastEggCellId: CellId | null = null;
   let lastTrailStamp: [number, number] | null = null;
+  // Paste also sets as an agar wall along the stroke (game/agarWall.ts).
+  const agarWall = createAgarWall(state.grid.LX, state.grid.LY);
   let pastePathRemaining = 0;
   const dishEvents: DishEventMarker[] = [];
   let nextDishEventId = 1;
@@ -730,7 +733,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       }
 
       if (tool === 'paste') {
-        // Drawing a trail: stamp a small nutrient field, but only once the
+        // Drawing a wall: stamp gel and a small nutrient field, but only once the
         // pointer has travelled stampSpacing from the last stamp, so a drag
         // lays an even line. A charge is spent per unitsPerCharge of path.
         if (lastTrailStamp) {
@@ -752,6 +755,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
           pastePathRemaining = PASTE_TUNING.unitsPerCharge;
         }
         pasteStrokeStamped = true;
+        agarWall.add(lastTrailStamp ?? pos, pos);
+        state.wall = agarWall.mask();
         lastTrailStamp = [pos[0], pos[1]];
         const maxTtl = TOOL_TUNING.paste.ttl;
         trailEffects.push({
@@ -1104,6 +1109,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
         state.bonds = merges.bonds.size() > 0 ? merges.bonds : undefined;
       }
 
+      agarWall.tick();
+      state.wall = agarWall.mask();
       simTick(state, MC_STEPS_PER_TICK);
 
       if (merges && tickNo % MERGE_DETECTION.scanTicks === 0) {

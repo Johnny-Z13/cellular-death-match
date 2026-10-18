@@ -43,8 +43,8 @@ export const TOOL_TUNING = {
   water: { charges: 6, radius: 28, ttl: 60 * 6, cooldownTicks: 90 },
   salt: { charges: 4, radius: 18, ttl: 60 * 9, cooldownTicks: 180 },
   acid: { charges: 3, radius: 17, ttl: 60 * 5, cooldownTicks: 240 },
-  // Paste draws a trail: each charge buys a length of drawn path. Stamps are
-  // small, long-lived nutrient fields so colonies gently drift along the line.
+  // Paste draws an agar wall (game/agarWall.ts): each charge buys a length of
+  // drawn path. Fresh gel is also a small nutrient field along the line.
   paste: { charges: 3, radius: 9, ttl: 60 * 7, cooldownTicks: 180 } as const,
 } as const;
 
