@@ -216,7 +216,15 @@ if (
   identPlate?.remove();
 }
 const haptics = createHaptics();
-const fx = createFx();
+// A new strain's reveal plays as a catch: the egg wobbles and ticks, bursts
+// with the win fanfare and a haptic, and Dr. E cheers (ui/catchReveal.ts).
+const fx = createFx({
+  cue: (cue, step) => uiAudio.playCatchCue(cue, step),
+  fanfare: () => uiAudio.play('epoch_win'),
+  haptic: (cue) => haptics.play(cue),
+  cheer: () => drE.react('delighted', 4200),
+  stopSpeech: () => speech.finish(),
+});
 const coach = createCoach(runtimeStorage);
 
 // Publish the HUD's live bottom edge so the Professor's transmission rail can
@@ -1249,6 +1257,11 @@ function finishGenomeReveal(): void {
 
 function genomeRevealInfo(genome: GenomeArtIdentity) {
   const archive = notebookViewForProgression(discoveryProgression).archive;
+  // The catch's dex card: the strain's friend number, what it does, and the
+  // friends count it just raised.
+  const view = currentDexView();
+  const friend = view.items.find((item) => item.id === genome.id);
+  const identity = genome.id in LIFEFORM_IDENTITIES ? LIFEFORM_IDENTITIES[genome.id as LifeformIdentityId] : null;
   return {
     id: genome.id,
     name: genome.name,
@@ -1256,6 +1269,12 @@ function genomeRevealInfo(genome: GenomeArtIdentity) {
     alt: genome.alt,
     primary: genome.primary,
     archivePosition: `${archive.decodedGenomes} / ${archive.totalGenomes} STRAINS FOUND`,
+    number: friend?.number,
+    role: identity?.role,
+    behavior: identity?.behavior,
+    note: friend?.note,
+    found: view.found,
+    total: view.total,
   };
 }
 

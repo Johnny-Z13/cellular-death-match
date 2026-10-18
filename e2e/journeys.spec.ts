@@ -5,6 +5,7 @@ import {
   continueToMethodPicker,
   monitorRuntime,
   startFirstTrial,
+  dismissReveal,
 } from './helpers';
 
 interface TrialTiming {
@@ -79,7 +80,7 @@ async function finishTrial(
       || await introduction.evaluate((element) => element.classList.contains('visible'))
       || await pick.evaluate((element) => element.classList.contains('visible'))
   )).toBe(true);
-  if (await reveal.getAttribute('aria-hidden') === 'false') await reveal.click();
+  await dismissReveal(page);
   if (trial === 2) {
     await expect(introduction).toHaveClass(/visible/);
     await expect(page.locator('#method-intro-title')).toHaveText('Right. You’re on your own now.');

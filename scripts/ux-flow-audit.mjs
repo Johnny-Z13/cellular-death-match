@@ -200,7 +200,7 @@ for (const size of sizes) {
   await tryDo(async () => { await tap(0.55, 0.53); await page.waitForTimeout(1200); await snap('t1-bloom-1s'); await page.waitForTimeout(3500); await snap('t1-goal-done'); });
   await tryDo(async () => { await page.click('#options-button'); await page.waitForTimeout(500); await snap('options-in-trial1'); await page.click('#options-close'); await page.waitForTimeout(300); });
   await tryDo(async () => { await page.click('#end-epoch-button'); await page.waitForTimeout(1500); await snap('reveal-new-strain'); });
-  await tryDo(async () => { if (await page.locator('#fx-genome').getAttribute('aria-hidden') === 'false') await page.click('#fx-genome'); await page.waitForTimeout(1200); await snap('after-reveal'); });
+  await tryDo(async () => { await page.waitForTimeout(2600); await snap('reveal-catch'); for (let i = 0; i < 6 && await page.locator('#fx-genome').getAttribute('aria-hidden') === 'false'; i += 1) { await page.click('#fx-genome'); await page.waitForTimeout(150); } await page.waitForTimeout(1000); await snap('after-reveal'); });
   await tryDo(async () => { if (await page.locator('#method-intro-continue').isVisible()) { await snap('on-your-own'); await page.click('#method-intro-continue'); await page.waitForTimeout(700); } await snap('upgrade-pick'); });
   await tryDo(async () => { await page.locator('#pick-choices .pick-card').first().click(); await page.waitForTimeout(2200); await snap('t2-start'); });
   await tryDo(async () => { await page.click('[data-tool="egg"]'); await page.waitForTimeout(600); await snap('t2-egg-tray'); });

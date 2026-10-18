@@ -7,6 +7,7 @@ import {
   selectSwarmlet,
   startFirstTrial,
   toolCharge,
+  dismissReveal,
 } from './helpers';
 
 async function openWithFreshStorageOnce(page: import('@playwright/test').Page): Promise<void> {
@@ -67,7 +68,7 @@ test.describe('reload-safe Case checkpoints', () => {
     await expect(page.locator('#title-trial-label')).toContainText('Trial 02');
     await continueSavedCase(page);
     await expect(page.locator('#fx-genome-title')).toHaveText('Bloom Mass');
-    await page.locator('#fx-genome').click();
+    await dismissReveal(page);
     await continueToMethodPicker(page);
 
     await page.reload();
@@ -150,9 +151,7 @@ test.describe('reload-safe Case checkpoints', () => {
     await completeOpeningActions(page);
     await expect(page.locator('#end-epoch-button')).toHaveClass(/end-action-ready/, { timeout: 25_000 });
     await page.locator('#end-epoch-button').click();
-    if (await page.locator('#fx-genome').getAttribute('aria-hidden') === 'false') {
-      await page.locator('#fx-genome').click();
-    }
+    await dismissReveal(page);
     await continueToMethodPicker(page);
     await page.locator('#pick-choices .pick-card').first().click();
     await expect(page.locator('#hud-fight')).toHaveText('2 / 5');

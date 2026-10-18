@@ -52,6 +52,10 @@ const SPEECH_DUCK = 0.55;
 export interface UiAudio {
   unlock(): void;
   play(id: UiSoundId): void;
+  /** The catch reveal's synthesized cues: a wobble tick that climbs with
+   *  each wobble (`step` 0-2), a shimmer as the egg cracks, a pop as it
+   *  bursts. */
+  playCatchCue(cue: 'wobble' | 'crack' | 'burst', step: number): void;
   startAmbience(): void;
   stopAmbience(): void;
   isMuted(): boolean;
@@ -200,7 +204,59 @@ export function createUiAudio(): UiAudio {
     osc.stop(now + 0.18);
   }
 
+  // A short pitched blip through the master bus (so mute applies).
+  function blip(c: AudioContext, out: AudioNode, at: number, from: number, to: number, peak: number, length: number, type: OscillatorType): void {
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(from, at);
+    osc.frequency.exponentialRampToValueAtTime(to, at + length * 0.6);
+    gain.gain.setValueAtTime(0, at);
+    gain.gain.linearRampToValueAtTime(peak, at + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + length);
+    osc.connect(gain).connect(out);
+    osc.start(at);
+    osc.stop(at + length + 0.02);
+  }
+
+  function playCatchCue(cue: 'wobble' | 'crack' | 'burst', step: number): void {
+    if (muted) return;
+    const c = ensureContext();
+    if (c.state === 'suspended' || !master) return;
+    const now = c.currentTime;
+    if (cue === 'wobble') {
+      // A hollow tock that climbs a little each wobble, like a shell rocking.
+      const base = 300 * 1.26 ** step;
+      blip(c, master, now, base, base * 0.72, 0.07, 0.14, 'triangle');
+      blip(c, master, now + 0.07, base * 1.5, base * 1.1, 0.035, 0.1, 'sine');
+      return;
+    }
+    if (cue === 'crack') {
+      // Glassy shimmer: three quick high partials.
+      [0, 0.05, 0.1].forEach((dt, i) => blip(c, master!, now + dt, 1600 + i * 420, 2300 + i * 380, 0.025, 0.2, 'sine'));
+      return;
+    }
+    // The pop: a noise burst through a falling band-pass, and a bright sweep up.
+    const length = 0.4;
+    const buffer = c.createBuffer(1, Math.ceil(c.sampleRate * length), c.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i += 1) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length) ** 2;
+    const noise = c.createBufferSource();
+    noise.buffer = buffer;
+    const band = c.createBiquadFilter();
+    band.type = 'bandpass';
+    band.frequency.setValueAtTime(2400, now);
+    band.frequency.exponentialRampToValueAtTime(500, now + length);
+    const gain = c.createGain();
+    gain.gain.setValueAtTime(0.16, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + length);
+    noise.connect(band).connect(gain).connect(master);
+    noise.start(now);
+    blip(c, master, now, 420, 1500, 0.06, 0.32, 'sine');
+  }
+
   return {
+    playCatchCue,
     speechBus() {
       if (!ctx || !master) return null;
       if (!speechGain) {

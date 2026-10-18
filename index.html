@@ -29,7 +29,7 @@
     <link rel="stylesheet" href="/src/wide-layout.css?v=20261018-ui-pass-1" />
     <link rel="stylesheet" href="/src/dr-e.css?v=20261015-face-1" />
     <link rel="stylesheet" href="/src/dex.css?v=20261018-ui-pass-1" />
-    <link rel="stylesheet" href="/src/reveal.css?v=20261018-ui-pass-1" />
+    <link rel="stylesheet" href="/src/reveal.css?v=20261018-catch-1" />
     <link rel="stylesheet" href="/src/egg-tray.css?v=20261018-ui-pass-1" />
     <style>
       /* Z13 boot ident plate: painted before scripts run so the title never
@@ -435,11 +435,31 @@
       <div id="fx-toasts" class="fx-toasts" aria-live="polite" aria-atomic="true" aria-relevant="additions"></div>
       <button id="fx-genome" class="fx-genome" type="button" aria-hidden="true" tabindex="-1">
         <span class="fx-genome-scan" aria-hidden="true"></span>
+        <span class="catch-flash" aria-hidden="true"></span>
         <span class="fx-genome-inner">
           <span id="fx-genome-eyebrow" class="fx-genome-eyebrow">NEW STRAIN</span>
-          <span id="fx-genome-art" class="fx-genome-art"></span>
+          <span class="catch-stage">
+            <span class="catch-rays" aria-hidden="true"></span>
+            <span class="catch-egg" aria-hidden="true">
+              <img class="catch-egg-silhouette" alt="" width="384" height="384" />
+              <span class="catch-egg-shine"></span>
+              <span class="catch-egg-crack"></span>
+            </span>
+            <span class="catch-cells" aria-hidden="true"></span>
+            <span id="fx-genome-art" class="fx-genome-art"></span>
+          </span>
           <strong id="fx-genome-title" class="fx-genome-title">SPLITTER</strong>
           <span id="fx-genome-sub" class="fx-genome-sub">NOW AVAILABLE AS AN EGG</span>
+          <span class="catch-card">
+            <span class="catch-card-head"><b id="catch-number">#000</b><span class="catch-card-kicker">New friend</span><span id="catch-count" class="catch-count"></span></span>
+            <span id="catch-role" class="catch-role"></span>
+            <span id="catch-behavior" class="catch-behavior"></span>
+            <span class="catch-tray"><i class="catch-tray-egg" aria-hidden="true"></i>Now in your Egg tray</span>
+          </span>
+          <span class="catch-dre">
+            <canvas class="dre-face" data-dre-slot="catch" aria-hidden="true"></canvas>
+            <span class="catch-bubble"><strong id="catch-line" class="catch-line"></strong></span>
+          </span>
           <span class="fx-genome-skip">Tap or press to continue</span>
         </span>
       </button>

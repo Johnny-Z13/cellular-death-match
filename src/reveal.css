@@ -298,3 +298,460 @@
     transform: none;
   }
 }
+
+/* ---- The catch (ui/catchReveal.ts) ---------------------------------------
+   A new strain's end-of-trial reveal: a sealed specimen egg wobbles three
+   times, cracks and bursts; the creature pops out over turning light rays;
+   its name lands and a dex card slides up; Dr. E cheers. Everything here is
+   scoped to .fx-genome-catch, so the multi-strain summary stays as it was. */
+
+.catch-stage,
+.catch-card,
+.catch-dre,
+.catch-flash {
+  display: none;
+}
+
+/* The catch owns the screen: a near-opaque backdrop with a glow in the
+   strain's colour, and one tight column that fits a 667px phone. */
+.fx-genome.fx-genome-catch {
+  background:
+    radial-gradient(circle at 50% 34%, color-mix(in srgb, var(--genome-color) 16%, transparent), transparent 44%),
+    rgba(1, 5, 6, 0.94);
+}
+
+.fx-genome-catch .fx-genome-inner {
+  gap: 7px;
+  padding: 16px 22px 14px;
+  border: 0;
+  background: none;
+}
+
+.fx-genome-catch .catch-stage { order: 1; }
+.fx-genome-catch .fx-genome-eyebrow { order: 2; margin-top: 4px; }
+.fx-genome-catch .fx-genome-title { order: 3; font-size: clamp(26px, 5vw, 46px); text-wrap: balance; }
+
+/* One count on screen: the card's friends count (the strains-found line
+   would be a second, different number). */
+.fx-genome-catch .fx-genome-sub { display: none; }
+.fx-genome-catch .catch-card { order: 5; margin-top: 6px; }
+.fx-genome-catch .catch-dre { order: 6; }
+.fx-genome-catch .fx-genome-skip { order: 7; }
+
+.fx-genome-catch .catch-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(260px, 30svh, 64vw);
+  min-height: 0;
+  aspect-ratio: 1;
+}
+
+.fx-genome-catch .catch-stage > * {
+  grid-area: 1 / 1;
+}
+
+/* The scan line belongs to the plain card. */
+.fx-genome-catch .fx-genome-scan {
+  display: none;
+}
+
+/* Light rays behind the creature, turning slowly once it is out. They spill
+   past the stage without taking up layout space. */
+.fx-genome-catch .catch-rays {
+  position: absolute;
+  top: -35%;
+  left: -35%;
+  width: 170%;
+  aspect-ratio: 1;
+  pointer-events: none;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    color-mix(in srgb, var(--genome-color) 34%, transparent) 0deg 7deg,
+    transparent 7deg 20deg
+  );
+  -webkit-mask-image: radial-gradient(circle, #000 18%, transparent 66%);
+  mask-image: radial-gradient(circle, #000 18%, transparent 66%);
+  opacity: 0;
+  transform: scale(0.3);
+}
+
+.catch-burst.fx-genome-catch .catch-rays {
+  opacity: 0.85;
+  transform: scale(1);
+  transition: opacity 420ms ease, transform 620ms cubic-bezier(0.2, 1.2, 0.4, 1);
+  animation: catch-rays-turn 18s linear infinite;
+}
+
+@keyframes catch-rays-turn {
+  to { rotate: 360deg; }
+}
+
+/* The egg: a glass shell tinted in the strain's colour with its silhouette
+   dark inside. */
+.fx-genome-catch .catch-egg {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 46%;
+  aspect-ratio: 0.8;
+  overflow: hidden;
+  border: 2px solid color-mix(in srgb, var(--genome-color) 70%, #ffffff);
+  border-radius: 50% 50% 46% 46% / 58% 58% 42% 42%;
+  background:
+    radial-gradient(ellipse at 34% 24%, rgba(255, 255, 255, 0.55), transparent 22%),
+    radial-gradient(ellipse at 50% 60%, color-mix(in srgb, var(--genome-color) 46%, #061214), #051012 78%);
+  box-shadow: 0 0 34px color-mix(in srgb, var(--genome-color) 45%, transparent), inset 0 -10px 22px rgba(0, 0, 0, 0.45);
+  transform-origin: 50% 92%;
+  animation: catch-egg-in 420ms cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+
+@keyframes catch-egg-in {
+  from { opacity: 0; transform: translateY(-40px) scale(0.6); }
+}
+
+.fx-genome-catch .catch-egg-silhouette {
+  grid-area: 1 / 1;
+  width: 78%;
+  height: auto;
+  opacity: 0.6;
+  filter: brightness(0) drop-shadow(0 0 6px color-mix(in srgb, var(--genome-color) 40%, transparent));
+  image-rendering: pixelated;
+}
+
+.fx-genome-catch .catch-egg-shine,
+.fx-genome-catch .catch-egg-crack {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+}
+
+/* Cracks: thin rays of light leaking through the shell. */
+.fx-genome-catch .catch-egg-crack {
+  background: repeating-conic-gradient(from 12deg at 50% 46%, transparent 0deg 26deg, rgba(255, 255, 255, 0.95) 26deg 27.4deg, transparent 27.4deg 51deg);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 46%, transparent 12%, #000 34%, transparent 70%);
+  mask-image: radial-gradient(ellipse at 50% 46%, transparent 12%, #000 34%, transparent 70%);
+  opacity: 0;
+}
+
+.catch-wobble.fx-genome-catch .catch-egg {
+  animation: catch-egg-wobble 420ms cubic-bezier(0.36, 0, 0.3, 1) both;
+}
+
+@keyframes catch-egg-wobble {
+  0% { transform: rotate(0); }
+  25% { transform: rotate(calc(-7deg * var(--wobble, 1))) translateX(-3px); }
+  55% { transform: rotate(calc(6deg * var(--wobble, 1))) translateX(3px); }
+  80% { transform: rotate(calc(-2deg * var(--wobble, 1))); }
+  100% { transform: rotate(0); }
+}
+
+.catch-crack.fx-genome-catch .catch-egg {
+  box-shadow: 0 0 60px color-mix(in srgb, var(--genome-color) 80%, #ffffff), inset 0 -10px 22px rgba(0, 0, 0, 0.3);
+}
+
+.catch-crack.fx-genome-catch .catch-egg-crack {
+  opacity: 1;
+  transition: opacity 260ms ease;
+}
+
+/* The burst: the shell pops, cells fly, the screen flashes. */
+.catch-burst.fx-genome-catch .catch-egg {
+  animation: catch-egg-pop 260ms ease-out forwards;
+}
+
+@keyframes catch-egg-pop {
+  to { opacity: 0; transform: scale(1.5); }
+}
+
+.fx-genome-catch .catch-cells {
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+.fx-genome-catch .catch-cells i {
+  position: absolute;
+  left: calc(var(--s) / -2);
+  top: calc(var(--s) / -2);
+  width: var(--s);
+  height: var(--s);
+  background: var(--genome-color);
+  box-shadow: 0 0 10px var(--genome-color);
+  animation: catch-cell-fly 760ms cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+.fx-genome-catch .catch-cells i:nth-child(3n) {
+  background: #ffffff;
+}
+
+@keyframes catch-cell-fly {
+  from { opacity: 1; transform: rotate(var(--a)) translateX(0) scale(1); }
+  to { opacity: 0; transform: rotate(var(--a)) translateX(var(--d)) scale(0.4); }
+}
+
+.fx-genome-catch .catch-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: block;
+  background: radial-gradient(circle at 50% 42%, #ffffff, color-mix(in srgb, var(--genome-color) 50%, transparent) 60%, transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.catch-burst.fx-genome-catch .catch-flash {
+  animation: catch-flash 380ms ease-out;
+}
+
+@keyframes catch-flash {
+  0% { opacity: 0; }
+  18% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+
+.catch-burst.fx-genome-catch .fx-genome-inner {
+  animation: catch-shake 300ms ease-out;
+}
+
+@keyframes catch-shake {
+  20% { transform: translate(-5px, 2px); }
+  40% { transform: translate(4px, -3px); }
+  60% { transform: translate(-2px, 2px); }
+  80% { transform: translate(1px, -1px); }
+}
+
+/* The creature pops out of the shell. */
+.fx-genome-catch .fx-genome-art {
+  width: 82%;
+  margin: 0;
+  opacity: 0;
+  transform: scale(0.3);
+}
+
+.catch-burst.fx-genome-catch .fx-genome-art {
+  opacity: 1;
+  transform: none;
+  transition: opacity 160ms ease, transform 560ms cubic-bezier(0.2, 1.7, 0.4, 1);
+}
+
+/* Name, count and card land in turn. */
+.fx-genome-catch .fx-genome-eyebrow,
+.fx-genome-catch .fx-genome-title,
+.fx-genome-catch .fx-genome-sub {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.catch-named.fx-genome-catch .fx-genome-eyebrow,
+.catch-named.fx-genome-catch .fx-genome-title,
+.catch-named.fx-genome-catch .fx-genome-sub {
+  opacity: 1;
+  transform: none;
+  transition: opacity 280ms ease, transform 420ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.catch-named.fx-genome-catch .fx-genome-title { transition-delay: 60ms; }
+.catch-named.fx-genome-catch .fx-genome-sub { transition-delay: 140ms; }
+
+/* The dex card: number, what it does, and where to find it now. */
+.fx-genome-catch .catch-card {
+  display: grid;
+  gap: 4px;
+  width: min(440px, 100%);
+  padding: 11px 14px 12px;
+  border: 1px solid color-mix(in srgb, var(--genome-color) 40%, transparent);
+  border-left: 3px solid var(--genome-color);
+  border-radius: 12px;
+  background: rgba(6, 16, 18, 0.9);
+  box-sizing: border-box;
+  text-align: left;
+  text-transform: none;
+  opacity: 0;
+  transform: translateY(18px);
+}
+
+.catch-carded.fx-genome-catch .catch-card {
+  opacity: 1;
+  transform: none;
+  transition: opacity 260ms ease, transform 460ms cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+.catch-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  white-space: nowrap;
+}
+
+.catch-card-head b {
+  color: color-mix(in srgb, var(--genome-color) 75%, #ffffff);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.catch-card-kicker {
+  color: var(--ink-dim);
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.catch-count {
+  margin-left: auto;
+  color: var(--bio);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.catch-role {
+  color: #ffffff;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.catch-behavior {
+  color: var(--ink-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.catch-tray {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 3px;
+  color: color-mix(in srgb, var(--genome-color) 70%, #ffffff);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.catch-tray-egg {
+  width: 9px;
+  height: 11px;
+  border-radius: 50% 50% 46% 46% / 58% 58% 42% 42%;
+  background: var(--genome-color);
+  box-shadow: 0 0 8px var(--genome-color);
+}
+
+/* Dr. E cheers. */
+.fx-genome-catch .catch-dre {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: min(440px, 100%);
+  opacity: 0;
+  transform: translateY(10px) scale(0.94);
+}
+
+.catch-cheer.fx-genome-catch .catch-dre {
+  opacity: 1;
+  transform: none;
+  transition: opacity 240ms ease, transform 380ms cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+
+:root .catch-dre canvas.dre-face {
+  width: 56px;
+}
+
+.catch-bubble {
+  position: relative;
+  padding: 9px 13px;
+  border: 1px solid rgba(120, 196, 200, 0.24);
+  border-radius: 14px;
+  background: rgba(10, 24, 28, 0.9);
+  text-align: left;
+}
+
+.catch-line {
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.3;
+  text-transform: none;
+}
+
+/* "Tap or press to continue" waits for the finished card. */
+.fx-genome-catch .fx-genome-skip {
+  opacity: 0;
+}
+
+.catch-settled.fx-genome-catch .fx-genome-skip {
+  opacity: 1;
+  transition: opacity 300ms ease 200ms;
+}
+
+/* Short portrait phones: a smaller stage and a compact Dr. E so the whole
+   card, his line and the continue hint fit a 667px screen. */
+@media (orientation: portrait) and (max-height: 760px) {
+  .fx-genome-catch .catch-stage { width: min(220px, 26svh, 60vw); }
+  .fx-genome-catch .catch-card { padding: 9px 12px 10px; gap: 3px; }
+  .catch-role { font-size: 15px; }
+  .catch-behavior { font-size: 11px; line-height: 1.35; }
+  .fx-genome-catch .catch-dre { grid-template-columns: 42px minmax(0, 1fr); gap: 8px; }
+  :root .catch-dre canvas.dre-face { width: 42px; }
+  .catch-bubble { padding: 7px 11px; }
+  .catch-line { font-size: 14px; }
+}
+
+/* Short landscape screens: the creature on the left, its card on the right. */
+@media (orientation: landscape) and (max-height: 560px) {
+  .fx-genome-catch .fx-genome-inner {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "stage eyebrow"
+      "stage title"
+      "stage sub"
+      "stage card"
+      "stage dre"
+      "stage skip";
+    justify-items: start;
+    align-items: center;
+    column-gap: 22px;
+    row-gap: 6px;
+    text-align: left;
+  }
+
+  .fx-genome-catch .catch-stage { grid-area: stage; width: min(230px, 58svh); }
+  .fx-genome-catch .fx-genome-eyebrow { grid-area: eyebrow; }
+  .fx-genome-catch .fx-genome-title { grid-area: title; font-size: clamp(22px, 7svh, 36px); }
+  .fx-genome-catch .catch-card { padding: 8px 12px 9px; gap: 2px; }
+  .catch-role { font-size: 15px; }
+  .catch-behavior { font-size: 11px; line-height: 1.3; }
+  .fx-genome-catch .catch-dre { grid-template-columns: 38px minmax(0, 1fr); gap: 8px; }
+  :root .catch-dre canvas.dre-face { width: 38px; }
+  .catch-bubble { padding: 6px 10px; }
+  .catch-line { font-size: 14px; }
+  .fx-genome-catch .fx-genome-sub { grid-area: sub; }
+  .fx-genome-catch .catch-card { grid-area: card; }
+  .fx-genome-catch .catch-dre { grid-area: dre; }
+  .fx-genome-catch .fx-genome-skip { grid-area: skip; }
+}
+
+/* Reduced motion: the finished card, no wobble, burst, flash or shake. */
+@media (prefers-reduced-motion: reduce) {
+  .fx-genome-catch .catch-egg,
+  .fx-genome-catch .catch-cells,
+  .fx-genome-catch .catch-flash {
+    display: none;
+  }
+
+  .fx-genome-catch .catch-rays,
+  .fx-genome-catch .fx-genome-inner {
+    animation: none;
+  }
+
+  .fx-genome-catch * {
+    transition: none !important;
+  }
+}

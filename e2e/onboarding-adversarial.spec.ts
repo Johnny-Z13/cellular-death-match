@@ -6,6 +6,7 @@ import {
   monitorRuntime,
   openFreshApp,
   toolCharge,
+  dismissReveal,
 } from './helpers';
 
 const CORE_PROJECTS = new Set(['phone', 'small-phone', 'desktop']);
@@ -33,7 +34,7 @@ async function reachTrialTwo(page: Page): Promise<void> {
   await page.waitForTimeout(3_100);
   await expect(page.locator('#fx-genome')).toHaveAttribute('aria-hidden', 'false');
   await expect(page.locator('#screen-method-intro')).not.toHaveClass(/visible/);
-  await page.locator('#fx-genome').press('Enter');
+  await dismissReveal(page, 'Enter');
   await continueToMethodPicker(page);
   await page.locator('#pick-choices .pick-card').first().dblclick();
   await expect(page.locator('#hud-fight')).toHaveText('2 / 5');
