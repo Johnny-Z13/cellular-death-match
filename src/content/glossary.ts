@@ -3,7 +3,7 @@
 //   Culture  — one living mass in the dish
 //   Strain   — a kind of culture (Swarmlet, Bloom Mass, a hybrid…)
 //   Egg      — the tool that plants a strain; its tray lists the plantable strains
-//   Tool     — anything applied to the dish (Nutrient, Paste, Toxin, Water…)
+//   Tool     — anything applied to the dish (Nutrient, Membrane, Toxin, Water…)
 //   Reaction — chemistry that fires when tools and strains combine
 //   Trial    — one dish round; the Open Lab continues the numbering
 //   Upgrade  — the pick between trials
@@ -42,6 +42,7 @@ export const RETIRED_PLAYER_WORDS: readonly RegExp[] = [
   // Capitalised UI nouns only; lower-case English uses are fine.
   /\bMethods?\b/,
   /\bCase\b/,
+  /\bPaste\b/,
 ];
 
 export function retiredWordsIn(text: string): string[] {

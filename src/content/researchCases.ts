@@ -82,7 +82,7 @@ export const COMMON_COLD_CASE: ResearchCaseDef = {
       hypothesis: 'An unstable Foam field may take a second dose of Water and discharge.',
       resultPromise: 'Foam Lightning reaction',
       objectiveKind: 'understand_recipe',
-      introducedFeature: 'Paste and Agitate',
+      introducedFeature: 'Membrane and Agitate',
       guidanceTier: 'hypothesis',
       recoveryHints: [
         'An unstable Foam signal can accept a second Water pulse before it fades.',

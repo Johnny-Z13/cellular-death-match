@@ -13,13 +13,6 @@ describe('overlapping reagent forces', () => {
     const pos: [number, number] = [...colony.center];
     const charges = arena.getToolStates()[tool].charges;
     for (let i = 0; i < charges; i++) expect(arena.applyTool(tool, pos)).toBe(true);
-    // Add trail fields to exercise the second accumulation pass as well.
-    if (tool === 'nutrient') {
-      for (let i = 0; i < 3; i++) {
-        arena.applyTool('paste', pos);
-        arena.endPasteStroke();
-      }
-    }
     arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     for (const shift of Object.values(colony.energyShifts!)) {
       expect(shift).toBeGreaterThanOrEqual(REAGENT_SHIFT_LIMITS.min);

@@ -274,7 +274,7 @@ export function createRenderer(
 }
 
 
-// Agar wall (Paste): a pale gel line. A translucent core and a crisp rim so it
+// Membrane: a pale gel line. A translucent core and a crisp rim so it
 // reads as gel, never as a culture; alpha follows the wall's strength as it
 // dissolves.
 const AGAR_GEL = {

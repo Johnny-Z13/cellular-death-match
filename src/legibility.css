@@ -845,10 +845,15 @@
     max-width: 100%;
   }
 
+  /* Compact tiles (up to eight a row on tablets) use the narrow mono face so
+     the longest names, "Nutrient" and "Membrane", fit. */
   .layout[data-screen="arena"] .toolbox .tool-button strong {
     display: block;
     overflow: hidden;
+    font-family: var(--font-mono);
     font-size: var(--fs-small);
+    font-weight: 500;
+    letter-spacing: 0;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -865,15 +870,6 @@
   /* The finish tile keeps its state word visible. */
   .layout[data-screen="arena"] .toolbox .end-action > b {
     color: var(--bio);
-  }
-}
-
-@media (max-width: 599px) {
-  /* Five tiles a row on phones: the narrow mono face fits "Nutrient". */
-  .layout[data-screen="arena"] .toolbox .tool-button strong {
-    font-family: var(--font-mono);
-    font-weight: 500;
-    letter-spacing: 0;
   }
 }
 

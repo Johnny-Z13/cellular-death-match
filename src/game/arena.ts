@@ -1,7 +1,7 @@
 import { type SimState, type CellId, type Cell } from '../sim/types';
 import { createSim, tick as simTick, addCell } from '../sim/sim';
-import { removePixel } from '../sim/cell';
-import { getCell, setCell, updateBoundaryAround } from '../sim/grid';
+import { addPixel, removePixel } from '../sim/cell';
+import { getCell, setCell, updateBoundaryAround, xy } from '../sim/grid';
 import { type PlayerConfig } from '../content/upgrades';
 import { type EnemyArchetype, type EnemySpawn, ARCHETYPE_DEFAULTS, ARCHETYPE_INFO } from '../content/enemies';
 import {
@@ -46,7 +46,8 @@ import { displacementVec } from './geometry';
 import { clampReagentShift, getBreedProfile, getReagentShift, type BreedProfileId } from '../sim/breedProfiles';
 import { classifyBiome, type BiomeRecord } from './homeostasis';
 import { BALANCE_TUNING, createBalanceMeter, HUNTER_ROLES, type BalanceReading } from './balance';
-import { createAgarWall } from './agarWall';
+import { AGAR_TUNING, createAgarWall } from './agarWall';
+import { culturePieces, PINCH_TUNING } from './membranePinch';
 import { applyAppetite, applyMetabolism, createLifeCycleState, readyToDivide } from './lifeCycle';
 import { getEscalation } from './escalation';
 import { createMergeTracker, MERGE_DETECTION, type FormingGroup, type LockedForm, type MergeEvent } from './mergeDetection';
@@ -365,13 +366,15 @@ export function createArena(opts: CreateArenaOpts): Arena {
   let lastEmergencyEggTick = 0;
   let activeCrisis: { id: CrisisId; ttl: number } | null = null;
   const toolEffects: ToolEffect[] = [];
-  // Paste trail: small nutrient-type stamps drawn along a drag. Kept separate
-  // from toolEffects so a long trail never evicts catalysis effects (and so it
-  // isn't mistaken for a placed reagent during reaction/accident checks).
+  // Membrane (tool id 'paste'): a gel wall along a drag (game/agarWall.ts)
+  // that also pinches any culture it cuts through (game/membranePinch.ts).
+  // Its stamps never feed; they only let a reagent dropped on a fresh
+  // membrane react along it. Kept separate from toolEffects so a long line
+  // never evicts catalysis effects (and so it isn't mistaken for a placed
+  // reagent during reaction/accident checks).
   const trailEffects: ToolEffect[] = [];
   let lastEggCellId: CellId | null = null;
   let lastTrailStamp: [number, number] | null = null;
-  // Paste also sets as an agar wall along the stroke (game/agarWall.ts).
   const agarWall = createAgarWall(state.grid.LX, state.grid.LY);
   let pastePathRemaining = 0;
   const dishEvents: DishEventMarker[] = [];
@@ -447,6 +450,93 @@ export function createArena(opts: CreateArenaOpts): Arena {
       pos: seedPos,
     });
     birthCount += 1;
+  }
+
+  // A Membrane stretch from `from` to `to` parts every culture it crosses at
+  // once, and pinches each one it cuts through into separate cultures of the
+  // same strain (game/membranePinch.ts).
+  function pinchAlong(arena: Arena, from: readonly [number, number], to: readonly [number, number]): void {
+    const gel = state.wall;
+    if (!gel) return;
+    const { LX, LY, cells } = state.grid;
+    const r = AGAR_TUNING.radius;
+    const [ax, ay] = from;
+    const dx = to[0] - ax;
+    const dy = to[1] - ay;
+    const lengthSq = dx * dx + dy * dy;
+    const crossed = new Set<CellId>();
+    for (let x = Math.max(0, Math.floor(Math.min(ax, to[0]) - r)); x <= Math.min(LX - 1, Math.ceil(Math.max(ax, to[0]) + r)); x++) {
+      for (let y = Math.max(0, Math.floor(Math.min(ay, to[1]) - r)); y <= Math.min(LY - 1, Math.ceil(Math.max(ay, to[1]) + r)); y++) {
+        const id = cells[x * LY + y]!;
+        if (id === 0 || crossed.has(id) || !archetypes.has(id)) continue;
+        const t = lengthSq > 0 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / lengthSq)) : 0;
+        const px = ax + dx * t - x;
+        const py = ay + dy * t - y;
+        if (px * px + py * py <= r * r) crossed.add(id);
+      }
+    }
+    for (const id of crossed) pinchCulture(arena, id, gel);
+  }
+
+  function pinchCulture(arena: Arena, id: CellId, gel: Uint8Array): void {
+    const spawn = archetypes.get(id);
+    const parent = state.cells.get(id);
+    if (!spawn || !parent) return;
+    const { pieces, underGel } = culturePieces(state.grid, id, gel);
+    // A culture lying wholly under the line is squeezed out by the sim
+    // instead, so a stroke never wipes out a seedling at a stroke.
+    if (pieces.length === 0) return;
+    const { LX, LY, wrap } = state.grid;
+    const movePixel = (i: number, to: Cell | null) => {
+      const [x, y] = xy(state.grid, i);
+      removePixel(parent, x, y, LX, LY, wrap);
+      setCell(state.grid, x, y, to ? to.id : 0);
+      if (to) addPixel(to, x, y, LX, LY, wrap);
+      updateBoundaryAround(state.grid, x, y);
+    };
+    // The strike is clean: the culture lets go of the gel under the line.
+    for (const i of underGel) movePixel(i, null);
+    const minPiece = PINCH_TUNING.minPieceShare * spawn.targetVol;
+    const room = ECOSYSTEM_MAX_POPULATION - livingCultureCount(state, archetypes);
+    const daughters = pieces.slice(1).filter((piece) => piece.length >= minPiece).slice(0, Math.max(0, room));
+    if (pieces[0]!.length < minPiece || daughters.length === 0) return;
+    const total = parent.vol;
+    const parentTarget = parent.targetVol;
+    for (const piece of daughters) {
+      // Seed the daughter on the piece pixel nearest the piece's middle, so
+      // its starting blob lands inside the piece rather than in the gel.
+      let sx = 0;
+      let sy = 0;
+      for (const i of piece) {
+        sx += Math.floor(i / LY);
+        sy += i % LY;
+      }
+      sx /= piece.length;
+      sy /= piece.length;
+      let seed = piece[0]!;
+      let best = Infinity;
+      for (const i of piece) {
+        const d = (Math.floor(i / LY) - sx) ** 2 + (i % LY - sy) ** 2;
+        if (d < best) {
+          best = d;
+          seed = i;
+        }
+      }
+      const daughterId = arena.spawnEnemy({ spawn: { ...spawn, traits: spawn.traits?.slice() }, pos: xy(state.grid, seed) });
+      const daughter = state.cells.get(daughterId)!;
+      for (const i of piece) movePixel(i, daughter);
+      daughter.targetVol = parentTarget * (piece.length / total);
+      parent.targetVol -= daughter.targetVol;
+      if (lifeCycle) {
+        life.digestUntil.set(id, tickNo + lifeCycle.digestTicks);
+        life.digestUntil.set(daughterId, tickNo + lifeCycle.digestTicks);
+      }
+      birthCount += 1;
+    }
+    const name = spawn.breedId ? BREED_DEFS[spawn.breedId].name : ARCHETYPE_INFO[spawn.archetype].name;
+    const radius = Math.sqrt(parent.vol / Math.PI) + 4;
+    addDishEvent('stabilize', `PINCHED · ${name.toUpperCase()}`, parent.center, radius, 'green');
+    pushSignal(`The Membrane pinched ${name} in two.`);
   }
 
   function addDishEvent(
@@ -652,7 +742,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       };
     },
     getToolEffects(): ToolEffect[] {
-      return [...toolEffects, ...trailEffects].map((effect) => ({
+      return toolEffects.map((effect) => ({
         ...effect,
         pos: [...effect.pos],
       }));
@@ -733,9 +823,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
       }
 
       if (tool === 'paste') {
-        // Drawing a wall: stamp gel and a small nutrient field, but only once the
-        // pointer has travelled stampSpacing from the last stamp, so a drag
-        // lays an even line. A charge is spent per unitsPerCharge of path.
+        // Drawing a membrane: lay gel, but only once the pointer has travelled
+        // stampSpacing from the last stamp, so a drag lays an even line. A
+        // charge is spent per unitsPerCharge of path.
         if (lastTrailStamp) {
           const dx = pos[0] - lastTrailStamp[0];
           const dy = pos[1] - lastTrailStamp[1];
@@ -757,6 +847,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         pasteStrokeStamped = true;
         agarWall.add(lastTrailStamp ?? pos, pos);
         state.wall = agarWall.mask();
+        pinchAlong(this, lastTrailStamp ?? pos, pos);
         lastTrailStamp = [pos[0], pos[1]];
         const maxTtl = TOOL_TUNING.paste.ttl;
         trailEffects.push({
@@ -837,8 +928,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
         toolEffects.push(reaction.effect);
         addDishEventForEffect(reaction.effect, addDishEvent);
       }
-      // Dropping a reagent onto a drawn nutrient trail sparks a reaction along
-      // the painted line — steer life with paste, then catalyse the path.
+      // Dropping a reagent onto a fresh Membrane sparks a reaction along the
+      // line: fence life in, then catalyse the path.
       const trailReaction = reactionFor(effect, trailEffects, state.rng.randInt(1_000_000));
       if (trailReaction) {
         if (reactionUsesAcid(trailReaction)) objectiveRuntime.acidReactionTriggered = true;
@@ -846,8 +937,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
         pulseToolEffect(state, trailReaction.effect, archetypes);
         toolEffects.push(trailReaction.effect);
         addDishEventForEffect(trailReaction.effect, addDishEvent);
-        discoverNote('paste_catalysed', 'Lab note: tools react along a Paste trail.');
-        pushSignal('A tool reacted along the Paste trail.');
+        discoverNote('paste_catalysed', 'Lab note: tools react along a Membrane.');
+        pushSignal('A tool reacted along the Membrane.');
         while (toolEffects.length > MAX_TOOL_EFFECTS) toolEffects.shift();
       }
       if (catalyticReaction) {
@@ -972,9 +1063,6 @@ export function createArena(opts: CreateArenaOpts): Arena {
         const pressurePaused = isStable();
         const hazardsPaused = pressurePaused || hazardsHeld;
         applyToolEffects(state, toolEffects, archetypes);
-        // Trail stamps pull + feed cells exactly like nutrient drops, so a drawn
-        // line becomes a gentle gradient colonies drift along.
-        applyToolEffects(state, trailEffects, archetypes);
         for (const cell of state.cells.values()) {
           if (!cell.energyShifts) continue;
           cell.energyShifts.isingShift = clampReagentShift(cell.energyShifts.isingShift);
@@ -1122,8 +1210,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         const fedBy = (id: CellId, feed: FormFeed): boolean => {
           const cell = state.cells.get(id);
           if (!cell) return false;
-          return overlapsEffect(state, cell, toolEffects, feed)
-            || (feed === 'nutrient' && overlapsEffect(state, cell, trailEffects, 'nutrient'));
+          return overlapsEffect(state, cell, toolEffects, feed);
         };
         for (const merge of merges.scan(state, strainOf, fedBy)) {
           mergeEvents.push(merge);

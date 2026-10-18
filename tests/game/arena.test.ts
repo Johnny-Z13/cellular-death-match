@@ -448,7 +448,7 @@ describe('arena ecosystem mode', () => {
     expect(arena.archetypes.get(newId!)?.breedId).toBe('vitric_anchor');
   });
 
-  it('paste draws a spaced trail of nutrient stamps without evicting catalysis effects', () => {
+  it('the Membrane lays a spaced gel line, charged per stroke', () => {
     const arena = createArena({
       LX: 80,
       LY: 80,
@@ -468,8 +468,9 @@ describe('arena ecosystem mode', () => {
     expect(arena.applyTool('paste', [18, 10])).toBe(true);
     expect(arena.applyTool('paste', [26, 10])).toBe(true);
 
-    const trailStamps = arena.getToolEffects().filter((e) => e.type === 'nutrient');
-    expect(trailStamps.length).toBeGreaterThanOrEqual(3);
+    // The line is gel only: nothing shows up as a placed tool field.
+    expect(arena.state.wall).toBeDefined();
+    expect(arena.getToolEffects()).toHaveLength(0);
 
     // A new stroke starts fresh and pays its opening charge again.
     arena.endPasteStroke();
@@ -497,7 +498,7 @@ describe('arena ecosystem mode', () => {
     expect(arena.getToolEffects().some((e) => e.type === 'bloom')).toBe(true);
   });
 
-  it('paste trail gently feeds a colony along the drawn line', () => {
+  it('the Membrane never feeds a culture it is drawn beside', () => {
     const arena = createArena({
       LX: 80,
       LY: 80,
@@ -510,14 +511,72 @@ describe('arena ecosystem mode', () => {
     });
     const cell = arena.state.cells.get(2)!;
     const before = cell.targetVol;
-    // Draw a trail across the colony's position.
+    // Draw a line just beside the culture.
     const cx = Math.round(cell.center[0]);
-    const cy = Math.round(cell.center[1]);
-    for (let i = 0; i < 4; i++) arena.applyTool('paste', [cx + i * 6, cy]);
+    const cy = Math.round(cell.center[1]) + 9;
+    for (let i = 0; i < 4; i++) arena.applyTool('paste', [cx - 9 + i * 6, cy]);
     for (let i = 0; i < 30; i++) {
       arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     }
-    expect(arena.state.cells.get(2)!.targetVol).toBeGreaterThan(before);
+    expect(arena.state.cells.get(2)!.targetVol).toBe(before);
+  });
+
+  it('a Membrane drawn through a culture pinches it into two of the same strain', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 23,
+      player: { targetVol: 100, speed: 0, engulfMultiplier: 1, bulletSize: 3 },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 60, speed: 0, engulfMultiplier: 1 }],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 60,
+      worldEventIntensity: 0,
+    });
+    // Feed it up: a culture must be big enough for both halves to live.
+    const cell = arena.state.cells.get(2)!;
+    cell.targetVol = 200;
+    for (let i = 0; i < 400 && cell.vol < 170; i++) {
+      arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    }
+    expect(cell.vol).toBeGreaterThanOrEqual(170);
+    const swarmlets = () => [...arena.archetypes.entries()]
+      .filter(([id, spawn]) => spawn.archetype === 'swarmlet' && (arena.state.cells.get(id)?.vol ?? 0) > 0);
+    expect(swarmlets()).toHaveLength(1);
+    const targetBefore = cell.targetVol;
+
+    const cx = Math.round(cell.center[0]);
+    const cy = Math.round(cell.center[1]);
+    for (let y = cy - 18; y <= cy + 18; y += 6) arena.applyTool('paste', [cx, y]);
+    arena.endPasteStroke();
+
+    const after = swarmlets();
+    expect(after).toHaveLength(2);
+    const targets = after.map(([id]) => arena.state.cells.get(id)!.targetVol);
+    expect(targets.reduce((a, b) => a + b, 0)).toBeCloseTo(targetBefore);
+    // A cut through the middle shares the mass between the halves.
+    expect(Math.min(...targets)).toBeGreaterThan(targetBefore * 0.25);
+  });
+
+  it('a Membrane leaves a culture too small to halve in one piece', () => {
+    const arena = createArena({
+      LX: 80,
+      LY: 80,
+      seed: 23,
+      player: { targetVol: 100, speed: 0, engulfMultiplier: 1, bulletSize: 3 },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 60, speed: 0, engulfMultiplier: 1 }],
+      wrap: false,
+      mode: 'ecosystem',
+      epochTicks: 60 * 60,
+      worldEventIntensity: 0,
+    });
+    const cell = arena.state.cells.get(2)!;
+    for (let i = 0; i < 200; i++) arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    const cx = Math.round(cell.center[0]);
+    const cy = Math.round(cell.center[1]);
+    for (let y = cy - 18; y <= cy + 18; y += 6) arena.applyTool('paste', [cx, y]);
+    const swarmlets = [...arena.archetypes.values()].filter((spawn) => spawn.archetype === 'swarmlet');
+    expect(swarmlets).toHaveLength(1);
   });
 
   it('agitation spends a charge and mixes living cell movement for a short pulse', () => {

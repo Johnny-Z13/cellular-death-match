@@ -41,7 +41,7 @@ Details, evidence and open questions: [`docs/ux-legibility/README.md`](./ux-legi
 - Arena: ecosystem tick loop, objective evaluation, tool effects, mutation, reseeding, homeostasis tracking, escalation, and resupply in `src/game/arena.ts`.
 - Run state: open-ended state machine with homeostasis/collapse end states in `src/game/run.ts`.
 - Balance: time-held and stable-ecosystem clocks, plus the sustain-trial clocks, in `src/game/balance.ts`; biome naming in `src/game/homeostasis.ts`.
-- Agar wall: Paste's gel line in `src/game/agarWall.ts`; the sim reads its mask (`SimState.wall`) in `mcStep`.
+- Membrane: the gel wall in `src/game/agarWall.ts` (the sim reads its mask, `SimState.wall`, in `mcStep`) and the pinch in `src/game/membranePinch.ts`.
 - Escalation: per-epoch pressure scaling in `src/game/escalation.ts`.
 - Objective pool: procedural mid-game objectives in `src/game/objectivePool.ts`.
 - Strain library: persistent strain bank and loadout in `src/game/strainLibrary.ts`.
@@ -98,7 +98,7 @@ Hybrid breeds (cross-bred from two discovered base breeds under a nutrient field
 
 - Egg: places the selected lifeform strain.
 - Nutrient: attracts nearby lifeforms and strongly increases their target volume.
-- Paste: drag on the dish to draw an agar wall. Cultures can't grow into the gel, so a wall fences a strain off, gives prey a refuge or pens cultures together for a merge; a culture caught under fresh gel is squeezed out. The wall holds about 13s, leaks as it dissolves and is gone at 20s (`AGAR_TUNING`). Fresh gel is also a small nutrient field, and reagents dropped on it react along the line. One charge buys a length of drawn path; each stamp rasterises back to the last so fast strokes leave no gaps. Drawing is wired via pointer capture in `main.ts` (`endPasteStroke` resets between strokes).
+- Membrane (tool id `paste`): drag on the dish to draw a gel wall cultures can't grow into. It fences a strain off, gives prey a refuge or pens cultures together for a merge. Drawn through a culture, it pinches it in two: each piece at least `PINCH_TUNING.minPieceShare` of the strain's genome size becomes its own culture of the same strain, sharing the mass (`src/game/membranePinch.ts`). That is the only way to copy a culture already in the dish, rare strains and hybrids included. The wall holds about 13s, leaks as it dissolves and is gone at 20s (`AGAR_TUNING`). It never feeds; a reagent dropped on a fresh membrane reacts along it. One charge buys a length of drawn path; each stamp rasterises back to the last so fast strokes leave no gaps. Drawing is wired via pointer capture in `main.ts` (`endPasteStroke` resets between strokes).
 - Toxin: pushes nearby lifeforms away, shrinking and eroding matter in its radius.
 - Water, Salt, Acid: research-unlocked reagents that drive further reactions.
 - Agitate: spreads active fields and can fold overlapping reactions into a fault.

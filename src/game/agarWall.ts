@@ -1,5 +1,7 @@
-// Paste sets as agar: a gel line cultures cannot grow into. Draw one to fence
-// a strain off, give prey a refuge, or pen cultures together for a merge.
+// The Membrane (tool id 'paste') sets as agar: a gel line cultures cannot
+// grow into. Draw one to fence a strain off, give prey a refuge, or pen
+// cultures together for a merge; draw it through a culture to pinch it in two
+// (game/membranePinch.ts).
 // The medium can still take gel pixels, so a culture caught under fresh gel is
 // squeezed out rather than pinned. The wall holds at full strength, then
 // dissolves over the last part of its life: it starts to leak, then is gone.

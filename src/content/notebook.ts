@@ -425,7 +425,7 @@ function noteEntry(category: Exclude<NotebookCategory, 'lifeform'>, noteId: Disc
 function clueForNote(noteId: DiscoveryNoteId, category: NotebookCategory): string {
   if (noteId === 'water_carries') return 'Try Water on Nutrient fields near budding cultures.';
   if (noteId === 'water_dilutes') return 'Try Water after Acid or Toxin if the dish is getting too sharp.';
-  if (noteId === 'paste_catalysed') return 'Draw a Paste wall, then drop Acid or Water onto the fresh gel.';
+  if (noteId === 'paste_catalysed') return 'Draw a Membrane, then drop Acid or Water onto it while it is fresh.';
   if (noteId === 'recipe_nutrient_conduit') return 'Water plus Nutrient carries food through budding cultures.';
   if (noteId === 'recipe_bitter_bloom') return 'Feed a budding culture, then sour it with Toxin.';
   if (noteId === 'recipe_pressure_bloom') return 'Put Toxin pressure into a resistant fed culture.';

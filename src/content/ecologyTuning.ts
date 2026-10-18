@@ -34,7 +34,7 @@ export const ECOSYSTEM_LIMITS = {
 } as const;
 
 // cooldownTicks paces repeat uses of the same tool (radial wipe on the button);
-// stock charges stay the strategic budget. Paste's cooldown starts when the
+// stock charges stay the strategic budget. The Membrane's cooldown starts when the
 // drawn stroke ends, not per stamp.
 export const TOOL_TUNING = {
   egg: { charges: 8, hatchRadius: 16, hatchTtl: 60 * 2, cooldownTicks: 120 },
@@ -43,8 +43,9 @@ export const TOOL_TUNING = {
   water: { charges: 6, radius: 28, ttl: 60 * 6, cooldownTicks: 90 },
   salt: { charges: 4, radius: 18, ttl: 60 * 9, cooldownTicks: 180 },
   acid: { charges: 3, radius: 17, ttl: 60 * 5, cooldownTicks: 240 },
-  // Paste draws an agar wall (game/agarWall.ts): each charge buys a length of
-  // drawn path. Fresh gel is also a small nutrient field along the line.
+  // The Membrane (tool id 'paste') draws a gel wall (game/agarWall.ts): each
+  // charge buys a length of drawn path. Its stamps never feed; radius and ttl
+  // are where a reagent dropped on a fresh membrane reacts along it.
   paste: { charges: 3, radius: 9, ttl: 60 * 7, cooldownTicks: 180 } as const,
 } as const;
 

@@ -5,7 +5,7 @@
 // arrangements the dish resists last. Numbers follow the dex: #000 is Dr. E,
 // #001-#014 are the strains, then these.
 
-/** The field a form must be fed in. Paste trails count as Nutrient. */
+/** The field a form must be fed in. */
 export type FormFeed = 'nutrient' | 'water' | 'salt' | 'acid';
 
 export type FormId =

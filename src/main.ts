@@ -823,7 +823,7 @@ canvas.addEventListener('keydown', (event) => {
   event.preventDefault();
   if (event.repeat || pastePointerId !== null) return;
   if (!applySelectedToolAt([LX / 2, LY / 2])) return;
-  // Keyboard Paste places one deliberate stamp rather than entering a drag
+  // Keyboard Membrane places one deliberate stamp rather than entering a drag
   // state that cannot be completed without a pointer.
   if (selectedTool === 'paste') arena?.endPasteStroke();
 });
