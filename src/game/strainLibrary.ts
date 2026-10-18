@@ -2,7 +2,7 @@ import type { DiscoveryStorage } from './discoverySave';
 import { writeVerifiedJson, type VerifiedWriteResult } from './verifiedStorage';
 
 export const STRAIN_LIBRARY_KEY = 'cellular-death-match.strains.v1';
-const MAX_LOADOUT_SLOTS = 6;
+export const MAX_LOADOUT_SLOTS = 6;
 const DEFAULT_STRAIN = 'swarmlet';
 
 export interface StrainLibraryState {

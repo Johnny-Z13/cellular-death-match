@@ -135,6 +135,6 @@ export const LIFE_CYCLE_PROFILES = {
 
 export type LifeCycleProfileId = keyof typeof LIFE_CYCLE_PROFILES;
 export type LifeCycleProfile = NonNullable<(typeof LIFE_CYCLE_PROFILES)[LifeCycleProfileId]>;
-// The authored case trials keep the death match; the open lab after the case
-// is the long-running sandbox.
-export const OPEN_LAB_LIFE_CYCLE: LifeCycleProfileId = 'culture';
+// Every dish after the coached onboarding runs the food web, the case trials
+// as well as the open lab: a cosy pace where living dishes can hold.
+export const DISH_LIFE_CYCLE: LifeCycleProfileId = 'culture';

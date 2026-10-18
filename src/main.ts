@@ -3,7 +3,7 @@ import { createArena, toolRadiusFor, type Arena, type ArenaStatus } from './game
 import { createRenderer, type MergeRing, type Renderer } from './ui/render';
 import { createDebugPanel } from './ui/debug';
 import { createScreens, type ToolId } from './ui/screens';
-import { AGITATION_TUNING, OPEN_LAB_LIFE_CYCLE, SIM_SPEED_TUNING, TOOL_TUNING } from './content/ecologyTuning';
+import { AGITATION_TUNING, DISH_LIFE_CYCLE, SIM_SPEED_TUNING, TOOL_TUNING } from './content/ecologyTuning';
 import { renderLoadoutScreen } from './ui/loadoutScreen';
 import { getUpgradeDef, upgradeToolNote } from './content/upgrades';
 import { goalLineFor } from './content/goalCopy';
@@ -1484,8 +1484,9 @@ function startNewFight() {
     objective: run.getObjective(),
     fightIndex: runState.fightIndex,
     knownBreedIds: new Set(discoveryProgression.discoveredBreedIds),
-    // The authored case keeps the death match; the open lab is the sandbox.
-    lifeCycle: runState.fightIndex >= COMMON_COLD_CASE.trials.length ? OPEN_LAB_LIFE_CYCLE : 'arena',
+    // The food web for the case and the open lab (the onboarding dish keeps
+    // its own tuning inside the arena).
+    lifeCycle: DISH_LIFE_CYCLE,
   });
   renderer = createRenderer(canvas, PALETTE_SIZE, {
     additiveBloom: visualProfile.additiveBloom,
@@ -2070,6 +2071,9 @@ function syncResearchArchive(biomeName?: string | null, biomeStrains?: readonly 
   if (result.newBiome) {
     newBiomeThisRun = true;
     strainLibrary.incrementBiomeCount();
+    // Holding a living dish is what grows the loadout: one more strain per
+    // new biome.
+    strainLibrary.addLoadoutSlot();
     strainLibrary.save();
   }
   for (const sealId of result.newSealIds) {
@@ -2511,9 +2515,16 @@ function announceEquilibrium(info: { achieved: boolean; progress: number; biomeN
   didAnnounceEquilibrium = true;
   uiAudio.play('epoch_win');
   haptics.play('success');
-  fx.showUnlockBanner('Biome recorded', info.biomeName ?? 'Stable ecosystem', 'A minute in balance · crises calm', 'bio');
-  screens.addTicker(`Stable ecosystem: ${info.biomeName ?? 'a living dish'}. Crises calm; the biome is in your Notebook.`, 'discovery');
+  const slotsBefore = strainLibrary.getLoadoutSlots();
   syncResearchArchive(info.biomeName, info.biomeStrains);
+  const slots = strainLibrary.getLoadoutSlots();
+  fx.showUnlockBanner(
+    'Biome recorded',
+    info.biomeName ?? 'Stable ecosystem',
+    slots > slotsBefore ? `New biome · you can now bring ${slots} strains` : 'A minute in balance · crises calm',
+    'bio',
+  );
+  screens.addTicker(`Stable ecosystem: ${info.biomeName ?? 'a living dish'}. Crises calm; the biome is in your Notebook.`, 'discovery');
 }
 
 function labelForStrain(strain: string): string {

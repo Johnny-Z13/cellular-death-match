@@ -6,7 +6,7 @@
 import { createRun } from '../src/game/run';
 import { createArena } from '../src/game/arena';
 import type { EnemyArchetype } from '../src/content/enemies';
-import { OPEN_LAB_LIFE_CYCLE, LIFE_CYCLE_PROFILES, type LifeCycleProfileId } from '../src/content/ecologyTuning';
+import { DISH_LIFE_CYCLE, LIFE_CYCLE_PROFILES, type LifeCycleProfileId } from '../src/content/ecologyTuning';
 
 const arg = (name: string, fallback: string) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -15,7 +15,7 @@ const arg = (name: string, fallback: string) => {
 const SEEDS = Number(arg('seeds', '20'));
 const SECONDS = Number(arg('seconds', '300'));
 const HAZARDS = arg('hazards', 'on') === 'on';
-const PROFILE = arg('profile', OPEN_LAB_LIFE_CYCLE) as LifeCycleProfileId;
+const PROFILE = arg('profile', DISH_LIFE_CYCLE) as LifeCycleProfileId;
 // --set key=value[,key=value] overrides numeric knobs of the chosen profile
 // for this run only, e.g. --set engulfDrain=0.1,huntBelow=0.8
 const overrides = arg('set', '');

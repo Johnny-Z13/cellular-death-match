@@ -100,8 +100,10 @@ export function updateObjectiveRuntime(
     ? objective.minCount ?? 2
     : 2;
   const balanced = metrics.livingLifeforms >= balanceMinCount && metrics.maxBreedDominance <= balanceMax;
-  runtime.balanceTicks = balanced ? runtime.balanceTicks + 1 : 0;
-  runtime.symbiosisTicks = metrics.nearbyDifferentBreedPair ? runtime.symbiosisTicks + 1 : 0;
+  // Sustain clocks pause on a dip rather than resetting: a cosy dish is
+  // rewarded for time held, not punished for one bad moment.
+  if (balanced) runtime.balanceTicks += 1;
+  if (metrics.nearbyDifferentBreedPair) runtime.symbiosisTicks += 1;
   if (metrics.livingLifeforms <= 1) runtime.sawExtinctionLow = true;
   if (events.hybridDiscovered) runtime.hybridDiscovered = true;
   if (events.survivedCrisis) runtime.survivedCrisis = true;

@@ -42,6 +42,7 @@ import { prepareRunCheckpoint } from './runCheckpoint';
 import {
   canonicalStrainLibraryState,
   loadStrainLibraryState,
+  MAX_LOADOUT_SLOTS,
   saveStrainLibraryStateVerified,
   type StrainLibraryState,
 } from './strainLibrary';
@@ -194,6 +195,11 @@ export function planResearchBank(input: ResearchBankPlanInput): PlannedResearchB
     ],
     runCount: input.strainState.runCount + (terminal ? 1 : 0),
     biomeCount: input.strainState.biomeCount + (terminal && archiveUpdate.newBiome ? 1 : 0),
+    // Each new biome widens the loadout by one strain (see syncResearchArchive).
+    loadoutSlots: Math.min(
+      MAX_LOADOUT_SLOTS,
+      input.strainState.loadoutSlots + (terminal && archiveUpdate.newBiome ? 1 : 0),
+    ),
   });
   const checkpoint = terminal ? null : prepareRunCheckpoint({
     run: runAfter,

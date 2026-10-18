@@ -1,7 +1,7 @@
 import { describe, it, expect, onTestFinished } from 'vitest';
 import { createArena, type Arena } from '../../src/game/arena';
 import { BALANCE_TUNING } from '../../src/game/balance';
-import { TOOL_TUNING, AGITATION_TUNING, ARENA_TIMING, OPEN_LAB_LIFE_CYCLE } from '../../src/content/ecologyTuning';
+import { TOOL_TUNING, AGITATION_TUNING, ARENA_TIMING, DISH_LIFE_CYCLE } from '../../src/content/ecologyTuning';
 import { ARCHETYPE_DEFAULTS } from '../../src/content/enemies';
 import { getCell, setCell, updateBoundaryAround } from '../../src/sim/grid';
 import { removePixel } from '../../src/sim/cell';
@@ -1781,7 +1781,7 @@ describe('arena ecosystem mode', () => {
         includeControlSample: false,
         fightIndex: 5,
         worldEventIntensity: 0,
-        lifeCycle: OPEN_LAB_LIFE_CYCLE,
+        lifeCycle: DISH_LIFE_CYCLE,
         breedDiscovery: false,
         mergeDiscovery,
       });

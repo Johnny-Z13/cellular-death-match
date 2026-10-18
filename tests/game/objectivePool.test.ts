@@ -4,6 +4,7 @@ import {
   canCrisisSurvivorResolve,
   crisisSurvivorResolvableForEpoch,
   drawObjectives,
+  SUSTAIN_KINDS,
 } from '../../src/game/objectivePool';
 import type { DrawContext } from '../../src/game/objectivePool';
 
@@ -198,6 +199,22 @@ describe('drawObjectives', () => {
     }
     // With 20 seeds across many available objectives, we should see more than 1 unique combination
     expect(results.size).toBeGreaterThan(1);
+  });
+
+  it('always offers one sustain trial when one is available', () => {
+    const ctx: DrawContext = {
+      ...baseCtx,
+      knownBreeds: new Set(['bloom_mass', 'needle_swarm']),
+      seedableLifeforms: new Set(['swarmlet', 'bruiser', 'bloom_mass', 'needle_swarm']),
+      unlockedTools: ['egg', 'nutrient', 'toxin', 'water', 'salt', 'acid'],
+      epochIndex: 6,
+    };
+    for (let seed = 0; seed < 50; seed++) {
+      const choices = drawObjectives({ ...ctx, seed });
+      expect(choices).toHaveLength(2);
+      expect(new Set(choices.map((choice) => choice.kind)).size).toBe(2);
+      expect(choices.some((choice) => SUSTAIN_KINDS.has(choice.kind))).toBe(true);
+    }
   });
 
   it('returns at most 2 even when many objectives are available', () => {

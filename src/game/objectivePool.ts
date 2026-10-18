@@ -102,7 +102,7 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
   {
     kind: 'balance_keeper',
     name: 'Even Spread',
-    description: 'Keep the dish balanced, with no strain above 40% of living matter, for 30 seconds.',
+    description: 'Keep the dish balanced, with no strain above 40% of living matter, for 30 seconds in all. A dip only pauses the clock.',
     target: 'No strain > 40% for 30s',
     hint: 'Use Toxin to check the leader and Nutrient to support the trailing culture.',
     maxDominance: 0.4,
@@ -167,7 +167,7 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
   {
     kind: 'symbiosis',
     name: 'Symbiosis',
-    description: 'Keep 2 different strains near each other for 30 seconds.',
+    description: 'Keep 2 different strains near each other for 30 seconds in all. A dip only pauses the clock.',
     target: '2 strains nearby for 30s',
     hint: 'Plant one of each strain with a stable border and support either side with Nutrient.',
     sustainTicks: 60 * 30,
@@ -228,6 +228,11 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
   },
 ];
 
+/** Trials that reward holding a living dish over time. */
+export const SUSTAIN_KINDS: ReadonlySet<ObjectiveDef['kind']> = new Set([
+  'hold_balance', 'keep_alive', 'food_web', 'balance_keeper', 'symbiosis',
+]);
+
 export function drawObjectives(ctx: StudyCapabilities): StudyChoice[] {
   const available = OBJECTIVE_POOL.flatMap((objective): StudyChoice[] => {
     const result = objective.availability(ctx);
@@ -241,7 +246,14 @@ export function drawObjectives(ctx: StudyCapabilities): StudyChoice[] {
     pool[i] = pool[j]!;
     pool[j] = tmp!;
   }
-  return pool.slice(0, 2);
+  // Cosy pace: one of the two choices always asks the player to sustain a
+  // living dish, whenever such a trial is available.
+  const choices = pool.slice(0, 2);
+  if (!choices.some((choice) => SUSTAIN_KINDS.has(choice.kind))) {
+    const sustain = pool.find((choice) => SUSTAIN_KINDS.has(choice.kind));
+    if (sustain) choices[choices.length - 1] = sustain;
+  }
+  return choices;
 }
 
 export function isObjectiveFeasible(objective: ObjectiveDef, ctx: StudyCapabilities): boolean {
