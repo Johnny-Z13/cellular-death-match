@@ -1,10 +1,10 @@
 {
-  "version": "Alpha Build 4",
-  "id": "alpha-4",
-  "date": "2026-10-18",
-  "sourceCommit": "352880e9814dfd93e523b280a60ff85f6e4c74b8",
+  "version": "Alpha Build 5",
+  "id": "alpha-5",
+  "date": "2026-10-19",
+  "sourceCommit": "75fb2fcc4a810e780e652d159632db1cd0cf26dd",
   "branch": "main",
-  "description": "Membrane: draw a wall to pen cultures, or draw through a culture to pinch it in two.",
+  "description": "Playtest fixes: the Membrane shields bullets, trials carry on after a stable dish, every creature hatches from an egg.",
   "play": "/play/",
   "platforms": "Any modern browser: Chrome, Edge, Safari or Firefox, on desktop, tablet or phone."
 }
