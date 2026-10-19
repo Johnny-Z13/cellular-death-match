@@ -43,6 +43,9 @@ export async function startFirstTrial(page: Page): Promise<void> {
   await expect(page.locator('#coach-title')).toHaveText('Oh! A visitor!');
   await page.locator('#coach-skip').click();
   await expect(page.locator('#coach-title')).toContainText('Press Egg.');
+  // Dr. E's arrow is really drawn on the Egg tile, not just flagged visible.
+  await expect(page.locator('#onboarding-guide-pointer')).toHaveAttribute('data-target', 'tool:egg');
+  await expect(page.locator('#onboarding-guide-pointer')).toHaveCSS('opacity', '1');
 }
 
 export async function selectSwarmlet(page: Page): Promise<void> {

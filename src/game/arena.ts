@@ -789,6 +789,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           : eggSpawnFor(applyOpts.eggArchetype ?? 'swarmlet', state.rng.random());
         applyEggSynergies(state, toolEffects, seedPos, spawn, pushSignal);
         lastEggCellId = this.spawnEnemy({ spawn, pos: seedPos });
+        if (lifeCycle) life.yolkUntil.set(lastEggCellId, tickNo + lifeCycle.yolkTicks);
         const hatchEffect: ToolEffect = {
           type: 'hatch',
           pos: seedPos,
@@ -1036,7 +1037,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
 
       if (lifeCycle) {
         applyAppetite(state, archetypes, lifeCycle, life, tickNo);
-        applyMetabolism(state, archetypes, lifeCycle, life);
+        applyMetabolism(state, archetypes, lifeCycle, life, tickNo);
         if (tickNo % lifeCycle.divideCheckTicks === 0) {
           // Cultures mid-merge are busy becoming one organism: they do not
           // divide until the merge locks or lets go. A locked form divides as

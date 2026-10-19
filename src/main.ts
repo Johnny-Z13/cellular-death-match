@@ -2336,13 +2336,29 @@ function focusCurrentOnboardingTarget(): boolean {
   return true;
 }
 
+// Dr. E's pointer: his face over an arrow on the exact control or dish spot
+// the current instruction asks for. It runs every frame, so it works out the
+// placement first and only then sets is-visible: removing and re-adding the
+// class each frame (with a layout read in between) restarted its fade-in
+// every frame, and the pointer never showed.
 function syncOnboardingPointer(): void {
   if (!onboardingGuidePointer) return;
-  onboardingGuidePointer.classList.remove('is-visible');
+  const placement = onboardingPointerPlacement();
+  if (!placement) {
+    onboardingGuidePointer.classList.remove('is-visible');
+    return;
+  }
+  onboardingGuidePointer.style.left = `${Math.round(placement.x)}px`;
+  onboardingGuidePointer.style.top = `${Math.round(placement.y)}px`;
+  onboardingGuidePointer.dataset.target = placement.target;
+  onboardingGuidePointer.classList.add('is-visible');
+}
+
+function onboardingPointerPlacement(): { x: number; y: number; target: string } | null {
   const state = run.getState();
-  if (state.phase !== 'arena' || !arena || !coach.isActive()) return;
+  if (state.phase !== 'arena' || !arena || !coach.isActive()) return null;
   const target = coach.getCurrentPointerTarget();
-  if (!target) return;
+  if (!target) return null;
 
   let x = 0;
   let y = 0;
@@ -2359,16 +2375,13 @@ function syncOnboardingPointer(): void {
     y = rect.top + (guidePos[1] / LY) * rect.height;
   } else {
     const targetElement = onboardingControlForTarget(target);
-    if (!targetElement || targetElement.hidden) return;
+    if (!targetElement || targetElement.hidden) return null;
     const rect = targetElement.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return;
+    if (rect.width === 0 || rect.height === 0) return null;
     x = rect.left + rect.width * 0.5;
     y = rect.top + Math.min(18, rect.height * 0.25);
   }
-  onboardingGuidePointer.style.left = `${Math.round(x)}px`;
-  onboardingGuidePointer.style.top = `${Math.round(y)}px`;
-  onboardingGuidePointer.dataset.target = target;
-  onboardingGuidePointer.classList.add('is-visible');
+  return { x, y, target };
 }
 
 function updateButtonHint(): void {
@@ -3103,10 +3116,18 @@ function isFieldTool(tool: ToolId): tool is 'nutrient' | 'toxin' | 'water' | 'sa
 }
 
 // Dev server only (stripped from builds): lets QA scripts stage and read the
-// live dish, and stage a friend's ta-da for screenshots.
+// live dish, stage a friend's ta-da, and stage strain catches for screenshots.
 if (import.meta.env.DEV) {
-  (window as unknown as { cdmDebug: { arena: () => Arena | null; reveal: (id: string) => boolean } }).cdmDebug = {
+  (window as unknown as { cdmDebug: {
+    arena: () => Arena | null;
+    reveal: (id: string) => boolean;
+    catch: (ids: string[]) => void;
+  } }).cdmDebug = {
     arena: () => arena,
+    catch: (ids) => {
+      const genomes = ids.filter(isProgressionLifeformId).map((id) => genomeArtFor(id));
+      fx.showGenomeDecode(genomes.map(genomeRevealInfo), () => {});
+    },
     reveal: (id) => {
       const item = currentDexView().items.find((entry) => entry.id === id);
       if (!item) return false;

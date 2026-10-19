@@ -3,14 +3,17 @@ import type { EnemySpawn } from '../content/enemies';
 import { ARCHETYPE_ECOLOGY, type EcologyRole } from '../content/ecology';
 import type { LifeCycleProfile } from '../content/ecologyTuning';
 
-// Digestion and starvation outlast a tick, so they live across ticks.
+// Digestion, a hatchling's yolk and starvation outlast a tick, so they live
+// across ticks.
 export interface LifeCycleState {
   digestUntil: Map<CellId, number>;
+  /** Cultures planted from an Egg burn no mass until this tick. */
+  yolkUntil: Map<CellId, number>;
   starving: Set<CellId>;
 }
 
 export function createLifeCycleState(): LifeCycleState {
-  return { digestUntil: new Map(), starving: new Set() };
+  return { digestUntil: new Map(), yolkUntil: new Map(), starving: new Set() };
 }
 
 function isHunter(profile: LifeCycleProfile, role: EcologyRole): boolean {
@@ -43,14 +46,16 @@ export function applyAppetite(
   }
 }
 
-// Every culture burns a share of its genome size each tick, hunters faster.
-// The agar feeds grazers in proportion to the dish's free space. A culture
-// that falls below starveBelow dissolves: its target volume is held at zero.
+// Every culture burns a share of its genome size each tick, hunters faster,
+// except a hatchling still on its yolk. The agar feeds grazers in proportion
+// to the dish's free space. A culture that falls below starveBelow dissolves:
+// its target volume is held at zero.
 export function applyMetabolism(
   state: SimState,
   archetypes: Map<CellId, EnemySpawn>,
   profile: LifeCycleProfile,
   life: LifeCycleState,
+  tick = 0,
 ): void {
   let occupied = 0;
   for (const cell of state.cells.values()) {
@@ -67,7 +72,10 @@ export function applyMetabolism(
     const base = spawn.targetVol;
     const hunter = isHunter(profile, ARCHETYPE_ECOLOGY[spawn.archetype].role);
     const growth = hunter ? 0 : profile.agarGrowthPerTick * free * Math.max(0, base * profile.agarCeiling - cell.targetVol);
-    const burn = (hunter ? profile.hunterMetabolismPerTick : profile.grazerMetabolismPerTick) * base;
+    const yolkUntil = life.yolkUntil.get(id);
+    const onYolk = yolkUntil !== undefined && yolkUntil > tick;
+    if (yolkUntil !== undefined && !onYolk) life.yolkUntil.delete(id);
+    const burn = onYolk ? 0 : (hunter ? profile.hunterMetabolismPerTick : profile.grazerMetabolismPerTick) * base;
     cell.targetVol += growth - burn;
     if (cell.targetVol < base * profile.starveBelow) life.starving.add(id);
   }

@@ -64,6 +64,33 @@ describe('culture life cycle', () => {
     expect(arena.state.cells.get(2)!.targetVol).toBeLessThan(BRUISER.targetVol);
   });
 
+  it('lets a hatchling live on its yolk, then burn like any hunter', () => {
+    const arena = dish([BRUISER]);
+    const life = createLifeCycleState();
+    life.yolkUntil.set(2, 100);
+
+    applyMetabolism(arena.state, arena.archetypes, profile, life, 50);
+    expect(arena.state.cells.get(2)!.targetVol).toBe(BRUISER.targetVol);
+
+    applyMetabolism(arena.state, arena.archetypes, profile, life, 100);
+    expect(arena.state.cells.get(2)!.targetVol).toBeLessThan(BRUISER.targetVol);
+    expect(life.yolkUntil.has(2)).toBe(false);
+  });
+
+  it('keeps a Bruiser planted from an Egg alive past the old 20-second starvation', () => {
+    // A dish with nothing to eat, not even the control sample.
+    const arena = createArena({
+      LX: 100, LY: 100, seed: 31, wrap: false, mode: 'ecosystem', fightIndex: 6,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [], worldEventIntensity: 0, lifeCycle: 'culture', includeControlSample: false,
+    });
+    expect(arena.applyTool('egg', [80, 20], { eggArchetype: 'bruiser' })).toBe(true);
+    const [id, spawn] = [...arena.archetypes.entries()].find(([, s]) => s.archetype === 'bruiser')!;
+    for (let i = 0; i < 60 * 22; i++) arena.tick(tickInput);
+    // Without the yolk it would be starving (target held at zero) by now.
+    expect(arena.state.cells.get(id)!.targetVol).toBeGreaterThan(spawn.targetVol * 0.5);
+  });
+
   it('dissolves a starved culture', () => {
     const arena = dish([SWARMLET]);
     const life = createLifeCycleState();

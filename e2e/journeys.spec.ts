@@ -42,6 +42,7 @@ async function clickGuidedDish(page: Page): Promise<void> {
   const pointer = page.locator('#onboarding-guide-pointer');
   await expect(pointer).toHaveAttribute('data-target', 'dish');
   await expect(pointer).toHaveClass(/is-visible/);
+  await expect(pointer).toHaveCSS('opacity', '1');
   const anchor = await pointer.evaluate((element) => ({
     x: Number.parseFloat((element as HTMLElement).style.left),
     y: Number.parseFloat((element as HTMLElement).style.top),

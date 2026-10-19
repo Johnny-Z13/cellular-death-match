@@ -29,6 +29,14 @@ describe('Professor onboarding pointer', () => {
     expect(css).toContain('pointer-events: none');
   });
 
+  it('places the guide before showing it, so a per-frame sync never restarts its fade', () => {
+    const start = mainSource.indexOf('function syncOnboardingPointer(): void {');
+    const body = mainSource.slice(start, mainSource.indexOf('\n}\n', start));
+    expect(body).toContain('const placement = onboardingPointerPlacement();');
+    // The only removal is the hidden branch, after the placement is known.
+    expect(body.indexOf("classList.remove('is-visible')")).toBeGreaterThan(body.indexOf('if (!placement) {'));
+  });
+
   it('clears the guide before a genome reveal owns the screen', () => {
     const revealStart = mainSource.indexOf('function showPhaseAfterGenomeReveals(): void {');
     const revealEnd = mainSource.indexOf('function playGenomeDecodeSounds(', revealStart);

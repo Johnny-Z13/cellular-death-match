@@ -131,6 +131,9 @@ export const LIFE_CYCLE_PROFILES = {
     digestTicks: 60 * 6,      // both halves rest after dividing
     divideCheckTicks: 30,
     starveBelow: 0.15,        // dissolves under base × this
+    // A culture planted from an Egg lives on its yolk at first: no mass burned
+    // for this long, so a fresh hunter can reach prey before it starves.
+    yolkTicks: 60 * 20,
   },
 };
 
