@@ -1,6 +1,9 @@
-// Balance: the dish's living-colony reading. A dish is in balance while at
-// least three strains are alive and no strain holds more than half of the
-// living mass. The meter keeps two clocks:
+// Balance: the dish's living reading. A dish is in balance while at least
+// three of the player's own strains are alive (strains with a culture the
+// player planted, or one of its daughters or cuttings) and no strain, wild
+// or not, holds more than half of the living mass. Wild residents are the
+// environment: they can tip the balance but never hold it for the player.
+// The meter keeps two clocks:
 //  - `heldTicks`: total time in balance this trial. Never resets; a dip only
 //    pauses it (the HUD shows it as m:ss, and sustain goals count it).
 //  - `streakTicks`: the current unbroken run. A dip shorter than the grace
@@ -8,7 +11,8 @@
 // A streak that reaches `stableAfterTicks` makes the dish a stable ecosystem
 // (crises calm, the biome is recorded, the trial may finish).
 // It also tracks the other sustain clocks the goals read: time with N or more
-// strains alive, and time with a hunter and its prey sharing the dish.
+// of the player's strains alive, and time with a hunter and its prey sharing
+// the dish (one of the two the player's own).
 
 export const BALANCE_TUNING = {
   /** Strains that must be alive. */
@@ -31,18 +35,22 @@ export interface BalanceSample {
   strainVolumes: ReadonlyMap<string, number>;
   /** Strains whose role hunts other strains. */
   hunterStrains: ReadonlySet<string>;
+  /** Strains with a living culture of the player's own lineage. */
+  ownStrains: ReadonlySet<string>;
 }
 
 export interface BalanceReading {
   balanced: boolean;
+  /** The player's own strains alive. */
   strains: number;
   maxShare: number;
   heldTicks: number;
   streakTicks: number;
   stable: boolean;
-  /** Ticks with at least `n` strains alive, keyed by n (3..6). */
+  /** Ticks with at least `n` of the player's strains alive, keyed by n (3..6). */
   aliveTicks: ReadonlyMap<number, number>;
-  /** Ticks with a hunter and a non-hunter both alive, neither dominant. */
+  /** Ticks with a hunter and a non-hunter both alive, neither dominant, and
+   *  one of them the player's own. */
   foodWebTicks: number;
 }
 
@@ -65,13 +73,13 @@ export function createBalanceMeter(tuning = BALANCE_TUNING): BalanceMeter {
   const alive = new Map<number, number>([[3, 0], [4, 0], [5, 0], [6, 0]]);
 
   return {
-    sample({ strainVolumes, hunterStrains }, ticks) {
+    sample({ strainVolumes, hunterStrains, ownStrains }, ticks) {
       let total = 0;
       let largest = 0;
       strains = 0;
-      for (const volume of strainVolumes.values()) {
+      for (const [strain, volume] of strainVolumes) {
         if (volume <= 0) continue;
-        strains += 1;
+        if (ownStrains.has(strain)) strains += 1;
         total += volume;
         largest = Math.max(largest, volume);
       }
@@ -91,12 +99,14 @@ export function createBalanceMeter(tuning = BALANCE_TUNING): BalanceMeter {
       }
       let hunter = false;
       let prey = false;
+      let ownInWeb = false;
       for (const [strain, volume] of strainVolumes) {
         if (volume <= 0) continue;
         if (hunterStrains.has(strain)) hunter = true;
         else prey = true;
+        if (ownStrains.has(strain)) ownInWeb = true;
       }
-      if (hunter && prey && maxShare <= tuning.foodWebMaxShare) foodWeb += ticks;
+      if (hunter && prey && ownInWeb && maxShare <= tuning.foodWebMaxShare) foodWeb += ticks;
     },
     reading() {
       return { balanced, strains, maxShare, heldTicks: held, streakTicks: streak, stable, aliveTicks: alive, foodWebTicks: foodWeb };

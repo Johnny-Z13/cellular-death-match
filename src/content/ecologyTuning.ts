@@ -37,7 +37,9 @@ export const ECOSYSTEM_LIMITS = {
 // stock charges stay the strategic budget. The Membrane's cooldown starts when the
 // drawn stroke ends, not per stamp.
 export const TOOL_TUNING = {
-  egg: { charges: 8, hatchRadius: 16, hatchTtl: 60 * 2, cooldownTicks: 120 },
+  // Hunter eggs (Bruiser, Mirror, Boss) hatch at this share of the strain's
+  // genome size; grazer eggs hatch as small buds.
+  egg: { charges: 8, hatchRadius: 16, hatchTtl: 60 * 2, cooldownTicks: 120, hunterGenomeShare: 0.7 },
   nutrient: { charges: 5, radius: 20, ttl: 60 * 8, cooldownTicks: 90 },
   toxin: { charges: 4, radius: 24, ttl: 60 * 7, cooldownTicks: 180 },
   water: { charges: 6, radius: 28, ttl: 60 * 6, cooldownTicks: 90 },

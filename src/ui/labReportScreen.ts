@@ -10,7 +10,7 @@ export function renderLabReport(report: LabReport): HTMLElement {
 
   const outcomeText = report.header.outcome === 'won'
     ? `Stable Ecosystem - ${report.header.biomeName ?? 'Unknown Biome'}`
-    : `Ecosystem Collapse - Trial ${report.header.epochCount}`;
+    : 'Dish Collapsed';
 
   const header = el('div', 'lab-report-header');
   header.append(
@@ -21,7 +21,7 @@ export function renderLabReport(report: LabReport): HTMLElement {
 
   const discoveries = section('Discoveries');
   discoveries.append(
-    el('p', '', `${report.discoveries.breeds.length} strains discovered`),
+    el('p', '', `${report.discoveries.breeds.length} ${report.discoveries.breeds.length === 1 ? 'strain' : 'strains'} discovered`),
     labelList(report.discoveries.breeds, 'lab-report-list', 'No new strains'),
     el('p', '', `${report.discoveries.hybrids.length} hybrids created`),
     labelList(report.discoveries.hybrids, 'lab-report-list', 'No new hybrids'),

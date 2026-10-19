@@ -264,3 +264,19 @@
   width: min(100cqw, 100cqh);
   aspect-ratio: 1;
 }
+
+/* The hotbar sizes to its tiles. Fixed at left 50%, a shrink-to-fit width
+   only had the half screen to its right, so on narrow windows the last
+   tile hung past the bar's border. */
+:root[data-layout="wide"] .layout[data-screen="arena"] .toolbox {
+  width: max-content;
+}
+
+/* Below 1280 wide the centred hotbar leaves the bottom-left chip no room:
+   it drops the tool readout (the rack already shows the selected tool and
+   its charges) and keeps Log. */
+@media (max-width: 1279px) {
+  :root[data-layout="wide"] .layout[data-screen="arena"] .mobile-tool-readout {
+    display: none;
+  }
+}

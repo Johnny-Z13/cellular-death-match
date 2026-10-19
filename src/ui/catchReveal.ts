@@ -24,6 +24,9 @@ export const CATCH_TIMING = {
   cheerAtMs: 3260,
   /** Cells thrown out by the burst. */
   burstCells: 18,
+  /** Taps this soon after an egg appears are ignored, so the rest of the
+   *  gesture that finished the trial (a double tap on Finish) can't skip it. */
+  inputGraceMs: 700,
 };
 
 export type CatchCue = 'wobble' | 'crack' | 'burst';

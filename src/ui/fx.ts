@@ -7,7 +7,7 @@ import {
   type DirectedNotification,
   type NotificationPriority,
 } from './notificationDirector';
-import { createCatchStage, type CatchDeps, type CatchInfo } from './catchReveal';
+import { CATCH_TIMING, createCatchStage, type CatchDeps, type CatchInfo } from './catchReveal';
 
 export type ToastKind = 'discovery' | 'catalyst' | 'lifeform';
 export type BannerAccent = 'bio' | 'amber' | 'violet';
@@ -81,6 +81,8 @@ export function createFx(catchDeps?: CatchDeps): Fx {
   let catchQueue: GenomeRevealInfo[] = [];
   let catchIndex = 0;
   let catchCount = 0;
+  // A catch takes taps only once this time has passed (CATCH_TIMING.inputGraceMs).
+  let catchArmedAt = 0;
   // Desktop toasts raised while a strain reveal or a banner owns the screen
   // wait for it (on phones the notification director already queues them).
   let heldDesktopToasts: Array<[ToastKind, string, string]> = [];
@@ -91,6 +93,7 @@ export function createFx(catchDeps?: CatchDeps): Fx {
   genomeReveal?.addEventListener('click', advanceGenome);
 
   function advanceGenome(): void {
+    if (performance.now() < catchArmedAt) return;
     if (catchStage && !catchStage.isSettled()) {
       catchStage.settle();
       return;
@@ -228,6 +231,7 @@ export function createFx(catchDeps?: CatchDeps): Fx {
     genomeArt.replaceChildren(genomeImage(item));
     const [r, g, b] = item.primary;
     genomeReveal.style.setProperty('--genome-color', `rgb(${r}, ${g}, ${b})`);
+    catchArmedAt = performance.now() + CATCH_TIMING.inputGraceMs;
     catchStage.start(item, reduceMotion);
   }
 

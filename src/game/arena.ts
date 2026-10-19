@@ -48,6 +48,7 @@ import { classifyBiome, type BiomeRecord } from './homeostasis';
 import { BALANCE_TUNING, createBalanceMeter, HUNTER_ROLES, type BalanceReading } from './balance';
 import { AGAR_TUNING, createAgarWall } from './agarWall';
 import { culturePieces, PINCH_TUNING } from './membranePinch';
+import { isEmptyPen, spansDish } from './oddities';
 import { applyAppetite, applyMetabolism, createLifeCycleState, readyToDivide } from './lifeCycle';
 import { getEscalation } from './escalation';
 import { createMergeTracker, MERGE_DETECTION, type FormingGroup, type LockedForm, type MergeEvent } from './mergeDetection';
@@ -102,6 +103,8 @@ export interface Arena {
   getDishEvents(): DishEventMarker[];
   /** Groups forming a merge, and the locked forms now in the dish. */
   getMerges(): { forming: readonly FormingGroup[]; locked: readonly LockedForm[] };
+  /** Counters the Oddities read (game/oddities.ts). */
+  getOddityStats(): OddityStats;
   /** Merges that locked or came apart since the last call. */
   drainMergeEvents(): MergeEvent[];
   applyTool(tool: LabTool, pos: [number, number], opts?: ApplyToolOpts): boolean;
@@ -127,6 +130,18 @@ export interface EquilibriumInfo {
 }
 
 export type { BalanceReading } from './balance';
+
+/** What this dish has done that the Oddities look for. */
+export interface OddityStats {
+  emptyPens: number;
+  wallsToWall: number;
+  maxPinchesOfOneStrain: number;
+  bulletsBlocked: number;
+  divisions: number;
+  /** The tick a tool (or Agitate) was last used. */
+  lastToolTick: number;
+  tick: number;
+}
 
 export interface EcologyInfo {
   tick: number;
@@ -220,6 +235,10 @@ export interface CreateArenaOpts {
   breedDiscovery?: boolean;
   /** False turns merges off: no forming, locking or bonds (the title dish). */
   mergeDiscovery?: boolean;
+  /** True stages the opening spawn list as the player's own cultures, for
+   *  tests and QA probes of a player-built dish. In play the opening dish is
+   *  always wild. */
+  ownEnemies?: boolean;
 }
 
 const PLAYER_ID = 1;
@@ -376,6 +395,15 @@ export function createArena(opts: CreateArenaOpts): Arena {
   let lastEggCellId: CellId | null = null;
   let lastTrailStamp: [number, number] | null = null;
   const agarWall = createAgarWall(state.grid.LX, state.grid.LY);
+  // The player's own lineage: cultures planted from an Egg, and their
+  // daughters and cuttings. Goals and Balance count these; wild residents
+  // are the environment.
+  const lineage = new Set<CellId>();
+  // What the Oddities read (game/oddities.ts): this stroke's stamps, and
+  // counts of pens, cuttings, stopped bullets and divisions.
+  let strokePoints: [number, number][] = [];
+  const oddity = { emptyPens: 0, wallsToWall: 0, bulletsBlocked: 0, divisions: 0, lastToolTick: 0 };
+  const pinchesByStrain = new Map<string, number>();
   let pastePathRemaining = 0;
   const dishEvents: DishEventMarker[] = [];
   let nextDishEventId = 1;
@@ -524,6 +552,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       }
       const daughterId = arena.spawnEnemy({ spawn: { ...spawn, traits: spawn.traits?.slice() }, pos: xy(state.grid, seed) });
       const daughter = state.cells.get(daughterId)!;
+      if (lineage.has(id)) lineage.add(daughterId);
       for (const i of piece) movePixel(i, daughter);
       daughter.targetVol = parentTarget * (piece.length / total);
       parent.targetVol -= daughter.targetVol;
@@ -533,6 +562,8 @@ export function createArena(opts: CreateArenaOpts): Arena {
       }
       birthCount += 1;
     }
+    const strainKey = spawn.breedId ?? spawn.archetype;
+    pinchesByStrain.set(strainKey, (pinchesByStrain.get(strainKey) ?? 0) + 1);
     const name = spawn.breedId ? BREED_DEFS[spawn.breedId].name : ARCHETYPE_INFO[spawn.archetype].name;
     const radius = Math.sqrt(parent.vol / Math.PI) + 4;
     addDishEvent('stabilize', `PINCHED · ${name.toUpperCase()}`, parent.center, radius, 'green');
@@ -576,7 +607,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
     progressTick = tickNo,
     forceShowcase = false,
   ): ObjectiveProgress {
-    return evaluateObjective(objective, objectiveMetrics(state, archetypes), {
+    return evaluateObjective(objective, objectiveMetrics(state, archetypes, lineage), {
       tickNo: progressTick,
       epochTicks,
       reactions: reactionCount,
@@ -601,6 +632,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       };
     }
     archetypes.set(cellId, spawn);
+    if (opts.ownEnemies) lineage.add(cellId);
     const cell = state.cells.get(cellId);
     if (cell) cell.targetVol = spawn.targetVol;
     assignEnergyProfile(cell, spawn);
@@ -651,9 +683,6 @@ export function createArena(opts: CreateArenaOpts): Arena {
         // Complete after the moment of success.
         if (progress.met && progress.latches) objectiveAchieved = true;
         const complete = progress.latches ? objectiveAchieved : progress.met;
-        // Equilibrium is visible and stable until the player banks it; it
-        // pauses pressure without letting the normal objective deadline fire.
-        if (isStable()) return 'running';
         // Most studies are open dishes: they continue until the player banks
         // the evidence, reaches equilibrium, or the ecology collapses. Only a
         // specifically authored pressure experiment expires at its window.
@@ -757,10 +786,23 @@ export function createArena(opts: CreateArenaOpts): Arena {
       // runs per stroke, so it starts here rather than per stamp.
       lastTrailStamp = null;
       pastePathRemaining = 0;
+      if (strokePoints.length > 0) {
+        const { LX, LY, cells } = state.grid;
+        if (isEmptyPen(strokePoints, cells, LX, LY)) oddity.emptyPens += 1;
+        if (spansDish(strokePoints, LX, LY)) oddity.wallsToWall += 1;
+        strokePoints = [];
+      }
       if (pasteStrokeStamped) {
         pasteStrokeStamped = false;
         startToolCooldown('paste');
       }
+    },
+    getOddityStats() {
+      return {
+        ...oddity,
+        maxPinchesOfOneStrain: Math.max(0, ...pinchesByStrain.values()),
+        tick: tickNo,
+      };
     },
     getMerges() {
       return { forming: merges?.forming() ?? [], locked: merges?.locked() ?? [] };
@@ -775,11 +817,17 @@ export function createArena(opts: CreateArenaOpts): Arena {
       }));
     },
     applyTool(tool: LabTool, pos: [number, number], applyOpts: ApplyToolOpts = {}): boolean {
+      oddity.lastToolTick = tickNo;
       const toolState = toolStates[tool];
       if (tool !== 'paste' && toolState.charges <= 0) return false;
       // Paste is gated per stroke (see endPasteStroke), not per stamp.
       if (tool !== 'paste' && toolIsCooling(tool)) return false;
       if (tool === 'egg') {
+        // A full dish takes no more eggs (the cap the dish's own births keep).
+        if (livingCultureCount(state, archetypes) >= ECOSYSTEM_MAX_POPULATION) {
+          pushSignal('The dish is full. Let a culture go before planting more.');
+          return false;
+        }
         const seedPos = findEggSeedPos(state, pos);
         if (!seedPos) return false;
         toolState.charges -= 1;
@@ -790,6 +838,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         applyEggSynergies(state, toolEffects, seedPos, spawn, pushSignal);
         lastEggCellId = this.spawnEnemy({ spawn, pos: seedPos });
         if (lifeCycle) life.yolkUntil.set(lastEggCellId, tickNo + lifeCycle.yolkTicks);
+        lineage.add(lastEggCellId);
         const hatchEffect: ToolEffect = {
           type: 'hatch',
           pos: seedPos,
@@ -850,6 +899,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         state.wall = agarWall.mask();
         pinchAlong(this, lastTrailStamp ?? pos, pos);
         lastTrailStamp = [pos[0], pos[1]];
+        strokePoints.push([pos[0], pos[1]]);
         const maxTtl = TOOL_TUNING.paste.ttl;
         trailEffects.push({
           type: 'nutrient',
@@ -955,6 +1005,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       return true;
     },
     agitate(): boolean {
+      oddity.lastToolTick = tickNo;
       if (this.getStatus() !== 'running' || agitationCharges <= 0) return false;
       if (tickNo < agitationReadyAtTick) return false;
       agitationCharges -= 1;
@@ -1055,7 +1106,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
             state.cells.get(daughter)!.targetVol = parent.targetVol;
             life.digestUntil.set(id, tickNo + lifeCycle.digestTicks);
             life.digestUntil.set(daughter, tickNo + lifeCycle.digestTicks);
+            if (lineage.has(id)) lineage.add(daughter);
             birthCount += 1;
+            oddity.divisions += 1;
           }
         }
       }
@@ -1201,6 +1254,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       agarWall.tick();
       state.wall = agarWall.mask();
       simTick(state, MC_STEPS_PER_TICK);
+      for (const event of state.events) if (event.type === 'bulletBlocked') oddity.bulletsBlocked += 1;
 
       if (merges && tickNo % MERGE_DETECTION.scanTicks === 0) {
         const strainOf = (id: CellId): string | null => {
@@ -1237,10 +1291,16 @@ export function createArena(opts: CreateArenaOpts): Arena {
         }
       }
       const wasStable = isStable();
-      balanceMeter.sample({ strainVolumes: breedVolumes, hunterStrains }, 1);
+      const ownStrains = new Set<string>();
+      for (const id of lineage) {
+        if ((state.cells.get(id)?.vol ?? 0) <= 0) continue;
+        const spawn = archetypes.get(id);
+        if (spawn) ownStrains.add(spawn.breedId ?? spawn.archetype);
+      }
+      balanceMeter.sample({ strainVolumes: breedVolumes, hunterStrains, ownStrains }, 1);
       if (!wasStable && isStable()) stableBiome = classifyBiome(breedVolumes);
       if (mode === 'ecosystem') {
-        updateObjectiveRuntime(objectiveRuntime, objectiveMetrics(state, archetypes), objective);
+        updateObjectiveRuntime(objectiveRuntime, objectiveMetrics(state, archetypes, lineage), objective);
       }
     },
     spawnEnemy(spawnOpts: SpawnEnemyOpts): CellId {
@@ -1272,6 +1332,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
       const target: [number, number] = field ? [field.pos[0], field.pos[1]] : [state.grid.LX / 2, state.grid.LY / 2];
       const seedPos = findEggSeedPos(state, target) ?? target;
       const id = this.spawnEnemy({ spawn: { ...ARCHETYPE_DEFAULTS.swarmlet }, pos: seedPos });
+      lineage.add(id);
       // This path exists only after the player has demonstrated Egg → Nutrient.
       // Log the tutorial specimen immediately instead of depending on the next
       // animation-frame tick, which embedded/headless browsers may throttle.
@@ -2138,7 +2199,14 @@ function rule30Bit(seed: number, x: number, y: number, phase: number): 0 | 1 {
   return ((30 >> pattern) & 1) as 0 | 1;
 }
 
-function objectiveMetrics(state: SimState, archetypes: Map<CellId, EnemySpawn>): ObjectiveMetrics {
+function objectiveMetrics(
+  state: SimState,
+  archetypes: Map<CellId, EnemySpawn>,
+  lineage: ReadonlySet<CellId> = new Set(),
+): ObjectiveMetrics {
+  const ownArchetypeCounts = new Map<EnemyArchetype, number>();
+  const ownStrainKeys = new Set<string>();
+  let ownMaxVolume = 0;
   let controlSampleVol = 0;
   let livingLifeforms = 0;
   let protectedCultureCount = 0;
@@ -2151,7 +2219,7 @@ function objectiveMetrics(state: SimState, archetypes: Map<CellId, EnemySpawn>):
   const archetypeCounts = new Map<EnemyArchetype, number>();
   const breedVolumes = new Map<string, number>();
   const livingBreedIds = new Set<BreedId>();
-  const livingBreedCells: Array<{ cell: Cell; breedKey: string }> = [];
+  const livingBreedCells: Array<{ cell: Cell; breedKey: string; own: boolean }> = [];
   for (const [id, cell] of state.cells) {
     if (cell.vol <= 0) continue;
     livingVol += cell.vol;
@@ -2177,7 +2245,13 @@ function objectiveMetrics(state: SimState, archetypes: Map<CellId, EnemySpawn>):
     const breedKey = spawn?.breedId ?? spawn?.archetype ?? `cell-${id}`;
     if (spawn?.breedId) livingBreedIds.add(spawn.breedId);
     breedVolumes.set(breedKey, (breedVolumes.get(breedKey) ?? 0) + cell.vol);
-    livingBreedCells.push({ cell, breedKey });
+    const own = lineage.has(id);
+    livingBreedCells.push({ cell, breedKey, own });
+    if (own && archetype) {
+      ownArchetypeCounts.set(archetype, (ownArchetypeCounts.get(archetype) ?? 0) + 1);
+      ownStrainKeys.add(breedKey);
+      ownMaxVolume = Math.max(ownMaxVolume, cell.vol);
+    }
   }
 
   let maxBreedVolume = 0;
@@ -2185,14 +2259,18 @@ function objectiveMetrics(state: SimState, archetypes: Map<CellId, EnemySpawn>):
     if (volume > maxBreedVolume) maxBreedVolume = volume;
   }
 
-  for (let i = 0; i < livingBreedCells.length && !nearbyDifferentBreedPair; i++) {
+  let nearbyOwnPair = false;
+  for (let i = 0; i < livingBreedCells.length && !(nearbyDifferentBreedPair && nearbyOwnPair); i++) {
     const a = livingBreedCells[i]!;
     for (let j = i + 1; j < livingBreedCells.length; j++) {
       const b = livingBreedCells[j]!;
       if (a.breedKey === b.breedKey) continue;
       if (distanceBetween(state, a.cell.center, b.cell.center) <= 28) {
         nearbyDifferentBreedPair = true;
-        break;
+        if (a.own || b.own) {
+          nearbyOwnPair = true;
+          break;
+        }
       }
     }
   }
@@ -2209,6 +2287,10 @@ function objectiveMetrics(state: SimState, archetypes: Map<CellId, EnemySpawn>):
     coverage: livingVol / (state.grid.LX * state.grid.LY),
     maxLifeformVolume,
     maxBreedDominance: lifeformVol === 0 ? 0 : maxBreedVolume / lifeformVol,
+    ownArchetypeCounts,
+    ownMaxVolume,
+    ownStrains: ownStrainKeys.size,
+    nearbyOwnPair,
     nearbyDifferentBreedPair,
     livingBreedIds,
   };
@@ -2704,7 +2786,12 @@ function eggSpawnFor(archetype: EnemyArchetype, roll: number): EnemySpawn {
   const spawn = budSpawn(base, 1);
   const sizeJitter = 0.9 + roll * 0.25;
   spawn.archetype = archetype;
-  spawn.targetVol = clamp(spawn.targetVol * sizeJitter, 55, 620);
+  // Hunters hatch nearer their genome size: at a bud's size a planted hunter
+  // could not catch enough to outlast its metabolism.
+  const hunter = (HUNTER_ROLES as readonly string[]).includes(ARCHETYPE_ECOLOGY[archetype].role);
+  spawn.targetVol = hunter
+    ? clamp(base.targetVol * TOOL_TUNING.egg.hunterGenomeShare * sizeJitter, 55, 1000)
+    : clamp(spawn.targetVol * sizeJitter, 55, 620);
   spawn.instability = Math.max(spawn.instability ?? 1, (base.instability ?? 1) * 1.15);
   return spawn;
 }

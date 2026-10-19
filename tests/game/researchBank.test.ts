@@ -174,8 +174,8 @@ describe('research bank journal', () => {
       researchEvidence: { biomeName: 'Coral Basin' },
     });
 
-    // A new biome widens the loadout by one strain.
-    expect(plan.commit.strains).toMatchObject({ runCount: 5, biomeCount: 3, loadoutSlots: 3 });
+    // Reaching the third biome passes two slot milestones (1 and 3).
+    expect(plan.commit.strains).toMatchObject({ runCount: 5, biomeCount: 3, loadoutSlots: 4 });
     expect(plan.commit.checkpoint).toBeNull();
     expect(plan.runAfter).toMatchObject({ phase: 'run_end', outcome: 'won' });
   });

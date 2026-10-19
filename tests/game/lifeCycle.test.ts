@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createArena, type Arena } from '../../src/game/arena';
 import { applyAppetite, applyMetabolism, createLifeCycleState } from '../../src/game/lifeCycle';
-import { LIFE_CYCLE_PROFILES, type LifeCycleProfileId } from '../../src/content/ecologyTuning';
+import { ECOSYSTEM_LIMITS, LIFE_CYCLE_PROFILES, type LifeCycleProfileId } from '../../src/content/ecologyTuning';
 
 const profile = LIFE_CYCLE_PROFILES.culture;
 const tickInput = { moveVec: [0, 0] as [number, number], shouldFire: false, shouldEngulf: false };
@@ -89,6 +89,17 @@ describe('culture life cycle', () => {
     for (let i = 0; i < 60 * 22; i++) arena.tick(tickInput);
     // Without the yolk it would be starving (target held at zero) by now.
     expect(arena.state.cells.get(id)!.targetVol).toBeGreaterThan(spawn.targetVol * 0.5);
+  });
+
+  it('refuses an egg once the dish holds as many cultures as it can', () => {
+    const full = Array.from({ length: ECOSYSTEM_LIMITS.maxPopulation }, () => ({ ...SWARMLET, targetVol: 40 }));
+    const arena = createArena({
+      LX: 100, LY: 100, seed: 31, wrap: false, mode: 'ecosystem', fightIndex: 6,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: full, worldEventIntensity: 0, lifeCycle: 'culture', includeControlSample: false,
+    });
+    expect(arena.applyTool('egg', [50, 50], { eggArchetype: 'swarmlet' })).toBe(false);
+    expect([...arena.archetypes.keys()]).toHaveLength(ECOSYSTEM_LIMITS.maxPopulation);
   });
 
   it('dissolves a starved culture', () => {

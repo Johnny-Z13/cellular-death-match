@@ -15,6 +15,7 @@ import type { ResearchNotebookView } from '../game/researchNotebook';
 import type { StudyChoice } from '../game/objectivePool';
 import { isRackExitVisible, type DishExitState } from '../game/dishExitAction';
 import { formatHeld } from '../game/balance';
+import type { OdditiesView } from '../game/oddities';
 
 type ScreenName = 'title' | 'method-intro' | 'pick' | 'end' | 'hud' | 'notebook';
 type AppScreenName = ScreenName | 'loadout' | 'objective';
@@ -115,6 +116,8 @@ export interface Screens {
   /** The Balance readout: time held (m:ss), lit while the dish is in balance. */
   setEquilibrium(info: EquilibriumInfo & { balance?: { balanced: boolean; heldTicks: number } }): void;
   updateNotebook(view: NotebookView): void;
+  /** The Oddities section at the top of the Notebook's Found tab. */
+  setOddities(view: OdditiesView): void;
   updateResearchNotebook(view: ResearchNotebookView): void;
   updateAtlas(view: AtlasView): void;
   setLoadoutScreen(el: HTMLElement): void;
@@ -194,6 +197,7 @@ export function createScreens(): Screens {
   const notebookProgress = get('notebook-progress');
   const notebookStudy = get('notebook-study');
   const notebookList = get('notebook-list');
+  let odditiesSection: HTMLElement | null = null;
   const notebookAtlas = get('notebook-atlas');
   const notebookTabStudy = get('notebook-tab-study') as HTMLButtonElement;
   const notebookTabLog = get('notebook-tab-log') as HTMLButtonElement;
@@ -954,9 +958,49 @@ export function createScreens(): Screens {
       hudEquilibriumRow.classList.toggle('is-balanced', info.balance?.balanced === true);
       hud.classList.toggle('hud-equilibrium-achieved', info.achieved);
     },
+    setOddities(view) {
+      const section = document.createElement('section');
+      section.className = 'notebook-oddities';
+      const head = document.createElement('div');
+      head.className = 'notebook-oddities-head';
+      const title = document.createElement('h3');
+      title.textContent = 'Oddities';
+      const count = document.createElement('span');
+      count.textContent = `${view.found} / ${view.total} found`;
+      head.append(title, count);
+      const intro = document.createElement('p');
+      intro.className = 'notebook-oddities-intro';
+      intro.textContent = 'Strange goings-on in the dish. Dr. E keeps notes.';
+      const grid = document.createElement('div');
+      grid.className = 'oddity-grid';
+      for (const [index, item] of view.items.entries()) {
+        const card = document.createElement('article');
+        card.className = `oddity ${item.color ? 'oddity-found' : 'oddity-unfound'}`;
+        const marker = item.color
+          ? makeSwatch('oddity-marker', item.color, 900 + index * 41)
+          : document.createElement('span');
+        if (!item.color) {
+          marker.className = 'oddity-marker oddity-marker-unknown';
+          marker.textContent = '?';
+        }
+        marker.setAttribute('aria-hidden', 'true');
+        const copy = document.createElement('div');
+        const name = document.createElement('strong');
+        name.textContent = item.name;
+        const text = document.createElement('p');
+        text.textContent = item.text;
+        copy.append(name, text);
+        card.append(marker, copy);
+        grid.append(card);
+      }
+      section.append(head, intro, grid);
+      odditiesSection?.replaceWith(section);
+      odditiesSection = section;
+    },
     updateNotebook(view) {
       notebookProgress.textContent = `${view.archive.decodedGenomes} / ${view.archive.totalGenomes} strains found · ${view.archive.understoodProtocols} / ${view.archive.totalProtocols} reactions understood`;
       notebookList.replaceChildren();
+      if (odditiesSection) notebookList.append(odditiesSection);
       for (const entry of view.entries) {
         if (!entry.discovered) continue;
         const card = document.createElement('article');
@@ -1307,20 +1351,20 @@ export function createScreens(): Screens {
       }
     },
     updateEnd(info) {
-      endTitle.textContent = info.outcome === 'won' ? 'Lineage Stabilized' : 'Colony Collapsed';
+      endTitle.textContent = info.outcome === 'won' ? 'Dish in Balance' : 'Dish Collapsed';
       const objectiveLabel = info.objectivesCompleted === 1 ? 'objective' : 'objectives';
       let fightStr: string;
       if (info.totalFights === 0) {
         fightStr = info.outcome === 'won'
-          ? `Balance reached after trial ${info.fightReached}; ${info.objectivesCompleted} ${objectiveLabel} saved.`
-          : `Dish collapsed during trial ${info.fightReached}; ${info.objectivesCompleted} ${objectiveLabel} saved.`;
+          ? `Balance reached in Open Lab trial ${info.fightReached}; ${info.objectivesCompleted} ${objectiveLabel} saved.`
+          : `The dish collapsed during Open Lab trial ${info.fightReached}; ${info.objectivesCompleted} ${objectiveLabel} saved.`;
       } else if (info.outcome === 'won') {
         fightStr = info.objectivesCompleted >= info.totalFights
           ? `All ${info.totalFights} objectives achieved — a flawless trial.`
           : `Trial concluded: ${info.objectivesCompleted} of ${info.totalFights} objectives achieved.`;
       } else {
         const fixedRunProgress = `${info.fightReached} / ${info.totalFights}`;
-        fightStr = `Collapsed during ecosystem ${fixedRunProgress}.`;
+        fightStr = `The dish collapsed during trial ${fixedRunProgress}.`;
       }
       const buildStr = info.upgrades.length === 0
         ? 'No upgrades picked.'

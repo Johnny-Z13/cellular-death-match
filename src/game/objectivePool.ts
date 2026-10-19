@@ -167,10 +167,10 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
   {
     kind: 'symbiosis',
     name: 'Symbiosis',
-    description: 'Keep 2 different strains near each other for 30 seconds in all. A dip only pauses the clock.',
-    target: '2 strains nearby for 30s',
+    description: 'Keep one of your strains beside a different strain for a minute in all. A dip only pauses the clock.',
+    target: '2 strains nearby for 60s',
     hint: 'Plant one of each strain with a stable border and support either side with Nutrient.',
-    sustainTicks: 60 * 30,
+    sustainTicks: 60 * 60,
     availability: (ctx) => distinctSeedables(ctx) >= 2
       && hasCharges(ctx, 'egg', 2)
       && hasCharges(ctx, 'nutrient', 1)

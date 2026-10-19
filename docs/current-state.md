@@ -7,11 +7,13 @@ Last updated: 2026-10-09 (legibility overhaul, branch `ux/legibility-overhaul`)
 Cellular Death Match is a mobile-first Petri dish ecosystem roguelike. Runs are open-ended with escalating pressure:
 
 - 3-beat guided onboarding epoch (~30s), 2 fixed progression epochs, then open-ended mid-game.
-- Runs fail via ecosystem collapse. Balance is a clock of time held (3+ strains alive, none over half the living mass); a minute unbroken makes the dish a stable ecosystem that pauses pressure, records its biome and lets the player end the trial.
+- Runs fail via ecosystem collapse. Balance is a clock of time held: 3+ of the player's own strains alive (planted from an Egg, or a daughter or cutting of one) and no strain, wild or not, over half the living mass. A minute unbroken makes the dish a stable ecosystem: it pauses pressure and records a biome. It is a reward, never a trial finish; each trial ends on its own goal.
+- Your cultures vs the wild: goals about building a dish (Balance and the sustain clocks, Even Spread, Symbiosis, Founder Strain, Mega-Culture) count only the player's lineage. Wild residents are the environment; they can tip the balance but never hold it for the player. Tests and probes can stage a player-built dish with `CreateArenaOpts.ownEnemies`.
+- Oddities (`src/game/oddities.ts`): twelve hidden lab secrets that are not creatures (an empty Membrane pen, a wall to wall stroke, three cuttings of one strain, twenty shots stopped by gel, six strains at once, a still life, the long hold, a mitosis party, three biomes, tickling Dr. E, a night visit, a secret key code that makes the dish dance). Each shows as a riddle in the Notebook's Found tab until found; Dr. E scribbles a riddle into the log from Trial 3 on.
 - Cosy pace: every dish after the coached onboarding runs the `culture` food web (`DISH_LIFE_CYCLE` in `src/content/ecologyTuning.ts`), case trials included. Sustain trials (Living Dish, Full House, Food Web, Even Spread, Symbiosis) pause on a dip rather than resetting, and the open-lab draw always offers one.
 - Per-breed CPM energy profiles: each breed has distinct Ising/volume/movement/engulf multipliers, resolved by the arena into sim-neutral cell profiles.
 - Reagent energy shifts: reagents modify CPM coefficients within field radius (salt hardens, acid fragments, etc.).
-- Strain library: discovered breeds banked across runs; players choose egg loadouts before each run. Loadouts start at 2 strains and each new biome adds a slot (up to 6).
+- Strain library: discovered breeds banked across runs; players choose egg loadouts before each run. Loadouts start at 2 strains and grow at biome milestones (1, 3, 6 and 10 distinct biomes, up to 6; `BIOME_SLOT_MILESTONES`).
 - Procedural objective pool: mid-game epochs offer 2 objectives to choose from.
 - Escalating pressure: hazard intervals shorten, outbreaks grow, mutations intensify per epoch.
 - Biome classification: stable ecosystems are named from their leading strains and kept as biome cards in the Notebook's Trial tab.
@@ -40,7 +42,7 @@ Details, evidence and open questions: [`docs/ux-legibility/README.md`](./ux-legi
 
 - Simulation: cellular Potts model in `src/sim/`. Cells store generic energy coefficients; breed profile lookup stays outside the low-level sim.
 - Arena: ecosystem tick loop, objective evaluation, tool effects, mutation, reseeding, homeostasis tracking, escalation, and resupply in `src/game/arena.ts`.
-- Run state: open-ended state machine in `src/game/run.ts`; a run ends on collapse or when the player leaves. A stable ecosystem completes an Open Lab trial (the run continues); in the case the authored lesson stays the goal.
+- Run state: open-ended state machine in `src/game/run.ts`; a run ends on collapse or when the player leaves (leaving drops the run's upgrades). A stable ecosystem never ends a trial or the run.
 - Balance: time-held and stable-ecosystem clocks, plus the sustain-trial clocks, in `src/game/balance.ts`; biome naming in `src/game/homeostasis.ts`.
 - Membrane: the gel wall in `src/game/agarWall.ts` (the sim reads its mask, `SimState.wall`, in `mcStep`) and the pinch in `src/game/membranePinch.ts`.
 - Escalation: per-epoch pressure scaling in `src/game/escalation.ts`.
@@ -71,7 +73,7 @@ Details, evidence and open questions: [`docs/ux-legibility/README.md`](./ux-legi
 5. During each epoch, select an egg strain or lab tool and tap the dish to seed life, feed growth, repel colonies, or trigger reactions.
 6. Satisfy the objective: creation objectives latch once achieved; balance objectives reflect live state.
 7. Pick an upgrade between epochs.
-8. The HUD's Balance clock counts time held. After a minute of unbroken balance the dish is a stable ecosystem: a biome banner shows, the biome is recorded, pressure pauses. In the Open Lab, Finish then completes the trial and the lab moves on to the next one.
+8. The HUD's Balance clock counts time held. After a minute of unbroken balance the dish is a stable ecosystem: a biome banner shows, the biome is recorded, pressure pauses. Finish stays tied to the trial's own goal.
 9. Collapse still ends the run as a failure if all cultures die.
 10. Lab Report summarizes discoveries, hybrids, reactions, biome state, ecosystem stats, notebook progress, and strains banked.
 11. Strains discovered during the run are banked to the strain library for future runs.

@@ -2591,6 +2591,33 @@ canvas {
   display: none;
 }
 
+/* The end card is at most the screen's height: the report takes the room
+   left between the heading and "Return to Lab" and scrolls, with a soft
+   fade at its foot to say there is more, and the button always shows. */
+#screen-end .end-card {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100svh - 24px);
+  overflow: hidden;
+}
+
+#screen-end .end-card > * {
+  flex: 0 0 auto;
+}
+
+#screen-end .lab-report-mount {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: none;
+  padding-bottom: 24px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
+}
+
+#screen-end #end-restart {
+  align-self: center;
+}
+
 .lab-report-screen {
   display: grid;
   gap: 12px;
@@ -2870,6 +2897,10 @@ canvas {
     overflow-y: auto;
     overscroll-behavior: contain;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* Cards keep their own height and the list scrolls; auto rows in a
+       fixed-height scroller were squeezed until the copy overran the cards. */
+    grid-auto-rows: max-content;
+    align-content: start;
     gap: 7px;
   }
 
@@ -3735,6 +3766,125 @@ canvas {
 .research-seal-locked .research-seal-marker {
   opacity: 0.5;
   filter: grayscale(0.8);
+}
+
+/* Oddities (game/oddities.ts): the lab's secrets, at the top of the Found
+   tab. A found one shows its colour and Dr. E's note; an unfound one keeps a
+   dashed border and its riddle. */
+.notebook-oddities {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.notebook-oddities-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.notebook-oddities-head h3 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--fs-small);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.notebook-oddities-head span,
+.notebook-oddities-intro {
+  margin: 0;
+  color: var(--ink-dim);
+  font-family: var(--font-mono);
+  font-size: var(--fs-min);
+}
+
+.oddity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 8px;
+}
+
+.oddity {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  padding: 9px 10px;
+  border: 1px solid rgba(91, 233, 214, 0.36);
+  border-radius: 10px;
+  background: rgba(11, 17, 19, 0.5);
+}
+
+.oddity-unfound {
+  border-style: dashed;
+  border-color: var(--hairline);
+}
+
+.oddity strong {
+  display: block;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--fs-min);
+  line-height: 1.2;
+}
+
+.oddity p {
+  margin: 3px 0 0;
+  color: var(--ink-dim);
+  font-family: var(--font-serif);
+  font-size: var(--fs-small);
+  line-height: 1.3;
+}
+
+.oddity-unfound p {
+  font-style: italic;
+}
+
+.oddity-marker {
+  width: 26px;
+  height: 26px;
+}
+
+.oddity-marker-unknown {
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--hairline);
+  border-radius: 50%;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: var(--fs-min);
+}
+
+/* Achoo! Dr. E sneezes when his face is tickled. */
+canvas.dre-face.dre-sneeze {
+  animation: dre-sneeze 620ms cubic-bezier(0.3, 1.6, 0.4, 1);
+}
+
+@keyframes dre-sneeze {
+  0% { transform: scale(1); }
+  30% { transform: scale(0.88) rotate(-6deg); }
+  55% { transform: scale(1.18) rotate(4deg); }
+  100% { transform: scale(1); }
+}
+
+/* The Disco Dish: the cultures dance through every colour. */
+#game.disco-dish {
+  animation: disco-dish 2.4s linear infinite;
+}
+
+@keyframes disco-dish {
+  from { filter: hue-rotate(0deg) saturate(1.35); }
+  to { filter: hue-rotate(360deg) saturate(1.35); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  canvas.dre-face.dre-sneeze { animation: none; }
+  #game.disco-dish { animation: none; filter: hue-rotate(140deg) saturate(1.35); }
 }
 
 .research-records {
@@ -6170,6 +6320,15 @@ canvas {
   text-transform: uppercase;
   box-shadow: 0 0 0 1px rgba(143, 247, 230, 0.6), 0 0 40px rgba(91, 233, 214, 0.35);
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Landscape windows: the button grows to keep its label ("Enter Open Lab",
+   "Continue Trial") on one line rather than wrapping at the 260px floor. */
+@media (orientation: landscape) {
+  .screen-title-screen .title-start-button {
+    min-width: max-content;
+    white-space: nowrap;
+  }
 }
 
 .screen-title-screen .title-start-button::after {

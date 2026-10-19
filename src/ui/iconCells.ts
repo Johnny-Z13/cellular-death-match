@@ -7,6 +7,11 @@
 
 const GRID = 11;            // cells per side — small + cheap, reads as a blob
 const FPS = 12;             // icon sim is slow; the wobble doesn't need 60fps
+// An icon whose canvas has left the page for longer than this is dropped, so
+// rebuilt panels (the notebook's badges, oddities, tray) don't pile up
+// detached canvases. The grace covers a canvas registered just before it is
+// attached.
+const DETACHED_GRACE_MS = 2000;
 
 interface IconCell {
   canvas: HTMLCanvasElement;
@@ -14,6 +19,7 @@ interface IconCell {
   color: [number, number, number];
   seed: number;
   phase: number;
+  registeredAt: number;
 }
 
 const reduceMotion = typeof window !== 'undefined'
@@ -22,6 +28,7 @@ const reduceMotion = typeof window !== 'undefined'
 
 let icons: IconCell[] = [];
 let running = false;
+let rafId = 0;
 let lastFrameAt = 0;
 let t = 0;
 
@@ -67,13 +74,14 @@ function tick(now: number): void {
   if (now - lastFrameAt >= 1000 / FPS) {
     lastFrameAt = now;
     t = now;
+    icons = icons.filter((icon) => icon.canvas.isConnected || now - icon.registeredAt < DETACHED_GRACE_MS);
     for (const icon of icons) {
       // Skip work for icons not currently on screen.
       if (icon.canvas.offsetParent === null) continue;
       drawIcon(icon, t);
     }
   }
-  requestAnimationFrame(tick);
+  rafId = requestAnimationFrame(tick);
 }
 
 export interface IconCellAnimator {
@@ -87,18 +95,20 @@ export function createIconCells(): IconCellAnimator {
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       ctx.imageSmoothingEnabled = false;
-      const icon: IconCell = { canvas, ctx, color, seed, phase: hash(seed, 7, 3) * 6.28 };
+      const now = performance.now();
+      const icon: IconCell = { canvas, ctx, color, seed, phase: hash(seed, 7, 3) * 6.28, registeredAt: now };
+      // A first frame at once, so an icon shows its cells even before (or
+      // without) the loop reaching it.
+      drawIcon(icon, reduceMotion ? 1000 : now);
+      if (reduceMotion) return; // a single static frame, nothing to keep
       icons.push(icon);
-      if (reduceMotion) {
-        drawIcon(icon, 1000); // single static frame
-        return;
-      }
       if (!running) {
         running = true;
-        requestAnimationFrame(tick);
+        rafId = requestAnimationFrame(tick);
       }
     },
     reset() {
+      cancelAnimationFrame(rafId);
       icons = [];
       running = false;
     },

@@ -457,3 +457,79 @@
 .layout[data-screen="arena"].presentation-mode .preview-exit {
   display: none !important;
 }
+
+/* Below 1100 wide the four filters and Close no longer fit beside the
+   "Friends found" headline: they take their own row instead of sliding
+   over it. */
+@media (min-width: 700px) and (max-width: 1099px) {
+  .dex-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "kicker close" "title close" "tabs tabs";
+  }
+
+  .dex-tabs {
+    padding-top: 8px;
+  }
+}
+
+/* Short landscape screens (phones on their side, a small window at high
+   zoom): a two-row header, and the tiles keep their room beside the
+   detail rather than above it. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .dex-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "title close" "tabs tabs";
+    gap: 4px 12px;
+    padding: max(10px, env(safe-area-inset-top)) 16px 8px;
+  }
+
+  .dex-kicker {
+    display: none;
+  }
+
+  .dex-tabs {
+    display: flex;
+    gap: 6px;
+    padding-top: 4px;
+  }
+
+  .dex-tab {
+    flex: 1 1 0;
+    justify-content: center;
+    min-height: 32px;
+    padding: 6px 10px;
+  }
+
+  .dex-body {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 36%);
+    grid-template-rows: none;
+  }
+
+  .dex-grid {
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    padding: 10px 14px;
+  }
+
+  .dex-detail {
+    grid-template-columns: 72px minmax(0, 1fr);
+    grid-template-areas: "art number" "art name" "art tier" "line line" "found found";
+    justify-items: start;
+    align-items: center;
+    gap: 2px 12px;
+    max-height: none;
+    padding: 12px 14px max(12px, env(safe-area-inset-bottom));
+    border-top: 0;
+    border-left: 1px solid rgba(120, 196, 200, 0.14);
+    text-align: left;
+  }
+
+  .dex-detail-art { grid-area: art; }
+  :root .dex-detail-art canvas.dex-specimen { width: 72px; }
+  .dex-detail-number { grid-area: number; }
+  .dex-detail-name { grid-area: name; font-size: 16px; }
+  .dex-detail-tier { grid-area: tier; justify-self: start; }
+  .dex-detail-strains { display: none; }
+  .dex-detail-bubble { grid-area: line; margin-top: 6px; }
+  .dex-detail-found { grid-area: found; }
+}
+

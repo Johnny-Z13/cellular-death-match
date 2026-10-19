@@ -22,7 +22,7 @@ The game layer leans into that by asking the player to cultivate conditions inst
 
 ## Current Gameplay
 
-- **Open-ended runs** — no fixed trial count. Runs end when the ecosystem collapses; a stable ecosystem records a biome and completes an Open Lab trial, and the lab carries on to the next.
+- **Open-ended runs** — no fixed trial count. Runs end when the ecosystem collapses. Hold three of your strains in balance for a minute and the dish becomes a stable ecosystem: crises calm and its biome joins your Notebook.
 - **Guided Case** — five authored Trials teach placement, catalysis, reaction chaining, and equilibrium without turning the dish into a speed run.
 - **Procedural Open Lab** — after the Case is sealed, choose between 2 field studies each epoch. Pressure escalates: crises come faster, outbreaks hit harder, mutations grow wilder.
 - **Homeostasis win state** — when 3+ breeds hold stable volume share for 20 seconds, the HUD recognizes a living ecosystem, pauses pressure, and marks the dish "Equilibrium."

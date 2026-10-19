@@ -96,11 +96,7 @@ describe('run telemetry', () => {
       'persistArenaDiscoveries(arena);',
       'run.skipEpoch();',
     )).toBe(true);
-    // A stable ecosystem completes the trial; the run carries on.
-    expect(branchSource(
-      'if (!objectiveComplete && equilibriumComplete)',
-      'const status = arena.endEpochNow();',
-    )).toContain('bankCompletedStudy();');
+    // A stable ecosystem never ends the run (nor, now, the trial).
     expect(mainSource).not.toContain("bankCompletedStudy('won')");
     expect(branchSource('arena.isEcosystemCollapsed()', '// Status check'))
       .toContain("bankCompletedStudy('lost', false);");

@@ -3,6 +3,13 @@ import { writeVerifiedJson, type VerifiedWriteResult } from './verifiedStorage';
 
 export const STRAIN_LIBRARY_KEY = 'cellular-death-match.strains.v1';
 export const MAX_LOADOUT_SLOTS = 6;
+/** Distinct biomes recorded that each widen the loadout by one strain. */
+export const BIOME_SLOT_MILESTONES = [1, 3, 6, 10] as const;
+
+/** Loadout slots earned by this many biomes: 2, then +1 per milestone. */
+export function slotsForBiomes(biomes: number): number {
+  return Math.min(MAX_LOADOUT_SLOTS, 2 + BIOME_SLOT_MILESTONES.filter((at) => biomes >= at).length);
+}
 const DEFAULT_STRAIN = 'swarmlet';
 
 export interface StrainLibraryState {

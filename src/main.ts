@@ -28,6 +28,17 @@ import {
   type LifeformIdentityId,
 } from './content/lifeformIdentity';
 import { genomeArtFor, type GenomeArtIdentity } from './content/genomeArt';
+import {
+  ODDITIES,
+  ODDITY_TUNING,
+  createKonamiListener,
+  loadOddities,
+  newOddities,
+  odditiesView,
+  odditySketch,
+  recordOddity,
+  type OddityId,
+} from './game/oddities';
 import { createEcologyAudio } from './audio/ecologyAudio';
 import { createUiAudio, DROP_SOUND_FOR_TOOL } from './audio/uiAudio';
 import { createFx } from './ui/fx';
@@ -85,6 +96,7 @@ import {
 import {
   createStrainLibrary,
   loadStrainLibraryState,
+  slotsForBiomes,
   type StrainLibrary,
 } from './game/strainLibrary';
 import {
@@ -352,6 +364,72 @@ function showReveal(item: DexItem, from: { x: number; y: number }): void {
   });
 }
 dex.refresh(currentDexView());
+
+// Oddities (game/oddities.ts): the lab's secrets. The shell feeds in what the
+// arena cannot see: taps on Dr. E's face, the key code and the clock.
+let odditiesSave = loadOddities(runtimeStorage);
+screens.setOddities(odditiesView(odditiesSave));
+const hearKonami = createKonamiListener();
+let konamiHeard = false;
+const faceTaps: number[] = [];
+const DISCO_MS = 30_000;
+window.addEventListener('keydown', (event) => {
+  if (!hearKonami(event.key)) return;
+  konamiHeard = true;
+  // The Disco Dish: the cultures dance through every colour for a while.
+  canvas.classList.add('disco-dish');
+  window.setTimeout(() => canvas.classList.remove('disco-dish'), DISCO_MS);
+});
+document.addEventListener('pointerdown', (event) => {
+  const face = (event.target as Element | null)?.closest?.('#hud-director canvas.dre-face, #coach canvas.dre-face');
+  if (!face) return;
+  const now = performance.now();
+  faceTaps.push(now);
+  while (faceTaps.length > 0 && now - faceTaps[0]! > ODDITY_TUNING.faceTapWindowMs) faceTaps.shift();
+  if (faceTaps.length >= ODDITY_TUNING.faceTaps) {
+    // Achoo! He sneezes.
+    face.classList.remove('dre-sneeze');
+    void (face as HTMLElement).offsetWidth;
+    face.classList.add('dre-sneeze');
+    drE.react('surprised', 900);
+  }
+});
+
+function checkOddities(): void {
+  if (!arena || run.getState().phase !== 'arena' || isOnboardingEpoch(run.getState().fightIndex)) return;
+  const stats = arena.getOddityStats();
+  const balance = arena.getBalance();
+  const now = performance.now();
+  const found = newOddities({
+    emptyPens: stats.emptyPens,
+    wallsToWall: stats.wallsToWall,
+    maxPinchesOfOneStrain: stats.maxPinchesOfOneStrain,
+    bulletsBlocked: stats.bulletsBlocked,
+    strainsAlive: balance.strains,
+    balanceStreakTicks: balance.streakTicks,
+    ticksSinceTool: stats.tick - stats.lastToolTick,
+    heldTicks: balance.heldTicks,
+    divisions: stats.divisions,
+    biomes: researchArchive.biomeRecords.length,
+    faceTapsInWindow: faceTaps.filter((at) => now - at <= ODDITY_TUNING.faceTapWindowMs).length,
+    localHour: new Date().getHours(),
+    konami: konamiHeard,
+  }, new Set(odditiesSave.found.map((entry) => entry.id)));
+  for (const id of found) announceOddity(id);
+}
+
+function announceOddity(id: OddityId): void {
+  const def = ODDITIES.find((entry) => entry.id === id)!;
+  odditiesSave = recordOddity(runtimeStorage, odditiesSave, id);
+  screens.setOddities(odditiesView(odditiesSave));
+  uiAudio.playCatchCue('crack', 0);
+  haptics.play('discovery');
+  drE.react('delighted', 3200);
+  fx.showToast('discovery', 'Oddity found', def.name);
+  const stop = /[.!?]$/.test(def.name) ? '' : '.';
+  screens.addTicker(`Oddity found: ${def.name}${stop} Dr. E: “${def.note}”`, 'discovery');
+}
+
 document.getElementById('dex-button')?.addEventListener('click', () => {
   uiAudio.unlock();
   uiAudio.play('ui_select');
@@ -981,7 +1059,6 @@ screens.onEndEpoch(() => {
     return;
   }
   const objectiveComplete = arena.getObjectiveProgress().complete;
-  const equilibriumComplete = stabilityCompletesTrial() && arena.getEquilibrium().achieved;
   const taughtSequenceIncomplete = isOnboardingEpoch(run.getState().fightIndex)
     && coach.isActive()
     && !coach.isPresentingSuccess();
@@ -992,7 +1069,7 @@ screens.onEndEpoch(() => {
     haptics.play('warning');
     return;
   }
-  if (!objectiveComplete && !equilibriumComplete) {
+  if (!objectiveComplete) {
     requestLeaveTrial();
     return;
   }
@@ -1002,22 +1079,9 @@ screens.onEndEpoch(() => {
   // dish before the success card's delayed animation arrives, retire the
   // coach immediately so it cannot cover the Method/Objective screens.
   coach.leaveArena(objectiveComplete);
-  // A stable ecosystem completes the trial, and the lab carries on to the
-  // next one (it no longer ends the whole run).
-  if (!objectiveComplete && equilibriumComplete) {
-    bankCompletedStudy();
-    return;
-  }
   const status = arena.endEpochNow();
   resolveArenaStatus(status);
 });
-
-// A stable ecosystem completes a trial only in the Open Lab. In the case the
-// authored lesson is the goal; stability there is its reward (a biome, a
-// loadout slot, calm crises), not a way past the lesson.
-function stabilityCompletesTrial(): boolean {
-  return run.getState().fightIndex >= COMMON_COLD_CASE.trials.length;
-}
 
 // Leaving an unfinished trial takes two deliberate activations within four
 // seconds. It lives in Options (the pause menu), not the tool rack.
@@ -1047,12 +1111,13 @@ screens.onLeaveTrial(() => {
 function updateDishExitAction(): void {
   if (!arena || run.getState().phase !== 'arena') return;
   const objectiveComplete = arena.getObjectiveProgress().complete;
-  const equilibriumComplete = stabilityCompletesTrial() && arena.getEquilibrium().achieved;
   const taughtSequenceIncomplete = isOnboardingEpoch(run.getState().fightIndex)
     && coach.isActive()
     && !coach.isPresentingSuccess();
+  // A stable ecosystem is a reward (a biome card, calm crises, toward the next
+  // loadout slot), never a finish: each trial ends on its own goal.
   screens.setDishExitState(dishExitState({
-    complete: !taughtSequenceIncomplete && (objectiveComplete || equilibriumComplete),
+    complete: !taughtSequenceIncomplete && objectiveComplete,
     firstTrial: isOnboardingEpoch(run.getState().fightIndex),
     saveBlocked: pendingBankPlan !== null,
     armedUntilMs: abandonArmedUntilMs,
@@ -1203,10 +1268,11 @@ function showPhase() {
   } else if (state.phase === 'run_end') {
     updateButtonHint();
     screens.updateLabReport(labReportForRunEnd());
+    const openLabEnd = state.fightIndex >= COMMON_COLD_CASE.trials.length;
     screens.updateEnd({
       outcome: state.outcome ?? 'lost',
-      fightReached: state.fightIndex + 1,
-      totalFights: COMMON_COLD_CASE.trials.length,
+      fightReached: openLabEnd ? state.fightIndex - COMMON_COLD_CASE.trials.length + 1 : state.fightIndex + 1,
+      totalFights: openLabEnd ? 0 : COMMON_COLD_CASE.trials.length,
       objectivesCompleted: state.epochResults.filter((result) => result === 'completed').length,
       upgrades: state.upgrades.map((u) => {
         const def = getUpgradeDef(u.id);
@@ -1529,6 +1595,11 @@ function startNewFight() {
   screens.clearTicker();
   const objective = run.getObjective();
   screens.addTicker(`Dr. E: ${objective.name}. ${objective.hint ?? objective.description}`);
+  // From Trial 3 on, Dr. E scribbles a riddle for an oddity not yet found.
+  if (runState.fightIndex >= 2) {
+    const sketch = odditySketch(odditiesSave, Math.random());
+    if (sketch) screens.addTicker(sketch);
+  }
   if (!uiAudio.isMuted()) uiAudio.startAmbience();
   uiAudio.play('epoch_begin');
   haptics.play('impact');
@@ -1794,7 +1865,7 @@ function loop() {
       return u.stacks > 1 ? `${def.name} x${u.stacks}` : def.name;
     }),
   });
-  if (objective.complete || (stabilityCompletesTrial() && equilibrium.achieved)) clearAbandonConfirmation(false);
+  if (objective.complete) clearAbandonConfirmation(false);
   updateDishExitAction();
   // Tool state (charges + cooldown wipes) refreshes every frame regardless of
   // the control sample — the onboarding dish has no player cell.
@@ -1803,6 +1874,7 @@ function loop() {
   updateButtonHint();
   announceEpochCompletion(objective.complete);
   announceEquilibrium(equilibrium);
+  checkOddities();
   maybeNudgeIdlePlayer(objective.complete, objective.def.hint);
   updateTicker(arena);
   persistArenaDiscoveries(arena);
@@ -2077,9 +2149,11 @@ function syncResearchArchive(biomeName?: string | null, biomeStrains?: readonly 
   if (result.newBiome) {
     newBiomeThisRun = true;
     strainLibrary.incrementBiomeCount();
-    // Holding a living dish is what grows the loadout: one more strain per
-    // new biome.
-    strainLibrary.addLoadoutSlot();
+    // Holding a living dish is what grows the loadout: one more strain at
+    // each biome milestone (1, 3, 6, 10 distinct biomes).
+    while (strainLibrary.getLoadoutSlots() < slotsForBiomes(strainLibrary.getBiomeCount())) {
+      strainLibrary.addLoadoutSlot();
+    }
     strainLibrary.save();
   }
   for (const sealId of result.newSealIds) {

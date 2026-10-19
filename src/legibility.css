@@ -1571,3 +1571,16 @@
   align-self: start;
   margin-top: 2px;
 }
+
+/* Narrow desktop windows (900-1279 wide): the HUD starts at the left edge
+   instead of centring between mirrored chrome reserves, so the goal's
+   readouts (Trial, Time, Balance) have room and never run into Dr. E's
+   column. From 1280 up it centres as before. */
+@media (min-width: 900px) and (max-width: 1279px) {
+  .layout[data-screen="arena"] .hud,
+  .layout[data-screen="arena"] .hud.visible {
+    left: 16px;
+    transform: none;
+    width: min(1040px, calc(100vw - 236px));
+  }
+}

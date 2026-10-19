@@ -78,13 +78,15 @@ export async function completeOpeningActions(page: Page): Promise<void> {
 
 /** A new strain's catch takes two activations (the first finishes the
  *  sequence, the next continues; each further strain hatches from its own
- *  egg and takes two more). Activate the reveal until it closes. */
+ *  egg and takes two more). Each egg ignores taps for its first moments
+ *  (CATCH_TIMING.inputGraceMs), so keep tapping steadily until it closes. */
 export async function dismissReveal(page: Page, key?: 'Enter'): Promise<void> {
   const reveal = page.locator('#fx-genome');
-  for (let i = 0; i < 20 && await reveal.getAttribute('aria-hidden') === 'false'; i += 1) {
+  const deadline = Date.now() + 15_000;
+  while (Date.now() < deadline && await reveal.getAttribute('aria-hidden') === 'false') {
     if (key) await reveal.press(key);
     else await reveal.click();
-    await page.waitForTimeout(80);
+    await page.waitForTimeout(150);
   }
   await expect(reveal).toHaveAttribute('aria-hidden', 'true');
 }

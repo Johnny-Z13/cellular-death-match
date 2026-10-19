@@ -32,6 +32,13 @@ export interface ObjectiveMetrics {
   maxBreedDominance: number;
   nearbyDifferentBreedPair: boolean;
   livingBreedIds: ReadonlySet<BreedId>;
+  /** The player's own cultures (planted, or a daughter or cutting of one):
+   *  goals about building a dish count these, never the wild residents. */
+  ownArchetypeCounts: ReadonlyMap<EnemyArchetype, number>;
+  ownMaxVolume: number;
+  ownStrains: number;
+  /** Two different strains side by side, one of them the player's own. */
+  nearbyOwnPair: boolean;
 }
 
 export interface ObjectiveRuntime {
@@ -99,11 +106,11 @@ export function updateObjectiveRuntime(
   const balanceMinCount = objective.kind === 'balance_keeper'
     ? objective.minCount ?? 2
     : 2;
-  const balanced = metrics.livingLifeforms >= balanceMinCount && metrics.maxBreedDominance <= balanceMax;
+  const balanced = metrics.ownStrains >= balanceMinCount && metrics.maxBreedDominance <= balanceMax;
   // Sustain clocks pause on a dip rather than resetting: a cosy dish is
   // rewarded for time held, not punished for one bad moment.
   if (balanced) runtime.balanceTicks += 1;
-  if (metrics.nearbyDifferentBreedPair) runtime.symbiosisTicks += 1;
+  if (metrics.nearbyOwnPair) runtime.symbiosisTicks += 1;
   if (metrics.livingLifeforms <= 1) runtime.sawExtinctionLow = true;
   if (events.hybridDiscovered) runtime.hybridDiscovered = true;
   if (events.survivedCrisis) runtime.survivedCrisis = true;
@@ -208,8 +215,8 @@ export function evaluateObjective(
     }
     case 'mega_culture': {
       const target = objective.volumeTarget ?? MEGA_CULTURE_VOLUME;
-      const ok = metrics.maxLifeformVolume > target;
-      return progress(objective, ok, true, deadline && !ok, urgency, `${Math.round(metrics.maxLifeformVolume)} / >${target} culture volume`, ratio(metrics.maxLifeformVolume, target));
+      const ok = metrics.ownMaxVolume > target;
+      return progress(objective, ok, true, deadline && !ok, urgency, `${Math.round(metrics.ownMaxVolume)} / >${target} culture volume`, ratio(metrics.ownMaxVolume, target));
     }
     case 'reaction_chain': {
       const targetCount = objective.targetCount ?? REACTION_CHAIN_COUNT;
@@ -243,7 +250,7 @@ export function evaluateObjective(
       const targetCount = objective.targetCount ?? COLONY_FOUNDER_COUNT;
       let maxCount = 0;
       let maxArchetype: EnemyArchetype | null = null;
-      for (const [archetype, count] of metrics.archetypeCounts) {
+      for (const [archetype, count] of metrics.ownArchetypeCounts) {
         if (count > maxCount) {
           maxCount = count;
           maxArchetype = archetype;

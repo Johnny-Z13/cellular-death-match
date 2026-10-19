@@ -299,9 +299,10 @@
   }
 }
 
-/* Short landscape screens (phones on their side): the droplet sits left of
-   the words, so the name, Dr. E and "Into the dex" all stay on screen. */
-@media (orientation: landscape) and (max-height: 520px) {
+/* Short landscape screens (phones on their side, small laptop or embed
+   windows): the droplet sits left of the words, so the name, Dr. E and
+   "Into the dex" all stay on screen. */
+@media (orientation: landscape) and (max-height: 660px) {
   .reveal-stage {
     grid-template-columns: auto minmax(0, 1fr);
     justify-items: start;

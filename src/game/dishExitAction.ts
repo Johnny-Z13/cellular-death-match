@@ -27,9 +27,9 @@ export function dishExitState(context: DishExitContext): DishExitState {
     return state('locked', 'Finish trial', 'in progress', 'Finish Dr. E’s lesson first.', true);
   }
   if (context.armedUntilMs > context.nowMs) {
-    return state('confirm-abandon', 'Leave trial?', 'tap again', 'Leave without a result? Notebook entries stay.');
+    return state('confirm-abandon', 'Leave trial?', 'tap again', 'Leave without a result? This run’s upgrades go; strains and Notebook entries stay.');
   }
-  return state('abandon', 'Leave trial', 'no result', 'Leave this trial without a result. Notebook entries stay.');
+  return state('abandon', 'Leave trial', 'no result', 'Leave this trial without a result. This run’s upgrades go; strains and Notebook entries stay.');
 }
 
 /** The rack's end slot is a finish control. Leaving an unfinished trial is a

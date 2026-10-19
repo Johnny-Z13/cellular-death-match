@@ -9,7 +9,7 @@ import { NEIGHBOR_DIRS, type CellId, type Grid } from '../sim/types';
 export const PINCH_TUNING = {
   /** Each piece must be at least this share of its strain's genome size
    *  (its spawn size), so a culture is fed up before it can be pinched. */
-  minPieceShare: 0.6,
+  minPieceShare: 0.4,
 };
 
 export interface CulturePieces {

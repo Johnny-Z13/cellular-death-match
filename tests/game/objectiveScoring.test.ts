@@ -10,8 +10,10 @@ import {
   type ObjectiveRuntime,
 } from '../../src/game/objectiveScoring';
 
+// Unless a test says otherwise, every culture in the dish is the player's
+// own, so the own-culture readings mirror the whole-dish ones.
 function metrics(overrides: Partial<ObjectiveMetrics> = {}): ObjectiveMetrics {
-  return {
+  const dish = {
     controlSampleVol: 0,
     livingLifeforms: 3,
     protectedCultureCount: 0,
@@ -19,13 +21,20 @@ function metrics(overrides: Partial<ObjectiveMetrics> = {}): ObjectiveMetrics {
     livingVol: 900,
     lifeformVol: 900,
     dominantVol: 320,
-    dominantArchetype: 'swarmlet',
+    dominantArchetype: 'swarmlet' as EnemyArchetype,
     coverage: 0.2,
     maxLifeformVolume: 320,
     maxBreedDominance: 0.36,
     nearbyDifferentBreedPair: false,
-    livingBreedIds: new Set(),
+    livingBreedIds: new Set<never>(),
     ...overrides,
+  };
+  return {
+    ...dish,
+    ownArchetypeCounts: overrides.ownArchetypeCounts ?? dish.archetypeCounts,
+    ownMaxVolume: overrides.ownMaxVolume ?? dish.maxLifeformVolume,
+    ownStrains: overrides.ownStrains ?? dish.livingLifeforms,
+    nearbyOwnPair: overrides.nearbyOwnPair ?? dish.nearbyDifferentBreedPair,
   };
 }
 
@@ -145,6 +154,23 @@ describe('evaluateObjective procedural objectives', () => {
     for (let i = 0; i < 5; i++) updateObjectiveRuntime(runtime, even, objective);
     expect(runtime.balanceTicks).toBe(15);
     expect(runtime.symbiosisTicks).toBe(15);
+  });
+
+  it('counts only the player\'s own cultures for goals about building a dish', () => {
+    const founder: ObjectiveDef = { kind: 'colony_founder', name: 'Founder Strain', description: 'Grow matching cultures.', target: '5 of one strain', targetCount: 5 };
+    const mega: ObjectiveDef = { kind: 'mega_culture', name: 'Mega-Culture', description: 'Grow one.', target: 'big', volumeTarget: 800 };
+    // A dish full of wild Swarmlets and a wild giant: none of it is the player's.
+    const wild = metrics({
+      archetypeCounts: new Map([['swarmlet', 6]]), maxLifeformVolume: 1350,
+      ownArchetypeCounts: new Map(), ownMaxVolume: 0, ownStrains: 0, nearbyOwnPair: false,
+    });
+    expect(evaluateObjective(founder, wild, context()).complete).toBe(false);
+    expect(evaluateObjective(mega, wild, context()).complete).toBe(false);
+    const runtime = createObjectiveRuntime();
+    const spread: ObjectiveDef = { kind: 'balance_keeper', name: 'Even Spread', description: 'No strain dominates.', target: '40%', maxDominance: 0.4 };
+    updateObjectiveRuntime(runtime, metrics({ nearbyDifferentBreedPair: true, livingLifeforms: 5, maxBreedDominance: 0.3, ownStrains: 0, nearbyOwnPair: false }), spread);
+    expect(runtime.balanceTicks).toBe(0);
+    expect(runtime.symbiosisTicks).toBe(0);
   });
 
   it('satisfies colony_founder with 5 cultures of one archetype', () => {

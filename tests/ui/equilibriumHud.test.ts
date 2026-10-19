@@ -26,11 +26,10 @@ describe('equilibrium HUD state', () => {
     expect(mainSource).not.toContain('arena.isHomeostasisAchieved()) {\n    persistArenaDiscoveries(arena);');
   });
 
-  it('lets a stable ecosystem finish only an Open Lab trial, and never end the run', () => {
-    expect(mainSource).toContain('return run.getState().fightIndex >= COMMON_COLD_CASE.trials.length;');
-    expect(mainSource).toContain('const equilibriumComplete = stabilityCompletesTrial() && arena.getEquilibrium().achieved;');
-    expect(mainSource).toContain('if (!objectiveComplete && equilibriumComplete) {');
-    expect(mainSource).toContain('complete: !taughtSequenceIncomplete && (objectiveComplete || equilibriumComplete)');
+  it('treats a stable ecosystem as a reward: it never finishes a trial or ends the run', () => {
+    expect(mainSource).not.toContain('equilibriumComplete');
+    expect(mainSource).toContain('complete: !taughtSequenceIncomplete && objectiveComplete,');
+    expect(mainSource).not.toContain("bankCompletedStudy('won')");
     expect(mainSource).toContain('firstTrial: isOnboardingEpoch(run.getState().fightIndex)');
   });
 

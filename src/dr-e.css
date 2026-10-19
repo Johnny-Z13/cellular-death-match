@@ -20,6 +20,12 @@
   image-rendering: pixelated;
 }
 
+/* His face takes taps where he guides from (Oddities: Achoo!). */
+#hud-director canvas.dre-face,
+#coach canvas.dre-face {
+  pointer-events: auto;
+}
+
 /* His line as he says it: the unsaid words keep their space. */
 .dre-unsaid {
   visibility: hidden;
