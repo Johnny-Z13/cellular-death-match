@@ -333,6 +333,7 @@ const currentDexView = () => dexView(discoveryProgression, friendsSave);
 const reveal = createFriendReveal({
   presence: drE,
   playSound: (id) => uiAudio.play(id),
+  cue: (cue, step) => uiAudio.playCatchCue(cue, step),
   haptic: (cue) => haptics.play(cue),
   stopSpeech: () => speech.finish(),
 });
@@ -980,8 +981,7 @@ screens.onEndEpoch(() => {
     return;
   }
   const objectiveComplete = arena.getObjectiveProgress().complete;
-  const equilibriumComplete = !isOnboardingEpoch(run.getState().fightIndex)
-    && arena.getEquilibrium().achieved;
+  const equilibriumComplete = stabilityCompletesTrial() && arena.getEquilibrium().achieved;
   const taughtSequenceIncomplete = isOnboardingEpoch(run.getState().fightIndex)
     && coach.isActive()
     && !coach.isPresentingSuccess();
@@ -1002,14 +1002,22 @@ screens.onEndEpoch(() => {
   // dish before the success card's delayed animation arrives, retire the
   // coach immediately so it cannot cover the Method/Objective screens.
   coach.leaveArena(objectiveComplete);
-  const equilibriumCanEndRun = !isOnboardingEpoch(run.getState().fightIndex);
-  if (equilibriumCanEndRun && arena.getEquilibrium().achieved) {
-    bankCompletedStudy('won');
+  // A stable ecosystem completes the trial, and the lab carries on to the
+  // next one (it no longer ends the whole run).
+  if (!objectiveComplete && equilibriumComplete) {
+    bankCompletedStudy();
     return;
   }
   const status = arena.endEpochNow();
   resolveArenaStatus(status);
 });
+
+// A stable ecosystem completes a trial only in the Open Lab. In the case the
+// authored lesson is the goal; stability there is its reward (a biome, a
+// loadout slot, calm crises), not a way past the lesson.
+function stabilityCompletesTrial(): boolean {
+  return run.getState().fightIndex >= COMMON_COLD_CASE.trials.length;
+}
 
 // Leaving an unfinished trial takes two deliberate activations within four
 // seconds. It lives in Options (the pause menu), not the tool rack.
@@ -1039,8 +1047,7 @@ screens.onLeaveTrial(() => {
 function updateDishExitAction(): void {
   if (!arena || run.getState().phase !== 'arena') return;
   const objectiveComplete = arena.getObjectiveProgress().complete;
-  const equilibriumComplete = !isOnboardingEpoch(run.getState().fightIndex)
-    && arena.getEquilibrium().achieved;
+  const equilibriumComplete = stabilityCompletesTrial() && arena.getEquilibrium().achieved;
   const taughtSequenceIncomplete = isOnboardingEpoch(run.getState().fightIndex)
     && coach.isActive()
     && !coach.isPresentingSuccess();
@@ -1748,7 +1755,6 @@ function loop() {
 
   const ecology = arena.getEcology();
   const equilibrium = arena.getEquilibrium();
-  const equilibriumCanEndRun = !isOnboardingEpoch(run.getState().fightIndex);
   screens.setEquilibrium({ ...equilibrium, balance: arena.getBalance() });
   sampleRunTelemetryFromArena(arena);
 
@@ -1788,7 +1794,7 @@ function loop() {
       return u.stacks > 1 ? `${def.name} x${u.stacks}` : def.name;
     }),
   });
-  if (objective.complete || (equilibriumCanEndRun && equilibrium.achieved)) clearAbandonConfirmation(false);
+  if (objective.complete || (stabilityCompletesTrial() && equilibrium.achieved)) clearAbandonConfirmation(false);
   updateDishExitAction();
   // Tool state (charges + cooldown wipes) refreshes every frame regardless of
   // the control sample — the onboarding dish has no player cell.
@@ -1859,8 +1865,8 @@ function bankCompletedStudy(
       reactions: arena.getEcology().reactions,
       peakBiodiversity,
       stabilitySeconds: Math.round(longestStabilityStreak / 60),
-      biomeName: terminalOutcome === 'won' ? arena.getEquilibrium().biomeName : undefined,
-      biomeStrains: terminalOutcome === 'won' ? arena.getEquilibrium().biomeStrains : undefined,
+      biomeName: arena.getEquilibrium().achieved ? arena.getEquilibrium().biomeName : undefined,
+      biomeStrains: arena.getEquilibrium().achieved ? arena.getEquilibrium().biomeStrains : undefined,
     },
     completedStudy,
     terminalOutcome,
@@ -2822,6 +2828,10 @@ function updateJuiceEvents(ar: Arena): void {
     cellFxTracker.lastDishEventId = maxSeen;
     return;
   }
+
+  // A Membrane stopping a bullet: one soft gel ripple a frame at most.
+  const blocked = ar.state.events.find((event) => event.type === 'bulletBlocked');
+  if (blocked) juice.ripple([blocked.pos[0], blocked.pos[1]], 'paste');
 
   // Births and deaths at their dish positions.
   for (const [id, cell] of ar.state.cells) {

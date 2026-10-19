@@ -16,6 +16,7 @@ Cellular Death Match is a mobile-first Petri dish ecosystem roguelike. Runs are 
 - Escalating pressure: hazard intervals shorten, outbreaks grow, mutations intensify per epoch.
 - Biome classification: stable ecosystems are named from their leading strains and kept as biome cards in the Notebook's Trial tab.
 - Catalytic reactions, rare breed discovery, and cross-breeding of hybrids.
+- Every new creature hatches from an egg: each new strain gets its own catch, and a rescued friend's egg rises in its droplet, wobbles, cracks and bursts. From Trial 2 every caught strain is in the Egg tray; the case's finale (Brine Channel) catches the Boss.
 - Pixel-bloom dish rendering: every culture's own pixels glow in their color.
 - Mobile portrait touch shell: Lifeforms/Log drawers, tool readout, bottom tool bar.
 - Mobile landscape side-rail composition and intentionally scaled tablet portrait layout.
@@ -39,7 +40,7 @@ Details, evidence and open questions: [`docs/ux-legibility/README.md`](./ux-legi
 
 - Simulation: cellular Potts model in `src/sim/`. Cells store generic energy coefficients; breed profile lookup stays outside the low-level sim.
 - Arena: ecosystem tick loop, objective evaluation, tool effects, mutation, reseeding, homeostasis tracking, escalation, and resupply in `src/game/arena.ts`.
-- Run state: open-ended state machine with homeostasis/collapse end states in `src/game/run.ts`.
+- Run state: open-ended state machine in `src/game/run.ts`; a run ends on collapse or when the player leaves. A stable ecosystem completes an Open Lab trial (the run continues); in the case the authored lesson stays the goal.
 - Balance: time-held and stable-ecosystem clocks, plus the sustain-trial clocks, in `src/game/balance.ts`; biome naming in `src/game/homeostasis.ts`.
 - Membrane: the gel wall in `src/game/agarWall.ts` (the sim reads its mask, `SimState.wall`, in `mcStep`) and the pinch in `src/game/membranePinch.ts`.
 - Escalation: per-epoch pressure scaling in `src/game/escalation.ts`.
@@ -70,7 +71,7 @@ Details, evidence and open questions: [`docs/ux-legibility/README.md`](./ux-legi
 5. During each epoch, select an egg strain or lab tool and tap the dish to seed life, feed growth, repel colonies, or trigger reactions.
 6. Satisfy the objective: creation objectives latch once achieved; balance objectives reflect live state.
 7. Pick an upgrade between epochs.
-8. The HUD's Balance clock counts time held. After a minute of unbroken balance the dish is a stable ecosystem: a biome banner shows, the biome is recorded, pressure pauses, and the player can keep observing or end the trial.
+8. The HUD's Balance clock counts time held. After a minute of unbroken balance the dish is a stable ecosystem: a biome banner shows, the biome is recorded, pressure pauses. In the Open Lab, Finish then completes the trial and the lab moves on to the next one.
 9. Collapse still ends the run as a failure if all cultures die.
 10. Lab Report summarizes discoveries, hybrids, reactions, biome state, ecosystem stats, notebook progress, and strains banked.
 11. Strains discovered during the run are banked to the strain library for future runs.
@@ -98,7 +99,7 @@ Hybrid breeds (cross-bred from two discovered base breeds under a nutrient field
 
 - Egg: places the selected lifeform strain.
 - Nutrient: attracts nearby lifeforms and strongly increases their target volume.
-- Membrane (tool id `paste`): drag on the dish to draw a gel wall cultures can't grow into. It fences a strain off, gives prey a refuge or pens cultures together for a merge. Drawn through a culture, it pinches it in two: each piece at least `PINCH_TUNING.minPieceShare` of the strain's genome size becomes its own culture of the same strain, sharing the mass (`src/game/membranePinch.ts`). That is the only way to copy a culture already in the dish, rare strains and hybrids included. The wall holds about 13s, leaks as it dissolves and is gone at 20s (`AGAR_TUNING`). It never feeds; a reagent dropped on a fresh membrane reacts along it. One charge buys a length of drawn path; each stamp rasterises back to the last so fast strokes leave no gaps. Drawing is wired via pointer capture in `main.ts` (`endPasteStroke` resets between strokes).
+- Membrane (tool id `paste`): drag on the dish to draw a gel wall cultures can't grow into. It fences a strain off, gives prey a refuge or pens cultures together for a merge. Drawn through a culture, it pinches it in two: each piece at least `PINCH_TUNING.minPieceShare` of the strain's genome size becomes its own culture of the same strain, sharing the mass (`src/game/membranePinch.ts`). That is the only way to copy a culture already in the dish, rare strains and hybrids included. The wall holds about 13s, leaks as it dissolves and is gone at 20s (`AGAR_TUNING`). It never feeds; a reagent dropped on a fresh membrane reacts along it. Gel absorbs bullets too, so a Membrane shields what is behind it (a dissolving wall lets them through as often as it lets cultures). One charge buys a length of drawn path; each stamp rasterises back to the last so fast strokes leave no gaps. Drawing is wired via pointer capture in `main.ts` (`endPasteStroke` resets between strokes).
 - Toxin: pushes nearby lifeforms away, shrinking and eroding matter in its radius.
 - Water, Salt, Acid: research-unlocked reagents that drive further reactions.
 - Agitate: spreads active fields and can fold overlapping reactions into a fault.

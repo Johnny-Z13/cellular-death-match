@@ -27,6 +27,10 @@ describe('organic unlock cadence', () => {
     expect(progression.unlockedTools).toContain('salt');
     expect(progression.unlockedLifeforms).toEqual(['swarmlet', 'bruiser', 'splitter', 'bloom_mass']);
 
+    // The case's finale, Brine Channel, ends on a catch: the Boss.
+    expect(updateDiscoveryProgression(progression, { noteIds: ['recipe_brine_channel'] }).unlockedLifeforms)
+      .toContain('boss');
+
     progression = updateDiscoveryProgression(progression, {
       noteIds: ['recipe_salt_water_crystal'],
     });

@@ -74,11 +74,11 @@ export async function completeOpeningActions(page: Page): Promise<void> {
 }
 
 /** A new strain's catch takes two activations (the first finishes the
- *  sequence, the next continues; a second strain takes two more). Activate
- *  the reveal until it closes. */
+ *  sequence, the next continues; each further strain hatches from its own
+ *  egg and takes two more). Activate the reveal until it closes. */
 export async function dismissReveal(page: Page, key?: 'Enter'): Promise<void> {
   const reveal = page.locator('#fx-genome');
-  for (let i = 0; i < 6 && await reveal.getAttribute('aria-hidden') === 'false'; i += 1) {
+  for (let i = 0; i < 20 && await reveal.getAttribute('aria-hidden') === 'false'; i += 1) {
     if (key) await reveal.press(key);
     else await reveal.click();
     await page.waitForTimeout(80);

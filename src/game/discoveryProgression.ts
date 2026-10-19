@@ -312,8 +312,11 @@ function buildProgression(base: {
   ) {
     lifeformSet.add('mirror');
   }
+  // The case's finale (The Cure-ish, Brine Channel) catches the Boss: the
+  // last trial ends with an egg like the others, and the biggest one.
   if (
-    notes.has('recipe_folding_fault')
+    notes.has('recipe_brine_channel')
+    || notes.has('recipe_folding_fault')
     || notes.has('recipe_foam_salt_rule30')
     || notes.has('recipe_crystal_toxin_prism')
     || notes.has('recipe_brine_flash')

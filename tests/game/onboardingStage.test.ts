@@ -8,7 +8,6 @@ import {
   lifeformUnlocksForCurrentStage,
   toolUnlocksForCurrentStage,
   shouldUseOnboardingDishForCurrentStage,
-  FIRST_CASE_STAGE_LIFEFORMS,
   MOBILE_TOOLBOX_ONBOARDING_BEAT,
   ONBOARDING_BEATS,
   TRIAL_ONBOARDING_BEATS,
@@ -50,7 +49,7 @@ describe('onboarding stage gates', () => {
     expect(shouldUseOnboardingDishForCurrentStage(1, false)).toBe(false);
   });
 
-  it('reveals each earned organism on the next authored Case Trial', () => {
+  it('puts each earned organism in the Egg tray on the next Case Trial', () => {
     let progression = updateDiscoveryProgression(createDiscoveryProgression(), {
       breedIds: ['bloom_mass'],
       noteIds: ['breed_bloom_mass'],
@@ -74,11 +73,19 @@ describe('onboarding stage gates', () => {
       'swarmlet', 'bruiser', 'splitter', 'mirror', 'bloom_mass',
     ]);
 
-    FIRST_CASE_STAGE_LIFEFORMS.forEach((allowed, trialIndex) => {
-      for (const lifeform of lifeformUnlocksForCurrentStage(progression, trialIndex)) {
-        expect(allowed).toContain(lifeform);
-      }
+    // Trial 1 stays the one-strain tutorial dish.
+    expect(lifeformUnlocksForCurrentStage(progression, 0)).toEqual(['swarmlet']);
+  });
+
+  it('keeps a strain caught off the authored path plantable, as its catch promised', () => {
+    const progression = updateDiscoveryProgression(createDiscoveryProgression(), {
+      breedIds: ['bloom_mass', 'needle_swarm'],
+      noteIds: ['breed_bloom_mass', 'recipe_bitter_bloom', 'recipe_nutrient_conduit'],
     });
+    // Needle Swarm also unlocks Sniper and Mirror; all three are in Trial 4's tray.
+    expect(lifeformUnlocksForCurrentStage(progression, 3)).toEqual(expect.arrayContaining([
+      'needle_swarm', 'sniper', 'mirror', 'bruiser', 'splitter',
+    ]));
   });
 });
 

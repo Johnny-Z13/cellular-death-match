@@ -299,6 +299,44 @@
   }
 }
 
+/* Short landscape screens (phones on their side): the droplet sits left of
+   the words, so the name, Dr. E and "Into the dex" all stay on screen. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .reveal-stage {
+    grid-template-columns: auto minmax(0, 1fr);
+    justify-items: start;
+    align-items: center;
+    column-gap: 28px;
+    row-gap: 4px;
+    width: min(760px, 100%);
+    text-align: left;
+  }
+
+  .reveal-drop {
+    grid-column: 1;
+    grid-row: 1 / span 6;
+    width: min(240px, 60svh);
+    margin: 0;
+  }
+
+  .reveal-stage > :not(.reveal-drop) {
+    grid-column: 2;
+  }
+
+  .reveal-stamp { margin: 0 0 6px; }
+  .reveal-kicker { padding-left: 0; }
+  .reveal-name { font-size: clamp(26px, 9svh, 40px); }
+
+  .reveal-dre {
+    grid-template-columns: 56px minmax(0, 1fr);
+    margin-top: 8px;
+  }
+
+  :root .reveal-dre canvas.dre-face { width: 56px; }
+  .reveal-line { font-size: 16px; }
+  .reveal-continue { margin-top: 8px; }
+}
+
 /* ---- The catch (ui/catchReveal.ts) ---------------------------------------
    A new strain's end-of-trial reveal: a sealed specimen egg wobbles three
    times, cracks and bursts; the creature pops out over turning light rays;
@@ -390,7 +428,7 @@
 
 /* The egg: a glass shell tinted in the strain's colour with its silhouette
    dark inside. */
-.fx-genome-catch .catch-egg {
+:is(.fx-genome-catch, .friend-reveal) .catch-egg {
   position: relative;
   display: grid;
   place-items: center;
@@ -420,22 +458,22 @@
   image-rendering: pixelated;
 }
 
-.fx-genome-catch .catch-egg-shine,
-.fx-genome-catch .catch-egg-crack {
+:is(.fx-genome-catch, .friend-reveal) .catch-egg-shine,
+:is(.fx-genome-catch, .friend-reveal) .catch-egg-crack {
   grid-area: 1 / 1;
   width: 100%;
   height: 100%;
 }
 
 /* Cracks: thin rays of light leaking through the shell. */
-.fx-genome-catch .catch-egg-crack {
+:is(.fx-genome-catch, .friend-reveal) .catch-egg-crack {
   background: repeating-conic-gradient(from 12deg at 50% 46%, transparent 0deg 26deg, rgba(255, 255, 255, 0.95) 26deg 27.4deg, transparent 27.4deg 51deg);
   -webkit-mask-image: radial-gradient(ellipse at 50% 46%, transparent 12%, #000 34%, transparent 70%);
   mask-image: radial-gradient(ellipse at 50% 46%, transparent 12%, #000 34%, transparent 70%);
   opacity: 0;
 }
 
-.catch-wobble.fx-genome-catch .catch-egg {
+.catch-wobble:is(.fx-genome-catch, .friend-reveal) .catch-egg {
   animation: catch-egg-wobble 420ms cubic-bezier(0.36, 0, 0.3, 1) both;
 }
 
@@ -447,17 +485,17 @@
   100% { transform: rotate(0); }
 }
 
-.catch-crack.fx-genome-catch .catch-egg {
+.catch-crack:is(.fx-genome-catch, .friend-reveal) .catch-egg {
   box-shadow: 0 0 60px color-mix(in srgb, var(--genome-color) 80%, #ffffff), inset 0 -10px 22px rgba(0, 0, 0, 0.3);
 }
 
-.catch-crack.fx-genome-catch .catch-egg-crack {
+.catch-crack:is(.fx-genome-catch, .friend-reveal) .catch-egg-crack {
   opacity: 1;
   transition: opacity 260ms ease;
 }
 
 /* The burst: the shell pops, cells fly, the screen flashes. */
-.catch-burst.fx-genome-catch .catch-egg {
+.catch-burst:is(.fx-genome-catch, .friend-reveal) .catch-egg {
   animation: catch-egg-pop 260ms ease-out forwards;
 }
 
@@ -465,13 +503,13 @@
   to { opacity: 0; transform: scale(1.5); }
 }
 
-.fx-genome-catch .catch-cells {
+:is(.fx-genome-catch, .friend-reveal) .catch-cells {
   position: relative;
   width: 0;
   height: 0;
 }
 
-.fx-genome-catch .catch-cells i {
+:is(.fx-genome-catch, .friend-reveal) .catch-cells i {
   position: absolute;
   left: calc(var(--s) / -2);
   top: calc(var(--s) / -2);
@@ -482,7 +520,7 @@
   animation: catch-cell-fly 760ms cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
 }
 
-.fx-genome-catch .catch-cells i:nth-child(3n) {
+:is(.fx-genome-catch, .friend-reveal) .catch-cells i:nth-child(3n) {
   background: #ffffff;
 }
 
@@ -491,7 +529,7 @@
   to { opacity: 0; transform: rotate(var(--a)) translateX(var(--d)) scale(0.4); }
 }
 
-.fx-genome-catch .catch-flash {
+:is(.fx-genome-catch, .friend-reveal) .catch-flash {
   position: absolute;
   inset: 0;
   z-index: 3;
@@ -501,7 +539,7 @@
   pointer-events: none;
 }
 
-.catch-burst.fx-genome-catch .catch-flash {
+.catch-burst:is(.fx-genome-catch, .friend-reveal) .catch-flash {
   animation: catch-flash 380ms ease-out;
 }
 
@@ -509,6 +547,46 @@
   0% { opacity: 0; }
   18% { opacity: 0.9; }
   100% { opacity: 0; }
+}
+
+/* A rescued friend hatches the same way (ui/friendReveal.ts): its egg sits
+   in the glass droplet over the specimen, which shows once the egg bursts. */
+.friend-reveal {
+  --genome-color: var(--tier);
+}
+
+.friend-reveal .catch-egg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  width: 56%;
+  translate: -50% -50%;
+  animation: none;
+}
+
+.friend-reveal .catch-egg,
+.friend-reveal .catch-cells {
+  display: none;
+}
+
+.friend-reveal.is-egg .catch-egg,
+.friend-reveal.is-egg .catch-cells {
+  display: grid;
+}
+
+.friend-reveal .catch-cells {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+}
+
+.friend-reveal.is-egg:not(.is-hatched) canvas.reveal-specimen {
+  opacity: 0;
+}
+
+.friend-reveal canvas.reveal-specimen {
+  transition: opacity 240ms ease;
 }
 
 .catch-burst.fx-genome-catch .fx-genome-inner {
@@ -740,9 +818,9 @@
 
 /* Reduced motion: the finished card, no wobble, burst, flash or shake. */
 @media (prefers-reduced-motion: reduce) {
-  .fx-genome-catch .catch-egg,
-  .fx-genome-catch .catch-cells,
-  .fx-genome-catch .catch-flash {
+  :is(.fx-genome-catch, .friend-reveal) .catch-egg,
+  :is(.fx-genome-catch, .friend-reveal) .catch-cells,
+  :is(.fx-genome-catch, .friend-reveal) .catch-flash {
     display: none;
   }
 

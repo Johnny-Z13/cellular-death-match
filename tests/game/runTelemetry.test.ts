@@ -72,7 +72,7 @@ describe('run telemetry', () => {
     expect(mainSource).toContain('equilibriumBiomeName: arena?.getEquilibrium().biomeName');
     expect(mainSource).not.toContain('classifyBiome(finalBreedCounts).name');
     expect(mainSource).toContain('newBiome: newBiomeThisRun');
-    expect(mainSource).toContain("biomeName: terminalOutcome === 'won' ? arena.getEquilibrium().biomeName : undefined");
+    expect(mainSource).toContain('biomeName: arena.getEquilibrium().achieved ? arena.getEquilibrium().biomeName : undefined');
   });
 
   it('samples the current arena before every run phase transition that can replace it', () => {
@@ -96,10 +96,12 @@ describe('run telemetry', () => {
       'persistArenaDiscoveries(arena);',
       'run.skipEpoch();',
     )).toBe(true);
+    // A stable ecosystem completes the trial; the run carries on.
     expect(branchSource(
-      'if (equilibriumCanEndRun && arena.getEquilibrium().achieved)',
+      'if (!objectiveComplete && equilibriumComplete)',
       'const status = arena.endEpochNow();',
-    )).toContain("bankCompletedStudy('won');");
+    )).toContain('bankCompletedStudy();');
+    expect(mainSource).not.toContain("bankCompletedStudy('won')");
     expect(branchSource('arena.isEcosystemCollapsed()', '// Status check'))
       .toContain("bankCompletedStudy('lost', false);");
   });

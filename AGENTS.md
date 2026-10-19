@@ -32,8 +32,8 @@ For UI or gameplay changes, also check the app in a browser at:
 
 - `src/sim/` is the low-level cellular Potts simulation. Keep it mostly UI-agnostic and game-agnostic. Cells store generic energy coefficients; `breedProfiles.ts` defines game-side per-breed CPM coefficients and reagent energy shifts.
 - `src/game/arena.ts` owns ecosystem rules, tool effects, objective progress, spawning, homeostasis tracking, escalation, and per-tick orchestration.
-- `src/game/run.ts` is an open-ended run state machine (no fixed epoch cap) with homeostasis win state and collapse fail state.
-- `src/game/homeostasis.ts` detects equilibrium (20s sustain, 3+ breeds, stable volume share) and classifies biomes.
+- `src/game/run.ts` is an open-ended run state machine (no fixed epoch cap) that ends on collapse or when the player leaves; a stable ecosystem completes an Open Lab trial, not the run.
+- `src/game/balance.ts` keeps the Balance clocks (a stable ecosystem is a minute of unbroken balance); `src/game/homeostasis.ts` classifies biomes.
 - `src/game/escalation.ts` scales hazard pressure per epoch past the onboarding phase.
 - `src/game/strainLibrary.ts` persists discovered strains and egg loadouts across runs.
 - `src/game/objectivePool.ts` draws procedural objectives for mid-game epochs.

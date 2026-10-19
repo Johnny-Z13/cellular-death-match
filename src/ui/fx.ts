@@ -235,8 +235,10 @@ export function createFx(catchDeps?: CatchDeps): Fx {
     if (!genomeReveal || !genomeEyebrow || !genomeTitle || !genomeSub || !genomeArt || items.length === 0) {
       return false;
     }
-    const batch = items.length > 2;
-    const catching = !batch && catchStage !== null;
+    // Every new strain hatches from its own egg; the one-card summary is only
+    // the fallback when the catch stage is missing.
+    const catching = catchStage !== null;
+    const batch = !catching && items.length > 2;
     genomeEyebrow.textContent = batch ? 'NEW STRAINS' : 'NEW STRAIN';
     genomeTitle.textContent = batch ? `${items.length} STRAINS FOUND` : items[0]!.name;
     genomeSub.textContent = `${items[0]!.archivePosition} · NOW AVAILABLE AS EGGS`;

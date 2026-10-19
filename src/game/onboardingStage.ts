@@ -15,17 +15,6 @@ export const FIRST_CASE_STAGE_TOOLS: readonly (readonly ProgressionToolId[])[] =
   ['egg', 'nutrient', 'toxin', 'water', 'paste', 'salt', 'agitate'],
 ];
 
-// The authored Case controls when an earned specimen may enter the current
-// trial. The progression state still controls whether the genome was actually
-// decoded, so ending an experiment early cannot grant the next organism.
-export const FIRST_CASE_STAGE_LIFEFORMS: readonly (readonly ProgressionLifeformId[])[] = [
-  ONBOARDING_STAGE_LIFEFORMS,
-  ['swarmlet', 'bloom_mass'],
-  ['swarmlet', 'bruiser', 'bloom_mass'],
-  ['swarmlet', 'bruiser', 'splitter', 'bloom_mass'],
-  ['swarmlet', 'bruiser', 'splitter', 'mirror', 'bloom_mass'],
-];
-
 export interface OnboardingBeat {
   readonly id: string;
   readonly title: string;
@@ -134,10 +123,14 @@ export function lifeformUnlocksForCurrentStage(
   fightIndex: number,
   _bloomCreatedInCurrentDish = progression.discoveredBreedIds.includes('bloom_mass'),
 ): readonly ProgressionLifeformId[] {
-  const authoredLifeforms = FIRST_CASE_STAGE_LIFEFORMS[fightIndex];
-  if (authoredLifeforms) {
+  // The coached first trial plants a Swarmlet only. From Trial 2 on, every
+  // strain the player has caught is in the Egg tray, so a catch always means
+  // "now in your Egg tray", even for a strain found off the authored path.
+  // The progression state still controls what was actually decoded, so
+  // ending an experiment early cannot grant the next organism.
+  if (fightIndex === 0) {
     const earned = new Set(progression.unlockedLifeforms);
-    return authoredLifeforms.filter((lifeform) => earned.has(lifeform));
+    return ONBOARDING_STAGE_LIFEFORMS.filter((lifeform) => earned.has(lifeform));
   }
   return progression.unlockedLifeforms;
 }

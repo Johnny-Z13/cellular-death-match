@@ -1,9 +1,12 @@
-// The ta-da. The first time a friend is rescued the dish pauses and its
-// specimen rises out of the dish in a glass droplet; a tier stamp lands with
-// the name and number; Dr. E pops up delighted and says its line; then
-// "Into the dex" sends the droplet into the Friends chip, which bumps.
-// Reduced motion keeps the sequence but swaps every move for a fade.
+// The ta-da. The first time a friend is rescued the dish pauses and an egg
+// rises out of the dish in a glass droplet. Like a new strain's catch, it
+// wobbles three times, cracks and bursts, and the living specimen pops out;
+// a tier stamp lands with the name and number; Dr. E pops up delighted and
+// says its line; then "Into the dex" sends the droplet into the Friends chip,
+// which bumps. A tap during the egg hatches it at once. Reduced motion skips
+// the egg and swaps every move for a fade.
 import type { HapticCue } from './haptics';
+import type { CatchCue } from './catchReveal';
 import type { DexItem } from '../game/friendsDex';
 import type { DrEPresence } from './drEPresence';
 import { createSpecimen } from './specimen';
@@ -11,10 +14,16 @@ import { createSpecimen } from './specimen';
 export const REVEAL_TIMING = {
   /** The droplet's rise from the dish to the centre. */
   riseMs: 720,
-  /** When the stamp, name and number land. */
-  stampMs: 640,
-  /** When Dr. E pops up and starts talking. */
-  speakMs: 1050,
+  /** The egg's three wobbles, a crack, then the burst that hatches it. */
+  eggWobbleAtMs: [860, 1340, 1820] as const,
+  eggCrackAtMs: 2140,
+  eggBurstAtMs: 2440,
+  /** After the hatch (the burst, or the start without an egg): when the
+   *  stamp, name and number land, and when Dr. E pops up and talks. */
+  stampMs: 240,
+  speakMs: 650,
+  /** The hatch moment when there is no egg (reduced motion). */
+  noEggHatchMs: 400,
   /** The droplet's flight into the Friends chip. */
   leaveMs: 460,
   /** How long the chip bumps when the droplet lands. */
@@ -30,12 +39,16 @@ export interface FriendReveal {
 export interface FriendRevealDeps {
   presence: DrEPresence;
   playSound: (id: 'epoch_win' | 'ui_tap') => void;
+  /** The egg's wobble, crack and burst sounds (shared with the catch). */
+  cue: (cue: CatchCue, step: number) => void;
   haptic: (cue: HapticCue) => void;
   /** Stop Dr. E mid-line when the reveal closes. */
   stopSpeech: () => void;
 }
 
 const pad = (n: number) => `#${String(n).padStart(3, '0')}`;
+// Cells thrown out when a friend's egg bursts.
+const CATCH_BURST_CELLS = 16;
 
 export function createFriendReveal(deps: FriendRevealDeps): FriendReveal {
   const T = REVEAL_TIMING;
@@ -46,13 +59,60 @@ export function createFriendReveal(deps: FriendRevealDeps): FriendReveal {
   const number = document.getElementById('reveal-number')!;
   const line = document.getElementById('reveal-line')!;
   const next = document.getElementById('reveal-continue') as HTMLButtonElement;
+  const cells = root.querySelector<HTMLElement>('.catch-cells');
   const chip = document.getElementById('dex-button');
+  const reduceMotion = typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let open = false;
   let timers: number[] = [];
   let specimen: { destroy(): void } | null = null;
   let done: (() => void) | undefined;
+  let current: DexItem | null = null;
+  let hatched = true;
 
   const later = (ms: number, fn: () => void) => { timers.push(window.setTimeout(fn, ms)); };
+  const clearTimers = () => {
+    for (const id of timers) window.clearTimeout(id);
+    timers = [];
+  };
+
+  const throwCells = () => {
+    if (!cells) return;
+    const thrown: HTMLElement[] = [];
+    for (let i = 0; i < CATCH_BURST_CELLS; i += 1) {
+      const cell = document.createElement('i');
+      cell.style.setProperty('--a', `${(i / CATCH_BURST_CELLS) * 360 + (i % 2 ? 9 : -9)}deg`);
+      cell.style.setProperty('--d', `${110 + (i % 3) * 40}px`);
+      cell.style.setProperty('--s', `${6 + (i % 4) * 3}px`);
+      thrown.push(cell);
+    }
+    cells.replaceChildren(...thrown);
+  };
+
+  // The specimen is out: the stamp lands, then Dr. E speaks.
+  const hatch = (withBurst: boolean) => {
+    if (!current) return;
+    const item = current;
+    hatched = true;
+    if (withBurst) {
+      throwCells();
+      root.classList.remove('catch-wobble');
+      root.classList.add('catch-crack', 'catch-burst');
+      deps.cue('burst', 0);
+    }
+    root.classList.add('is-hatched');
+    later(T.stampMs, () => {
+      root.classList.add('is-stamped');
+      deps.playSound('epoch_win');
+      deps.haptic(item.tier === 'very-rare' ? 'success' : 'discovery');
+    });
+    later(T.speakMs, () => {
+      root.classList.add('is-speaking');
+      deps.presence.react('delighted', 4200);
+      line.textContent = item.note;
+      next.focus({ preventScroll: true });
+    });
+  };
 
   const finish = () => {
     if (!open || root.classList.contains('is-leaving')) return;
@@ -65,13 +125,14 @@ export function createFriendReveal(deps: FriendRevealDeps): FriendReveal {
     }
     root.classList.add('is-leaving');
     later(T.leaveMs, () => {
-      for (const id of timers) window.clearTimeout(id);
-      timers = [];
+      clearTimers();
       specimen?.destroy();
       specimen = null;
       root.hidden = true;
       root.className = 'friend-reveal';
       line.textContent = '';
+      cells?.replaceChildren();
+      current = null;
       open = false;
       chip?.classList.add('is-bumped');
       window.setTimeout(() => chip?.classList.remove('is-bumped'), T.bumpMs);
@@ -81,16 +142,27 @@ export function createFriendReveal(deps: FriendRevealDeps): FriendReveal {
   };
 
   next.addEventListener('click', finish);
+  // A tap or key during the egg hatches it at once (as a new strain's catch).
+  const hatchNow = () => {
+    if (!open || hatched) return false;
+    clearTimers();
+    hatch(true);
+    return true;
+  };
+  root.addEventListener('click', (event) => {
+    if (event.target !== next) hatchNow();
+  });
   root.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') finish();
+    if (event.key === 'Escape' && !hatchNow()) finish();
+    else if ((event.key === 'Enter' || event.key === ' ') && hatchNow()) event.preventDefault();
   });
 
   return {
     show(item, from, onDone) {
-      for (const id of timers) window.clearTimeout(id);
-      timers = [];
+      clearTimers();
       done = onDone;
       open = true;
+      current = item;
       specimen?.destroy();
       specimen = createSpecimen(canvas, item, true);
       root.dataset.tier = item.tier;
@@ -100,23 +172,31 @@ export function createFriendReveal(deps: FriendRevealDeps): FriendReveal {
       line.textContent = '';
       root.style.setProperty('--from-x', `${from ? from.x - window.innerWidth / 2 : 0}px`);
       root.style.setProperty('--from-y', `${from ? from.y - window.innerHeight / 2 : window.innerHeight * 0.4}px`);
-      root.className = 'friend-reveal';
+      root.className = reduceMotion ? 'friend-reveal' : 'friend-reveal is-egg';
       root.hidden = false;
+      cells?.replaceChildren();
+      hatched = false;
       // Focus moves into the dialog at once, so keys never reach the paused dish.
       root.focus({ preventScroll: true });
       // Next frame, so the droplet starts at the dish before it rises.
       requestAnimationFrame(() => root.classList.add('is-rising'));
-      later(T.stampMs, () => {
-        root.classList.add('is-stamped');
-        deps.playSound('epoch_win');
-        deps.haptic(item.tier === 'very-rare' ? 'success' : 'discovery');
+      if (reduceMotion) {
+        later(T.noEggHatchMs, () => hatch(false));
+        return;
+      }
+      T.eggWobbleAtMs.forEach((at, i) => later(at, () => {
+        root.classList.remove('catch-wobble');
+        void root.offsetWidth;
+        root.classList.add('catch-wobble');
+        root.style.setProperty('--wobble', String(i + 1));
+        deps.cue('wobble', i);
+        deps.haptic('impact');
+      }));
+      later(T.eggCrackAtMs, () => {
+        root.classList.add('catch-crack');
+        deps.cue('crack', 0);
       });
-      later(T.speakMs, () => {
-        root.classList.add('is-speaking');
-        deps.presence.react('delighted', 4200);
-        line.textContent = item.note;
-        next.focus({ preventScroll: true });
-      });
+      later(T.eggBurstAtMs, () => hatch(true));
     },
     isOpen: () => open,
   };

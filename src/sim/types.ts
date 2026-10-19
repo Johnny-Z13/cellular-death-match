@@ -52,7 +52,8 @@ export interface Bullet {
 export type SimEvent =
   | { type: 'pixelTransferred'; from: CellId; to: CellId; pos: [number, number] }
   | { type: 'bulletFired';      ownerId: CellId; pos: [number, number]; v: [number, number] }
-  | { type: 'bulletHit';        ownerId: CellId; victimId: CellId; pos: [number, number] };
+  | { type: 'bulletHit';        ownerId: CellId; victimId: CellId; pos: [number, number] }
+  | { type: 'bulletBlocked';    ownerId: CellId; pos: [number, number] };
 
 export interface SimState {
   grid: Grid;

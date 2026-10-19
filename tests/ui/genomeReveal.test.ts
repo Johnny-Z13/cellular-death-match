@@ -45,9 +45,10 @@ describe('genome decode presentation', () => {
     expect(finishBoundary.indexOf('onComplete();')).toBeLessThan(finishBoundary.indexOf('hideGenomeReveal();'));
   });
 
-  it('serializes above ordinary mobile feedback and collapses bulk unlocks to one summary', () => {
+  it('serializes above ordinary mobile feedback and hatches every strain from its own egg', () => {
     expect(fxSource).toContain("enqueueMobile({ kind: 'genome', items, onComplete }, 4)");
-    expect(fxSource).toContain('const batch = items.length > 2;');
+    expect(fxSource).toContain('const catching = catchStage !== null;');
+    expect(fxSource).toContain('const batch = !catching && items.length > 2;');
     expect(fxSource).toContain("'NEW STRAINS'");
     expect(fxSource).toContain('`${items.length} STRAINS FOUND`');
     const revealAllStart = mainSource.indexOf('debug.onRevealDiscoveries(() => {');

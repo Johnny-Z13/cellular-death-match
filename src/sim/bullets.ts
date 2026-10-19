@@ -1,5 +1,5 @@
 import { type Bullet, type CellId, type SimState } from './types';
-import { getCell, setCell, updateBoundaryAround } from './grid';
+import { getCell, idx, setCell, updateBoundaryAround } from './grid';
 import { removePixel } from './cell';
 
 export interface AddBulletOpts {
@@ -50,13 +50,39 @@ function gracePeriod(LX: number, LY: number): number {
   return Math.sqrt(LX * LX + LY * LY) / 3;
 }
 
+// The strongest agar gel (Membrane) a bullet meets this tick: its footprint
+// now, and every pixel its centre passes through on the way to the next tick.
+function gelOnPath(wall: Uint8Array, state: SimState, b: Bullet): number {
+  const { grid } = state;
+  const { LX, LY } = grid;
+  let gel = 0;
+  for (const [x, y] of bulletPxs(b, LX, LY)) gel = Math.max(gel, wall[idx(grid, x, y)] ?? 0);
+  const steps = Math.ceil(Math.hypot(b.v[0], b.v[1]) * 2);
+  for (let i = 1; i <= steps; i++) {
+    const x = Math.round(b.pos[0] + (b.v[0] * i) / steps);
+    const y = Math.round(b.pos[1] + (b.v[1] * i) / steps);
+    if (x < 0 || x >= LX || y < 0 || y >= LY) break;
+    gel = Math.max(gel, wall[idx(grid, x, y)] ?? 0);
+  }
+  return gel;
+}
+
 export function stepBullets(state: SimState): void {
-  const { grid, bullets, cells, wrapBullets } = state;
+  const { grid, bullets, cells, wrapBullets, wall } = state;
   const { LX, LY } = grid;
   const grace = gracePeriod(LX, LY);
+  const blocked = new Set<Bullet>();
 
   // 1. Process collisions and advance each bullet.
   for (const b of bullets) {
+    // A Membrane shields what is behind it: gel absorbs the bullet, and a
+    // dissolving wall lets bullets through as often as it lets cultures.
+    const gel = wall ? gelOnPath(wall, state, b) : 0;
+    if (gel > 0 && state.rng.randInt(255) < gel) {
+      blocked.add(b);
+      state.events.push({ type: 'bulletBlocked', ownerId: b.ownerId, pos: [b.pos[0], b.pos[1]] });
+      continue;
+    }
     for (const [x, y] of bulletPxs(b, LX, LY)) {
       const id = getCell(grid, x, y) as CellId;
       if (id === 0) continue;
@@ -98,10 +124,10 @@ export function stepBullets(state: SimState): void {
       b.pos[1] = ny;
       if (wrapped) b.wraps += 1;
     }
-    state.bullets = bullets.filter((b) => b.wraps < 2);
+    state.bullets = bullets.filter((b) => b.wraps < 2 && !blocked.has(b));
   } else {
     state.bullets = bullets.filter(
-      (b) => b.pos[0] >= 0 && b.pos[0] < LX && b.pos[1] >= 0 && b.pos[1] < LY,
+      (b) => !blocked.has(b) && b.pos[0] >= 0 && b.pos[0] < LX && b.pos[1] >= 0 && b.pos[1] < LY,
     );
   }
 }

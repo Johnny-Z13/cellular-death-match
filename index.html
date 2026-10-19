@@ -29,7 +29,7 @@
     <link rel="stylesheet" href="/src/wide-layout.css?v=20261018-ui-pass-1" />
     <link rel="stylesheet" href="/src/dr-e.css?v=20261015-face-1" />
     <link rel="stylesheet" href="/src/dex.css?v=20261018-ui-pass-1" />
-    <link rel="stylesheet" href="/src/reveal.css?v=20261018-catch-1" />
+    <link rel="stylesheet" href="/src/reveal.css?v=20261019-friend-egg-1" />
     <link rel="stylesheet" href="/src/egg-tray.css?v=20261018-ui-pass-1" />
     <style>
       /* Z13 boot ident plate: painted before scripts run so the title never
@@ -467,10 +467,16 @@
 
       <div id="friend-reveal" class="friend-reveal" role="dialog" aria-modal="true" aria-labelledby="reveal-name" tabindex="-1" hidden>
         <div class="reveal-veil" aria-hidden="true"></div>
+        <span class="catch-flash" aria-hidden="true"></span>
         <div class="reveal-stage">
           <div class="reveal-drop" aria-hidden="true">
             <span class="reveal-ring"></span>
             <canvas id="reveal-canvas" class="dex-specimen reveal-specimen"></canvas>
+            <span class="catch-egg">
+              <span class="catch-egg-shine"></span>
+              <span class="catch-egg-crack"></span>
+            </span>
+            <span class="catch-cells"></span>
           </div>
           <p id="reveal-stamp" class="reveal-stamp">Rare</p>
           <p class="reveal-kicker">Friend rescued</p>

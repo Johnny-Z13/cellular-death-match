@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createSim } from '../../src/sim/sim';
 import { addBullet, stepBullets } from '../../src/sim/bullets';
 import type { SimState } from '../../src/sim/types';
+import { createAgarWall } from '../../src/game/agarWall';
 
 function fixture(): SimState {
   return createSim({
@@ -177,5 +178,39 @@ describe('stepBullets — wrap and despawn', () => {
     });
     stepBullets(state);
     expect(state.bullets.length).toBe(0);
+  });
+});
+
+describe('the Membrane shields bullets', () => {
+  // A fast bullet flying right along y = 10 toward a wall at x = 15.
+  function shot(withWall: boolean) {
+    const state = createSim({ LX: 30, LY: 20, nCells: 1, targetVol: 30, seed: 3, wrap: false });
+    state.cells.clear();
+    state.grid.cells.fill(0);
+    if (withWall) {
+      const wall = createAgarWall(30, 20);
+      wall.add([15, 0], [15, 19]);
+      state.wall = wall.mask();
+    }
+    addBullet(state, { pos: [4, 10], v: [3, 0], ownerId: 9, size: 1 });
+    state.events.length = 0;
+    const passed: number[] = [];
+    for (let i = 0; i < 8; i++) {
+      stepBullets(state);
+      for (const b of state.bullets) passed.push(b.pos[0]);
+    }
+    return { passed, blocked: state.events.filter((e) => e.type === 'bulletBlocked') };
+  }
+
+  it('absorbs a bullet at fresh gel, even one fast enough to step over it', () => {
+    const { passed, blocked } = shot(true);
+    expect(Math.max(...passed)).toBeLessThan(15);
+    expect(blocked).toHaveLength(1);
+  });
+
+  it('lets the same bullet fly on through open medium', () => {
+    const { passed, blocked } = shot(false);
+    expect(Math.max(...passed)).toBeGreaterThan(20);
+    expect(blocked).toHaveLength(0);
   });
 });
