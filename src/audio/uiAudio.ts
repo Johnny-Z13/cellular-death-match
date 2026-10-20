@@ -56,6 +56,8 @@ export interface UiAudio {
    *  each wobble (`step` 0-2), a shimmer as the egg cracks, a pop as it
    *  bursts. */
   playCatchCue(cue: 'wobble' | 'crack' | 'burst', step: number): void;
+  /** Restock: a rising run of soft drops, one per refilled tool (up to 4). */
+  playRestock(tools: number): void;
   startAmbience(): void;
   stopAmbience(): void;
   isMuted(): boolean;
@@ -219,6 +221,20 @@ export function createUiAudio(): UiAudio {
     osc.stop(at + length + 0.02);
   }
 
+  function playRestock(tools: number): void {
+    if (muted) return;
+    const c = ensureContext();
+    if (c.state === 'suspended' || !master) return;
+    const now = c.currentTime;
+    const notes = Math.max(1, Math.min(4, tools));
+    for (let i = 0; i < notes; i += 1) {
+      // A water drop: a quick sine falling into a softer, higher ring.
+      const base = 520 * 1.19 ** i;
+      blip(c, master, now + i * 0.085, base * 1.6, base, 0.05, 0.16, 'sine');
+      blip(c, master, now + i * 0.085 + 0.03, base * 2, base * 2.4, 0.018, 0.12, 'triangle');
+    }
+  }
+
   function playCatchCue(cue: 'wobble' | 'crack' | 'burst', step: number): void {
     if (muted) return;
     const c = ensureContext();
@@ -257,6 +273,7 @@ export function createUiAudio(): UiAudio {
 
   return {
     playCatchCue,
+    playRestock,
     speechBus() {
       if (!ctx || !master) return null;
       if (!speechGain) {

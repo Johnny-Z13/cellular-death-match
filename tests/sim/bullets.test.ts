@@ -214,3 +214,17 @@ describe('the Membrane shields bullets', () => {
     expect(blocked).toHaveLength(0);
   });
 });
+
+describe('a hatchling on its yolk', () => {
+  it('lets bullets pass through a shielded culture', () => {
+    const state = createSim({ LX: 30, LY: 20, nCells: 1, targetVol: 30, seed: 3, wrap: false });
+    state.grid.cells.fill(0);
+    for (let x = 14; x <= 16; x++) for (let y = 9; y <= 11; y++) state.grid.cells[x * 20 + y] = 1;
+    state.shielded = new Set([1]);
+    addBullet(state, { pos: [4, 10], v: [2, 0], ownerId: 9, size: 1 });
+    state.events.length = 0;
+    for (let i = 0; i < 12; i++) stepBullets(state);
+    expect(state.events.filter((e) => e.type === 'bulletHit')).toHaveLength(0);
+    expect(state.grid.cells[15 * 20 + 10]).toBe(1);
+  });
+});

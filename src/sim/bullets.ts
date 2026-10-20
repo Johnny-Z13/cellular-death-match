@@ -86,6 +86,8 @@ export function stepBullets(state: SimState): void {
     for (const [x, y] of bulletPxs(b, LX, LY)) {
       const id = getCell(grid, x, y) as CellId;
       if (id === 0) continue;
+      // A hatchling on its yolk: the bullet passes through.
+      if (state.shielded?.has(id)) continue;
       // Hit if not owner, OR owner but past grace period.
       if (id !== b.ownerId || b.age >= grace) {
         const victim = cells.get(id);

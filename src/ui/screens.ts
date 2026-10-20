@@ -99,6 +99,8 @@ export interface Screens {
   setToolUnlocks(tools: readonly ToolId[]): void;
   showcaseToolUnlock(tool: ToolId): void;
   updateToolCharges(charges: Record<ToolId, ToolState>): void;
+  /** Restock: the refilled tiles sparkle and their counts pop. */
+  flashToolRefill(tools: readonly string[]): void;
   updateAgitation(state: AgitationState): void;
   setAgitateUnlocked(unlocked: boolean): void;
   onToolSelect(handler: (tool: ToolId) => void): void;
@@ -743,6 +745,18 @@ export function createScreens(): Screens {
       window.setTimeout(() => {
         button.classList.remove('tool-button-discovered');
       }, 1800);
+    },
+    flashToolRefill(tools) {
+      for (const tool of tools) {
+        const btn = tool === 'agitate'
+          ? document.getElementById('agitate-button')
+          : document.querySelector<HTMLElement>(`#toolbox [data-tool="${tool}"]`);
+        if (!btn) continue;
+        btn.classList.remove('tool-refill');
+        void btn.offsetWidth;
+        btn.classList.add('tool-refill');
+        window.setTimeout(() => btn.classList.remove('tool-refill'), 1100);
+      }
     },
     updateToolCharges(charges) {
       for (const btn of toolButtons) {

@@ -20,6 +20,7 @@ import {
   LIFE_CYCLE_PROFILES,
   type LifeCycleProfileId,
   PASTE_TUNING,
+  RESTOCK_TUNING,
   TOOL_EFFECT_TUNING,
   TOOL_TUNING,
   WORLD_EVENT_TUNING,
@@ -105,6 +106,8 @@ export interface Arena {
   getMerges(): { forming: readonly FormingGroup[]; locked: readonly LockedForm[] };
   /** Counters the Oddities read (game/oddities.ts). */
   getOddityStats(): OddityStats;
+  /** Restocks since the last call (content/ecologyTuning RESTOCK_TUNING). */
+  drainRestocks(): RestockEvent[];
   /** Merges that locked or came apart since the last call. */
   drainMergeEvents(): MergeEvent[];
   applyTool(tool: LabTool, pos: [number, number], opts?: ApplyToolOpts): boolean;
@@ -130,6 +133,16 @@ export interface EquilibriumInfo {
 }
 
 export type { BalanceReading } from './balance';
+
+export type RestockReason = 'balance' | 'stable' | 'discovery' | 'merge';
+
+/** A good moment that handed charges back: which tools, and why. */
+export interface RestockEvent {
+  reason: RestockReason;
+  tools: Array<LabTool | 'agitate'>;
+  /** The balance time held, the biome, the discovery or the friend. */
+  detail: string;
+}
 
 /** What this dish has done that the Oddities look for. */
 export interface OddityStats {
@@ -446,6 +459,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
     discoveredNoteIds.add(id);
     discoveryMessages.unshift(message);
     pushSignal(message);
+    restock('discovery', 'spares', message);
     while (discoveryMessages.length > 8) discoveryMessages.pop();
   }
 
@@ -478,6 +492,34 @@ export function createArena(opts: CreateArenaOpts): Arena {
       pos: seedPos,
     });
     birthCount += 1;
+  }
+
+  // Restock: good moments hand charges back (RESTOCK_TUNING). 'each' tops up
+  // every tool below full by one, 'full' fills the bench, 'spares' gives one
+  // to each of the emptiest tools. Locked tools are never used, so they sit
+  // full and are never picked. The coached tutorial dish keeps its own pace.
+  const restocks: RestockEvent[] = [];
+  let restockedMinutes = 0;
+  function restock(reason: RestockReason, mode: 'each' | 'full' | 'spares', detail: string): void {
+    if (isOnboardingDish) return;
+    const share = (tool: LabTool) => toolStates[tool].charges / Math.max(1, toolStates[tool].maxCharges);
+    const short = (Object.keys(toolStates) as LabTool[])
+      .filter((tool) => toolStates[tool].charges < toolStates[tool].maxCharges)
+      .sort((a, b) => share(a) - share(b));
+    const agitateShort = agitationCharges < maxAgitationCharges;
+    const picks: Array<LabTool | 'agitate'> = mode === 'spares'
+      ? [...short, ...(agitateShort ? ['agitate' as const] : [])]
+        .sort((a, b) => (a === 'agitate' ? agitationCharges / maxAgitationCharges : share(a)) - (b === 'agitate' ? agitationCharges / maxAgitationCharges : share(b)))
+        .slice(0, RESTOCK_TUNING.discoverySpares)
+      : [...short, ...(agitateShort ? ['agitate' as const] : [])];
+    for (const tool of picks) {
+      if (tool === 'agitate') {
+        agitationCharges = mode === 'full' ? maxAgitationCharges : agitationCharges + 1;
+      } else {
+        toolStates[tool].charges = mode === 'full' ? toolStates[tool].maxCharges : toolStates[tool].charges + 1;
+      }
+    }
+    if (picks.length > 0) restocks.push({ reason, tools: picks, detail });
   }
 
   // A Membrane stretch from `from` to `to` parts every culture it crosses at
@@ -796,6 +838,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
         pasteStrokeStamped = false;
         startToolCooldown('paste');
       }
+    },
+    drainRestocks() {
+      return restocks.splice(0, restocks.length);
     },
     getOddityStats() {
       return {
@@ -1253,6 +1298,14 @@ export function createArena(opts: CreateArenaOpts): Arena {
 
       agarWall.tick();
       state.wall = agarWall.mask();
+      // Hatchlings on their yolk are shielded (lifeCycle.ts yolkUntil).
+      if (life.yolkUntil.size > 0) {
+        const shielded = new Set<CellId>();
+        for (const [id, until] of life.yolkUntil) if (until > tickNo) shielded.add(id);
+        state.shielded = shielded.size > 0 ? shielded : undefined;
+      } else {
+        state.shielded = undefined;
+      }
       simTick(state, MC_STEPS_PER_TICK);
       for (const event of state.events) if (event.type === 'bulletBlocked') oddity.bulletsBlocked += 1;
 
@@ -1269,7 +1322,10 @@ export function createArena(opts: CreateArenaOpts): Arena {
         };
         for (const merge of merges.scan(state, strainOf, fedBy)) {
           mergeEvents.push(merge);
-          if (merge.kind === 'locked') addDishEvent('discovery', `MERGED · ${merge.form.name.toUpperCase()}`, merge.center, merge.radius, 'cyan');
+          if (merge.kind === 'locked') {
+            addDishEvent('discovery', `MERGED · ${merge.form.name.toUpperCase()}`, merge.center, merge.radius, 'cyan');
+            restock('merge', 'spares', merge.form.name);
+          }
           else if (merge.kind === 'very-rare') addDishEvent('discovery', `VERY RARE · ${merge.form.name.toUpperCase()}`, merge.center, merge.radius, 'amber');
           else addDishEvent('caution', `${merge.form.name} came apart`, merge.center, merge.radius, 'amber');
         }
@@ -1298,7 +1354,15 @@ export function createArena(opts: CreateArenaOpts): Arena {
         if (spawn) ownStrains.add(spawn.breedId ?? spawn.archetype);
       }
       balanceMeter.sample({ strainVolumes: breedVolumes, hunterStrains, ownStrains }, 1);
-      if (!wasStable && isStable()) stableBiome = classifyBiome(breedVolumes);
+      if (!wasStable && isStable()) {
+        stableBiome = classifyBiome(breedVolumes);
+        restock('stable', 'full', stableBiome.name);
+      }
+      const heldMinutes = Math.floor(balanceMeter.reading().heldTicks / RESTOCK_TUNING.balanceMinuteTicks);
+      if (heldMinutes > restockedMinutes) {
+        restockedMinutes = heldMinutes;
+        restock('balance', 'each', `${heldMinutes}:00`);
+      }
       if (mode === 'ecosystem') {
         updateObjectiveRuntime(objectiveRuntime, objectiveMetrics(state, archetypes, lineage), objective);
       }

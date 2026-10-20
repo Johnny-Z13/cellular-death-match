@@ -73,6 +73,9 @@ export interface SimState {
   /** Agar wall strength per pixel, 0..255, x-major like the grid
    *  (game/agarWall.ts). Absent when no wall is drawn. */
   wall?: Uint8Array;
+  /** Cultures no other culture can take pixels from, and that bullets pass
+   *  through (a hatchling on its yolk). Absent when none are. */
+  shielded?: ReadonlySet<CellId>;
 }
 
 /** How bonded cultures stick: each culture's partners with a strength 0..1,

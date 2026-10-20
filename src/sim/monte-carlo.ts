@@ -42,6 +42,10 @@ export function mcStep(state: SimState): boolean {
   const targetVal = getCell(grid, xT, yT);
   if (sourceVal === targetVal) return false;
 
+  // A shielded culture (a hatchling on its yolk) keeps its pixels from every
+  // other culture; it still grows, and the medium still shapes it.
+  if (state.shielded && sourceVal !== 0 && targetVal !== 0 && state.shielded.has(targetVal)) return false;
+
   // Agar wall: a culture can't grow into gel; a dissolving wall leaks in
   // proportion to its fading strength. The medium may still take gel pixels,
   // so a culture caught under fresh gel is squeezed out, not pinned.

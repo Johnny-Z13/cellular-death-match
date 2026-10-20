@@ -3,9 +3,11 @@ export const ARENA_TIMING = {
   mutationIntervalTicks: 60 * 12,
   reseedIntervalTicks: 60 * 5,
   // Softer pressure cadence for a playful-discovery feel: hazards arrive less
-  // often and never crowd the opening minute, and tools resupply sooner.
+  // often and never crowd the opening minute. The silent resupply is a slow
+  // safety net (one charge every 18 s); Restock moments (RESTOCK_TUNING) are
+  // where charges really come back, and they show.
   outbreakIntervalTicks: 60 * 14,
-  resupplyIntervalTicks: 60 * 9,
+  resupplyIntervalTicks: 60 * 18,
   accidentIntervalTicks: 60 * 22,
   emergencyEggRefillTicks: 60 * 6,
   crisisIntervalTicks: 60 * 30,
@@ -49,6 +51,16 @@ export const TOOL_TUNING = {
   // charge buys a length of drawn path. Its stamps never feed; radius and ttl
   // are where a reagent dropped on a fresh membrane reacts along it.
   paste: { charges: 3, radius: 9, ttl: 60 * 7, cooldownTicks: 180 } as const,
+} as const;
+
+// Restock: good moments hand the player charges back, so a long sustain trial
+// doesn't run dry. Every full minute of Balance tops up each tool below full
+// by one; the first stable ecosystem in a dish restocks the whole bench; a
+// discovery (a reaction or strain new to this dish, or a friend merged) slides
+// a spare to the emptiest tools. Never past a tool's max.
+export const RESTOCK_TUNING = {
+  balanceMinuteTicks: 60 * 60,
+  discoverySpares: 2,
 } as const;
 
 export const PASTE_TUNING = {

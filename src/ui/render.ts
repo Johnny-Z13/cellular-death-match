@@ -254,6 +254,7 @@ export function createRenderer(
         drawGoalRings(ctx, state, goalCellIds, sx, sy, frame, reduceMotion);
       }
       if (mergeRings.length > 0) drawMergeRings(ctx, mergeRings, sx, sy, frame, reduceMotion);
+      if (state.shielded) drawYolkShields(ctx, state, sx, sy);
       for (const b of state.bullets) {
         const palette = base[b.ownerId] ?? base[0]!;
         // Lighten by 0.5 for the bullet color (slightly brighter than boundary).
@@ -338,6 +339,22 @@ function agarFor(width: number, height: number): HTMLCanvasElement {
 
   agarCache = { width, height, canvas: plate };
   return plate;
+}
+
+// A hatchling on its yolk wears a faint gel ring: nothing can take it yet.
+function drawYolkShields(ctx: CanvasRenderingContext2D, state: SimState, sx: number, sy: number): void {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(214, 246, 178, 0.42)';
+  ctx.lineWidth = 1.5;
+  for (const id of state.shielded ?? []) {
+    const cell = state.cells.get(id);
+    if (!cell || cell.vol <= 0) continue;
+    const r = (Math.sqrt(cell.vol / Math.PI) + 2.5) * ((sx + sy) / 2);
+    ctx.beginPath();
+    ctx.arc((cell.center[0] + 0.5) * sx, (cell.center[1] + 0.5) * sy, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 // A dashed ring around every culture that counts toward the current goal.

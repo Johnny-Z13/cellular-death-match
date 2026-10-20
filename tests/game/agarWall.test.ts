@@ -97,3 +97,24 @@ describe('agar wall in the sim', () => {
     expect(rightmostPixel(walled)).toBeLessThan(14);
   });
 });
+
+describe('a shielded hatchling in the sim', () => {
+  it('keeps every pixel from a neighbouring culture', () => {
+    const grid = createGrid(30, 20, false);
+    const big = createCell(1, 400);
+    const small = createCell(2, 40);
+    for (let x = 2; x <= 12; x++) for (let y = 4; y <= 15; y++) { setCell(grid, x, y, 1); addPixel(big, x, y, grid.LX, grid.LY); }
+    for (let x = 13; x <= 18; x++) for (let y = 7; y <= 12; y++) { setCell(grid, x, y, 2); addPixel(small, x, y, grid.LX, grid.LY); }
+    recomputeBoundary(grid);
+    const state: SimState = {
+      grid, cells: new Map([[1, big], [2, small]]), bullets: [],
+      betaIsing: 1, betaVol: 1, betaMov: 1, events: [], rng: createRng(5), wrapBullets: false,
+      engulfGain: 0.5, engulfDrain: 0.6, bulletDrain: 1, shielded: new Set([2]),
+    };
+    const smallPixels = () => [...grid.cells].filter((v) => v === 2).length;
+    for (let i = 0; i < 100_000; i++) mcStep(state);
+    // The big culture never takes a pixel the shielded one held.
+    expect(state.events.some((e) => e.type === 'pixelTransferred' && e.from === 2 && e.to === 1)).toBe(false);
+    expect(smallPixels()).toBeGreaterThan(0);
+  });
+});

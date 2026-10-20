@@ -28,6 +28,7 @@ import {
   type LifeformIdentityId,
 } from './content/lifeformIdentity';
 import { genomeArtFor, type GenomeArtIdentity } from './content/genomeArt';
+import type { RestockEvent } from './game/arena';
 import {
   ODDITIES,
   ODDITY_TUNING,
@@ -416,6 +417,34 @@ function checkOddities(): void {
     konami: konamiHeard,
   }, new Set(odditiesSave.found.map((entry) => entry.id)));
   for (const id of found) announceOddity(id);
+}
+
+// Restock (RESTOCK_TUNING): a good moment hands charges back. It shows only
+// the tools the player has; a refill of nothing they use stays quiet.
+const RESTOCK_TOOL_NAMES: Record<string, string> = {
+  egg: 'Egg', nutrient: 'Nutrient', toxin: 'Toxin', water: 'Water',
+  salt: 'Salt', acid: 'Acid', paste: 'Membrane', agitate: 'Agitate',
+};
+
+function announceRestock(event: RestockEvent): void {
+  const unlocked = new Set<string>(currentCapabilityUnlocks());
+  const tools = event.tools.filter((tool) => unlocked.has(tool));
+  if (tools.length === 0) return;
+  const names = tools.map((tool) => RESTOCK_TOOL_NAMES[tool] ?? tool);
+  const why = event.reason === 'balance'
+    ? `Balance held ${event.detail}`
+    : event.reason === 'stable'
+      ? 'Stable ecosystem: the bench is restocked'
+      : event.reason === 'merge'
+        ? `${event.detail} merged: a spare`
+        : 'A discovery: a spare';
+  const gift = event.reason === 'stable' ? 'Every tool topped up' : `+1 ${names.join(' · ')}`;
+  screens.flashToolRefill(tools);
+  uiAudio.playRestock(tools.length);
+  haptics.play('impact');
+  if (event.reason !== 'stable') fx.showToast('discovery', 'Restock', gift);
+  screens.addTicker(`Restock · ${why}. ${gift}.`, 'discovery');
+  drE.react('happy', 1600);
 }
 
 function announceOddity(id: OddityId): void {
@@ -1875,6 +1904,7 @@ function loop() {
   announceEpochCompletion(objective.complete);
   announceEquilibrium(equilibrium);
   checkOddities();
+  for (const event of arena.drainRestocks()) announceRestock(event);
   maybeNudgeIdlePlayer(objective.complete, objective.def.hint);
   updateTicker(arena);
   persistArenaDiscoveries(arena);

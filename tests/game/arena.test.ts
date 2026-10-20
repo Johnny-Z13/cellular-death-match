@@ -1,7 +1,7 @@
 import { describe, it, expect, onTestFinished } from 'vitest';
 import { createArena, type Arena } from '../../src/game/arena';
 import { BALANCE_TUNING } from '../../src/game/balance';
-import { TOOL_TUNING, AGITATION_TUNING, ARENA_TIMING, DISH_LIFE_CYCLE } from '../../src/content/ecologyTuning';
+import { TOOL_TUNING, AGITATION_TUNING, ARENA_TIMING, DISH_LIFE_CYCLE, RESTOCK_TUNING } from '../../src/content/ecologyTuning';
 import { ARCHETYPE_DEFAULTS } from '../../src/content/enemies';
 import { getCell, setCell, updateBoundaryAround } from '../../src/sim/grid';
 import { removePixel } from '../../src/sim/cell';
@@ -267,7 +267,7 @@ describe('arena ecosystem mode', () => {
     });
     expect(arena.applyTool('nutrient', [10, 10])).toBe(true);
     expect(arena.getToolStates().nutrient.charges).toBe(0);
-    for (let i = 0; i < 60 * 11; i++) {
+    for (let i = 0; i < ARENA_TIMING.resupplyIntervalTicks + 60 * 2; i++) {
       arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     }
     expect(arena.getToolStates().nutrient.charges).toBe(1);
@@ -2529,6 +2529,74 @@ describe('arena ecosystem mode', () => {
     expect(ecology.accidents).toBe(pressureAtEquilibrium.accidents);
     expect(ecology.crisis).toBe('none');
     expect(arena.getStatus()).toBe('running');
+  });
+
+  it('restocks the bench at a stable ecosystem, then a tool at each further minute of balance', () => {
+    const arena = createArena({
+      LX: 140, LY: 140, seed: 51,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3, toolCooldownMult: 0 },
+      enemies: stableEquilibriumEnemies(),
+      ownEnemies: true,
+      // An Open Lab dish: the coached Trial 1 dish never restocks.
+      fightIndex: 6,
+      wrap: true, mode: 'ecosystem', includeControlSample: false,
+      epochTicks: 60 * 200, worldEventIntensity: 0,
+    });
+    const idle = { moveVec: [0, 0] as [number, number], shouldFire: false, shouldEngulf: false };
+    const water = () => arena.getToolStates().water;
+    // Spend Water just before the minute lands (the slow background trickle
+    // would otherwise have topped it up already).
+    for (let i = 0; i < BALANCE_TUNING.stableAfterTicks - 30; i++) arena.tick(idle);
+    expect(arena.applyTool('water', [10, 10])).toBe(true);
+    expect(arena.applyTool('water', [12, 10])).toBe(true);
+    expect(water().charges).toBe(water().maxCharges - 2);
+    arena.drainRestocks();
+
+    for (let i = 0; i < 30; i++) arena.tick(idle);
+    expect(arena.getEquilibrium().achieved).toBe(true);
+    const atStable = arena.drainRestocks();
+    expect(atStable.map((event) => event.reason)).toContain('stable');
+    expect(water().charges).toBe(water().maxCharges);
+
+    // Spend one just before the next full minute of balance, which hands it back.
+    for (let i = 0; i < RESTOCK_TUNING.balanceMinuteTicks - 30; i++) arena.tick(idle);
+    expect(arena.applyTool('water', [14, 10])).toBe(true);
+    arena.drainRestocks();
+    for (let i = 0; i < 30; i++) arena.tick(idle);
+    const minute = arena.drainRestocks().find((event) => event.reason === 'balance');
+    expect(minute?.tools).toContain('water');
+    expect(water().charges).toBe(water().maxCharges);
+  });
+
+  it('slides a spare to the emptiest tools for a discovery, never past full', () => {
+    const arena = createArena({
+      LX: 80, LY: 80, seed: 41,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3, waterCharges: 2, toolCooldownMult: 0 },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 80, speed: 8, engulfMultiplier: 4 }],
+      wrap: true, mode: 'ecosystem', epochTicks: 60 * 20,
+    });
+    // A Membrane, then Water on it: the reaction along the line is a discovery.
+    arena.applyTool('paste', [40, 40]);
+    arena.applyTool('paste', [46, 40]);
+    arena.endPasteStroke();
+    arena.drainRestocks();
+    expect(arena.applyTool('water', [43, 40])).toBe(true);
+    const spares = arena.drainRestocks().filter((event) => event.reason === 'discovery');
+    expect(spares.length).toBeGreaterThan(0);
+    for (const event of spares) expect(event.tools.length).toBeLessThanOrEqual(RESTOCK_TUNING.discoverySpares);
+    for (const state of Object.values(arena.getToolStates())) expect(state.charges).toBeLessThanOrEqual(state.maxCharges);
+  });
+
+  it('never restocks the coached tutorial dish', () => {
+    const arena = createArena({
+      LX: 80, LY: 80, seed: 3,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [], wrap: false, mode: 'ecosystem', fightIndex: 0, includeControlSample: false,
+    });
+    arena.applyTool('egg', [40, 40], { eggArchetype: 'swarmlet' });
+    arena.applyTool('nutrient', [40, 40]);
+    for (let i = 0; i < 60 * 10; i++) arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    expect(arena.drainRestocks()).toEqual([]);
   });
 
   it('marks a crisis-survivor objective if equilibrium cancels an active crisis', () => {
