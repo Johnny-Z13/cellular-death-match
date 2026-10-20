@@ -1,10 +1,10 @@
 {
-  "version": "Alpha Build 5",
-  "id": "alpha-5",
-  "date": "2026-10-19",
-  "sourceCommit": "75fb2fcc4a810e780e652d159632db1cd0cf26dd",
+  "version": "Alpha Build 6",
+  "id": "alpha-6",
+  "date": "2026-10-20",
+  "sourceCommit": "abb0de286f1eaa7925f2d731f0559b12dcc1dd71",
   "branch": "main",
-  "description": "Playtest fixes: the Membrane shields bullets, trials carry on after a stable dish, every creature hatches from an egg.",
+  "description": "Restock, Oddities and two QA rounds: good moments refill your tools, 12 secrets to find, and goals count only your own cultures.",
   "play": "/play/",
   "platforms": "Any modern browser: Chrome, Edge, Safari or Firefox, on desktop, tablet or phone."
 }
