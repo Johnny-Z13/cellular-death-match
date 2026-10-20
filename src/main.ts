@@ -373,16 +373,23 @@ screens.setOddities(odditiesView(odditiesSave));
 const hearKonami = createKonamiListener();
 let konamiHeard = false;
 const faceTaps: number[] = [];
+// The faces that take a tickle: every one but the pointer over the dish and
+// the catch card (taps there belong to the dish and the catch).
+const DR_E_TICKLE_FACES = 'canvas.dre-face:not([data-dre-slot="pointer"]):not([data-dre-slot="catch"])';
 const DISCO_MS = 30_000;
+let discoTimer = 0;
 window.addEventListener('keydown', (event) => {
   if (!hearKonami(event.key)) return;
-  konamiHeard = true;
+  // The dance plays anywhere; the find needs a live dish to dance in.
+  const state = run.getState();
+  if (state.phase === 'arena' && !isOnboardingEpoch(state.fightIndex)) konamiHeard = true;
   // The Disco Dish: the cultures dance through every colour for a while.
   canvas.classList.add('disco-dish');
-  window.setTimeout(() => canvas.classList.remove('disco-dish'), DISCO_MS);
+  window.clearTimeout(discoTimer);
+  discoTimer = window.setTimeout(() => canvas.classList.remove('disco-dish'), DISCO_MS);
 });
 document.addEventListener('pointerdown', (event) => {
-  const face = (event.target as Element | null)?.closest?.('#hud-director canvas.dre-face, #coach canvas.dre-face');
+  const face = (event.target as Element | null)?.closest?.(DR_E_TICKLE_FACES);
   if (!face) return;
   const now = performance.now();
   faceTaps.push(now);
@@ -393,6 +400,10 @@ document.addEventListener('pointerdown', (event) => {
     void (face as HTMLElement).offsetWidth;
     face.classList.add('dre-sneeze');
     drE.react('surprised', 900);
+    // Found on the spot, wherever his face shows (phone landscape has no HUD
+    // face), except in the coached first dish.
+    const found = odditiesSave.found.some((entry) => entry.id === 'achoo');
+    if (!found && !isOnboardingEpoch(run.getState().fightIndex)) announceOddity('achoo');
   }
 });
 
@@ -454,7 +465,7 @@ function announceOddity(id: OddityId): void {
   uiAudio.playCatchCue('crack', 0);
   haptics.play('discovery');
   drE.react('delighted', 3200);
-  fx.showToast('discovery', 'Oddity found', def.name);
+  fx.showToast('discovery', 'Oddity found', def.name, true);
   const stop = /[.!?]$/.test(def.name) ? '' : '.';
   screens.addTicker(`Oddity found: ${def.name}${stop} Dr. E: “${def.note}”`, 'discovery');
 }
@@ -906,7 +917,19 @@ function applySelectedToolAt(pos: [number, number]): boolean {
     registerPlayerAction();
     return true;
   }
+  if (selectedTool === 'egg' && arena.isFull()) announceDishFull();
   return false;
+}
+
+// An Egg refused by a full dish says why, in a toast (the log is often shut
+// on phones), at most every few seconds.
+const DISH_FULL_TOAST_MS = 6000;
+let dishFullToastAt = Number.NEGATIVE_INFINITY;
+function announceDishFull(): void {
+  const now = performance.now();
+  if (now - dishFullToastAt < DISH_FULL_TOAST_MS) return;
+  dishFullToastAt = now;
+  fx.showToast('catalyst', 'Dish full', 'Toxin a culture to make room');
 }
 
 canvas.addEventListener('pointerdown', (event) => {
@@ -1298,11 +1321,12 @@ function showPhase() {
     updateButtonHint();
     screens.updateLabReport(labReportForRunEnd());
     const openLabEnd = state.fightIndex >= COMMON_COLD_CASE.trials.length;
+    const stretch = reportedStretch(state);
     screens.updateEnd({
       outcome: state.outcome ?? 'lost',
-      fightReached: openLabEnd ? state.fightIndex - COMMON_COLD_CASE.trials.length + 1 : state.fightIndex + 1,
+      fightReached: stretch.fightIndex + 1,
       totalFights: openLabEnd ? 0 : COMMON_COLD_CASE.trials.length,
-      objectivesCompleted: state.epochResults.filter((result) => result === 'completed').length,
+      objectivesCompleted: stretch.epochResults.filter((result) => result === 'completed').length,
       upgrades: state.upgrades.map((u) => {
         const def = getUpgradeDef(u.id);
         if (!def) return u.id;
@@ -1527,10 +1551,18 @@ function resetRunTelemetry(): void {
   screens.updateLabReport(null);
 }
 
+// An Open Lab run end reports on its own trials, not the finished case before it.
+function reportedStretch(state: ReturnType<typeof run.getState>): { fightIndex: number; epochResults: readonly ('completed' | 'lapsed')[] } {
+  const caseTrials = COMMON_COLD_CASE.trials.length;
+  if (state.fightIndex < caseTrials) return state;
+  return { fightIndex: state.fightIndex - caseTrials, epochResults: state.epochResults.slice(caseTrials) };
+}
+
 function labReportForRunEnd(): LabReport {
   if (finalLabReport) return finalLabReport;
 
   const state = run.getState();
+  const stretch = reportedStretch(state);
   const notebookView = notebookViewForProgression(discoveryProgression);
   const finalBreedCounts = finalBreedCountsFor(arena);
   const finalBreedVolumes = finalBreedVolumesFor(arena);
@@ -1538,8 +1570,8 @@ function labReportForRunEnd(): LabReport {
     telemetry: runTelemetry,
     endedAtMs: performance.now(),
     outcome: state.outcome ?? 'lost',
-    fightIndex: state.fightIndex,
-    epochResults: state.epochResults,
+    fightIndex: stretch.fightIndex,
+    epochResults: stretch.epochResults,
     newBiome: newBiomeThisRun,
     finalBreedCounts,
     finalBreedVolumes,
@@ -1753,7 +1785,10 @@ function setCulturePaused(paused: boolean): void {
 }
 
 function loop() {
-  if (!arena || !renderer) return;
+  if (!arena || !renderer) {
+    setCulturePaused(false);
+    return;
+  }
   const phase = run.getState().phase;
   if (phase !== 'arena') {
     setCulturePaused(false);

@@ -101,6 +101,8 @@ export interface Arena {
   getAgitationState(): AgitationState;
   getToolEffects(): ToolEffect[];
   getLastEggCellPos(): [number, number] | null;
+  /** At the population cap: an Egg is refused until a culture goes. */
+  isFull(): boolean;
   getDishEvents(): DishEventMarker[];
   /** Groups forming a merge, and the locked forms now in the dish. */
   getMerges(): { forming: readonly FormingGroup[]; locked: readonly LockedForm[] };
@@ -487,10 +489,12 @@ export function createArena(opts: CreateArenaOpts): Arena {
     // after Bloom Mass has already been logged).
     const seedPos = findStableSeedPos(state, sourceCell.center);
     if (!seedPos) return;
-    arena.spawnEnemy({
+    const specimen = arena.spawnEnemy({
       spawn: breedSpawnFor(id, archetypes.get(sourceCell.id)),
       pos: seedPos,
     });
+    // A strain bred from one of the player's cultures is the player's too.
+    if (lineage.has(sourceCell.id)) lineage.add(specimen);
     birthCount += 1;
   }
 
@@ -500,8 +504,10 @@ export function createArena(opts: CreateArenaOpts): Arena {
   // full and are never picked. The coached tutorial dish keeps its own pace.
   const restocks: RestockEvent[] = [];
   let restockedMinutes = 0;
+  let sparesAt = Number.NEGATIVE_INFINITY;
   function restock(reason: RestockReason, mode: 'each' | 'full' | 'spares', detail: string): void {
     if (isOnboardingDish) return;
+    if (mode === 'spares' && tickNo - sparesAt < RESTOCK_TUNING.sparesCooldownTicks) return;
     const share = (tool: LabTool) => toolStates[tool].charges / Math.max(1, toolStates[tool].maxCharges);
     const short = (Object.keys(toolStates) as LabTool[])
       .filter((tool) => toolStates[tool].charges < toolStates[tool].maxCharges)
@@ -519,7 +525,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
         toolStates[tool].charges = mode === 'full' ? toolStates[tool].maxCharges : toolStates[tool].charges + 1;
       }
     }
-    if (picks.length > 0) restocks.push({ reason, tools: picks, detail });
+    if (picks.length === 0) return;
+    restocks.push({ reason, tools: picks, detail });
+    if (mode === 'spares') sparesAt = tickNo;
   }
 
   // A Membrane stretch from `from` to `to` parts every culture it crosses at
@@ -608,7 +616,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
     pinchesByStrain.set(strainKey, (pinchesByStrain.get(strainKey) ?? 0) + 1);
     const name = spawn.breedId ? BREED_DEFS[spawn.breedId].name : ARCHETYPE_INFO[spawn.archetype].name;
     const radius = Math.sqrt(parent.vol / Math.PI) + 4;
-    addDishEvent('stabilize', `PINCHED · ${name.toUpperCase()}`, parent.center, radius, 'green');
+    addDishEvent('stabilize', `PINCHED · ${name}`, parent.center, radius, 'green');
     pushSignal(`The Membrane pinched ${name} in two.`);
   }
 
@@ -841,6 +849,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
     },
     drainRestocks() {
       return restocks.splice(0, restocks.length);
+    },
+    isFull() {
+      return livingCultureCount(state, archetypes) >= ECOSYSTEM_MAX_POPULATION;
     },
     getOddityStats() {
       return {
@@ -1133,7 +1144,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
 
       if (lifeCycle) {
         applyAppetite(state, archetypes, lifeCycle, life, tickNo);
-        applyMetabolism(state, archetypes, lifeCycle, life, tickNo);
+        applyMetabolism(state, archetypes, lifeCycle, life, tickNo, lineage);
         if (tickNo % lifeCycle.divideCheckTicks === 0) {
           // Cultures mid-merge are busy becoming one organism: they do not
           // divide until the merge locks or lets go. A locked form divides as
@@ -1151,9 +1162,11 @@ export function createArena(opts: CreateArenaOpts): Arena {
             state.cells.get(daughter)!.targetVol = parent.targetVol;
             life.digestUntil.set(id, tickNo + lifeCycle.digestTicks);
             life.digestUntil.set(daughter, tickNo + lifeCycle.digestTicks);
-            if (lineage.has(id)) lineage.add(daughter);
             birthCount += 1;
-            oddity.divisions += 1;
+            if (lineage.has(id)) {
+              lineage.add(daughter);
+              oddity.divisions += 1;
+            }
           }
         }
       }
@@ -1286,8 +1299,13 @@ export function createArena(opts: CreateArenaOpts): Arena {
         ai.splitter.didSpawn = true;
         const pos = cell.center;
         const swarmletSpawn = { ...ARCHETYPE_DEFAULTS.swarmlet };
-        this.spawnEnemy({ spawn: swarmletSpawn, pos: [pos[0] - 3, pos[1]] });
-        this.spawnEnemy({ spawn: swarmletSpawn, pos: [pos[0] + 3, pos[1]] });
+        const left = this.spawnEnemy({ spawn: swarmletSpawn, pos: [pos[0] - 3, pos[1]] });
+        const right = this.spawnEnemy({ spawn: swarmletSpawn, pos: [pos[0] + 3, pos[1]] });
+        // The player's Splitter leaves the player's Swarmlets.
+        if (lineage.has(id)) {
+          lineage.add(left);
+          lineage.add(right);
+        }
       }
 
       // Locked forms move as one; the sim reads their bonds while any exist.
@@ -1323,10 +1341,10 @@ export function createArena(opts: CreateArenaOpts): Arena {
         for (const merge of merges.scan(state, strainOf, fedBy)) {
           mergeEvents.push(merge);
           if (merge.kind === 'locked') {
-            addDishEvent('discovery', `MERGED · ${merge.form.name.toUpperCase()}`, merge.center, merge.radius, 'cyan');
+            addDishEvent('discovery', `MERGED · ${merge.form.name}`, merge.center, merge.radius, 'cyan');
             restock('merge', 'spares', merge.form.name);
           }
-          else if (merge.kind === 'very-rare') addDishEvent('discovery', `VERY RARE · ${merge.form.name.toUpperCase()}`, merge.center, merge.radius, 'amber');
+          else if (merge.kind === 'very-rare') addDishEvent('discovery', `VERY RARE · ${merge.form.name}`, merge.center, merge.radius, 'amber');
           else addDishEvent('caution', `${merge.form.name} came apart`, merge.center, merge.radius, 'amber');
         }
       }
@@ -1347,13 +1365,15 @@ export function createArena(opts: CreateArenaOpts): Arena {
         }
       }
       const wasStable = isStable();
-      const ownStrains = new Set<string>();
+      const ownVolumes = new Map<string, number>();
       for (const id of lineage) {
-        if ((state.cells.get(id)?.vol ?? 0) <= 0) continue;
+        const vol = state.cells.get(id)?.vol ?? 0;
         const spawn = archetypes.get(id);
-        if (spawn) ownStrains.add(spawn.breedId ?? spawn.archetype);
+        if (vol <= 0 || !spawn) continue;
+        const strain = spawn.breedId ?? spawn.archetype;
+        ownVolumes.set(strain, (ownVolumes.get(strain) ?? 0) + vol);
       }
-      balanceMeter.sample({ strainVolumes: breedVolumes, hunterStrains, ownStrains }, 1);
+      balanceMeter.sample({ strainVolumes: breedVolumes, hunterStrains, ownVolumes }, 1);
       if (!wasStable && isStable()) {
         stableBiome = classifyBiome(breedVolumes);
         restock('stable', 'full', stableBiome.name);
@@ -2269,7 +2289,8 @@ function objectiveMetrics(
   lineage: ReadonlySet<CellId> = new Set(),
 ): ObjectiveMetrics {
   const ownArchetypeCounts = new Map<EnemyArchetype, number>();
-  const ownStrainKeys = new Set<string>();
+  const ownStrainVolumes = new Map<string, number>();
+  let ownCultures = 0;
   let ownMaxVolume = 0;
   let controlSampleVol = 0;
   let livingLifeforms = 0;
@@ -2312,10 +2333,17 @@ function objectiveMetrics(
     const own = lineage.has(id);
     livingBreedCells.push({ cell, breedKey, own });
     if (own && archetype) {
+      ownCultures += 1;
       ownArchetypeCounts.set(archetype, (ownArchetypeCounts.get(archetype) ?? 0) + 1);
-      ownStrainKeys.add(breedKey);
-      ownMaxVolume = Math.max(ownMaxVolume, cell.vol);
+      ownStrainVolumes.set(breedKey, (ownStrainVolumes.get(breedKey) ?? 0) + cell.vol);
+      // A culture counts as grown once it is past its strain's full size: a
+      // big strain's egg is not a Mega-Culture the moment it hatches.
+      if (cell.vol > (spawn?.targetVol ?? 0)) ownMaxVolume = Math.max(ownMaxVolume, cell.vol);
     }
+  }
+  let ownStrains = 0;
+  for (const volume of ownStrainVolumes.values()) {
+    if (volume >= lifeformVol * BALANCE_TUNING.minOwnShare) ownStrains += 1;
   }
 
   let maxBreedVolume = 0;
@@ -2331,7 +2359,7 @@ function objectiveMetrics(
       if (a.breedKey === b.breedKey) continue;
       if (distanceBetween(state, a.cell.center, b.cell.center) <= 28) {
         nearbyDifferentBreedPair = true;
-        if (a.own || b.own) {
+        if (a.own && b.own) {
           nearbyOwnPair = true;
           break;
         }
@@ -2353,7 +2381,8 @@ function objectiveMetrics(
     maxBreedDominance: lifeformVol === 0 ? 0 : maxBreedVolume / lifeformVol,
     ownArchetypeCounts,
     ownMaxVolume,
-    ownStrains: ownStrainKeys.size,
+    ownStrains,
+    ownCultures,
     nearbyOwnPair,
     nearbyDifferentBreedPair,
     livingBreedIds,
@@ -2788,7 +2817,12 @@ function resupplyLab(toolStates: Record<LabTool, ToolState>, objective: Objectiv
       : objective.kind === 'dominant_archetype'
         ? ['egg', 'nutrient', 'water', 'salt', 'acid', 'toxin']
       : ['egg', 'water', 'salt', 'acid', 'toxin', 'nutrient'];
-  const refill = preference.find((tool) => toolStates[tool].charges < toolStates[tool].maxCharges);
+  // The tool the player is shortest on, by share of its charges; the order
+  // above breaks ties (a tending player drains Nutrient, so it must come back).
+  const share = (tool: LabTool) => toolStates[tool].charges / Math.max(1, toolStates[tool].maxCharges);
+  const refill = preference
+    .filter((tool) => toolStates[tool].charges < toolStates[tool].maxCharges)
+    .reduce<LabTool | undefined>((best, tool) => (best === undefined || share(tool) < share(best) ? tool : best), undefined);
   if (!refill) return 0;
   toolStates[refill].charges += 1;
   return 1;

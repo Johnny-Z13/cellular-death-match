@@ -64,6 +64,16 @@ describe('culture life cycle', () => {
     expect(arena.state.cells.get(2)!.targetVol).toBeLessThan(BRUISER.targetVol);
   });
 
+  it('burns the player\'s own hunters slower than wild ones', () => {
+    const wild = dish([BRUISER]);
+    const mine = dish([BRUISER]);
+    applyMetabolism(wild.state, wild.archetypes, profile, createLifeCycleState());
+    applyMetabolism(mine.state, mine.archetypes, profile, createLifeCycleState(), 0, new Set([2]));
+    const wildBurn = BRUISER.targetVol - wild.state.cells.get(2)!.targetVol;
+    const ownBurn = BRUISER.targetVol - mine.state.cells.get(2)!.targetVol;
+    expect(ownBurn).toBeCloseTo(wildBurn * profile.ownHunterBurnScale);
+  });
+
   it('lets a hatchling live on its yolk, then burn like any hunter', () => {
     const arena = dish([BRUISER]);
     const life = createLifeCycleState();

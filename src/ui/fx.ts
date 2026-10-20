@@ -26,9 +26,12 @@ export interface Fx {
   showEpochBanner(eyebrow: string, title: string, sub?: string): void;
   showUnlockBanner(eyebrow: string, title: string, sub: string, accent: BannerAccent): void;
   showGenomeDecode(items: readonly GenomeRevealInfo[], onComplete: () => void): void;
-  showToast(kind: ToastKind, kicker: string, title: string): void;
+  /** `urgent` puts it ahead of the phone queue (a find the player made). */
+  showToast(kind: ToastKind, kicker: string, title: string, urgent?: boolean): void;
   playWipe(): void;
 }
+
+const MOBILE_TOAST_BACKLOG_MS = 1700;
 
 type MobileFxPayload =
   | {
@@ -320,7 +323,10 @@ export function createFx(catchDeps?: CatchDeps): Fx {
     }
     activeMobileToast = createToastElement(payload.toastKind, payload.kicker, payload.title);
     toasts.append(activeMobileToast);
-    const toastLife = reduceMotion ? 2200 : 3200;
+    // A toast with others waiting behind it gets a shorter turn, so a burst
+    // drains in seconds instead of narrating stale news.
+    const backlog = mobileDirector.getQueued().length > 0;
+    const toastLife = backlog ? MOBILE_TOAST_BACKLOG_MS : reduceMotion ? 2200 : 3200;
     mobileTimer = window.setTimeout(() => {
       activeMobileToast?.classList.add('fx-toast-out');
       mobileExitTimer = window.setTimeout(() => finishMobile(notification.key), 420);
@@ -381,9 +387,9 @@ export function createFx(catchDeps?: CatchDeps): Fx {
         playGenomeReveal(items, onComplete);
       }
     },
-    showToast(kind, kicker, title) {
+    showToast(kind, kicker, title, urgent = false) {
       if (isCompactMobile()) {
-        const priority: NotificationPriority = kind === 'catalyst' ? 1 : 2;
+        const priority: NotificationPriority = urgent ? 3 : kind === 'catalyst' ? 1 : 2;
         enqueueMobile({ kind: 'toast', toastKind: kind, kicker, title }, priority);
         return;
       }

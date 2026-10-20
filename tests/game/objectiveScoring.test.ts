@@ -34,6 +34,7 @@ function metrics(overrides: Partial<ObjectiveMetrics> = {}): ObjectiveMetrics {
     ownArchetypeCounts: overrides.ownArchetypeCounts ?? dish.archetypeCounts,
     ownMaxVolume: overrides.ownMaxVolume ?? dish.maxLifeformVolume,
     ownStrains: overrides.ownStrains ?? dish.livingLifeforms,
+    ownCultures: overrides.ownCultures ?? dish.livingLifeforms,
     nearbyOwnPair: overrides.nearbyOwnPair ?? dish.nearbyDifferentBreedPair,
   };
 }
@@ -162,10 +163,19 @@ describe('evaluateObjective procedural objectives', () => {
     // A dish full of wild Swarmlets and a wild giant: none of it is the player's.
     const wild = metrics({
       archetypeCounts: new Map([['swarmlet', 6]]), maxLifeformVolume: 1350,
-      ownArchetypeCounts: new Map(), ownMaxVolume: 0, ownStrains: 0, nearbyOwnPair: false,
+      ownArchetypeCounts: new Map(), ownMaxVolume: 0, ownStrains: 0, ownCultures: 0, nearbyOwnPair: false,
     });
     expect(evaluateObjective(founder, wild, context()).complete).toBe(false);
     expect(evaluateObjective(mega, wild, context()).complete).toBe(false);
+    // Wild cultures riding out a crisis, or regrowing after a crash, are not the player's doing.
+    const afterCrisis = createObjectiveRuntime();
+    afterCrisis.survivedCrisis = true;
+    afterCrisis.sawExtinctionLow = true;
+    const crisis: ObjectiveDef = { kind: 'crisis_survivor', name: 'Crisis Survivor', description: 'Survive.', target: '3+', minCount: 3 };
+    const reversal: ObjectiveDef = { kind: 'extinction_reversal', name: 'Extinction Reversal', description: 'Regrow.', target: '4+', targetCount: 4 };
+    expect(evaluateObjective(crisis, { ...wild, livingLifeforms: 6 }, context(afterCrisis)).complete).toBe(false);
+    expect(evaluateObjective(reversal, { ...wild, livingLifeforms: 6 }, context(afterCrisis)).complete).toBe(false);
+    expect(evaluateObjective(crisis, { ...wild, livingLifeforms: 6, ownCultures: 3 }, context(afterCrisis)).complete).toBe(true);
     const runtime = createObjectiveRuntime();
     const spread: ObjectiveDef = { kind: 'balance_keeper', name: 'Even Spread', description: 'No strain dominates.', target: '40%', maxDominance: 0.4 };
     updateObjectiveRuntime(runtime, metrics({ nearbyDifferentBreedPair: true, livingLifeforms: 5, maxBreedDominance: 0.3, ownStrains: 0, nearbyOwnPair: false }), spread);

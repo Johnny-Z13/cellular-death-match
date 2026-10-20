@@ -35,9 +35,12 @@ export interface ObjectiveMetrics {
   /** The player's own cultures (planted, or a daughter or cutting of one):
    *  goals about building a dish count these, never the wild residents. */
   ownArchetypeCounts: ReadonlyMap<EnemyArchetype, number>;
+  /** The largest own culture grown past its strain's full size. */
   ownMaxVolume: number;
+  /** Own strains established in the dish (BALANCE_TUNING.minOwnShare). */
   ownStrains: number;
-  /** Two different strains side by side, one of them the player's own. */
+  ownCultures: number;
+  /** Two of the player's own cultures of different strains side by side. */
   nearbyOwnPair: boolean;
 }
 
@@ -233,9 +236,9 @@ export function evaluateObjective(
     }
     case 'crisis_survivor': {
       const minCount = objective.minCount ?? CRISIS_SURVIVOR_MIN_CULTURES;
-      const ok = context.runtime.survivedCrisis && metrics.livingLifeforms >= minCount;
+      const ok = context.runtime.survivedCrisis && metrics.ownCultures >= minCount;
       return progress(objective, ok, true, deadline && !ok, urgency, context.runtime.survivedCrisis
-        ? `${metrics.livingLifeforms} / ${minCount} cultures after crisis`
+        ? `${metrics.ownCultures} / ${minCount} of your cultures after crisis`
         : 'No crisis survived yet');
     }
     case 'protector': {
@@ -268,11 +271,11 @@ export function evaluateObjective(
     }
     case 'extinction_reversal': {
       const targetCount = objective.targetCount ?? EXTINCTION_RECOVERY_COUNT;
-      const ok = context.runtime.sawExtinctionLow && metrics.livingLifeforms >= targetCount;
+      const ok = context.runtime.sawExtinctionLow && metrics.ownCultures >= targetCount;
       return progress(objective, ok, true, deadline && !ok, urgency, context.runtime.sawExtinctionLow
-        ? `${metrics.livingLifeforms} / ${targetCount} recovered cultures`
+        ? `${metrics.ownCultures} / ${targetCount} of your cultures regrown`
         : 'Dish has not dropped to extinction threshold',
-        context.runtime.sawExtinctionLow ? 0.5 + ratio(metrics.livingLifeforms, targetCount) / 2 : 0);
+        context.runtime.sawExtinctionLow ? 0.5 + ratio(metrics.ownCultures, targetCount) / 2 : 0);
     }
     case 'hold_balance': {
       const sustainTicks = objective.sustainTicks ?? SUSTAIN_2_MINUTES;

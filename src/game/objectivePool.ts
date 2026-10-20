@@ -117,8 +117,8 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
   {
     kind: 'crisis_survivor',
     name: 'Crisis Survivor',
-    description: 'Maintain 3 or more living cultures through a toxic crisis event.',
-    target: '3+ cultures alive through crisis',
+    description: 'Keep 3 or more of your own cultures alive through a toxic crisis event.',
+    target: '3+ of your cultures alive through crisis',
     hint: 'Spread three cultures apart and keep Nutrient ready before the crisis arrives.',
     minCount: 3,
     timed: true,
@@ -167,8 +167,8 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
   {
     kind: 'symbiosis',
     name: 'Symbiosis',
-    description: 'Keep one of your strains beside a different strain for a minute in all. A dip only pauses the clock.',
-    target: '2 strains nearby for 60s',
+    description: 'Keep two of your own strains side by side for a minute in all. A dip only pauses the clock.',
+    target: '2 of your strains nearby for 60s',
     hint: 'Plant one of each strain with a stable border and support either side with Nutrient.',
     sustainTicks: 60 * 60,
     availability: (ctx) => distinctSeedables(ctx) >= 2
@@ -180,7 +180,7 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
   {
     kind: 'hold_balance',
     name: 'Living Dish',
-    description: 'Hold the dish in balance for two minutes in all: 3 or more strains alive, none holding over half the dish. A dip only pauses the clock.',
+    description: 'Hold the dish in balance for two minutes in all: 3 or more of your strains growing, none holding over half the dish. A dip only pauses the clock.',
     target: 'Balance held 2:00',
     hint: 'Plant three strains apart. Feed whoever is fading; slow whoever is taking over.',
     sustainTicks: 60 * 120,
@@ -216,8 +216,8 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
   {
     kind: 'extinction_reversal',
     name: 'Extinction Reversal',
-    description: 'Let the dish fall to one living culture, then recover to 4 or more.',
-    target: 'Dish recovers from 1 to 4+ living cultures',
+    description: 'Let the dish fall to one living culture, then regrow 4 or more of your own.',
+    target: 'Dish recovers from 1 to 4+ of your cultures',
     hint: 'Hold Egg charges in reserve; once only one culture remains, reseed and feed three more.',
     targetCount: 4,
     availability: (ctx) => ctx.epochIndex >= 4

@@ -2585,6 +2585,11 @@ describe('arena ecosystem mode', () => {
     expect(spares.length).toBeGreaterThan(0);
     for (const event of spares) expect(event.tools.length).toBeLessThanOrEqual(RESTOCK_TUNING.discoverySpares);
     for (const state of Object.values(arena.getToolStates())) expect(state.charges).toBeLessThanOrEqual(state.maxCharges);
+    // A burst of discoveries is one gift: more drops right away give no more spares.
+    expect(spares).toHaveLength(1);
+    for (const tool of ['salt', 'acid', 'toxin', 'nutrient'] as const) arena.applyTool(tool, [43, 40]);
+    for (let i = 0; i < 60; i++) arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    expect(arena.drainRestocks().filter((event) => event.reason === 'discovery')).toEqual([]);
   });
 
   it('never restocks the coached tutorial dish', () => {
@@ -2908,8 +2913,9 @@ describe('arena ecosystem mode', () => {
       LX: 90,
       LY: 90,
       seed: 812,
-      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3, eggCharges: 3, toolCooldownMult: 0 },
       enemies: [{ archetype: 'swarmlet' as const, targetVol: 90, speed: 10, engulfMultiplier: 4 }],
+      ownEnemies: true,
       wrap: false,
       mode: 'ecosystem',
       epochTicks: 60 * 20,
@@ -2925,9 +2931,16 @@ describe('arena ecosystem mode', () => {
     arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     expect(arena.getObjectiveProgress().complete).toBe(false);
 
-    arena.spawnEnemy({ spawn: { archetype: 'swarmlet', targetVol: 90, speed: 10, engulfMultiplier: 4 }, pos: [20, 20] });
-    arena.spawnEnemy({ spawn: { archetype: 'splitter', targetVol: 90, speed: 8, engulfMultiplier: 4 }, pos: [35, 20] });
-    arena.spawnEnemy({ spawn: { archetype: 'bruiser', targetVol: 90, speed: 7, engulfMultiplier: 5 }, pos: [50, 20] });
+    // Wild cultures drifting back in are not a recovery; the player's eggs are.
+    arena.spawnEnemy({ spawn: { archetype: 'swarmlet', targetVol: 90, speed: 10, engulfMultiplier: 4 }, pos: [20, 70] });
+    arena.spawnEnemy({ spawn: { archetype: 'splitter', targetVol: 90, speed: 8, engulfMultiplier: 4 }, pos: [35, 70] });
+    arena.spawnEnemy({ spawn: { archetype: 'bruiser', targetVol: 90, speed: 7, engulfMultiplier: 5 }, pos: [50, 70] });
+    arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+    expect(arena.getObjectiveProgress().complete).toBe(false);
+
+    for (const pos of [[20, 20], [40, 20], [60, 20]] as const) {
+      expect(arena.applyTool('egg', [...pos])).toBe(true);
+    }
     arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
 
     expect(arena.getObjectiveProgress().complete).toBe(true);

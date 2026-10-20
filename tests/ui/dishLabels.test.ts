@@ -278,6 +278,9 @@ describe('humanEventLabel', () => {
     expect(humanEventLabel('WATER DILUTED ACID')).toBe('Water diluted acid');
     expect(humanEventLabel('AGAR BLOOM')).toBe('Fertile patch');
     expect(humanEventLabel('BLOOM REACTION')).toBe('Growth burst');
+    expect(humanEventLabel('PINCHED · Sniper')).toBe('Pinched · Sniper');
+    expect(humanEventLabel('MERGED · Compound')).toBe('Merged · Compound');
+    expect(humanEventLabel('VERY RARE · Glass Choir')).toBe('Very rare · Glass Choir');
   });
 
   it('suppresses the duplicate flash and spark markers', () => {

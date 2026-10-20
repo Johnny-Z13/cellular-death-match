@@ -6,7 +6,7 @@
 // which bumps. A tap during the egg hatches it at once. Reduced motion skips
 // the egg and swaps every move for a fade.
 import type { HapticCue } from './haptics';
-import type { CatchCue } from './catchReveal';
+import { CATCH_TIMING, type CatchCue } from './catchReveal';
 import type { DexItem } from '../game/friendsDex';
 import type { DrEPresence } from './drEPresence';
 import { createSpecimen } from './specimen';
@@ -142,7 +142,11 @@ export function createFriendReveal(deps: FriendRevealDeps): FriendReveal {
   };
 
   next.addEventListener('click', finish);
-  // A tap or key during the egg hatches it at once (as a new strain's catch).
+  // A tap or key during the egg hatches it at once (as a new strain's catch),
+  // but only after the same short grace as a catch: a merge forms mid-play,
+  // and taps already on their way must not burst the egg unseen.
+  let armedAt = 0;
+  const armed = () => performance.now() >= armedAt;
   const hatchNow = () => {
     if (!open || hatched) return false;
     clearTimers();
@@ -150,9 +154,13 @@ export function createFriendReveal(deps: FriendRevealDeps): FriendReveal {
     return true;
   };
   root.addEventListener('click', (event) => {
-    if (event.target !== next) hatchNow();
+    if (event.target !== next && armed()) hatchNow();
   });
   root.addEventListener('keydown', (event) => {
+    if (!armed()) {
+      event.preventDefault();
+      return;
+    }
     if (event.key === 'Escape' && !hatchNow()) finish();
     else if ((event.key === 'Enter' || event.key === ' ') && hatchNow()) event.preventDefault();
   });
@@ -162,6 +170,7 @@ export function createFriendReveal(deps: FriendRevealDeps): FriendReveal {
       clearTimers();
       done = onDone;
       open = true;
+      armedAt = performance.now() + CATCH_TIMING.inputGraceMs;
       current = item;
       specimen?.destroy();
       specimen = createSpecimen(canvas, item, true);

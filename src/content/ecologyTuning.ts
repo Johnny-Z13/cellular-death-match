@@ -61,6 +61,9 @@ export const TOOL_TUNING = {
 export const RESTOCK_TUNING = {
   balanceMinuteTicks: 60 * 60,
   discoverySpares: 2,
+  /** Discovery and merge spares come at most once in this window, so a burst
+   *  of new reactions is one gift, not four. */
+  sparesCooldownTicks: 60 * 20,
 } as const;
 
 export const PASTE_TUNING = {
@@ -137,6 +140,10 @@ export const LIFE_CYCLE_PROFILES = {
     engulfDrain: 0.2,
     bulletDrain: 0.2,
     hunterMetabolismPerTick: 0.0008, // fraction of base burned per tick
+    // The player's own hunters (planted, or their daughters) are lab-bred and
+    // burn at this share of a wild hunter's rate, so a tended Bruiser or
+    // Mirror has time to hunt before it starves.
+    ownHunterBurnScale: 0.5,
     grazerMetabolismPerTick: 0.0004,
     // fraction of the gap to the agar ceiling regained per tick, × free space
     agarGrowthPerTick: 0.0014,

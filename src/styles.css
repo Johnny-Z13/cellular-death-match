@@ -2236,6 +2236,19 @@ canvas {
   to { opacity: 0; transform: translateY(-10px); }
 }
 
+/* Short desktop windows: the stack sits just above the toolbox, two cards at
+   most, instead of over the middle of the dish. */
+@media (min-width: 900px) and (max-height: 760px) {
+  .fx-toasts {
+    bottom: calc(112px + env(safe-area-inset-bottom));
+    width: min(60vw, 360px);
+  }
+
+  .fx-toast:nth-last-child(n + 3) {
+    display: none;
+  }
+}
+
 /* ---- Onboarding coach -------------------------------------------------- */
 /* A small, skippable lesson card in the deep-lab voice. Docked bottom-left on
    desktop; sits above the mobile shell on phones. Never blocks the dish. */
@@ -3889,6 +3902,16 @@ canvas {
   .tool-button.tool-refill #agitate-count {
     animation: none;
   }
+
+  /* Still marked, without the sparkle: a steady glow while the class is on. */
+  .tool-button.tool-refill {
+    box-shadow: 0 0 0 2px rgba(91, 233, 214, 0.6), inset 0 0 14px rgba(91, 233, 214, 0.3);
+  }
+
+  .tool-button.tool-refill [data-tool-count],
+  .tool-button.tool-refill #agitate-count {
+    color: var(--bio-bright);
+  }
 }
 
 /* Achoo! Dr. E sneezes when his face is tickled. */
@@ -5123,6 +5146,16 @@ canvas.dre-face.dre-sneeze {
   .fx-toasts,
   .coach-active .fx-toasts {
     top: calc(var(--hud-bottom, 100px) + 6px);
+  }
+
+  /* The landscape rail is narrow: kicker above, the whole title below. */
+  .fx-toast-text {
+    display: grid;
+    gap: 2px;
+  }
+
+  .fx-toast-title {
+    white-space: normal;
   }
 
   .fx-banner-inner {
@@ -8283,13 +8316,11 @@ canvas.dre-face.dre-sneeze {
 
 @media (max-width: 899px) and (orientation: portrait) and (max-height: 700px),
        (max-width: 899px) and (min-height: 521px) and (max-height: 700px) {
-  /* Keep transient research notices clear of the Notebook pill on short phones. */
-  .layout[data-screen="arena"] .fx-toasts {
-    right: calc(100px + env(safe-area-inset-right));
-  }
-
-  .layout[data-screen="arena"] .fx-toast-kicker {
-    display: none;
+  /* Keep transient research notices clear of the Notebook pill on short
+     phones: the rail drops below the pill's row, kicker and all (a bare
+     "Night Owl" or "+1 Egg" says nothing on its own). */
+  .layout[data-screen="arena"]:not(.coach-active) .fx-toasts {
+    top: calc(var(--hud-bottom, 100px) + 54px);
   }
 
   .layout[data-screen="arena"] .hud {

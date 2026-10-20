@@ -1,22 +1,27 @@
 // Balance: the dish's living reading. A dish is in balance while at least
-// three of the player's own strains are alive (strains with a culture the
-// player planted, or one of its daughters or cuttings) and no strain, wild
-// or not, holds more than half of the living mass. Wild residents are the
-// environment: they can tip the balance but never hold it for the player.
+// three of the player's own strains are established (the player's own
+// cultures of the strain, planted or a daughter or cutting of one, hold a
+// real share of the living mass) and no strain, wild or not, holds more than
+// half of it. Wild residents are the environment: they can tip the balance
+// but never hold it for the player, and a speck planted beside a crowd of
+// wild cultures of the same strain does not borrow theirs.
 // The meter keeps two clocks:
 //  - `heldTicks`: total time in balance this trial. Never resets; a dip only
 //    pauses it (the HUD shows it as m:ss, and sustain goals count it).
 //  - `streakTicks`: the current unbroken run. A dip shorter than the grace
 //    window keeps the streak (without adding to it); a longer one ends it.
 // A streak that reaches `stableAfterTicks` makes the dish a stable ecosystem
-// (crises calm, the biome is recorded, the trial may finish).
+// (crises calm, the biome is recorded; the trial still ends on its own goal).
 // It also tracks the other sustain clocks the goals read: time with N or more
 // of the player's strains alive, and time with a hunter and its prey sharing
 // the dish (one of the two the player's own).
 
 export const BALANCE_TUNING = {
-  /** Strains that must be alive. */
+  /** The player's own strains that must be established. */
   minStrains: 3,
+  /** An own strain is established once its own cultures hold this share of
+   *  the living mass. */
+  minOwnShare: 0.05,
   /** No strain may hold more than this share of the living mass. */
   maxShare: 0.5,
   /** A dip shorter than this does not break a streak. */
@@ -35,14 +40,16 @@ export interface BalanceSample {
   strainVolumes: ReadonlyMap<string, number>;
   /** Strains whose role hunts other strains. */
   hunterStrains: ReadonlySet<string>;
-  /** Strains with a living culture of the player's own lineage. */
-  ownStrains: ReadonlySet<string>;
+  /** Living mass of the player's own cultures, per strain. */
+  ownVolumes: ReadonlyMap<string, number>;
 }
 
 export interface BalanceReading {
   balanced: boolean;
   /** The player's own strains alive. */
   strains: number;
+  /** The player's own strains holding at least `minOwnShare` of the dish. */
+  establishedStrains: number;
   maxShare: number;
   heldTicks: number;
   streakTicks: number;
@@ -68,23 +75,29 @@ export function createBalanceMeter(tuning = BALANCE_TUNING): BalanceMeter {
   let stable = false;
   let balanced = false;
   let strains = 0;
+  let established = 0;
   let maxShare = 0;
   let foodWeb = 0;
   const alive = new Map<number, number>([[3, 0], [4, 0], [5, 0], [6, 0]]);
 
   return {
-    sample({ strainVolumes, hunterStrains, ownStrains }, ticks) {
+    sample({ strainVolumes, hunterStrains, ownVolumes }, ticks) {
       let total = 0;
       let largest = 0;
-      strains = 0;
-      for (const [strain, volume] of strainVolumes) {
+      for (const volume of strainVolumes.values()) {
         if (volume <= 0) continue;
-        if (ownStrains.has(strain)) strains += 1;
         total += volume;
         largest = Math.max(largest, volume);
       }
+      strains = 0;
+      established = 0;
+      for (const volume of ownVolumes.values()) {
+        if (volume <= 0) continue;
+        strains += 1;
+        if (volume >= total * tuning.minOwnShare) established += 1;
+      }
       maxShare = total > 0 ? largest / total : 0;
-      balanced = strains >= tuning.minStrains && maxShare <= tuning.maxShare;
+      balanced = established >= tuning.minStrains && maxShare <= tuning.maxShare;
       if (balanced) {
         held += ticks;
         streak += ticks;
@@ -104,12 +117,12 @@ export function createBalanceMeter(tuning = BALANCE_TUNING): BalanceMeter {
         if (volume <= 0) continue;
         if (hunterStrains.has(strain)) hunter = true;
         else prey = true;
-        if (ownStrains.has(strain)) ownInWeb = true;
+        if ((ownVolumes.get(strain) ?? 0) > 0) ownInWeb = true;
       }
       if (hunter && prey && ownInWeb && maxShare <= tuning.foodWebMaxShare) foodWeb += ticks;
     },
     reading() {
-      return { balanced, strains, maxShare, heldTicks: held, streakTicks: streak, stable, aliveTicks: alive, foodWebTicks: foodWeb };
+      return { balanced, strains, establishedStrains: established, maxShare, heldTicks: held, streakTicks: streak, stable, aliveTicks: alive, foodWebTicks: foodWeb };
     },
     reset() {
       held = 0;
@@ -118,6 +131,7 @@ export function createBalanceMeter(tuning = BALANCE_TUNING): BalanceMeter {
       stable = false;
       balanced = false;
       strains = 0;
+      established = 0;
       maxShare = 0;
       foodWeb = 0;
       for (const n of alive.keys()) alive.set(n, 0);

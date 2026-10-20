@@ -395,6 +395,9 @@ export function humanEventLabel(raw: string): string | null {
   if (/\s(FLASH|SPARK)$/.test(text)) return null;
   const strain = /^NEW STRAIN:\s*(.+)$/.exec(text);
   if (strain) return `New strain: ${strain[1]}`;
+  // A tag and a name (the name keeps its own case: "Pinched · Sniper").
+  const tagged = /^(PINCHED|MERGED|VERY RARE) · (.+)$/.exec(text);
+  if (tagged) return `${tagged[1]!.charAt(0)}${tagged[1]!.slice(1).toLowerCase()} · ${tagged[2]}`;
   const fault = /^FOLDING FAULT:\s*(.+?) discovered\.?$/.exec(text);
   if (fault) return fault[1]!.toLowerCase() === 'folding fault' ? 'Folding fault' : `Folding fault: ${fault[1]}`;
   const reaction = /^(?:[A-Z][a-z]+ reaction|Reaction):\s*(.+?) discovered\.?$/.exec(text);

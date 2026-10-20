@@ -56,6 +56,8 @@ export function applyMetabolism(
   profile: LifeCycleProfile,
   life: LifeCycleState,
   tick = 0,
+  /** The player's own cultures: their hunters burn slower. */
+  own: ReadonlySet<CellId> = new Set(),
 ): void {
   let occupied = 0;
   for (const cell of state.cells.values()) {
@@ -75,7 +77,8 @@ export function applyMetabolism(
     const yolkUntil = life.yolkUntil.get(id);
     const onYolk = yolkUntil !== undefined && yolkUntil > tick;
     if (yolkUntil !== undefined && !onYolk) life.yolkUntil.delete(id);
-    const burn = onYolk ? 0 : (hunter ? profile.hunterMetabolismPerTick : profile.grazerMetabolismPerTick) * base;
+    const hunterBurn = profile.hunterMetabolismPerTick * (own.has(id) ? profile.ownHunterBurnScale : 1);
+    const burn = onYolk ? 0 : (hunter ? hunterBurn : profile.grazerMetabolismPerTick) * base;
     cell.targetVol += growth - burn;
     if (cell.targetVol < base * profile.starveBelow) life.starving.add(id);
   }

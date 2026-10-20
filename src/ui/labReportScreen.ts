@@ -8,14 +8,14 @@ export function renderLabReport(report: LabReport): HTMLElement {
   const root = document.createElement('div');
   root.className = 'lab-report-screen';
 
-  const outcomeText = report.header.outcome === 'won'
-    ? `Stable Ecosystem - ${report.header.biomeName ?? 'Unknown Biome'}`
-    : 'Dish Collapsed';
-
+  // The end card's title already says the dish collapsed; a balanced dish
+  // still names its biome here.
   const header = el('div', 'lab-report-header');
+  header.append(el('h2', '', `Lab Report #${report.header.runNumber}`));
+  if (report.header.outcome === 'won') {
+    header.append(el('p', 'lab-report-outcome won', `Stable Ecosystem - ${report.header.biomeName ?? 'Unknown Biome'}`));
+  }
   header.append(
-    el('h2', '', `Lab Report #${report.header.runNumber}`),
-    el('p', `lab-report-outcome ${report.header.outcome}`, outcomeText),
     el('p', 'lab-report-duration', `${report.header.epochCount} ${report.header.epochCount === 1 ? 'trial' : 'trials'}, ${report.header.durationFormatted}`),
   );
 

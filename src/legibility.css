@@ -1546,16 +1546,17 @@
 }
 
 /* Tall portrait tablets have height to spare: Dr. E's card takes a
-   two-line title and his longest notes whole. */
+   two-line title, and his notes up to the HUD's height. */
 @media (min-width: 600px) and (max-width: 899px) and (orientation: portrait) and (min-height: 900px) {
   .layout[data-screen="arena"] #hud .hud-director {
     min-height: 136px;
   }
 
+  /* Two lines fit the HUD's height; a third would be cut mid-word. */
   .layout[data-screen="arena"] #hud .hud-director .hud-director-progress {
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-    max-height: 3lh;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    max-height: 2lh;
   }
 
   .layout[data-screen="arena"].hud-slot-docked.coach-active #coach:not(.coach-welcome):not(.coach-intro) .coach-body {
