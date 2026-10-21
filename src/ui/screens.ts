@@ -87,6 +87,10 @@ export interface CaseProgressInfo {
   saveAvailable: boolean;
   pendingBank: boolean;
   archive: GenomeArchiveProgress;
+  /** The collection the title counts: Dr. E's friends (the dex). */
+  friends: { found: number; total: number };
+  /** Dr. E's lead once the Open Lab is open (null during the case). */
+  lead: { name: string; hint: string } | null;
 }
 
 export interface Screens {
@@ -1468,20 +1472,20 @@ export function createScreens(): Screens {
       pickCaseProgress.textContent = info.openLabUnlocked
         ? 'All 5 trials done · Open Lab unlocked'
         : `Trial done · ${completed} / ${info.caseDef.trials.length} complete`;
-      titleGenomeProgress.textContent = `${info.archive.decodedGenomes} / ${info.archive.totalGenomes} strains`;
-      titleGenomeTrack.style.setProperty('--genome-total', String(info.archive.totalGenomes));
-      titleGenomeTrack.replaceChildren(...Array.from({ length: info.archive.totalGenomes }, (_, index) => {
+      // One collection: Dr. E's friends, the same count the catches and the
+      // dex show.
+      titleGenomeProgress.textContent = `${info.friends.found} / ${info.friends.total} friends`;
+      titleGenomeTrack.style.setProperty('--genome-total', String(info.friends.total));
+      titleGenomeTrack.replaceChildren(...Array.from({ length: info.friends.total }, (_, index) => {
         const cell = document.createElement('i');
-        cell.className = index < info.archive.decodedGenomes
-          ? 'is-decoded'
-          : index < info.archive.decodedGenomes + info.archive.observedGenomes
-            ? 'is-observed'
-            : '';
+        cell.className = index < info.friends.found ? 'is-decoded' : '';
         return cell;
       }));
-      titleGenomeLead.textContent = info.archive.nextLead.state === 'complete'
-        ? info.archive.nextLead.clue
-        : `Next lead · ${info.archive.nextLead.label} · ${info.archive.nextLead.clue}`;
+      titleGenomeLead.textContent = info.lead
+        ? `Dr. E’s lead · ${info.lead.name} · ${info.lead.hint}`
+        : info.archive.nextLead.state === 'complete'
+          ? info.archive.nextLead.clue
+          : `Next lead · ${info.archive.nextLead.label} · ${info.archive.nextLead.clue}`;
 
       document.querySelectorAll<HTMLElement>('[data-case-trial]').forEach((node) => {
         const index = Number(node.dataset.caseTrial);

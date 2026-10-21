@@ -381,6 +381,13 @@ function currentLead(): Lead | null {
   return nextLead(currentDexView(), currentLifeformUnlocks(), fightIndex - caseTrials);
 }
 
+// On the title, once the Open Lab is open: what Dr. E would point at first.
+function titleLead(): { name: string; hint: string } | null {
+  if (!caseIsSealed()) return null;
+  const lead = nextLead(currentDexView(), discoveryProgression.unlockedLifeforms);
+  return lead ? { name: lead.name, hint: lead.hint } : null;
+}
+
 function leadText(lead: Lead): string {
   return lead.tip ? `${lead.hint} ${lead.tip}` : lead.hint;
 }
@@ -1022,10 +1029,29 @@ function announceDishFull(): void {
   fx.showToast('catalyst', 'Dish full', 'Toxin a culture to make room');
 }
 
+// A second tap meant for Dr. E's "Tap to continue" must not land on the dish
+// where the button was and plant an egg before he has said why. Only taps on
+// the button's old spot, just after it closed, are held.
+const DIALOG_TAP_GUARD_MS = 800;
+const DIALOG_TAP_GUARD_PX = 16;
+let heldTapSpot: { until: number; rect: DOMRect } | null = null;
+document.getElementById('coach-skip')?.addEventListener('click', (event) => {
+  heldTapSpot = { until: performance.now() + DIALOG_TAP_GUARD_MS, rect: (event.currentTarget as HTMLElement).getBoundingClientRect() };
+});
+
+function isHeldDialogTap(event: PointerEvent): boolean {
+  if (!heldTapSpot || performance.now() > heldTapSpot.until) return false;
+  const { rect } = heldTapSpot;
+  const pad = DIALOG_TAP_GUARD_PX;
+  return event.clientX >= rect.left - pad && event.clientX <= rect.right + pad
+    && event.clientY >= rect.top - pad && event.clientY <= rect.bottom + pad;
+}
+
 canvas.addEventListener('pointerdown', (event) => {
   // A resting second finger or a context-menu click must never spend stock
   // or join two unrelated positions into a single painted trail.
   if (!event.isPrimary || event.button !== 0 || pastePointerId !== null) return;
+  if (isHeldDialogTap(event)) return;
   const pos = canvasEventToGridPos(event);
   // Name whatever was under the finger, whether or not the tool lands.
   if (arena && run.getState().phase === 'arena') dishLabels.ping(arena, pos, performance.now());
@@ -1365,6 +1391,8 @@ function showPhase() {
     saveAvailable: !persistenceUnavailable,
     pendingBank: pendingResearchBank !== null,
     archive: notebookViewForProgression(discoveryProgression).archive,
+    friends: { found: currentDexView().found, total: currentDexView().total },
+    lead: titleLead(),
   });
   if (overlayState.presentationMode && state.phase !== 'arena') {
     setPresentationMode(false);

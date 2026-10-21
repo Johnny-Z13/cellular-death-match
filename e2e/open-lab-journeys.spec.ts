@@ -55,8 +55,9 @@ async function seedSealedCase(page: Page): Promise<void> {
   }, { trials: CASE_TRIALS, notes: CASE_NOTES });
   await page.reload();
   await expect(page.locator('#title-start-label')).toHaveText('Enter Open Lab');
-  // The case's Brine Channel finale also catches the Boss.
-  await expect(page.locator('#title-genome-progress')).toHaveText('6 / 14 strains');
+  // The case's Brine Channel finale also catches the Boss. The title counts
+  // Dr. E's friends: the six strains and Dr. E himself (#000).
+  await expect(page.locator('#title-genome-progress')).toHaveText('7 / 32 friends');
 }
 
 async function enterOpenLab(page: Page): Promise<string> {
