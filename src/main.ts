@@ -2,7 +2,7 @@
 import { createArena, toolRadiusFor, type Arena, type ArenaStatus } from './game/arena';
 import { createRenderer, type MergeRing, type Renderer } from './ui/render';
 import { createDebugPanel } from './ui/debug';
-import { createScreens, type ToolId } from './ui/screens';
+import { createScreens, TOOL_SUMMARIES, type ToolId } from './ui/screens';
 import { AGITATION_TUNING, DISH_LIFE_CYCLE, SIM_SPEED_TUNING, TOOL_TUNING } from './content/ecologyTuning';
 import { renderLoadoutScreen } from './ui/loadoutScreen';
 import { getUpgradeDef, upgradeToolNote } from './content/upgrades';
@@ -529,6 +529,66 @@ function hasSeenAutonomyHandoff(): boolean {
   }
 }
 
+// The case's last trial ends on Dr. E's own card: the case is closed, and the
+// lab is the player's from here.
+const CASE_CLOSED_SEEN_KEY = 'cdm.coach.case-closed-seen.v1';
+let caseClosedAcknowledged = false;
+
+function hasSeenCaseClosed(): boolean {
+  if (caseClosedAcknowledged) return true;
+  try {
+    return runtimeStorage.getItem(CASE_CLOSED_SEEN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function shouldShowCaseClosed(): boolean {
+  const state = run.getState();
+  const last = COMMON_COLD_CASE.trials.length - 1;
+  return state.phase === 'upgrade_pick'
+    && state.fightIndex === last
+    && state.epochResults.length === last + 1
+    && !hasSeenCaseClosed();
+}
+
+/** Dr. E's full-screen card before this upgrade pick, if one is due. */
+function betweenTrialsCard(): 'handoff' | 'case-closed' | null {
+  if (shouldShowAutonomyHandoff()) return 'handoff';
+  if (shouldShowCaseClosed()) return 'case-closed';
+  return null;
+}
+
+function setBetweenTrialsCopy(card: 'handoff' | 'case-closed'): void {
+  if (card === 'handoff') {
+    screens.setMethodIntro({
+      kicker: 'Dr. E · Briefing complete',
+      title: 'Right. You’re on your own now.',
+      body: 'Run the next trials your way. I’ll pop in now and then. And keep an eye out for my friends.',
+      cta: 'Choose an upgrade ›',
+    });
+    return;
+  }
+  const dex = currentDexView();
+  screens.setMethodIntro({
+    kicker: `${COMMON_COLD_CASE.name} · Case closed`,
+    title: 'Cured. Mostly.',
+    body: `${dex.found} of ${dex.total} friends back already. From here the lab is yours: you choose every trial, and the rest of my friends are still out there.`,
+    cta: 'Choose an upgrade ›',
+  });
+}
+
+function acknowledgeBetweenTrialsCard(): void {
+  if (shouldShowAutonomyHandoff()) {
+    acknowledgeAutonomyHandoff();
+    return;
+  }
+  caseClosedAcknowledged = true;
+  try {
+    runtimeStorage.setItem(CASE_CLOSED_SEEN_KEY, '1');
+  } catch { /* the in-memory acknowledgement still prevents a loop */ }
+}
+
 function shouldShowAutonomyHandoff(): boolean {
   const state = run.getState();
   return state.phase === 'upgrade_pick'
@@ -1042,7 +1102,7 @@ screens.onTitleStart(() => {
   beginRunWithCurrentLoadout();
 });
 screens.onMethodIntroContinue(() => {
-  acknowledgeAutonomyHandoff();
+  acknowledgeBetweenTrialsCard();
   uiAudio.play('ui_select');
   fx.playWipe();
   showPhase();
@@ -1290,23 +1350,37 @@ function showPhase() {
   } else if (state.phase === 'upgrade_pick') {
     updateButtonHint();
     const unlocked = currentCapabilityUnlocks();
+    // Where the run goes next, and what arrives with it: the bridge between
+    // one trial and the next.
+    const nextIndex = state.fightIndex + 1;
+    const caseTrials = COMMON_COLD_CASE.trials;
+    const arriving = capabilityUnlocksAt(nextIndex).filter((tool) => !unlocked.includes(tool));
+    screens.setPickNext(nextIndex < caseTrials.length
+      ? { label: `Trial ${nextIndex + 1} · ${caseTrials[nextIndex]!.name}`, tools: arriving.map(toolDisplayName) }
+      : nextIndex === caseTrials.length
+        ? { label: 'Open Lab · you choose every trial', tools: arriving.map(toolDisplayName) }
+        : null);
     const choices = state.pendingPickChoices.map((id) => ({
       id,
       def: getUpgradeDef(id)!,
-      note: upgradeToolNote(id, unlocked),
+      note: upgradeToolNote(id, unlocked, arriving),
     }));
     screens.setPickChoices(choices, (id) => {
       uiAudio.play('ui_select');
       fx.playWipe();
+      const rackBefore = currentCapabilityUnlocks();
       run.pickUpgrade(id);
       saveActiveRunCheckpoint();
       if (run.getState().phase === 'objective_pick') {
         showPhase();
       } else {
         startNewFight();
+        announceNewTools(rackBefore);
       }
     });
-    screens.show(shouldShowAutonomyHandoff() ? 'method-intro' : 'pick');
+    const card = betweenTrialsCard();
+    if (card) setBetweenTrialsCopy(card);
+    screens.show(card ? 'method-intro' : 'pick');
   } else if (state.phase === 'objective_pick') {
     updateButtonHint();
     const choices = run.getObjectiveChoices(currentStudyCapabilityInput());
@@ -1370,7 +1444,7 @@ function finishGenomeReveal(): void {
   showPhase();
   window.requestAnimationFrame(() => {
     const selector = run.getState().phase === 'upgrade_pick'
-      ? shouldShowAutonomyHandoff() ? '#method-intro-continue' : '.pick-card'
+      ? betweenTrialsCard() ? '#method-intro-continue' : '.pick-card'
       : run.getState().phase === 'objective_pick'
         ? '.objective-card'
         : run.getState().phase === 'run_end'
@@ -1398,6 +1472,7 @@ function genomeRevealInfo(genome: GenomeArtIdentity) {
     number: friend?.number,
     role: identity?.role,
     behavior: identity?.behavior,
+    origin: identity && identity.origin !== 'Starter strain.' ? identity.origin : undefined,
     note: friend?.note,
     found: view.found,
     total: view.total,
@@ -2358,12 +2433,35 @@ function currentToolUnlocks(): readonly ToolId[] {
 }
 
 function currentCapabilityUnlocks(): readonly DiscoveryProgressionState['unlockedTools'][number][] {
+  return capabilityUnlocksAt(run.getState().fightIndex);
+}
+
+/** The rack at trial `fightIndex` (the case authors each trial's tools). */
+function capabilityUnlocksAt(fightIndex: number): readonly DiscoveryProgressionState['unlockedTools'][number][] {
   if (discoveryProgression.revealAll) return ALL_PROGRESSION_TOOLS;
   return toolUnlocksForCurrentStage(
     discoveryProgression,
-    run.getState().fightIndex,
+    fightIndex,
     openingBloomCreatedInCurrentDish(),
   );
+}
+
+function toolDisplayName(tool: string): string {
+  return RESTOCK_TOOL_NAMES[tool] ?? capitalize(tool);
+}
+
+// A trial that brings a new tool says so as it starts: the tile pops, and
+// Dr. E names it and what it does.
+function announceNewTools(before: readonly string[]): void {
+  const fresh = currentCapabilityUnlocks().filter((tool) => !before.includes(tool));
+  for (const tool of fresh) {
+    if (tool !== 'agitate') screens.showcaseToolUnlock(tool);
+    const name = toolDisplayName(tool);
+    const what = TOOL_SUMMARIES[tool as keyof typeof TOOL_SUMMARIES];
+    screens.addTicker(`Dr. E: A new tool, ${name}: ${what}.`, 'discovery');
+    fx.showToast('lifeform', 'New tool', what ? `${name} · ${what}` : name);
+  }
+  if (fresh.length > 0) haptics.play('discovery');
 }
 
 function currentLifeformUnlocks(): readonly ProgressionLifeformId[] {

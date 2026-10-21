@@ -88,6 +88,15 @@ describe('catalysis content', () => {
     expect(b?.id).toBe('nutrient_conduit');
   });
 
+  it('lets the trial\'s own reaction win when a stronger sibling also matches', () => {
+    // A Bloom Mass that mutated toxin resistance fits both Nutrient + Toxin recipes.
+    const context = { traits: ['budding', 'toxin_resistant'] as const, archetypes: ['swarmlet'] as const };
+    expect(reactionRecipeFor(['nutrient', 'toxin'], { traits: [...context.traits], archetypes: [...context.archetypes] })?.id).toBe('pressure_bloom');
+    expect(reactionRecipeFor(['nutrient', 'toxin'], { traits: [...context.traits], archetypes: [...context.archetypes] }, undefined, 'bitter_bloom')?.id).toBe('bitter_bloom');
+    // A preference that does not match changes nothing.
+    expect(reactionRecipeFor(['nutrient', 'toxin'], { traits: [...context.traits], archetypes: [...context.archetypes] }, undefined, 'brine_channel')?.id).toBe('pressure_bloom');
+  });
+
   it('requires agitation for the agitated chain recipe', () => {
     const calm = reactionRecipeFor(['water', 'nutrient', 'bloom'], {
       traits: ['budding'],

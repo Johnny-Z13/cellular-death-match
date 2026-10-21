@@ -20,6 +20,7 @@ Cellular Death Match is a mobile-first Petri dish ecosystem roguelike. Runs are 
 - Escalating pressure: hazard intervals shorten, outbreaks grow, mutations intensify per epoch.
 - Biome classification: stable ecosystems are named from their leading strains and kept as biome cards in the Notebook's Trial tab.
 - Catalytic reactions, rare breed discovery, and cross-breeding of hybrids.
+- The case flows trial to trial: the upgrade screen says what comes next ("Next · Trial 3 · Carrier Medium", with a chip for each new tool, and upgrades for an arriving tool read "arrives next trial"); a trial that brings a tool pops its tile and names it ("New tool · Water · dilute and spread"); every catch says how it was found; and the last trial ends on Dr. E's "Case closed" card. Recipe trials are forgiving: while Dr. E instructs, or the trial asks for a reaction, fields fade at lesson pace (`LESSON_TUNING.fieldFadeScale`), and the trial's own reaction wins a tie with a stronger sibling (a mutated Bloom Mass no longer turns Bitter Bloom into Pressure Bloom).
 - Every new creature hatches from an egg: each new strain gets its own catch, and a rescued friend's egg rises in its droplet, wobbles, cracks and bursts. From Trial 2 every caught strain is in the Egg tray; the case's finale (Brine Channel) catches the Boss.
 - Pixel-bloom dish rendering: every culture's own pixels glow in their color.
 - Mobile portrait touch shell: Lifeforms/Log drawers, tool readout, bottom tool bar.

@@ -17,6 +17,7 @@ import {
   AGITATION_TUNING,
   ARENA_TIMING,
   ECOSYSTEM_LIMITS,
+  LESSON_TUNING,
   LIFE_CYCLE_PROFILES,
   type LifeCycleProfileId,
   PASTE_TUNING,
@@ -339,6 +340,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
   const esc = getEscalation(fightIndex);
   const epochTicks = opts.epochTicks ?? esc.epochTicks;
   const objective = opts.objective ?? objectiveForEpoch(0);
+  const recipeTrial = objective.kind === 'understand_recipe' || objective.kind === 'apply_recipe';
   // Escalation-adjusted hazard intervals.
   const effectiveCrisisInterval = Math.max(60, Math.round(CRISIS_INTERVAL_TICKS * esc.crisisIntervalMul));
   const effectiveOutbreakInterval = Math.max(60, Math.round(OUTBREAK_INTERVAL_TICKS * esc.crisisIntervalMul));
@@ -911,6 +913,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           archetypes,
           agitationTicksRemaining > 0,
           state.rng.randInt(1_000_000),
+          objective.recipeId,
         );
         if (catalyticReaction) {
           if (reactionUsesAcid(catalyticReaction)) {
@@ -980,6 +983,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
         archetypes,
         agitationTicksRemaining > 0,
         state.rng.randInt(1_000_000),
+        objective.recipeId,
       );
       if (catalyticReaction?.effect.type === 'flare') {
         const sourceCell = sourceCellWithTraits(
@@ -1210,7 +1214,11 @@ export function createArena(opts: CreateArenaOpts): Arena {
         for (const effect of toolEffects) {
           if (effect.type === 'fold_fault') applyFoldingFault(state, effect);
         }
-        for (const effect of toolEffects) effect.ttl -= 1;
+        // While Dr. E's lesson instructs, or the trial asks for a reaction,
+        // the fields fade at lesson pace: a first-timer reading each step
+        // still lands Toxin on a live Nutrient field, or Water on the Foam.
+        const fieldFade = hazardsHeld || recipeTrial ? LESSON_TUNING.fieldFadeScale : 1;
+        for (const effect of toolEffects) effect.ttl -= fieldFade;
         for (let i = toolEffects.length - 1; i >= 0; i--) {
           if (toolEffects[i]!.ttl <= 0) toolEffects.splice(i, 1);
         }
@@ -1552,6 +1560,7 @@ function catalyticReactionFor(
   archetypes: Map<CellId, EnemySpawn>,
   agitated: boolean,
   seed: number,
+  preferredRecipeId?: ReactionRecipeId,
 ): {
   effect: ToolEffect;
   inputs: readonly ToolEffectType[];
@@ -1588,7 +1597,7 @@ function catalyticReactionFor(
       radius: Math.max(newEffect.radius, effect.radius) + 10,
     }, agitated);
     const inputs = overlappingCatalysisTypes(newEffect, effects, state, newType);
-    const recipe = reactionRecipeFor(inputs, context, newType);
+    const recipe = reactionRecipeFor(inputs, context, newType, preferredRecipeId);
     if (!recipe) continue;
 
     const reaction = {

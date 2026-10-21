@@ -124,6 +124,12 @@ export interface Screens {
   updateAtlas(view: AtlasView): void;
   setLoadoutScreen(el: HTMLElement): void;
   setPickChoices(choices: PickChoice[], onPick: (id: string) => void): void;
+  /** The line under the result strip: where the run goes next, and the tools
+   *  that arrive with it. Null hides it. */
+  setPickNext(next: { label: string; tools: readonly string[] } | null): void;
+  /** Dr. E's full-screen card between trials: the hand-off after the guided
+   *  trials, or the case closed. */
+  setMethodIntro(copy: { kicker: string; title: string; body: string; cta: string }): void;
   setObjectiveChoices(choices: StudyChoice[], onPick: (objective: ObjectiveDef) => void): void;
   updateEnd(info: EndInfo): void;
   updateLabReport(report: LabReport | null): void;
@@ -186,6 +192,10 @@ export function createScreens(): Screens {
   const titleGenomeLead = get('title-genome-lead');
   const methodIntroContinue = get('method-intro-continue') as HTMLButtonElement;
   const pickCaseProgress = get('pick-case-progress');
+  const pickNext = get('pick-next');
+  const methodIntroKicker = get('method-intro-kicker');
+  const methodIntroTitle = get('method-intro-title');
+  const methodIntroBody = get('method-intro-body');
   const notebookButton = get('notebook-button') as HTMLButtonElement;
   const fullscreenButton = get('fullscreen-button') as HTMLButtonElement;
   const fullscreenButtonLabel = fullscreenButton.querySelector<HTMLElement>('.fullscreen-button__label');
@@ -1327,6 +1337,27 @@ export function createScreens(): Screens {
         pickChoices.append(btn);
       }
     },
+    setPickNext(next) {
+      pickNext.hidden = next === null;
+      pickNext.replaceChildren();
+      if (!next) return;
+      const label = document.createElement('span');
+      label.className = 'pick-next-label';
+      label.textContent = `Next · ${next.label}`;
+      pickNext.append(label);
+      for (const tool of next.tools) {
+        const chip = document.createElement('span');
+        chip.className = 'pick-next-tool';
+        chip.textContent = `New tool: ${tool}`;
+        pickNext.append(chip);
+      }
+    },
+    setMethodIntro(copy) {
+      methodIntroKicker.textContent = copy.kicker;
+      methodIntroTitle.textContent = copy.title;
+      methodIntroBody.textContent = copy.body;
+      methodIntroContinue.textContent = copy.cta;
+    },
     setObjectiveChoices(choices, onPick) {
       objectiveChoices.replaceChildren();
       let picked = false;
@@ -1692,6 +1723,18 @@ function updateToolSummary(
   el.textContent = summaries[tool];
 }
 
+/** What each tool does, in two or three words (the rack readout, and Dr. E
+ *  naming a tool as it arrives). */
+export const TOOL_SUMMARIES: Record<Exclude<ToolId, 'egg'> | 'agitate', string> = {
+  nutrient: 'feed and attract',
+  toxin: 'repel and thin',
+  water: 'dilute and spread',
+  salt: 'slow and dry',
+  acid: 'burn tissue',
+  paste: 'pen or pinch',
+  agitate: 'shake and mix',
+};
+
 function updateMobileToolReadout(
   nameEl: HTMLElement,
   summaryEl: HTMLElement,
@@ -1710,17 +1753,8 @@ function updateMobileToolReadout(
     acid: 'Acid',
     paste: 'Membrane',
   };
-  const summaries: Record<ToolId, string> = {
-    egg: `${eggName} seed`,
-    nutrient: 'feed and attract',
-    toxin: 'repel and thin',
-    water: 'dilute and spread',
-    salt: 'slow and dry',
-    acid: 'burn tissue',
-    paste: 'pen or pinch',
-  };
   nameEl.textContent = names[tool];
-  summaryEl.textContent = summaries[tool];
+  summaryEl.textContent = tool === 'egg' ? `${eggName} seed` : TOOL_SUMMARIES[tool];
 }
 
 function setUnknownState(button: HTMLButtonElement, locked: boolean, label: string): void {

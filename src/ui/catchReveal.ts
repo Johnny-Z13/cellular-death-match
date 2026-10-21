@@ -39,6 +39,8 @@ export interface CatchInfo {
   number?: number;
   role?: string;
   behavior?: string;
+  /** How the player found it ("Found by reproducing a toxin-pressure bloom."). */
+  origin?: string;
   /** Dr. E's line. */
   note?: string;
   /** Friends found, including this one, and the dex total. */
@@ -75,6 +77,7 @@ export function createCatchStage(root: HTMLElement, deps: CatchDeps): CatchStage
   const count = q('#catch-count');
   const role = q('#catch-role');
   const behavior = q('#catch-behavior');
+  const origin = q('#catch-origin');
   const line = q('#catch-line');
   let timers: number[] = [];
   let countRaf = 0;
@@ -142,6 +145,10 @@ export function createCatchStage(root: HTMLElement, deps: CatchDeps): CatchStage
       if (number) number.textContent = next.number !== undefined ? pad(next.number) : '';
       if (role) role.textContent = next.role ?? '';
       if (behavior) behavior.textContent = next.behavior ?? '';
+      if (origin) {
+        origin.textContent = next.origin ?? '';
+        origin.hidden = !next.origin;
+      }
       if (line) line.textContent = '';
       if (count) count.textContent = countText(Math.max(0, (next.found ?? 1) - 1));
       cells?.replaceChildren();

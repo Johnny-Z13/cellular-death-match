@@ -601,12 +601,16 @@ export const DISCOVERY_NOTES: Record<DiscoveryNoteId, DiscoveryNote> = {
   },
 };
 
+/** `preferred` is the reaction the trial asks for: when it matches too, it
+ *  wins, so a lesson's reaction is never stolen by a stronger sibling (a
+ *  mutated toxin-resistant culture turning Bitter Bloom into Pressure Bloom). */
 export function reactionRecipeFor(
   inputs: readonly CatalysisEffectType[],
   context: ReactionContext,
   trigger?: CatalysisEffectType,
+  preferred?: ReactionRecipeId,
 ): ReactionRecipe | undefined {
-  return REACTION_RECIPES.filter((recipe) => {
+  const matches = REACTION_RECIPES.filter((recipe) => {
     const hasInputs = recipe.inputs.every((input) => inputs.includes(input));
     if (!hasInputs) return false;
     if (trigger && recipe.trigger && recipe.trigger !== trigger) return false;
@@ -620,7 +624,9 @@ export function reactionRecipeFor(
     if (!archetypeOk) return false;
 
     return !requiresAgitation(recipe.id) || context.agitated === true;
-  }).sort((a, b) => recipePriority(b, trigger) - recipePriority(a, trigger))[0];
+  });
+  return matches.find((recipe) => recipe.id === preferred)
+    ?? matches.sort((a, b) => recipePriority(b, trigger) - recipePriority(a, trigger))[0];
 }
 
 function requiresAgitation(id: ReactionRecipeId): boolean {

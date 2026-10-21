@@ -85,6 +85,11 @@ async function finishTrial(
   if (trial === 2) {
     await expect(introduction).toHaveClass(/visible/);
     await expect(page.locator('#method-intro-title')).toHaveText('Right. You’re on your own now.');
+  } else if (trial === 5) {
+    // The case closes on Dr. E's own card before the last upgrade.
+    await expect(introduction).toHaveClass(/visible/);
+    await expect(page.locator('#method-intro-kicker')).toContainText('Case closed');
+    await page.locator('#method-intro-continue').click();
   } else {
     await expect(introduction).not.toHaveClass(/visible/);
   }

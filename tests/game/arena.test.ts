@@ -1,7 +1,7 @@
 import { describe, it, expect, onTestFinished } from 'vitest';
 import { createArena, type Arena } from '../../src/game/arena';
 import { BALANCE_TUNING } from '../../src/game/balance';
-import { TOOL_TUNING, AGITATION_TUNING, ARENA_TIMING, DISH_LIFE_CYCLE, RESTOCK_TUNING } from '../../src/content/ecologyTuning';
+import { TOOL_TUNING, AGITATION_TUNING, ARENA_TIMING, DISH_LIFE_CYCLE, LESSON_TUNING, RESTOCK_TUNING } from '../../src/content/ecologyTuning';
 import { ARCHETYPE_DEFAULTS } from '../../src/content/enemies';
 import { getCell, setCell, updateBoundaryAround } from '../../src/sim/grid';
 import { removePixel } from '../../src/sim/cell';
@@ -2590,6 +2590,26 @@ describe('arena ecosystem mode', () => {
     for (const tool of ['salt', 'acid', 'toxin', 'nutrient'] as const) arena.applyTool(tool, [43, 40]);
     for (let i = 0; i < 60; i++) arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
     expect(arena.drainRestocks().filter((event) => event.reason === 'discovery')).toEqual([]);
+  });
+
+  it('fades the player\'s fields at lesson pace while Dr. E instructs', () => {
+    const arena = createArena({
+      LX: 80, LY: 80, seed: 5,
+      player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3 },
+      enemies: [{ archetype: 'swarmlet' as const, targetVol: 90, speed: 8, engulfMultiplier: 4 }],
+      wrap: false, mode: 'ecosystem', fightIndex: 6, epochTicks: 60 * 60,
+    });
+    const idle = { moveVec: [0, 0] as [number, number], shouldFire: false, shouldEngulf: false };
+    arena.setHazardsHeld(true);
+    expect(arena.applyTool('nutrient', [40, 40])).toBe(true);
+    const start = arena.getToolEffects()[0]!.ttl;
+    for (let i = 0; i < 100; i++) arena.tick(idle);
+    expect(arena.getToolEffects()[0]!.ttl).toBeCloseTo(start - 100 * LESSON_TUNING.fieldFadeScale);
+    // The lesson over, the field fades as usual.
+    arena.setHazardsHeld(false);
+    const held = arena.getToolEffects()[0]!.ttl;
+    for (let i = 0; i < 100; i++) arena.tick(idle);
+    expect(arena.getToolEffects()[0]!.ttl).toBeCloseTo(held - 100);
   });
 
   it('never restocks the coached tutorial dish', () => {

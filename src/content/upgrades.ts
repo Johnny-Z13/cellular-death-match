@@ -145,12 +145,15 @@ const TOOL_NAMES: Record<UpgradeTool, string> = {
   egg: 'Egg', nutrient: 'Nutrient', toxin: 'Toxin', agitate: 'Agitate', water: 'Water', salt: 'Salt', acid: 'Acid',
 };
 
-export function upgradeToolNote(id: string, unlockedTools: readonly string[]): string | null {
+/** `arrivingTools` come with the next trial: an upgrade for one of them is a
+ *  head start, not a dud. */
+export function upgradeToolNote(id: string, unlockedTools: readonly string[], arrivingTools: readonly string[] = []): string | null {
   const tools = UPGRADE_TOOLS[id];
   if (!tools || tools.length === 0) return null;
   if (tools.some((tool) => unlockedTools.includes(tool))) return null;
   const names = tools.map((tool) => TOOL_NAMES[tool]);
   const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+  if (tools.some((tool) => arrivingTools.includes(tool))) return `For ${list} · arrives next trial`;
   return `For ${list} · not in your rack yet`;
 }
 

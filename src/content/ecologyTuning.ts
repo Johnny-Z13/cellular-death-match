@@ -58,6 +58,14 @@ export const TOOL_TUNING = {
 // by one; the first stable ecosystem in a dish restocks the whole bench; a
 // discovery (a reaction or strain new to this dish, or a friend merged) slides
 // a spare to the emptiest tools. Never past a tool's max.
+// Lessons: while Dr. E's coach instructs a dish, or a trial asks the player to
+// reproduce a reaction, reagent fields (and the reactions they make, like
+// Foam) fade at this share of their usual speed: an 8 s Nutrient field lasts
+// ~23 s, a 4 s Foam ~11 s, so a recipe never expires while the player reads.
+export const LESSON_TUNING = {
+  fieldFadeScale: 0.35,
+} as const;
+
 export const RESTOCK_TUNING = {
   balanceMinuteTicks: 60 * 60,
   discoverySpares: 2,

@@ -3049,6 +3049,33 @@ canvas {
 .case-result-dots i.is-complete { border-color: var(--amber); background: var(--amber); box-shadow: 0 0 8px rgba(240, 195, 90, 0.45); }
 .case-result-dots i.is-lapsed { border-color: var(--danger); }
 
+/* Up next: where the run goes after this pick, and the tools it brings. */
+.pick-next {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 10px;
+  margin: -6px auto 14px;
+  max-width: 460px;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.pick-next[hidden] { display: none; }
+
+.pick-next-tool {
+  padding: 2px 9px;
+  border: 1px solid color-mix(in srgb, var(--amber) 60%, transparent);
+  border-radius: 999px;
+  color: var(--amber);
+  font-size: var(--fs-min);
+  letter-spacing: 0.06em;
+  box-shadow: 0 0 10px rgba(240, 195, 90, 0.18);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .coach.coach-show { animation: none; }
 }

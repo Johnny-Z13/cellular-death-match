@@ -112,6 +112,9 @@ describe('upgrade tool notes', () => {
   it('names the tool an upgrade needs when it is not in the rack yet', () => {
     expect(upgradeToolNote('toxin_radius_1', ['egg', 'nutrient'])).toBe('For Toxin · not in your rack yet');
     expect(upgradeToolNote('volatile_reagents_1', ['egg', 'nutrient', 'toxin'])).toBe('For Water, Salt and Acid · not in your rack yet');
+    // A tool that comes with the next trial is a head start, said so.
+    expect(upgradeToolNote('toxin_radius_1', ['egg', 'nutrient'], ['toxin'])).toBe('For Toxin · arrives next trial');
+    expect(upgradeToolNote('toxin_radius_1', ['egg', 'nutrient', 'toxin'], ['water'])).toBeNull();
   });
 
   it('stays quiet when the tool is already available or the upgrade needs none', () => {

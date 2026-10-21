@@ -702,6 +702,16 @@
   line-height: 1.4;
 }
 
+/* How the player found it: the cause behind the catch. */
+.catch-origin {
+  color: color-mix(in srgb, var(--genome-color) 55%, var(--ink));
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.catch-origin[hidden] { display: none; }
+
 .catch-tray {
   display: flex;
   align-items: center;

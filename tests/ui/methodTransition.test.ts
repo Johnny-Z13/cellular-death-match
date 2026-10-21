@@ -20,13 +20,17 @@ describe('between-trial Method transition', () => {
     expect(css).toContain('calc(22px + env(safe-area-inset-bottom))');
   });
 
-  it('shows the autonomy handoff only at the exact-to-hypothesis boundary', () => {
+  it('shows the autonomy handoff at the exact-to-hypothesis boundary, and the case closed once', () => {
     expect(mainSource).toContain("const AUTONOMY_HANDOFF_TRIAL_INDEX = 1;");
     expect(mainSource).toContain("state.phase === 'upgrade_pick'");
     expect(mainSource).toContain('state.fightIndex === AUTONOMY_HANDOFF_TRIAL_INDEX');
-    expect(mainSource).toContain("screens.show(shouldShowAutonomyHandoff() ? 'method-intro' : 'pick');");
+    expect(mainSource).toContain("if (shouldShowAutonomyHandoff()) return 'handoff';");
+    expect(mainSource).toContain("if (shouldShowCaseClosed()) return 'case-closed';");
+    expect(mainSource).toContain("screens.show(card ? 'method-intro' : 'pick');");
     expect(mainSource).toContain('screens.onMethodIntroContinue(() => {');
-    expect(mainSource).toContain('acknowledgeAutonomyHandoff();\n  uiAudio.play');
+    expect(mainSource).toContain('acknowledgeBetweenTrialsCard();\n  uiAudio.play');
+    expect(mainSource).toContain('state.fightIndex === last');
+    expect(mainSource).toContain("Case closed");
     expect(mainSource).not.toContain('pendingMethodIntroduction');
     expect(screensSource).toContain("name === 'method-intro'");
     expect(screensSource).toContain('? methodIntroContinue');
