@@ -3,6 +3,7 @@
 // cross-breeding). Then the merged forms (rare) and the exotic behaviours of
 // locked forms (very rare). Strains read the existing discovery progression;
 // friends found by merging are saved under their own key.
+import { BREED_DEFS, type BreedId } from '../content/catalysis';
 import { FORMS } from '../content/forms';
 import { LIFEFORM_IDENTITIES } from '../content/lifeformIdentity';
 import { ALL_PROGRESSION_LIFEFORMS, type DiscoveryProgressionState } from './discoveryProgression';
@@ -153,4 +154,53 @@ export function dexView(progression: Pick<DiscoveryProgressionState, 'unlockedLi
     if (item.found) byTier[item.tier].found += 1;
   }
   return { items, found: items.filter((item) => item.found).length, total: items.length, byTier };
+}
+
+// Dr. E's leads: in the Open Lab he points at one friend the player can find
+// next, so the sandbox always has something to try. Merges (their strains
+// must all be in the Egg tray) alternate with hybrids the tray can cross
+// (both parents in it), so the leads mix merging with breeding; other
+// strains still to find come after, and the very rares once a merge has been
+// made. `turn` (the Open Lab trial) walks the
+// first few candidates, so a lead the player could not land gives way to
+// another next trial instead of nagging.
+export const LEAD_TUNING = {
+  /** How many of the next candidates the turn rotates through. */
+  window: 3,
+  /** Said with merge leads until the player has made a merge. */
+  mergeTip: 'Plant them touching, then feed them at once.',
+};
+
+export interface Lead {
+  id: string;
+  name: string;
+  tier: DexTier;
+  hint: string;
+  /** How to do it, while the player is new to it. */
+  tip: string | null;
+}
+
+export function nextLead(view: DexView, tray: readonly string[], turn = 0): Lead | null {
+  const has = new Set(tray);
+  const open = view.items.filter((item) => !item.found && item.hint);
+  const mergedBefore = view.byTier.rare.found > 0;
+  const merges = open.filter((item) => item.tier === 'rare' && item.strains.length > 0 && item.strains.every((strain) => has.has(strain)));
+  const crossable = (item: DexItem) => BREED_DEFS[item.id as BreedId]?.parents?.every((parent) => has.has(parent)) ?? false;
+  const hybrids = open.filter((item) => item.tier === 'common' && crossable(item));
+  const candidates: DexItem[] = [];
+  for (let i = 0; i < Math.max(merges.length, hybrids.length); i++) {
+    if (merges[i]) candidates.push(merges[i]!);
+    if (hybrids[i]) candidates.push(hybrids[i]!);
+  }
+  candidates.push(...open.filter((item) => item.tier === 'common' && !crossable(item)));
+  if (mergedBefore) candidates.push(...open.filter((item) => item.tier === 'very-rare'));
+  if (candidates.length === 0) return null;
+  const item = candidates[turn % Math.min(LEAD_TUNING.window, candidates.length)]!;
+  return {
+    id: item.id,
+    name: item.name,
+    tier: item.tier,
+    hint: item.hint,
+    tip: item.tier === 'rare' && !mergedBefore ? LEAD_TUNING.mergeTip : null,
+  };
 }

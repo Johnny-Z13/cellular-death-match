@@ -43,6 +43,10 @@ export function applyAppetite(
     } else if (cell.intent.engulfMultiplier > 1) {
       cell.intent.engulfMultiplier = 1 + (cell.intent.engulfMultiplier - 1) * profile.huntEngulfScale;
     }
+    // A hatchling on its yolk stays about where it was planted, so cultures
+    // the player lays out side by side are still touching when they are fed.
+    const yolkUntil = life.yolkUntil.get(id);
+    if (yolkUntil !== undefined && yolkUntil > tick) cell.intent.speed *= profile.yolkSpeedScale;
   }
 }
 
@@ -85,17 +89,20 @@ export function applyMetabolism(
 }
 
 // Cultures that have grown to divideAt × their genome size and filled most
-// of that volume are ready to split.
+// of that volume are ready to split. A hatchling still on its yolk waits, so
+// a pair the player planted and fed stays a pair.
 export function readyToDivide(
   state: SimState,
   archetypes: Map<CellId, EnemySpawn>,
   profile: LifeCycleProfile,
   life: LifeCycleState,
+  tick = 0,
 ): CellId[] {
   const ready: CellId[] = [];
   for (const [id, spawn] of archetypes) {
     const cell = state.cells.get(id);
     if (!cell || cell.vol <= 0 || life.starving.has(id)) continue;
+    if ((life.yolkUntil.get(id) ?? 0) > tick) continue;
     if (cell.targetVol >= spawn.targetVol * profile.divideAt && cell.vol >= cell.targetVol * 0.8) ready.push(id);
   }
   return ready;

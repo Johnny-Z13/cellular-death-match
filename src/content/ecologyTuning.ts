@@ -163,6 +163,9 @@ export const LIFE_CYCLE_PROFILES = {
     // A culture planted from an Egg lives on its yolk at first: no mass burned
     // for this long, so a fresh hunter can reach prey before it starves.
     yolkTicks: 60 * 20,
+    // ...and it barely moves (this share of its speed), so an arrangement the
+    // player plants holds together long enough to feed it into a merge.
+    yolkSpeedScale: 0,
   },
 };
 

@@ -57,7 +57,7 @@ export function goalLineFor(def: ObjectiveDef): string {
     case 'balance_keeper':
       return `Keep every strain under ${Math.round((def.maxDominance ?? 0.4) * 100)}% for ${seconds(def.sustainTicks, 30)}s`;
     case 'crisis_survivor':
-      return `Keep ${def.minCount ?? 3}+ of your cultures alive through a crisis`;
+      return `Keep ${def.minCount ?? 3}+ of your cultures through a crisis`;
     case 'protector':
       return 'Shield a fragile culture from harm';
     case 'acid_sculptor':
@@ -65,9 +65,9 @@ export function goalLineFor(def: ObjectiveDef): string {
     case 'colony_founder':
       return `Grow ${def.targetCount ?? 5} cultures of one strain`;
     case 'symbiosis':
-      return `Keep two of your strains side by side for ${seconds(def.sustainTicks, 30)}s`;
+      return `Keep two of your strains together for ${seconds(def.sustainTicks, 30)}s`;
     case 'extinction_reversal':
-      return `After a crash, regrow ${def.targetCount ?? 4} cultures of your own`;
+      return `After a crash, regrow ${def.targetCount ?? 4} of your cultures`;
     case 'hold_balance':
       return `Hold the dish in balance for ${clock(def.sustainTicks, 120)}`;
     case 'keep_alive':

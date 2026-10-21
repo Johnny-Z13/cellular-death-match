@@ -131,6 +131,8 @@ export interface Screens {
    *  trials, or the case closed. */
   setMethodIntro(copy: { kicker: string; title: string; body: string; cta: string }): void;
   setObjectiveChoices(choices: StudyChoice[], onPick: (objective: ObjectiveDef) => void): void;
+  /** Dr. E's lead under the Open Lab trial chooser (null hides it). */
+  setObjectiveLead(lead: { name: string; text: string } | null): void;
   updateEnd(info: EndInfo): void;
   updateLabReport(report: LabReport | null): void;
   updateCaseProgress(info: CaseProgressInfo): void;
@@ -217,6 +219,7 @@ export function createScreens(): Screens {
   const loadoutMount = get('loadout-mount');
   const pickChoices  = get('pick-choices');
   const objectiveChoices = get('objective-choices');
+  const objectiveLead = get('objective-lead');
   const endTitle     = get('end-title');
   const endSummary   = get('end-summary');
   const labReportMount = get('lab-report-mount');
@@ -1357,6 +1360,18 @@ export function createScreens(): Screens {
       methodIntroTitle.textContent = copy.title;
       methodIntroBody.textContent = copy.body;
       methodIntroContinue.textContent = copy.cta;
+    },
+    setObjectiveLead(lead) {
+      objectiveLead.hidden = lead === null;
+      objectiveLead.replaceChildren();
+      if (!lead) return;
+      const kicker = document.createElement('span');
+      kicker.className = 'objective-lead-kicker';
+      kicker.textContent = `Dr. E’s lead · ${lead.name}`;
+      const text = document.createElement('span');
+      text.className = 'objective-lead-text';
+      text.textContent = lead.text;
+      objectiveLead.append(kicker, text);
     },
     setObjectiveChoices(choices, onPick) {
       objectiveChoices.replaceChildren();

@@ -242,9 +242,9 @@ describe('onboarding coach', () => {
   });
 
   it('nudges idle players with the objective hint, capped and dismissible', () => {
-    expect(coachSource).toContain('showNudge(title: string, body: string, opts?: { interruptTutorial?: boolean }): void;');
+    expect(coachSource).toContain('showNudge(title: string, body: string, opts?: { interruptTutorial?: boolean; kicker?: string }): void;');
     expect(coachSource).toContain("if (mode === 'nudge') hideNudgeNow();");
-    expect(coachSource).toContain("kickerEl.textContent = 'Dr. E’s note';");
+    expect(coachSource).toContain("kickerEl.textContent = opts.kicker ?? 'Dr. E’s note';");
     expect(mainSource).toContain('const NUDGE_IDLE_TICKS = 60 * 22;');
     expect(mainSource).toContain('const MAX_NUDGES_PER_EPOCH = 2;');
     expect(mainSource).toContain('function maybeNudgeIdlePlayer(');

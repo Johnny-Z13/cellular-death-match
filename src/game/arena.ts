@@ -485,6 +485,10 @@ export function createArena(opts: CreateArenaOpts): Arena {
       addDishEvent(marker.kind, `NEW STRAIN: ${BREED_DEFS[id].name}`, sourceCell.center, marker.radius, marker.color);
     }
     if (!sourceCell || sourceCell.vol <= 0 || livingCultureCount(state, archetypes) >= ECOSYSTEM_MAX_POPULATION) return;
+    // A strain the player already knows is not born again as a specimen: it
+    // still counts for the goals, but a clone beside its source would only
+    // crowd the player's layout (and spoil a merge being fed there).
+    if (!announce) return;
     // A discovery is born beside its source, never on top of it. `addCell`
     // intentionally refuses to overwrite occupied pixels, so reusing the
     // source centre can create a zero-volume specimen (and dead-end Trial 1
@@ -1154,7 +1158,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
           // divide until the merge locks or lets go. A locked form divides as
           // normal; its daughters are simply not part of it.
           const merging = new Set((merges?.forming() ?? []).flatMap((group) => group.members));
-          for (const id of readyToDivide(state, archetypes, lifeCycle, life)) {
+          for (const id of readyToDivide(state, archetypes, lifeCycle, life, tickNo)) {
             if (merging.has(id)) continue;
             if (livingCultureCount(state, archetypes) >= ECOSYSTEM_MAX_POPULATION) break;
             const parent = state.cells.get(id)!;
@@ -1336,8 +1340,11 @@ export function createArena(opts: CreateArenaOpts): Arena {
       for (const event of state.events) if (event.type === 'bulletBlocked') oddity.bulletsBlocked += 1;
 
       if (merges && tickNo % MERGE_DETECTION.scanTicks === 0) {
+        // Merges are made from the player's own cultures (planted, or a
+        // daughter or cutting of one). Wild cultures are neither members nor
+        // neighbours: a crowd drawn to the meal does not spoil the group.
         const strainOf = (id: CellId): string | null => {
-          if (id === PLAYER_ID) return 'control';
+          if (!lineage.has(id)) return null;
           const spawn = archetypes.get(id);
           return spawn ? spawn.breedId ?? spawn.archetype : null;
         };

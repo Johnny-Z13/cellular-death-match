@@ -30,7 +30,7 @@ export interface Coach {
   getCurrentPointerTarget(): string | undefined;
   shouldAutoSpawn(): boolean;
   onOnboardingComplete: ((trialIndex: number) => void) | null;
-  showNudge(title: string, body: string, opts?: { interruptTutorial?: boolean }): void;
+  showNudge(title: string, body: string, opts?: { interruptTutorial?: boolean; kicker?: string }): void;
   hideNudge(): void;
 }
 
@@ -441,7 +441,7 @@ export function createCoach(storage?: Pick<Storage, 'getItem' | 'setItem'>): Coa
       mode = 'nudge';
       clearPresentationTimers();
       clearPresentationClasses();
-      kickerEl.textContent = 'Dr. E’s note';
+      kickerEl.textContent = opts.kicker ?? 'Dr. E’s note';
       titleEl.textContent = title;
       bodyEl.textContent = body;
       stepEl.textContent = '';

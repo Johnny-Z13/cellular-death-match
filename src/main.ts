@@ -137,7 +137,7 @@ import { dishGridFor, dishLayoutFor, type DishLayout } from './ui/dishShape';
 import { createDrEPresence } from './ui/drEPresence';
 import { createDrESpeech } from './ui/drESpeech';
 import { groupExtent, type MergeEvent } from './game/mergeDetection';
-import { dexView, loadFriends, recordFriend, type DexItem } from './game/friendsDex';
+import { dexView, loadFriends, nextLead, recordFriend, type DexItem, type Lead } from './game/friendsDex';
 import { createDexScreen } from './ui/dexScreen';
 import { createFriendReveal } from './ui/friendReveal';
 import { isCrazyGamesEnvironment } from './platform/crazyGames';
@@ -362,7 +362,37 @@ function showReveal(item: DexItem, from: { x: number; y: number }): void {
     dex.refresh(currentDexView());
     const next = pendingReveals.shift();
     if (next) showReveal(next.item, next.from);
+    // A friend found: Dr. E already has the next lead.
+    else scheduleLeadNudge(LEAD_NUDGE_AFTER_FIND_MS);
   });
+}
+
+// Dr. E's leads (game/friendsDex.ts nextLead): in the Open Lab he names one
+// friend to find next, on the trial chooser and in a note shortly into each
+// trial, and the next one as soon as a friend is found.
+const LEAD_NUDGE_AFTER_START_MS = 5200;
+const LEAD_NUDGE_AFTER_FIND_MS = 1400;
+let leadNudgeTimer = 0;
+
+function currentLead(): Lead | null {
+  const caseTrials = COMMON_COLD_CASE.trials.length;
+  const fightIndex = run.getState().fightIndex;
+  if (fightIndex < caseTrials) return null;
+  return nextLead(currentDexView(), currentLifeformUnlocks(), fightIndex - caseTrials);
+}
+
+function leadText(lead: Lead): string {
+  return lead.tip ? `${lead.hint} ${lead.tip}` : lead.hint;
+}
+
+function scheduleLeadNudge(delayMs: number): void {
+  window.clearTimeout(leadNudgeTimer);
+  const dish = arena;
+  leadNudgeTimer = window.setTimeout(() => {
+    if (!dish || arena !== dish || run.getState().phase !== 'arena') return;
+    const lead = currentLead();
+    if (lead) coach.showNudge(lead.name, leadText(lead), { kicker: 'Dr. E’s lead' });
+  }, delayMs);
 }
 dex.refresh(currentDexView());
 
@@ -1384,6 +1414,8 @@ function showPhase() {
   } else if (state.phase === 'objective_pick') {
     updateButtonHint();
     const choices = run.getObjectiveChoices(currentStudyCapabilityInput());
+    const lead = currentLead();
+    screens.setObjectiveLead(lead ? { name: lead.name, text: leadText(lead) } : null);
     screens.setObjectiveChoices(choices, (objective) => {
       uiAudio.play('ui_select');
       run.setChosenObjective(objective);
@@ -1783,6 +1815,7 @@ function startNewFight() {
     debug.setSwatch(2 + i, swatchForArchetype(enemies[i]!.archetype));
   }
   showPhase();
+  if (!authoredTrial) scheduleLeadNudge(LEAD_NUDGE_AFTER_START_MS);
   focusStudyStart(
     authoredTrial,
     deferDirectorForMobileToolboxLesson && directorIntroduction
@@ -2731,16 +2764,14 @@ function maybeNudgeIdlePlayer(objectiveComplete: boolean, hint: string | undefin
     nudgeIndex: nudgeCountThisEpoch,
     recoveryHints: authoredTrial?.recoveryHints,
   });
-  // In the Open Lab, Dr. E's second nudge hints at a friend not yet found.
-  const friend = !authoredTrial && nudgeCountThisEpoch === 1
-    ? currentDexView().items.find((item) => item.tier === 'rare' && !item.found)
-    : undefined;
+  // In the Open Lab, Dr. E's second nudge is his lead.
+  const lead = !authoredTrial && nudgeCountThisEpoch === 1 ? currentLead() : null;
   nudgeCountThisEpoch += 1;
   lastActionTick = tickCount; // another full idle stretch before the next one
   coach.showNudge(
-    friend ? 'I’ve seen something odd…' : nudge.title,
-    friend ? friend.hint : nudge.body,
-    { interruptTutorial: nudge.interruptTutorial },
+    lead ? lead.name : nudge.title,
+    lead ? leadText(lead) : nudge.body,
+    { interruptTutorial: nudge.interruptTutorial, kicker: lead ? 'Dr. E’s lead' : undefined },
   );
 }
 

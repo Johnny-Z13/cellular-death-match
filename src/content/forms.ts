@@ -1,5 +1,6 @@
-// Dr. E's friends that you rescue by merging. Each form is a few cultures of
-// given strains, touching in a given pattern, fed together in one field, that
+// Dr. E's friends that you rescue by merging. Each form is a few of your own
+// cultures of given strains, touching in a given pattern, fed together in one
+// field (wild cultures never count, nor spoil it), that
 // lock into one bonded organism once the arrangement holds. The list comes
 // from the merge census (docs/v1/merge-census.md): natural affinities first,
 // arrangements the dish resists last. Numbers follow the dex: #000 is Dr. E,

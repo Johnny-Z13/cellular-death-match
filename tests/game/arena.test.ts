@@ -1845,12 +1845,16 @@ describe('arena ecosystem mode', () => {
         mergeDiscovery,
       });
       arena.setHazardsHeld(true);
-      const still = { ...ARCHETYPE_DEFAULTS.swarmlet, speed: 0 };
-      arena.spawnEnemy({ spawn: still, pos: [48, 50] });
-      arena.spawnEnemy({ spawn: { ...still }, pos: [53, 50] });
+      // Two planted Swarmlets, side by side (hatchlings hold still on their
+      // yolk), and a wild one pressing against them: the crowd neither joins
+      // the group nor spoils it.
+      expect(arena.applyTool('egg', [47, 50], { eggArchetype: 'swarmlet' })).toBe(true);
+      for (let t = 0; t < 130; t++) arena.tick(IDLE);
+      expect(arena.applyTool('egg', [53, 50], { eggArchetype: 'swarmlet' })).toBe(true);
+      arena.spawnEnemy({ spawn: { ...ARCHETYPE_DEFAULTS.swarmlet, speed: 0 }, pos: [50, 56] });
       const events = [];
       for (let t = 0; t < 600; t++) {
-        if (t % 120 === 0) arena.applyTool('nutrient', [50.5, 50]);
+        if (t % 120 === 0) arena.applyTool('nutrient', [50, 51]);
         arena.tick(IDLE);
         events.push(...arena.drainMergeEvents());
       }

@@ -34,6 +34,8 @@ export const VERY_RARE_TUNING = {
   /** ...crossing the mean this many times within the window. */
   blinkerCrossings: 6,
   blinkerWindowTicks: 480,
+  /** A swing must clear this share of blinkerSwing either side of the mean. */
+  blinkerBand: 0.25,
   /** Old Timer: locked this long (three minutes of dish time). */
   oldTimerTicks: MERGE_DETECTION.ticksPerSecond * 180,
 };
@@ -63,9 +65,16 @@ export function isBlinking(samples: readonly FormSample[]): boolean {
   const vols = samples.map((s) => s.vol);
   const mean = vols.reduce((a, b) => a + b, 0) / vols.length;
   if (mean <= 0 || (Math.max(...vols) - Math.min(...vols)) / mean < T.blinkerSwing) return false;
+  // A crossing counts only from clearly above the mean to clearly below it,
+  // or back: jitter around the mean is not a heartbeat.
+  const band = mean * T.blinkerSwing * T.blinkerBand;
+  let side = 0;
   let crossings = 0;
-  for (let i = 1; i < vols.length; i++) {
-    if (Math.sign(vols[i]! - mean) !== Math.sign(vols[i - 1]! - mean) && vols[i] !== mean) crossings += 1;
+  for (const vol of vols) {
+    const now = vol > mean + band ? 1 : vol < mean - band ? -1 : 0;
+    if (now === 0) continue;
+    if (side !== 0 && now !== side) crossings += 1;
+    side = now;
   }
   return crossings >= T.blinkerCrossings;
 }
@@ -211,7 +220,9 @@ export function createMergeTracker(): MergeTracker {
         if (form.samples.length > keep) form.samples.splice(0, form.samples.length - keep);
         const recent = (ticks: number) => form.samples.slice(-Math.ceil(ticks / T.scanTicks) - 1);
         if (!form.earned.has('glider') && isGliding(recent(V.gliderWindowTicks))) earn(form, 'glider');
-        if (!form.earned.has('blinker') && isBlinking(recent(V.blinkerWindowTicks))) earn(form, 'blinker');
+        // A heartbeat is judged over a whole window after the lock, not the
+        // settling of the meal that made it.
+        if (!form.earned.has('blinker') && form.age >= V.blinkerWindowTicks && isBlinking(recent(V.blinkerWindowTicks))) earn(form, 'blinker');
         if (!form.earned.has('old_timer') && form.age >= V.oldTimerTicks) earn(form, 'old_timer');
       }
       // Compound: two locked forms pressed together and fed bond into one.
