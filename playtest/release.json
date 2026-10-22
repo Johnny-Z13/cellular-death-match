@@ -1,10 +1,10 @@
 {
-  "version": "Alpha Build 6",
-  "id": "alpha-6",
-  "date": "2026-10-20",
-  "sourceCommit": "abb0de286f1eaa7925f2d731f0559b12dcc1dd71",
+  "version": "Alpha Build 7",
+  "id": "alpha-7",
+  "date": "2026-10-22",
+  "sourceCommit": "9d2ffaa01394f1b3a9410c10c5bb1c255818eed0",
   "branch": "main",
-  "description": "Restock, Oddities and two QA rounds: good moments refill your tools, 12 secrets to find, and goals count only your own cultures.",
+  "description": "Flow and discovery: the case leads trial to trial, and the Open Lab is a sandbox with Dr. E's leads to chase.",
   "play": "/play/",
   "platforms": "Any modern browser: Chrome, Edge, Safari or Firefox, on desktop, tablet or phone."
 }
