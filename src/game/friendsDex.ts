@@ -161,14 +161,16 @@ export function dexView(progression: Pick<DiscoveryProgressionState, 'unlockedLi
 // must all be in the Egg tray) alternate with hybrids the tray can cross
 // (both parents in it), so the leads mix merging with breeding; other
 // strains still to find come after, and the very rares once a merge has been
-// made. `turn` (the Open Lab trial) walks the
-// first few candidates, so a lead the player could not land gives way to
-// another next trial instead of nagging.
+// made. `turn` walks the first few candidates: it moves on when a lead has
+// gone unfound for a while (main.ts), so a lead the player cannot land gives
+// way to another instead of nagging.
 export const LEAD_TUNING = {
   /** How many of the next candidates the turn rotates through. */
   window: 3,
+  /** Dish seconds a lead may go unfound before Dr. E offers the next one. */
+  patienceSeconds: 75,
   /** Said with merge leads until the player has made a merge. */
-  mergeTip: 'Plant them touching, then feed them at once.',
+  mergeTip: 'Plant them touching, then feed.',
 };
 
 export interface Lead {
@@ -187,12 +189,14 @@ export function nextLead(view: DexView, tray: readonly string[], turn = 0): Lead
   const merges = open.filter((item) => item.tier === 'rare' && item.strains.length > 0 && item.strains.every((strain) => has.has(strain)));
   const crossable = (item: DexItem) => BREED_DEFS[item.id as BreedId]?.parents?.every((parent) => has.has(parent)) ?? false;
   const hybrids = open.filter((item) => item.tier === 'common' && crossable(item));
+  // Other strains to find, but never a hybrid the tray cannot cross.
+  const others = open.filter((item) => item.tier === 'common' && !crossable(item) && !BREED_DEFS[item.id as BreedId]?.parents);
   const candidates: DexItem[] = [];
   for (let i = 0; i < Math.max(merges.length, hybrids.length); i++) {
     if (merges[i]) candidates.push(merges[i]!);
     if (hybrids[i]) candidates.push(hybrids[i]!);
   }
-  candidates.push(...open.filter((item) => item.tier === 'common' && !crossable(item)));
+  candidates.push(...others);
   if (mergedBefore) candidates.push(...open.filter((item) => item.tier === 'very-rare'));
   if (candidates.length === 0) return null;
   const item = candidates[turn % Math.min(LEAD_TUNING.window, candidates.length)]!;

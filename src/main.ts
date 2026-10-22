@@ -137,7 +137,7 @@ import { dishGridFor, dishLayoutFor, type DishLayout } from './ui/dishShape';
 import { createDrEPresence } from './ui/drEPresence';
 import { createDrESpeech } from './ui/drESpeech';
 import { groupExtent, type MergeEvent } from './game/mergeDetection';
-import { dexView, loadFriends, nextLead, recordFriend, type DexItem, type Lead } from './game/friendsDex';
+import { dexView, LEAD_TUNING, loadFriends, nextLead, recordFriend, type DexItem, type Lead } from './game/friendsDex';
 import { createDexScreen } from './ui/dexScreen';
 import { createFriendReveal } from './ui/friendReveal';
 import { isCrazyGamesEnvironment } from './platform/crazyGames';
@@ -373,18 +373,36 @@ function showReveal(item: DexItem, from: { x: number; y: number }): void {
 const LEAD_NUDGE_AFTER_START_MS = 5200;
 const LEAD_NUDGE_AFTER_FIND_MS = 1400;
 let leadNudgeTimer = 0;
+// Which of the next few leads Dr. E is on. It moves only when a lead has gone
+// unfound for LEAD_TUNING.patienceSeconds of dish time, so the chooser, the
+// dish and the title name the same one.
+let leadTurn = 0;
+let leadWatch: { id: string; sinceTick: number } | null = null;
 
 function currentLead(): Lead | null {
-  const caseTrials = COMMON_COLD_CASE.trials.length;
-  const fightIndex = run.getState().fightIndex;
-  if (fightIndex < caseTrials) return null;
-  return nextLead(currentDexView(), currentLifeformUnlocks(), fightIndex - caseTrials);
+  if (run.getState().fightIndex < COMMON_COLD_CASE.trials.length) return null;
+  return nextLead(currentDexView(), currentLifeformUnlocks(), leadTurn);
 }
 
-// On the title, once the Open Lab is open: what Dr. E would point at first.
+// Called each dish frame: a lead left unfound too long gives way to the next.
+function watchLead(): void {
+  const lead = currentLead();
+  if (!lead) return;
+  if (leadWatch?.id !== lead.id || tickCount < leadWatch.sinceTick) {
+    leadWatch = { id: lead.id, sinceTick: tickCount };
+    return;
+  }
+  if (tickCount - leadWatch.sinceTick < LEAD_TUNING.patienceSeconds * 60) return;
+  leadTurn += 1;
+  leadWatch = null;
+  scheduleLeadNudge(0);
+}
+
+// On the title, once the Open Lab is open: Dr. E's lead for the loadout the
+// player brings.
 function titleLead(): { name: string; hint: string } | null {
   if (!caseIsSealed()) return null;
-  const lead = nextLead(currentDexView(), discoveryProgression.unlockedLifeforms);
+  const lead = nextLead(currentDexView(), strainLibrary.getLoadout(), leadTurn);
   return lead ? { name: lead.name, hint: lead.hint } : null;
 }
 
@@ -398,7 +416,7 @@ function scheduleLeadNudge(delayMs: number): void {
   leadNudgeTimer = window.setTimeout(() => {
     if (!dish || arena !== dish || run.getState().phase !== 'arena') return;
     const lead = currentLead();
-    if (lead) coach.showNudge(lead.name, leadText(lead), { kicker: 'Dr. E’s lead' });
+    if (lead) coach.showNudge(lead.name, leadText(lead), { kicker: 'Dr. E’s lead', dismissible: false });
   }, delayMs);
 }
 dex.refresh(currentDexView());
@@ -1031,8 +1049,8 @@ function announceDishFull(): void {
 
 // A second tap meant for Dr. E's "Tap to continue" must not land on the dish
 // where the button was and plant an egg before he has said why. Only taps on
-// the button's old spot, just after it closed, are held.
-const DIALOG_TAP_GUARD_MS = 800;
+// the button's old spot, within a slow double click of its closing, are held.
+const DIALOG_TAP_GUARD_MS = 1500;
 const DIALOG_TAP_GUARD_PX = 16;
 let heldTapSpot: { until: number; rect: DOMRect } | null = null;
 document.getElementById('coach-skip')?.addEventListener('click', (event) => {
@@ -1753,6 +1771,9 @@ function startNewFight() {
     objective: run.getObjective(),
     fightIndex: runState.fightIndex,
     knownBreedIds: new Set(discoveryProgression.discoveredBreedIds),
+    bankedBreedIds: new Set(discoveryProgression.breedDiscoveryRecords
+      .filter((record) => record.stage === 'stabilized')
+      .map((record) => record.id)),
     // The food web for the case and the open lab (the onboarding dish keeps
     // its own tuning inside the arena).
     lifeCycle: DISH_LIFE_CYCLE,
@@ -2077,6 +2098,7 @@ function loop() {
   checkOddities();
   for (const event of arena.drainRestocks()) announceRestock(event);
   maybeNudgeIdlePlayer(objective.complete, objective.def.hint);
+  watchLead();
   updateTicker(arena);
   persistArenaDiscoveries(arena);
 

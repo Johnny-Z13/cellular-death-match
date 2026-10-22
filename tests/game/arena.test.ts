@@ -2596,6 +2596,29 @@ describe('arena ecosystem mode', () => {
     expect(arena.drainRestocks().filter((event) => event.reason === 'discovery')).toEqual([]);
   });
 
+  it('re-spawns a strain only seen before, but not one the player has banked', () => {
+    const bloomCells = (banked: boolean) => {
+      const arena = createArena({
+        LX: 90, LY: 90, seed: 21,
+        player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3, toolCooldownMult: 0 },
+        enemies: [], wrap: false, mode: 'ecosystem', fightIndex: 6, includeControlSample: false,
+        worldEventIntensity: 0, lifeCycle: DISH_LIFE_CYCLE,
+        knownBreedIds: new Set(['bloom_mass'] as const),
+        bankedBreedIds: new Set(banked ? ['bloom_mass'] as const : []),
+      });
+      // A Splitter and a Swarmlet side by side, fed: the Bloom Mass recipe.
+      arena.applyTool('egg', [42, 45], { eggArchetype: 'splitter' });
+      arena.applyTool('egg', [48, 45], { eggArchetype: 'swarmlet' });
+      arena.applyTool('nutrient', [45, 45]);
+      for (let i = 0; i < 60 * 4; i++) arena.tick({ moveVec: [0, 0], shouldFire: false, shouldEngulf: false });
+      return [...arena.archetypes].filter(([id, spawn]) => spawn.breedId === 'bloom_mass' && (arena.state.cells.get(id)?.vol ?? 0) > 0).length;
+    };
+    // Seen once and lost, it is born again so it can be kept alive and saved.
+    expect(bloomCells(false)).toBeGreaterThan(0);
+    // Banked, no clone crowds the pair.
+    expect(bloomCells(true)).toBe(0);
+  });
+
   it('fades the player\'s fields at lesson pace while Dr. E instructs', () => {
     const arena = createArena({
       LX: 80, LY: 80, seed: 5,

@@ -30,7 +30,9 @@ export interface Coach {
   getCurrentPointerTarget(): string | undefined;
   shouldAutoSpawn(): boolean;
   onOnboardingComplete: ((trialIndex: number) => void) | null;
-  showNudge(title: string, body: string, opts?: { interruptTutorial?: boolean; kicker?: string }): void;
+  /** `dismissible: false` shows no "Got it" (the note still hides itself, and
+   *  on any dish action): its text gets the full width. */
+  showNudge(title: string, body: string, opts?: { interruptTutorial?: boolean; kicker?: string; dismissible?: boolean }): void;
   hideNudge(): void;
 }
 
@@ -447,7 +449,7 @@ export function createCoach(storage?: Pick<Storage, 'getItem' | 'setItem'>): Coa
       stepEl.textContent = '';
       if (actionEl) actionEl.textContent = '';
       if (skipBtn) skipBtn.textContent = 'Got it';
-      if (skipBtn) skipBtn.hidden = false;
+      if (skipBtn) skipBtn.hidden = opts.dismissible === false;
       show();
       window.clearTimeout(nudgeTimer);
       nudgeTimer = window.setTimeout(() => hideNudgeNow(), 9000);

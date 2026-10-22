@@ -245,6 +245,10 @@ export interface CreateArenaOpts {
   worldEventIntensity?: number;
   fightIndex?: number;
   knownBreedIds?: ReadonlySet<BreedId>;
+  /** Strains the player has banked (stabilized, in the Egg tray): a fresh
+   *  discovery of one is not born again as a specimen. A strain only seen,
+   *  never banked, still is, so it can be kept alive and saved. */
+  bankedBreedIds?: ReadonlySet<BreedId>;
   lifeCycle?: LifeCycleProfileId;
   /** False keeps the dish from evolving breeds (the title screen's dish must
    *  not reveal strains the player has yet to find). */
@@ -440,6 +444,7 @@ export function createArena(opts: CreateArenaOpts): Arena {
   };
   const signals: string[] = [];
   const knownBreedIds = new Set<BreedId>(opts.knownBreedIds ?? []);
+  const bankedBreedIds = new Set<BreedId>(opts.bankedBreedIds ?? []);
   const discoveredBreedIds = new Set<BreedId>();
   const discoveredBreedTicks = new Map<BreedId, number>();
   const discoveredNoteIds = new Set<DiscoveryNoteId>();
@@ -485,10 +490,11 @@ export function createArena(opts: CreateArenaOpts): Arena {
       addDishEvent(marker.kind, `NEW STRAIN: ${BREED_DEFS[id].name}`, sourceCell.center, marker.radius, marker.color);
     }
     if (!sourceCell || sourceCell.vol <= 0 || livingCultureCount(state, archetypes) >= ECOSYSTEM_MAX_POPULATION) return;
-    // A strain the player already knows is not born again as a specimen: it
+    // A strain the player has banked is not born again as a specimen: it
     // still counts for the goals, but a clone beside its source would only
-    // crowd the player's layout (and spoil a merge being fed there).
-    if (!announce) return;
+    // crowd the player's layout (and spoil a merge being fed there). One only
+    // seen before is, or it could never be kept alive and saved.
+    if (bankedBreedIds.has(id)) return;
     // A discovery is born beside its source, never on top of it. `addCell`
     // intentionally refuses to overwrite occupied pixels, so reusing the
     // source centre can create a zero-volume specimen (and dead-end Trial 1
