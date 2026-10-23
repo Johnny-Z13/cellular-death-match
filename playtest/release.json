@@ -1,10 +1,10 @@
 {
   "version": "Alpha Build 7",
   "id": "alpha-7",
-  "date": "2026-10-22",
-  "sourceCommit": "9d2ffaa01394f1b3a9410c10c5bb1c255818eed0",
+  "date": "2026-10-23",
+  "sourceCommit": "b1e92d151887a3fc497f8cee9b53aade5b89d3ef",
   "branch": "main",
-  "description": "Flow and discovery: the case leads trial to trial, and the Open Lab is a sandbox with Dr. E's leads to chase.",
+  "description": "Flow and discovery: the case leads trial to trial, and the Open Lab is a sandbox with Dr. E’s leads to chase. Refreshed browser, desktop-install and share icons.",
   "play": "/play/",
   "platforms": "Any modern browser: Chrome, Edge, Safari or Firefox, on desktop, tablet or phone."
 }
