@@ -2,9 +2,9 @@
   "version": "Alpha Build 7",
   "id": "alpha-7",
   "date": "2026-10-23",
-  "sourceCommit": "b1e92d151887a3fc497f8cee9b53aade5b89d3ef",
+  "sourceCommit": "efe0fc6acd6c2bbde9ad6406ae7ba748d76ab619",
   "branch": "main",
-  "description": "Flow and discovery: the case leads trial to trial, and the Open Lab is a sandbox with Dr. E’s leads to chase. Refreshed browser, desktop-install and share icons.",
+  "description": "Flow and discovery, with consistent Dr. E icons and a clearer, centred title screen introducing the cellular-automata inspiration.",
   "play": "/play/",
   "platforms": "Any modern browser: Chrome, Edge, Safari or Firefox, on desktop, tablet or phone."
 }
