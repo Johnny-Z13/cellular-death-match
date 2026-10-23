@@ -100,7 +100,7 @@ export function createTitleDish(profile: VisualPerformanceProfile, paletteSize: 
     const aspect = window.innerWidth / window.innerHeight;
     if (Math.abs(aspect / (grid.LX / grid.LY) - 1) > T.rebuildAspectChange) build();
     canvasRect = canvas.getBoundingClientRect();
-    const copy = screen.querySelectorAll<HTMLElement>('.title-eyebrow, .title-wordmark > span, .title-pitch, .title-archive-strip, .title-start-button, .title-save-note');
+    const copy = screen.querySelectorAll<HTMLElement>('.title-eyebrow, .title-wordmark > span, .title-pitch, .title-context, .title-archive-strip, .title-start-button, .title-save-note');
     avoid = [...copy, document.getElementById('options-button')]
       .filter((node): node is HTMLElement => !!node && node.getClientRects().length > 0)
       .map((node) => node.getBoundingClientRect());

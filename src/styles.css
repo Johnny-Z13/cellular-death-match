@@ -6327,13 +6327,14 @@ canvas.dre-face.dre-sneeze {
   z-index: 3;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-rows: auto 1fr auto auto auto 1.15fr auto;
+  grid-template-rows: auto 1fr auto auto auto auto 1.15fr auto;
   grid-template-areas:
     "eyebrow eyebrow"
     ". ."
     "word word"
     "pitch pitch"
     "cta cta"
+    "context context"
     ". ."
     "strip note";
   width: auto;
@@ -6362,11 +6363,12 @@ canvas.dre-face.dre-sneeze {
 
 .screen-title-screen .title-eyebrow {
   grid-area: eyebrow;
-  justify-self: start;
+  justify-self: center;
+  max-width: calc(100% - 80px);
   margin: 0;
   color: var(--bio);
   font: 400 clamp(11px, 1.5svh, 14px)/1.2 var(--font-mono);
-  letter-spacing: 0.32em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   text-shadow: none;
 }
@@ -6426,36 +6428,49 @@ canvas.dre-face.dre-sneeze {
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  width: clamp(260px, 26vw, 380px);
-  min-height: 56px;
-  margin: clamp(16px, 3svh, 30px) 0 0;
-  padding: 0 22px;
+  justify-content: center;
+  width: min(100%, 280px);
+  min-height: 48px;
+  margin: clamp(16px, 2.5svh, 24px) 0 0;
+  padding: 12px 20px;
   border: 0;
   border-radius: 4px;
   background: var(--bio);
   color: var(--void);
-  font: 400 clamp(14px, 2svh, 17px)/1 var(--font-display);
-  letter-spacing: 0.14em;
+  font: 400 clamp(13px, 1.8svh, 15px)/1.2 var(--font-display);
+  letter-spacing: 0.1em;
+  text-align: center;
   text-transform: uppercase;
   box-shadow: 0 0 0 1px rgba(143, 247, 230, 0.6), 0 0 40px rgba(91, 233, 214, 0.35);
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Landscape windows: the button grows to keep its label ("Enter Open Lab",
-   "Continue Trial") on one line rather than wrapping at the 260px floor. */
-@media (orientation: landscape) {
-  .screen-title-screen .title-start-button {
-    min-width: max-content;
-    white-space: nowrap;
-  }
+.screen-title-screen #title-start-label {
+  text-align: center;
 }
 
 .screen-title-screen .title-start-button::after {
-  content: "→";
-  font-family: var(--font-mono);
-  font-size: 1.35em;
+  content: none;
+}
+
+.screen-title-screen .title-context {
+  grid-area: context;
+  justify-self: center;
+  box-sizing: border-box;
+  max-width: min(100%, 44ch);
+  margin: clamp(14px, 2.2svh, 20px) 0 0;
+  padding: 6px 14px;
+  background: linear-gradient(90deg, transparent, rgba(4, 8, 10, 0.78) 16%, rgba(4, 8, 10, 0.78) 84%, transparent);
+  color: #b7cfce;
+  font: 400 clamp(12px, 1.5svh, 13px)/1.6 var(--font-mono);
+  text-align: center;
+  text-wrap: balance;
+  text-shadow: 0 1px 6px var(--void), 0 0 14px var(--void);
+}
+
+.screen-title-screen .title-context em {
+  color: #c6dedc;
+  font-style: normal;
 }
 
 .screen-title-screen .title-start-button:hover,
@@ -6578,6 +6593,7 @@ canvas.dre-face.dre-sneeze {
       "word"
       "pitch"
       "cta"
+      "context"
       "."
       "strip";
   }
@@ -6591,7 +6607,6 @@ canvas.dre-face.dre-sneeze {
 
   .screen-title-screen .title-archive-strip { width: 100%; }
   .screen-title-screen .title-save-note { display: none; }
-  .screen-title-screen .title-start-button { width: min(100%, 380px); }
 }
 
 /* Short phones: no small print laid over the dish. */
