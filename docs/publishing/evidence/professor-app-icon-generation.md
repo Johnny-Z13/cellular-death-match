@@ -1,5 +1,7 @@
 # Professor E. Mergent app-icon generation record
 
+Historical record: superseded on 2026-10-15 by the [cellular Dr. E icons](../../assets/branding/dr-e-icons.md). The paths below describe the former files, not the current shipped artwork.
+
 - Created: 2026-08-27
 - Provider: OpenAI built-in image generation
 - Master: `public/icon-1024.png`

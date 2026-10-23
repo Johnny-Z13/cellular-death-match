@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "npm run credits:crazygames:check",
+    "prebuild": "npm run credits:crazygames:check && npm run icons:check",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "qa:mobile": "playwright test e2e/responsive.spec.ts",
@@ -21,7 +21,9 @@
     "credits:crazygames": "node scripts/sync-crazygames-attributions.mjs --write",
     "credits:crazygames:check": "node scripts/sync-crazygames-attributions.mjs --check",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "icons:export": "node scripts/export-dre-icons.mjs",
+    "icons:check": "node scripts/audit-app-icons.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",

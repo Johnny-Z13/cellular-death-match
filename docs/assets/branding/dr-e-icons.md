@@ -19,3 +19,23 @@ The attribution register records each output's SHA-256.
 Vercel rewrites conventional root favicon and app-icon URLs to the same files
 under `/play/`. HTML and manifest references use new cache versions. External
 chat/search preview caches can retain an older icon after the live files change.
+
+## Consistency sweep — 23 October 2026
+
+The existing cellular Dr. E artwork was re-exported and byte-matched: the face
+has not changed. Browser, touch, desktop-install and share-image references
+now use icon version 5 (manifest link version 7). Both root and `/play/` icon
+and manifest routes explicitly revalidate. Open Graph and Twitter use the same
+512px face. The studio ident remains Z13.
+
+Run `npm run icons:check` to verify all PNG dimensions, embedded ICO entries,
+HTML/manifest/share references, versions and Vercel routes. Add `-- --staged`
+after staging, or `-- --staged --live https://cellular-death-match.vercel.app`
+after deployment to byte-check every root and game route against source.
+The source check also runs before production builds.
+
+There is no separate native desktop package in this repository. Desktop web-app
+installs use the manifest's 192/512px icons. No Cellular Death Match app or
+shortcut was found in the local Applications/Desktop folders during this sweep.
+Previously installed app icons and external chat-preview caches update on their
+own schedule; the audit verifies the server files, not those external caches.

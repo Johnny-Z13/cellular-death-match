@@ -4,6 +4,8 @@ import { writeFileSync } from 'node:fs';
 import { chromium } from 'playwright';
 
 const base = process.argv[2] ?? 'http://127.0.0.1:5199';
+const preview = await fetch(new URL('/src/content/drETuning.ts', base), { signal: AbortSignal.timeout(5000) });
+if (!preview.ok) throw new Error(`Start the Vite dev server before exporting icons (${preview.status}).`);
 const browser = await chromium.launch();
 try {
   const page = await browser.newPage({ viewport: { width: 512, height: 512 } });
