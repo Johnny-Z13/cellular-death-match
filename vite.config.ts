@@ -34,5 +34,9 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['tests/**/*.test.ts'],
+    // Several arena tests simulate minutes of dish time in one synchronous
+    // call. Vitest 3 times those too, and a CI runner is about half the speed
+    // of a dev machine, so the 5 s default is too tight there.
+    testTimeout: 20_000,
   },
 });
