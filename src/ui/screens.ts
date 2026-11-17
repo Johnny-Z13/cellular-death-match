@@ -103,6 +103,8 @@ export interface Screens {
   setToolUnlocks(tools: readonly ToolId[]): void;
   showcaseToolUnlock(tool: ToolId): void;
   updateToolCharges(charges: Record<ToolId, ToolState>): void;
+  /** A tap the dish refused: shake the tool's tile and say why in the readout. */
+  denyTool(tool: ToolId, reason: ToolDenyReason): void;
   /** Restock: the refilled tiles sparkle and their counts pop. */
   flashToolRefill(tools: readonly string[]): void;
   updateAgitation(state: AgitationState): void;
@@ -253,6 +255,8 @@ export function createScreens(): Screens {
   const mobileLogToggle = get('mobile-log-toggle') as HTMLButtonElement;
   const mobileToolName = get('mobile-tool-name');
   const mobileToolSummary = get('mobile-tool-summary');
+  const mobileToolReadout = document.getElementById('mobile-tool-readout');
+  let denyTimer = 0;
   const eggOptions   = get('egg-options');
   const lifeSummary  = get('life-summary');
   const lifeCount    = get('life-count');
@@ -791,6 +795,22 @@ export function createScreens(): Screens {
         applyCooldownUi(btn, state);
       }
     },
+    denyTool(tool, reason) {
+      const btn = toolButtons.find((button) => button.dataset.tool === tool);
+      if (btn) {
+        btn.classList.remove('tool-denied');
+        void btn.offsetWidth;
+        btn.classList.add('tool-denied');
+      }
+      mobileToolSummary.textContent = TOOL_DENY_COPY[reason];
+      mobileToolReadout?.classList.add('is-denied');
+      window.clearTimeout(denyTimer);
+      denyTimer = window.setTimeout(() => {
+        btn?.classList.remove('tool-denied');
+        mobileToolReadout?.classList.remove('is-denied');
+        syncToolReadouts();
+      }, TOOL_DENY_MS);
+    },
     updateAgitation(state) {
       currentAgitationState = state;
       applyAgitationUi();
@@ -1029,7 +1049,7 @@ export function createScreens(): Screens {
       odditiesSection = section;
     },
     updateNotebook(view) {
-      notebookProgress.textContent = `${view.archive.decodedGenomes} / ${view.archive.totalGenomes} strains found · ${view.archive.understoodProtocols} / ${view.archive.totalProtocols} reactions understood`;
+      notebookProgress.textContent = `${view.archive.decodedGenomes} / ${view.archive.totalGenomes} strains found · ${view.reactions.found} / ${view.reactions.total} reactions found`;
       notebookList.replaceChildren();
       if (odditiesSection) notebookList.append(odditiesSection);
       for (const entry of view.entries) {
@@ -1270,7 +1290,7 @@ export function createScreens(): Screens {
         count.className = 'atlas-group-count';
         count.textContent = group.key === 'lifeform'
           ? `${group.decoded} / ${group.total} found`
-          : `${group.discovered} / ${group.total}`;
+          : `${group.discovered} / ${group.total} found`;
         head.append(label, count);
 
         const grid = document.createElement('div');
@@ -1741,6 +1761,15 @@ function updateToolSummary(
   };
   el.textContent = summaries[tool];
 }
+
+export type ToolDenyReason = 'cooling' | 'empty';
+
+/** What the rack readout says when a tap is refused, and for how long. */
+export const TOOL_DENY_COPY: Record<ToolDenyReason, string> = {
+  cooling: 'recharging, one moment',
+  empty: 'none left for now',
+};
+export const TOOL_DENY_MS = 1100;
 
 /** What each tool does, in two or three words (the rack readout, and Dr. E
  *  naming a tool as it arrives). */

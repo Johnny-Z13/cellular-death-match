@@ -11,6 +11,7 @@ export interface Renderer {
     dishEvents?: readonly DishEventMarker[],
     goalCellIds?: ReadonlySet<CellId>,
     mergeRings?: readonly MergeRing[],
+    ownCellIds?: ReadonlySet<CellId>,
   ): void;
 }
 
@@ -170,12 +171,16 @@ export function createRenderer(
       dishEvents: readonly DishEventMarker[] = [],
       goalCellIds?: ReadonlySet<CellId>,
       mergeRings: readonly MergeRing[] = [],
+      ownCellIds?: ReadonlySet<CellId>,
     ) {
       frame += 1;
       const { LX, LY, cells, boundary } = state.grid;
       const wall = state.wall;
       const base = buildRenderPalette(nCells, state.cells, archetypes, fallbackBase);
       const boundaryColors = base.map((c) => lighten(c, 0.3));
+      const ownRimColors = ownCellIds && ownCellIds.size > 0
+        ? base.map((c) => lighten(c, OWN_RIM.lighten))
+        : null;
       // Lazy init when we know the grid size.
       if (!imageData || imageData.width !== LX || imageData.height !== LY) {
         offscreen = document.createElement('canvas');
@@ -196,7 +201,9 @@ export function createRenderer(
           const cellIdx = x * LY + y;
           const id = cells[cellIdx] as CellId;
           const onBoundary = boundary.has(cellIdx);
-          const palette = onBoundary ? boundaryColors[id] : base[id];
+          const palette = onBoundary
+            ? ownRimColors && ownCellIds!.has(id) ? ownRimColors[id] : boundaryColors[id]
+            : base[id];
           // Fall back to black if id out of palette range.
           const color = palette ?? base[0]!;
 
@@ -274,6 +281,14 @@ export function createRenderer(
   };
 }
 
+
+// The player's own cultures carry a bright rim, where a wild culture's edge
+// is only a little lighter than its body (0.3). It hugs the culture's own
+// outline, so it reads as "this one is yours" without a ring or badge on the
+// dish. `lighten` is how far the rim's colour goes toward white.
+const OWN_RIM = {
+  lighten: 0.78,
+};
 
 // Membrane: a pale gel line. A translucent core and a crisp rim so it
 // reads as gel, never as a culture; alpha follows the wall's strength as it

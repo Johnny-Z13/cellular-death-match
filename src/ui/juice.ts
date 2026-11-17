@@ -11,7 +11,8 @@ export type ShakeIntensity = 'soft' | 'hard';
 export interface Ripple {
   x: number;
   y: number;
-  tool: ToolId;
+  /** 'denied' is a tap the dish refused (tool cooling down or out of stock). */
+  tool: ToolId | 'denied';
   start: number;
   duration: number;
 }
@@ -47,6 +48,21 @@ export const RIPPLE_COLORS: Record<ToolId, string> = {
   acid: '#83ff55',
 };
 
+// A refused tap: a dull ring that closes in on the spot, where a tool that
+// lands sends a tinted ring outward. Radii in grid units.
+export const DENIED_RIPPLE = {
+  color: '#93a3a8',
+  duration: 280,
+  fromRadius: 7,
+  toRadius: 3,
+  alpha: 0.6,
+  lineWidth: 1.5,
+} as const;
+
+function rippleColor(tool: Ripple['tool']): string {
+  return tool === 'denied' ? DENIED_RIPPLE.color : RIPPLE_COLORS[tool];
+}
+
 // speed is grid units per second; duration in ms; size in grid units.
 const BURST_TUNING: Record<BurstKind, { count: number; speed: number; duration: number; size: number }> = {
   birth: { count: 12, speed: 6, duration: 700, size: 1.2 },
@@ -65,6 +81,11 @@ export function spawnRipple(
   now: number,
 ): void {
   store.ripples.push({ x: pos[0], y: pos[1], tool, start: now, duration: 450 });
+  while (store.ripples.length > MAX_RIPPLES) store.ripples.shift();
+}
+
+export function spawnDeniedRipple(store: JuiceStore, pos: [number, number], now: number): void {
+  store.ripples.push({ x: pos[0], y: pos[1], tool: 'denied', start: now, duration: DENIED_RIPPLE.duration });
   while (store.ripples.length > MAX_RIPPLES) store.ripples.shift();
 }
 
@@ -113,6 +134,15 @@ export interface RippleFrame {
 export function rippleVisual(r: Ripple, now: number): RippleFrame | null {
   const t = (now - r.start) / r.duration;
   if (t < 0 || t >= 1) return null;
+  if (r.tool === 'denied') {
+    const d = DENIED_RIPPLE;
+    return {
+      radius: d.fromRadius + t * (d.toRadius - d.fromRadius),
+      alpha: d.alpha * (1 - t),
+      lineWidth: d.lineWidth,
+      color: d.color,
+    };
+  }
   return {
     radius: 2 + t * 10,
     alpha: 0.55 * (1 - t),
@@ -125,7 +155,7 @@ export function rippleVisual(r: Ripple, now: number): RippleFrame | null {
 export function staticRippleVisual(r: Ripple, now: number): RippleFrame | null {
   const t = (now - r.start) / r.duration;
   if (t < 0 || t >= 1) return null;
-  return { radius: 6, alpha: 0.4, lineWidth: 1.5, color: RIPPLE_COLORS[r.tool] };
+  return { radius: 6, alpha: 0.4, lineWidth: 1.5, color: rippleColor(r.tool) };
 }
 
 export interface ParticleFrame {
@@ -151,6 +181,8 @@ export function particleVisual(p: Particle, now: number): ParticleFrame | null {
 
 export interface Juice {
   ripple(pos: [number, number], tool: ToolId): void;
+  /** Mark a tap the dish refused. */
+  deny(pos: [number, number]): void;
   burst(pos: [number, number], rgb: [number, number, number], kind: BurstKind): void;
   shake(intensity: ShakeIntensity): void;
   draw(): void;
@@ -165,6 +197,9 @@ export function createJuice(canvas: HTMLCanvasElement, grid: () => DishGrid): Ju
   return {
     ripple(pos, tool) {
       spawnRipple(store, pos, tool, performance.now());
+    },
+    deny(pos) {
+      spawnDeniedRipple(store, pos, performance.now());
     },
     burst(pos, rgb, kind) {
       if (reduceMotion) return;

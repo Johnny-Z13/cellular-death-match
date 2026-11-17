@@ -97,6 +97,9 @@ export interface Arena {
   getEquilibrium(): EquilibriumInfo;
   /** The dish's balance clocks (game/balance.ts). */
   getBalance(): BalanceReading;
+  /** The player's own cultures: planted from an Egg, or a daughter, cutting
+   *  or bred strain of one. Goals count these, never the wild residents. */
+  getOwnCultureIds(): ReadonlySet<CellId>;
   getObjectiveProgress(): ObjectiveProgress;
   getToolStates(): Record<LabTool, ToolState>;
   getAgitationState(): AgitationState;
@@ -1457,6 +1460,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
     },
     getBalance(): BalanceReading {
       return balanceMeter.reading();
+    },
+    getOwnCultureIds(): ReadonlySet<CellId> {
+      return lineage;
     },
     isHomeostasisAchieved(): boolean {
       return isStable();

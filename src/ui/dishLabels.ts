@@ -3,8 +3,11 @@
 // show and where. The overlay (dishLabelOverlay.ts) only renders the plan.
 //
 // Rules, in priority order: event callouts > tapped culture > goal strains >
-// newly found strains > control sample > other strains. One tag per strain,
-// on its largest culture that has room (falling back to the next largest).
+// newly found strains > the player's own strains > control sample > wild
+// strains. One tag per strain, on its largest culture that has room (falling
+// back to the next largest). The player's cultures of a strain and the wild
+// ones are tagged apart ("Your Splitter" and "Splitter"), because goals count
+// only the player's.
 // Labels sit beside what they name, never on it: a placement that covers a
 // culture body is used only when nothing clearer is free. A label already on
 // screen keeps its slot and side, so busy dishes do not flicker.
@@ -46,6 +49,8 @@ export const DISH_LABEL_TUNING = {
   stackGapPx: 4,
   /** Tags keep their centre at least this far (percent) from the dish edge. */
   edgePct: 4,
+  /** Leads the name on a tag for one of the player's own cultures. */
+  ownPrefix: 'Your',
   icons: {
     goal: '◎',
     new: '★',
@@ -67,7 +72,7 @@ export const DISH_LABEL_TUNING = {
   },
 } as const;
 
-export type DishLabelKind = 'event' | 'ping' | 'goal' | 'new' | 'control' | 'strain';
+export type DishLabelKind = 'event' | 'ping' | 'goal' | 'new' | 'own' | 'control' | 'strain';
 export type DishLabelPlacement = 'above' | 'below' | 'right' | 'left' | 'above-2' | 'below-2';
 
 export interface LabelCulture {
@@ -79,6 +84,9 @@ export interface LabelCulture {
   center: readonly [number, number];
   vol: number;
   isControl: boolean;
+  /** The player's own culture (planted, or a daughter, cutting or bred strain
+   *  of one), not a wild resident. */
+  isOwn: boolean;
   isGoal: boolean;
   /** The strain was found for the first time within newStrainMs. */
   isNew: boolean;
@@ -140,7 +148,7 @@ export interface DishLabelRect { x: number; y: number; w: number; h: number }
 type Rect = DishLabelRect;
 
 const KIND_RANK: Record<DishLabelKind, number> = {
-  event: 0, ping: 1, goal: 2, new: 3, control: 4, strain: 5,
+  event: 0, ping: 1, goal: 2, new: 3, own: 4, control: 5, strain: 6,
 };
 
 const PLACEMENTS: readonly DishLabelPlacement[] = ['above', 'below', 'right', 'left', 'above-2', 'below-2'];
@@ -203,8 +211,15 @@ export function planDishLabels(input: DishLabelInput): PlannedLabel[] {
   // Sticky tags keep their exact side; tags inside their minimum dwell keep
   // their place in the budget even if they had to move culture.
   const hold = input.hold ?? new Set<string>();
-  for (const candidate of candidates) {
+  for (const [index, candidate] of candidates.entries()) {
     if (tags >= maxTags) break;
+    // A slot is kept back for each higher-priority kind still waiting for
+    // pass 3 (a goal, or one of the player's own cultures), so a held wild tag
+    // gives way to it at once. Among equals, the tag on screen keeps its place.
+    const waitingAhead = candidates.slice(0, index).filter((other) => (
+      !placedKeys.has(other.key) && KIND_RANK[other.kind] < KIND_RANK[candidate.kind]
+    )).length;
+    if (tags + waitingAhead >= maxTags) continue;
     const prior = previous.get(candidate.key);
     let label: PlannedLabel | null = null;
     if (candidate.sticky && prior) {
@@ -285,7 +300,7 @@ export function planDishLabels(input: DishLabelInput): PlannedLabel[] {
       {
         key: candidate.key,
         kind,
-        text: kind === 'new' ? `New · ${c.name}` : c.name,
+        text: kind === 'new' ? `New · ${c.name}` : c.isOwn ? `${t.ownPrefix} ${c.name}` : c.name,
         icon: kind === 'goal' ? t.icons.goal
           : kind === 'new' ? t.icons.new
             : kind === 'control' ? t.icons.control
@@ -372,6 +387,7 @@ function cultureKind(c: LabelCulture): DishLabelKind {
   if (c.isControl) return 'control';
   if (c.isGoal) return 'goal';
   if (c.isNew) return 'new';
+  if (c.isOwn) return 'own';
   return 'strain';
 }
 

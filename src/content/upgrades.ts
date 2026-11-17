@@ -1,3 +1,5 @@
+import { AGITATION_TUNING, TOOL_TUNING } from './ecologyTuning';
+
 // Player-facing lab config. Computed from a base + accumulated upgrade
 // modifiers, then passed to the arena to seed each ecosystem.
 export interface PlayerConfig {
@@ -211,26 +213,28 @@ export function applyUpgrades(base: PlayerConfig, refs: ReadonlyArray<UpgradeRef
     engulfMultiplier: base.engulfMultiplier * (1 + pctEngulf),
     bulletSize: base.bulletSize * (1 + pctBullet),
   };
+  // A base that names no charges for a tool means the tool's default stock
+  // (the same fallback the arena uses), so an upgrade adds to that, never to 0.
   if (base.eggCharges !== undefined || addEggCharges !== 0) {
-    out.eggCharges = (base.eggCharges ?? 0) + addEggCharges;
+    out.eggCharges = (base.eggCharges ?? TOOL_TUNING.egg.charges) + addEggCharges;
   }
   if (base.nutrientCharges !== undefined || addNutrientCharges !== 0) {
-    out.nutrientCharges = (base.nutrientCharges ?? 0) + addNutrientCharges;
+    out.nutrientCharges = (base.nutrientCharges ?? TOOL_TUNING.nutrient.charges) + addNutrientCharges;
   }
   if (base.toxinCharges !== undefined || addToxinCharges !== 0) {
-    out.toxinCharges = (base.toxinCharges ?? 0) + addToxinCharges;
+    out.toxinCharges = (base.toxinCharges ?? TOOL_TUNING.toxin.charges) + addToxinCharges;
   }
   if (base.waterCharges !== undefined || addWaterCharges !== 0) {
-    out.waterCharges = (base.waterCharges ?? 0) + addWaterCharges;
+    out.waterCharges = (base.waterCharges ?? TOOL_TUNING.water.charges) + addWaterCharges;
   }
   if (base.saltCharges !== undefined || addSaltCharges !== 0) {
-    out.saltCharges = (base.saltCharges ?? 0) + addSaltCharges;
+    out.saltCharges = (base.saltCharges ?? TOOL_TUNING.salt.charges) + addSaltCharges;
   }
   if (base.acidCharges !== undefined || addAcidCharges !== 0) {
-    out.acidCharges = (base.acidCharges ?? 0) + addAcidCharges;
+    out.acidCharges = (base.acidCharges ?? TOOL_TUNING.acid.charges) + addAcidCharges;
   }
   if (base.agitationCharges !== undefined || addAgitationCharges !== 0) {
-    out.agitationCharges = (base.agitationCharges ?? 0) + addAgitationCharges;
+    out.agitationCharges = (base.agitationCharges ?? AGITATION_TUNING.defaultCharges) + addAgitationCharges;
   }
   if (base.nutrientRadius !== undefined || pctNutrientRadius !== 0) {
     out.nutrientRadius = (base.nutrientRadius ?? 20) * (1 + pctNutrientRadius);

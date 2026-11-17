@@ -51,6 +51,8 @@ export interface BalanceReading {
   /** The player's own strains holding at least `minOwnShare` of the dish. */
   establishedStrains: number;
   maxShare: number;
+  /** The strain holding `maxShare`, wild or not; null in an empty dish. */
+  dominantStrain: string | null;
   heldTicks: number;
   streakTicks: number;
   stable: boolean;
@@ -77,6 +79,7 @@ export function createBalanceMeter(tuning = BALANCE_TUNING): BalanceMeter {
   let strains = 0;
   let established = 0;
   let maxShare = 0;
+  let dominant: string | null = null;
   let foodWeb = 0;
   const alive = new Map<number, number>([[3, 0], [4, 0], [5, 0], [6, 0]]);
 
@@ -84,10 +87,14 @@ export function createBalanceMeter(tuning = BALANCE_TUNING): BalanceMeter {
     sample({ strainVolumes, hunterStrains, ownVolumes }, ticks) {
       let total = 0;
       let largest = 0;
-      for (const volume of strainVolumes.values()) {
+      dominant = null;
+      for (const [strain, volume] of strainVolumes) {
         if (volume <= 0) continue;
         total += volume;
-        largest = Math.max(largest, volume);
+        if (volume > largest) {
+          largest = volume;
+          dominant = strain;
+        }
       }
       strains = 0;
       established = 0;
@@ -122,7 +129,7 @@ export function createBalanceMeter(tuning = BALANCE_TUNING): BalanceMeter {
       if (hunter && prey && ownInWeb && maxShare <= tuning.foodWebMaxShare) foodWeb += ticks;
     },
     reading() {
-      return { balanced, strains, establishedStrains: established, maxShare, heldTicks: held, streakTicks: streak, stable, aliveTicks: alive, foodWebTicks: foodWeb };
+      return { balanced, strains, establishedStrains: established, maxShare, dominantStrain: dominant, heldTicks: held, streakTicks: streak, stable, aliveTicks: alive, foodWebTicks: foodWeb };
     },
     reset() {
       held = 0;
@@ -133,10 +140,31 @@ export function createBalanceMeter(tuning = BALANCE_TUNING): BalanceMeter {
       strains = 0;
       established = 0;
       maxShare = 0;
+      dominant = null;
       foodWeb = 0;
       for (const n of alive.keys()) alive.set(n, 0);
     },
   };
+}
+
+/** What is keeping the Balance clock from running, in the order the player
+ *  would fix it: plant the strains, grow them to a real share, then check
+ *  whoever holds over half the dish. */
+export type BalanceBlocker =
+  | { kind: 'balanced' }
+  | { kind: 'too_few_alive'; have: number; need: number }
+  | { kind: 'too_small'; have: number; need: number }
+  | { kind: 'dominant'; strain: string | null; share: number };
+
+export function balanceBlocker(reading: BalanceReading, tuning = BALANCE_TUNING): BalanceBlocker {
+  if (reading.balanced) return { kind: 'balanced' };
+  if (reading.strains < tuning.minStrains) {
+    return { kind: 'too_few_alive', have: reading.strains, need: tuning.minStrains };
+  }
+  if (reading.establishedStrains < tuning.minStrains) {
+    return { kind: 'too_small', have: reading.establishedStrains, need: tuning.minStrains };
+  }
+  return { kind: 'dominant', strain: reading.dominantStrain, share: reading.maxShare };
 }
 
 /** m:ss for the HUD. */

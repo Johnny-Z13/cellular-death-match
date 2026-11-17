@@ -58,6 +58,9 @@ export interface NotebookView {
   understoodCount: number;
   stabilizedCount: number;
   totalCount: number;
+  /** Reactions found, of all the Library's Reactions section lists. The
+   *  header and that section read the same pair, so they cannot disagree. */
+  reactions: { found: number; total: number };
   archive: GenomeArchiveProgress;
   entries: NotebookViewEntry[];
 }
@@ -187,6 +190,10 @@ export function notebookViewForProgression(
     understoodCount: entries.filter((entry) => entry.researchStage === 'understood').length,
     stabilizedCount: entries.filter((entry) => entry.researchStage === 'stabilized').length,
     totalCount: NOTEBOOK_ENTRIES.length,
+    reactions: {
+      found: entries.filter((entry) => entry.category === 'catalyst').length,
+      total: NOTEBOOK_ENTRIES.filter((entry) => entry.category === 'catalyst').length,
+    },
     archive: genomeArchiveProgress(progression),
     entries,
   };

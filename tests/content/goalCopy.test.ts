@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { OBJECTIVES, type ObjectiveDef, type ObjectiveKind } from '../../src/content/objectives';
-import { goalLineFor } from '../../src/content/goalCopy';
+import { balanceStatusLine, goalLineFor } from '../../src/content/goalCopy';
+import { retiredWordsIn } from '../../src/content/glossary';
 import { OBJECTIVE_POOL } from '../../src/game/objectivePool';
 
 const RETIRED = /\b(breed|genome|specimen|lifeform|chimera|reagent|protocol|study|epoch|equilibrium|homeostasis)s?\b/i;
@@ -65,3 +66,32 @@ describe('authored goal lines', () => {
     expect(goalLineFor(OBJECTIVES[0]!)).toBe('Feed a Swarmlet until it becomes Bloom Mass');
   });
 });
+
+describe('balance status line', () => {
+  const name = (strain: string) => (strain === 'splitter' ? 'Splitter' : strain);
+  const lines = [
+    balanceStatusLine({ kind: 'balanced' }, name),
+    balanceStatusLine({ kind: 'too_few_alive', have: 1, need: 3 }, name),
+    balanceStatusLine({ kind: 'too_small', have: 2, need: 3 }, name),
+    balanceStatusLine({ kind: 'dominant', strain: 'splitter', share: 0.624 }, name),
+    balanceStatusLine({ kind: 'dominant', strain: null, share: 0.7 }, name),
+  ];
+
+  it('says whether the clock is running and what to do when it is not', () => {
+    expect(lines[0]).toMatch(/^In balance/);
+    expect(lines[1]).toBe('Clock paused: 1 of 3 of your strains alive. Plant 2 more.');
+    expect(lines[2]).toBe('Clock paused: a strain of yours is too small. Feed it.');
+    expect(lines[3]).toBe('Clock paused: Splitter holds 62%. Thin it out.');
+    expect(lines[4]).toMatch(/^Clock paused: One strain holds 70%/);
+  });
+
+  it('stays short enough for the two lines a tablet gives Dr. E', () => {
+    const longestName = balanceStatusLine({ kind: 'dominant', strain: 'Static Lattice', share: 1 }, (strain) => strain);
+    for (const line of [...lines, longestName]) expect(line.length, line).toBeLessThanOrEqual(57);
+  });
+
+  it('uses only the player-facing vocabulary', () => {
+    for (const line of lines) expect(retiredWordsIn(line), line).toEqual([]);
+  });
+});
+

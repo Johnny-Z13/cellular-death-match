@@ -42,6 +42,19 @@ Details, evidence and open questions: [`docs/ux-legibility/README.md`](./ux-legi
 - **Layout.** There is an 11px type floor (`--fs-min`). Wide desktop sizes the dish from the height between the goal band and the log. On phones the dish sits below the measured rail, and the tool rack wraps so every tool is visible (`--rack-height`). The rack's end slot is only "Finish trial" or "Retry save"; leaving an unfinished trial is a two-tap action in Options.
 - **Smaller aids.** There is a desktop ghost ring for a field tool's reach, upgrade cards that say when their tool is not unlocked yet, a solid phone log sheet, and an agar plate background.
 
+## Review Slice 1 (2026-11-17)
+
+Fixes and legibility from the pre-itch review.
+
+- **Your cultures show as yours.** `arena.getOwnCultureIds()` exposes the player's lineage. The renderer gives those cultures a bright rim (`OWN_RIM` in `src/ui/render.ts`); their name tags read "Your Splitter" and are planned apart from the wild cultures of the same strain (`isOwn`, kind `own`, `ownPrefix` in `src/ui/dishLabels.ts`). A goal tag or one of the player's own takes a slot from a held wild tag at once.
+- **The Balance clock says why it is paused.** In a Living Dish trial Dr. E's line is live: `balanceBlocker` (`src/game/balance.ts`) names the first thing in the way (too few of your strains alive, a strain too small to count, or one strain over half the dish) and `balanceStatusLine` (`src/content/goalCopy.ts`) words it.
+- **Refused taps answer back.** A tap on a tool that is cooling down or out of stock shakes its tile, turns the rack readout amber with the reason (`TOOL_DENY_COPY` in `src/ui/screens.ts`), leaves a dull closing ring on the dish (`DENIED_RIPPLE` in `src/ui/juice.ts`) and plays a soft tock (`uiAudio.playDenied`).
+- **Desktop toasts hang under the HUD** (two at most), as the phone's event rail does, and the desktop director slot is tall enough for Dr. E's three-line notes.
+- **Upgrades add to a tool's default stock.** Flood Flask, Salt Lattice, Acid Pipette and Centrifuge Rotor used to replace the default with their bonus (Water 6 became 2); `applyUpgrades` now falls back to `TOOL_TUNING`.
+- **Notebook counts agree.** The header reads "reactions found" from the same entries the Library's Reactions section lists (`NotebookView.reactions`).
+- **The title dish waits for a window with a size** (`minGridCells`) instead of building a 0-wide grid.
+- End-to-end cover: `e2e/own-cultures-and-feedback.spec.ts` (its `openStagedRun` opens the game on a saved run at any trial).
+
 ## Main Systems
 
 - Simulation: cellular Potts model in `src/sim/`. Cells store generic energy coefficients; breed profile lookup stays outside the low-level sim.

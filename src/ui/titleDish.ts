@@ -19,6 +19,9 @@ export const TITLE_DISH_TUNING = {
   minCellPx: 4,
   maxGridArea: 30000,
   canvasPxPerCell: 4,
+  // A window too small to hold a dish this many cells across (a page loaded
+  // hidden, or an embed not laid out yet) builds nothing until it has a size.
+  minGridCells: 16,
   // Rebuild the dish when the window's shape drifts this far from the grid's.
   rebuildAspectChange: 0.15,
   // The open lab's mix of six hunters to ten grazers, interleaved so the
@@ -58,6 +61,7 @@ export function createTitleDish(profile: VisualPerformanceProfile, paletteSize: 
   let arena: Arena;
   let renderer: Renderer;
   let grid = { LX: 1, LY: 1 };
+  let built = false;
   let warmupLeft = 0;
   let paused = false;
   let dirty = true;
@@ -71,7 +75,10 @@ export function createTitleDish(profile: VisualPerformanceProfile, paletteSize: 
   // A fresh dish shaped like the window.
   const build = (): void => {
     const cellPx = Math.max(T.minCellPx, Math.sqrt((window.innerWidth * window.innerHeight) / T.maxGridArea));
-    grid = { LX: Math.round(window.innerWidth / cellPx), LY: Math.round(window.innerHeight / cellPx) };
+    const next = { LX: Math.round(window.innerWidth / cellPx), LY: Math.round(window.innerHeight / cellPx) };
+    built = next.LX >= T.minGridCells && next.LY >= T.minGridCells;
+    if (!built) return;
+    grid = next;
     const seed = (Date.now() & 0xffffffff) >>> 0;
     arena = createArena({
       ...grid,
@@ -98,7 +105,8 @@ export function createTitleDish(profile: VisualPerformanceProfile, paletteSize: 
 
   const measure = (): void => {
     const aspect = window.innerWidth / window.innerHeight;
-    if (Math.abs(aspect / (grid.LX / grid.LY) - 1) > T.rebuildAspectChange) build();
+    if (!built || Math.abs(aspect / (grid.LX / grid.LY) - 1) > T.rebuildAspectChange) build();
+    if (!built) return;
     canvasRect = canvas.getBoundingClientRect();
     const copy = screen.querySelectorAll<HTMLElement>('.title-eyebrow, .title-wordmark > span, .title-pitch, .title-context, .title-archive-strip, .title-start-button, .title-save-note');
     avoid = [...copy, document.getElementById('options-button')]
@@ -202,6 +210,12 @@ export function createTitleDish(profile: VisualPerformanceProfile, paletteSize: 
     if (!screen.classList.contains('visible') || document.hidden) {
       paused = true;
       return;
+    }
+    if (!built) {
+      // No dish yet: try again each frame until the window has a size.
+      measure();
+      if (!built) return;
+      clock.reset(now);
     }
     if (paused) {
       clock.reset(now);

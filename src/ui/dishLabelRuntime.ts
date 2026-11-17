@@ -103,7 +103,7 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
     if (id === controlId) {
       return {
         id, strainKey: 'control', name: 'Control sample', color: CONTROL_COLOR,
-        center: cell.center, vol: cell.vol, isControl: true, isGoal: goalIds.has(id), isNew: false,
+        center: cell.center, vol: cell.vol, isControl: true, isOwn: false, isGoal: goalIds.has(id), isNew: false,
         role: 'Reference culture',
         behavior: 'The red anchor. Cultures that drift close attack it.',
       };
@@ -112,14 +112,17 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
     if (!spawn) return null;
     const identity = lifeformIdentityForSpawn(spawn);
     const foundAt = freshStrains.get(identity.name);
+    const isOwn = arena.getOwnCultureIds().has(id);
     return {
       id,
-      strainKey: spawn.breedId ?? spawn.archetype,
+      // The player's cultures of a strain are tagged apart from the wild ones.
+      strainKey: `${isOwn ? 'own-' : ''}${spawn.breedId ?? spawn.archetype}`,
       name: identity.name,
       color: displayColorForSpawn(spawn),
       center: cell.center,
       vol: cell.vol,
       isControl: false,
+      isOwn,
       isGoal: goalIds.has(id),
       isNew: foundAt !== undefined && nowMs - foundAt <= DISH_LABEL_TUNING.newStrainMs,
       role: identity.role,
@@ -149,7 +152,7 @@ export function createDishLabelRuntime(options: DishLabelRuntimeOptions): DishLa
       return;
     }
     overlay.inspect({
-      name: view.name,
+      name: view.isOwn ? `${DISH_LABEL_TUNING.ownPrefix} ${view.name}` : view.name,
       role: view.role,
       behavior: view.behavior,
       color: `rgb(${view.color[0]}, ${view.color[1]}, ${view.color[2]})`,

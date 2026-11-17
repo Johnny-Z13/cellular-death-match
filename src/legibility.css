@@ -469,6 +469,14 @@
 
 .dish-label--goal .dish-label-icon { color: var(--bio-bright, #8ff7e6); }
 
+/* One of the player's own cultures: a bright border, the tag's echo of the
+   bright rim the culture itself carries in the dish (render.ts OWN_RIM). */
+.dish-label--own {
+  border-color: rgba(255, 255, 255, 0.9);
+  color: #fff;
+  font-weight: 600;
+}
+
 .dish-label--new { border-color: rgba(255, 255, 255, 0.8); }
 .dish-label--new .dish-label-icon { color: #ffe27a; }
 
@@ -1583,5 +1591,74 @@
     left: 16px;
     transform: none;
     width: min(1040px, calc(100vw - 236px));
+  }
+}
+
+
+/* ---- Refused taps ----------------------------------------------------------
+   A tap the dish refuses (tool cooling down, or out of stock) shakes the
+   tool's tile and turns the rack readout amber for a moment (main.ts
+   announceToolRefused, screens.ts denyTool). */
+.tool-button.tool-denied {
+  animation: tool-denied 320ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+.mobile-tool-readout.is-denied #mobile-tool-summary {
+  color: var(--amber);
+}
+
+@keyframes tool-denied {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tool-button.tool-denied {
+    animation: none;
+    outline: 2px solid var(--amber);
+    outline-offset: -2px;
+  }
+}
+
+
+/* ---- Desktop toasts --------------------------------------------------------
+   On a desktop the stack hangs just under the HUD, as the phone's event rail
+   does, two cards at most. A toast never lands on the middle of the dish,
+   over the reaction that raised it. */
+@media (min-width: 900px) {
+  .layout[data-screen="arena"] .fx-toasts {
+    top: calc(var(--hud-bottom, 110px) + 10px);
+    bottom: auto;
+    width: min(60vw, 360px);
+  }
+
+  .layout[data-screen="arena"] .fx-toast {
+    animation-name: fx-toast-drop;
+  }
+
+  .layout[data-screen="arena"] .fx-toast:nth-last-child(n + 3) {
+    display: none;
+  }
+}
+
+@keyframes fx-toast-drop {
+  from { opacity: 0; transform: translateY(-12px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+
+/* ---- Desktop director slot -------------------------------------------------
+   Dr. E's notes run to three lines (see the line clamp above). On a desktop
+   the slot is tall enough to hold all three, so a long note stays inside the
+   HUD instead of hanging over its bottom edge. */
+@media (min-width: 900px) {
+  .layout[data-screen="arena"] #hud .hud-director {
+    min-height: calc(
+      var(--hud-label-lh) + var(--hud-headline-lh) + 2 * var(--hud-row-gap)
+      + 3 * 1.35 * var(--fs-small) + 4px
+    );
   }
 }

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { UPGRADES, UPGRADE_TOOLS, applyUpgrades, upgradeToolNote, type PlayerConfig } from '../../src/content/upgrades';
+import { AGITATION_TUNING, TOOL_TUNING } from '../../src/content/ecologyTuning';
 
 const BASE: PlayerConfig = {
   targetVol: 300,
@@ -37,22 +38,22 @@ describe('applyUpgrades', () => {
 
   it('stacks multiply per ref.stacks', () => {
     const result = applyUpgrades(BASE, [{ id: 'egg_1', stacks: 3 }]);
-    expect(result.eggCharges).toBe(6);
+    expect(result.eggCharges).toBe(TOOL_TUNING.egg.charges + 6);
   });
 
   it('adds nutrient charges from "food_1"', () => {
     const result = applyUpgrades(BASE, [{ id: 'food_1', stacks: 1 }]);
-    expect(result.nutrientCharges).toBe(1);
+    expect(result.nutrientCharges).toBe(TOOL_TUNING.nutrient.charges + 1);
   });
 
   it('adds toxin charges from "toxin_1"', () => {
     const result = applyUpgrades(BASE, [{ id: 'toxin_1', stacks: 1 }]);
-    expect(result.toxinCharges).toBe(1);
+    expect(result.toxinCharges).toBe(TOOL_TUNING.toxin.charges + 1);
   });
 
-  it('adds agitation charges from "centrifuge_1"', () => {
+  it('adds agitation charges from "centrifuge_1" on top of the default', () => {
     const result = applyUpgrades(BASE, [{ id: 'centrifuge_1', stacks: 1 }]);
-    expect(result.agitationCharges).toBe(1);
+    expect(result.agitationCharges).toBe(AGITATION_TUNING.defaultCharges + 1);
   });
 
   it('applies tool radius research', () => {
@@ -64,15 +65,35 @@ describe('applyUpgrades', () => {
     expect(result.toxinRadius).toBeCloseTo(28.32, 5);
   });
 
-  it('adds water, salt, and acid charges from reagent research', () => {
+  // A base config that names no charges for a tool means the tool's default
+  // stock (TOOL_TUNING), so "+2 water" must land on top of that, never on 0.
+  it('adds water, salt, and acid charges on top of each tool default', () => {
     const result = applyUpgrades(BASE, [
       { id: 'water_1', stacks: 1 },
       { id: 'salt_1', stacks: 1 },
       { id: 'acid_1', stacks: 1 },
     ]);
-    expect(result.waterCharges).toBe(2);
-    expect(result.saltCharges).toBe(2);
-    expect(result.acidCharges).toBe(1);
+    expect(result.waterCharges).toBe(TOOL_TUNING.water.charges + 2);
+    expect(result.saltCharges).toBe(TOOL_TUNING.salt.charges + 2);
+    expect(result.acidCharges).toBe(TOOL_TUNING.acid.charges + 1);
+  });
+
+  it('never leaves a tool with fewer charges than it has without the upgrade', () => {
+    const defaults: Record<string, number> = {
+      eggCharges: TOOL_TUNING.egg.charges,
+      nutrientCharges: TOOL_TUNING.nutrient.charges,
+      toxinCharges: TOOL_TUNING.toxin.charges,
+      waterCharges: TOOL_TUNING.water.charges,
+      saltCharges: TOOL_TUNING.salt.charges,
+      acidCharges: TOOL_TUNING.acid.charges,
+      agitationCharges: AGITATION_TUNING.defaultCharges,
+    };
+    for (const upgrade of UPGRADES) {
+      const result = applyUpgrades(BASE, [{ id: upgrade.id, stacks: 1 }]) as unknown as Record<string, number | undefined>;
+      for (const [key, stock] of Object.entries(defaults)) {
+        expect(result[key] ?? stock, `${upgrade.id} → ${key}`).toBeGreaterThanOrEqual(stock);
+      }
+    }
   });
 
   it('applies radius research for volatile reagents', () => {
@@ -98,8 +119,8 @@ describe('applyUpgrades', () => {
       { id: 'food_1', stacks: 1 },
     ]);
     expect(result.targetVol).toBe(380);
-    expect(result.eggCharges).toBe(2);
-    expect(result.nutrientCharges).toBe(1);
+    expect(result.eggCharges).toBe(TOOL_TUNING.egg.charges + 2);
+    expect(result.nutrientCharges).toBe(TOOL_TUNING.nutrient.charges + 1);
   });
 
   it('unknown upgrade ids are silently ignored', () => {

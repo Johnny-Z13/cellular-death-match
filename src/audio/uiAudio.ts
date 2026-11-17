@@ -58,6 +58,8 @@ export interface UiAudio {
   playCatchCue(cue: 'wobble' | 'crack' | 'burst', step: number): void;
   /** Restock: a rising run of soft drops, one per refilled tool (up to 4). */
   playRestock(tools: number): void;
+  /** A tap the dish refused: two dull, falling tocks. */
+  playDenied(): void;
   startAmbience(): void;
   stopAmbience(): void;
   isMuted(): boolean;
@@ -235,6 +237,15 @@ export function createUiAudio(): UiAudio {
     }
   }
 
+  function playDenied(): void {
+    if (muted) return;
+    const c = ensureContext();
+    if (c.state === 'suspended' || !master) return;
+    const now = c.currentTime;
+    blip(c, master, now, 196, 150, 0.07, 0.09, 'triangle');
+    blip(c, master, now + 0.085, 165, 124, 0.06, 0.11, 'triangle');
+  }
+
   function playCatchCue(cue: 'wobble' | 'crack' | 'burst', step: number): void {
     if (muted) return;
     const c = ensureContext();
@@ -274,6 +285,7 @@ export function createUiAudio(): UiAudio {
   return {
     playCatchCue,
     playRestock,
+    playDenied,
     speechBus() {
       if (!ctx || !master) return null;
       if (!speechGain) {

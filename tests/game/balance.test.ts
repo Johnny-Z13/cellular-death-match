@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE_TUNING, createBalanceMeter, formatHeld } from '../../src/game/balance';
+import { BALANCE_TUNING, balanceBlocker, createBalanceMeter, formatHeld } from '../../src/game/balance';
 
 const vols = (entries: Record<string, number>) => new Map(Object.entries(entries));
 const none = new Set<string>();
@@ -90,3 +90,37 @@ describe('balance meter', () => {
     expect(formatHeld(60 * 102)).toBe('1:42');
   });
 });
+
+describe('why the Balance clock is paused', () => {
+  const read = (all: Record<string, number>, own: Record<string, number>) => {
+    const meter = createBalanceMeter();
+    meter.sample({ strainVolumes: vols(all), hunterStrains: none, ownVolumes: vols(own) }, 1);
+    return meter.reading();
+  };
+
+  it('says nothing is blocking a dish in balance', () => {
+    const even = { a: 30, b: 30, c: 40 };
+    expect(balanceBlocker(read(even, even))).toEqual({ kind: 'balanced' });
+  });
+
+  it('asks for more strains first when fewer than three of the player\'s are alive', () => {
+    // The wild strains do not count, however many there are.
+    expect(balanceBlocker(read({ a: 20, b: 20, c: 20, d: 20, e: 20 }, { a: 20, b: 20 })))
+      .toEqual({ kind: 'too_few_alive', have: 2, need: BALANCE_TUNING.minStrains });
+  });
+
+  it('names a strain too small to count once three are alive', () => {
+    // c is the player\'s, but holds 2% of the dish, under the 5% floor.
+    expect(balanceBlocker(read({ a: 40, b: 40, c: 2, wild: 18 }, { a: 40, b: 40, c: 2 })))
+      .toEqual({ kind: 'too_small', have: 2, need: BALANCE_TUNING.minStrains });
+  });
+
+  it('names the strain holding over half the dish, wild or not', () => {
+    const reading = read({ a: 10, b: 10, c: 10, wild: 70 }, { a: 10, b: 10, c: 10 });
+    expect(reading.dominantStrain).toBe('wild');
+    const blocker = balanceBlocker(reading);
+    expect(blocker).toMatchObject({ kind: 'dominant', strain: 'wild' });
+    expect(blocker.kind === 'dominant' && blocker.share).toBeCloseTo(0.7, 5);
+  });
+});
+

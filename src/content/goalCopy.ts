@@ -6,6 +6,7 @@
 import { ARCHETYPE_INFO } from './enemies';
 import { BREED_DEFS, REACTION_RECIPES } from './catalysis';
 import type { ObjectiveDef } from './objectives';
+import type { BalanceBlocker } from '../game/balance';
 
 function strainName(def: ObjectiveDef, fallback: string): string {
   if (def.breedId) return BREED_DEFS[def.breedId]?.name ?? fallback;
@@ -77,6 +78,27 @@ export function goalLineFor(def: ObjectiveDef): string {
     default: {
       const unhandled: never = def.kind;
       throw new Error(`Unhandled objective kind: ${unhandled}`);
+    }
+  }
+}
+
+/** Dr. E's live line in a Balance trial: whether the clock is running and, if
+ *  not, the one thing to do about it. `strainName` turns a strain key into
+ *  its display name. Kept under about 57 characters: the tablet HUD gives
+ *  Dr. E two short lines, and the advice must not be the part cut off. */
+export function balanceStatusLine(blocker: BalanceBlocker, strainName: (strain: string) => string): string {
+  switch (blocker.kind) {
+    case 'balanced':
+      return 'In balance. Clock running. Feed whoever fades.';
+    case 'too_few_alive': {
+      const missing = blocker.need - blocker.have;
+      return `Clock paused: ${blocker.have} of ${blocker.need} of your strains alive. Plant ${missing} more.`;
+    }
+    case 'too_small':
+      return 'Clock paused: a strain of yours is too small. Feed it.';
+    case 'dominant': {
+      const name = blocker.strain ? strainName(blocker.strain) : 'One strain';
+      return `Clock paused: ${name} holds ${Math.round(blocker.share * 100)}%. Thin it out.`;
     }
   }
 }

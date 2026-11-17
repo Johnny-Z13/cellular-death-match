@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  createJuiceStore, spawnRipple, spawnBurst, stepJuice,
+  createJuiceStore, spawnRipple, spawnDeniedRipple, spawnBurst, stepJuice,
   rippleVisual, staticRippleVisual, particleVisual,
-  MAX_PARTICLES, MAX_RIPPLES, RIPPLE_COLORS,
+  DENIED_RIPPLE, MAX_PARTICLES, MAX_RIPPLES, RIPPLE_COLORS,
 } from '../../src/ui/juice';
 
 const fixedRand = () => 0.5;
@@ -32,6 +32,18 @@ describe('juice store', () => {
     const store2 = createJuiceStore();
     spawnBurst(store2, [0, 0], [200, 100, 50], 'birth', 0, fixedRand);
     expect(store2.particles[0]!.rgb[0]).toBe(200);
+  });
+
+  it('marks a refused tap with a dull ring that closes in, not a tool ripple', () => {
+    const store = createJuiceStore();
+    spawnDeniedRipple(store, [10, 12], 1000);
+    const ripple = store.ripples[0]!;
+    const early = rippleVisual(ripple, 1000 + DENIED_RIPPLE.duration * 0.1)!;
+    const late = rippleVisual(ripple, 1000 + DENIED_RIPPLE.duration * 0.9)!;
+    expect(early.color).toBe(DENIED_RIPPLE.color);
+    expect(late.radius).toBeLessThan(early.radius);
+    expect(staticRippleVisual(ripple, 1010)!.color).toBe(DENIED_RIPPLE.color);
+    expect(rippleVisual(ripple, 1000 + DENIED_RIPPLE.duration)).toBeNull();
   });
 
   it('ages out expired ripples and particles', () => {

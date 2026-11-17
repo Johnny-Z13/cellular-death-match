@@ -160,6 +160,23 @@ describe('notebook catalogue content', () => {
     expect(notebookViewForProgression(stabilized).archive.decodedGenomes).toBe(2);
   });
 
+  it('counts reactions found exactly as the Library\'s Reactions section does', () => {
+    const progression = updateDiscoveryProgression(
+      createDiscoveryProgression(),
+      { noteIds: ['recipe_bitter_bloom', 'water_carries'] },
+      undefined,
+      { note: 'observed' },
+    );
+    const section = atlasViewForProgression(progression).groups.find((group) => group.key === 'catalyst')!;
+    const header = notebookViewForProgression(progression).reactions;
+    expect(header).toEqual({ found: section.discovered, total: section.total });
+    expect(header.found).toBeGreaterThan(0);
+
+    const revealed = revealAllDiscoveryProgression(createDiscoveryProgression());
+    const all = notebookViewForProgression(revealed).reactions;
+    expect(all.found).toBe(all.total);
+  });
+
   it('counts only distinct recipe-backed protocols and expands in reveal-all mode', () => {
     const totalProtocols = new Set(REACTION_RECIPES.map((recipe) => recipe.discoveryNoteId)).size;
     const observed = updateDiscoveryProgression(

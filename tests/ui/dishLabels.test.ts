@@ -20,6 +20,7 @@ function culture(overrides: Partial<LabelCulture> & Pick<LabelCulture, 'id'>): L
     center: [80, 80],
     vol: 120,
     isControl: false,
+    isOwn: false,
     isGoal: false,
     isNew: false,
     ...overrides,
@@ -387,5 +388,55 @@ describe('label dwell (calm appear/disappear)', () => {
     applyLabelDwell([label('strain-a', 'goal')], memory, 0);
     applyLabelDwell([], memory, 100);
     expect(applyLabelDwell([label('strain-a', 'goal'), label('event-1', 'event')], memory, 200)).toHaveLength(2);
+  });
+});
+
+describe('the player\'s own cultures', () => {
+  it('tags the player\'s culture of a strain apart from the wild one, and says whose it is', () => {
+    const plan = planDishLabels(input({
+      cultures: [
+        culture({ id: 2, strainKey: 'splitter', name: 'Splitter', center: [40, 40], vol: 400 }),
+        culture({ id: 3, strainKey: 'own-splitter', name: 'Splitter', center: [120, 120], vol: 90, isOwn: true }),
+      ],
+    }));
+    const wild = plan.find((label) => label.cultureId === 2)!;
+    const own = plan.find((label) => label.cultureId === 3)!;
+    expect(wild.text).toBe('Splitter');
+    expect(wild.kind).toBe('strain');
+    expect(own.text).toBe(`${DISH_LABEL_TUNING.ownPrefix} Splitter`);
+    expect(own.kind).toBe('own');
+  });
+
+  it('gives the player\'s cultures their tags before wild strains when tags run out', () => {
+    const wild = ['swarmlet', 'bruiser', 'sniper', 'mirror', 'boss'].map((strainKey, i) => culture({
+      id: 10 + i, strainKey, name: strainKey, center: [20 + i * 28, 30], vol: 500,
+    }));
+    const own = culture({ id: 3, strainKey: 'own-splitter', name: 'Splitter', center: [80, 120], vol: 60, isOwn: true });
+    const plan = planDishLabels(input({ cultures: [...wild, own], compact: true }));
+    expect(plan.filter((label) => label.cultureId !== null)).toHaveLength(DISH_LABEL_TUNING.maxTags.compact);
+    expect(plan.some((label) => label.cultureId === 3)).toBe(true);
+  });
+
+  it('makes room for the player\'s culture on a phone already full of wild tags', () => {
+    const wild = ['swarmlet', 'bruiser', 'sniper', 'mirror', 'boss'].map((strainKey, i) => culture({
+      id: 10 + i, strainKey, name: strainKey, center: [20 + i * 28, 30], vol: 500,
+    }));
+    const first = planDishLabels(input({ cultures: wild, compact: true }));
+    expect(first).toHaveLength(DISH_LABEL_TUNING.maxTags.compact);
+    const previous = new Map(first.map((label) => [label.key, { placement: label.placement, cultureId: label.cultureId }]));
+
+    // The player plants a Splitter: every slot is held by a tag already on screen.
+    const own = culture({ id: 3, strainKey: 'own-splitter', name: 'Splitter', center: [80, 120], vol: 60, isOwn: true });
+    const next = planDishLabels(input({ cultures: [...wild, own], compact: true, previous }));
+    expect(next.filter((label) => label.cultureId !== null)).toHaveLength(DISH_LABEL_TUNING.maxTags.compact);
+    expect(next.some((label) => label.cultureId === 3)).toBe(true);
+  });
+
+  it('keeps the goal mark on a goal culture that is also the player\'s own', () => {
+    const plan = planDishLabels(input({
+      cultures: [culture({ id: 3, strainKey: 'own-splitter', name: 'Splitter', isOwn: true, isGoal: true })],
+    }));
+    expect(plan[0]!.kind).toBe('goal');
+    expect(plan[0]!.text).toBe(`${DISH_LABEL_TUNING.ownPrefix} Splitter`);
   });
 });

@@ -6,7 +6,8 @@ import { createScreens, TOOL_SUMMARIES, type ToolId } from './ui/screens';
 import { AGITATION_TUNING, DISH_LIFE_CYCLE, SIM_SPEED_TUNING, TOOL_TUNING } from './content/ecologyTuning';
 import { renderLoadoutScreen } from './ui/loadoutScreen';
 import { getUpgradeDef, upgradeToolNote } from './content/upgrades';
-import { goalLineFor } from './content/goalCopy';
+import { balanceStatusLine, goalLineFor } from './content/goalCopy';
+import { balanceBlocker } from './game/balance';
 import { createDishLabelOverlay } from './ui/dishLabelOverlay';
 import { createDishLabelRuntime } from './ui/dishLabelRuntime';
 import {
@@ -997,6 +998,7 @@ function applySelectedToolAt(pos: [number, number]): boolean {
       registerPlayerAction();
       return true;
     }
+    announceToolRefused('paste', pos);
     return false;
   }
   if (arena.applyTool(selectedTool, pos, {
@@ -1033,7 +1035,27 @@ function applySelectedToolAt(pos: [number, number]): boolean {
     return true;
   }
   if (selectedTool === 'egg' && arena.isFull()) announceDishFull();
+  else announceToolRefused(selectedTool, pos);
   return false;
+}
+
+// A tap the dish refuses says so: the tool's tile shakes, the readout names
+// the reason, a dull ring closes on the spot, with a soft tock and a tick of
+// haptics. Without it a tap during a cooldown simply vanishes.
+const TOOL_REFUSED_REPEAT_MS = 220;
+let toolRefusedAt = Number.NEGATIVE_INFINITY;
+function announceToolRefused(tool: ToolId, pos: [number, number]): void {
+  if (!arena) return;
+  const state = arena.getToolStates()[tool];
+  const reason = state.charges <= 0 ? 'empty' : state.cooldownRemainingTicks > 0 ? 'cooling' : null;
+  if (!reason) return;
+  const now = performance.now();
+  if (now - toolRefusedAt < TOOL_REFUSED_REPEAT_MS) return;
+  toolRefusedAt = now;
+  uiAudio.playDenied();
+  haptics.play('impact');
+  juice.deny(pos);
+  screens.denyTool(tool, reason);
 }
 
 // An Egg refused by a full dish says why, in a toast (the log is often shut
@@ -1958,7 +1980,7 @@ function loop() {
     // storage is unavailable so Retry cannot overwrite later dish activity.
     simClock.reset(now);
     if (shouldRenderFrame(lastRenderAt, now, visualProfile.targetRenderFps)) {
-      renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds, mergeRingsFor(arena));
+      renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds, mergeRingsFor(arena), arena.getOwnCultureIds());
       renderToolEffects(arena);
       juice.draw();
       lastRenderAt = now;
@@ -2015,7 +2037,7 @@ function loop() {
   recoverLostLessonCulture(arena, now);
   dishGoalCellIds = dishLabels.update(arena, run.getObjective(), now);
   if (shouldRenderFrame(lastRenderAt, now, visualProfile.targetRenderFps)) {
-    renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds, mergeRingsFor(arena));
+    renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds, mergeRingsFor(arena), arena.getOwnCultureIds());
     renderToolEffects(arena);
     juice.draw();
     lastRenderAt = now;
@@ -2077,7 +2099,11 @@ function loop() {
     goalLine: goalLineFor(objective.def),
     goalFraction: objective.fraction,
     objectiveSummary: objective.summary,
-    objectiveHint: objective.def.hint ?? '',
+    // In a Balance trial Dr. E's line is live: whether the clock is running
+    // and, when it is paused, the one thing to do about it.
+    objectiveHint: objective.def.kind === 'hold_balance'
+      ? balanceStatusLine(balanceBlocker(arena.getBalance()), labelForStrain)
+      : objective.def.hint ?? '',
     objectiveComplete: objective.complete,
     objectiveTimed: objective.def.timed === true,
     upgrades: runState.upgrades.map((u) => {
