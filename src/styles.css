@@ -8492,3 +8492,18 @@ canvas.dre-face.dre-sneeze {
     padding-top: calc(116px + env(safe-area-inset-top));
   }
 }
+
+/* A storage warning replaces decorative title copy, never the dish controls. */
+.layout[data-temporary-storage="true"] .title-context {
+  visibility: hidden;
+}
+.screen-title-screen .temporary-storage-notice {
+  grid-area: context;
+  align-self: center;
+  justify-self: center;
+  max-width: 32ch;
+  margin: 12px 0 0;
+  color: var(--amber);
+  font: 400 12px/1.5 var(--font-mono);
+  text-align: center;
+}

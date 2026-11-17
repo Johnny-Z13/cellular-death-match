@@ -205,7 +205,7 @@ export const OBJECTIVE_POOL: ReadonlyArray<PoolObjective> = [
     name: 'Food Web',
     description: 'Let a hunter and its prey share the dish for three minutes in all, neither taking over. A dip only pauses the clock.',
     target: 'Hunter and prey together 3:00',
-    hint: 'Plant a Bruiser beside a few Swarmlets, and keep the Swarmlets fed so they outgrow the hunt.',
+    hint: 'Plant a Bruiser by Swarmlets. Keep the Swarmlets fed.',
     sustainTicks: 60 * 180,
     availability: (ctx) => [...ctx.seedableLifeforms].some((id) => HUNTER_STRAINS.has(id))
       && [...ctx.seedableLifeforms].some((id) => !HUNTER_STRAINS.has(id))

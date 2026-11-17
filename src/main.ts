@@ -64,6 +64,7 @@ import {
 } from './game/runCheckpoint';
 import { createFixedStepClock, normalizeSimTicksPerSecond } from './game/simClock';
 import { createPreviewStorage } from './game/previewStorage';
+import { acquireBrowserStorage } from './game/browserStorage';
 import { hash2 } from './game/hash';
 import { lifeformUnlocksForCurrentRun } from './game/lifeformLoadout';
 import {
@@ -181,7 +182,12 @@ if (commitDebug) {
   commitDebug.textContent = `build · ${gist}`;
 }
 
-const runtimeStorage = createPreviewStorage(window.localStorage);
+const browserStorage = acquireBrowserStorage(() => window.localStorage);
+const runtimeStorage = createPreviewStorage(browserStorage.storage);
+layout.dataset.temporaryStorage = String(browserStorage.temporary);
+for (const notice of document.querySelectorAll<HTMLElement>('[data-temporary-storage-notice]')) {
+  notice.hidden = !browserStorage.temporary;
+}
 applyOnboardingStateReset(runtimeStorage);
 const startupBankReplay = replayPendingResearchBank(runtimeStorage);
 let persistenceUnavailable = startupBankReplay?.status === 'unavailable';
@@ -262,7 +268,16 @@ if (hudEl && typeof ResizeObserver === 'function') {
       layout.style.setProperty('--hud-slot-height', `${Math.round(slot.height)}px`);
     }
   };
-  new ResizeObserver(publishHudBottom).observe(hudEl);
+  // Docking changes layout. Publish after observer delivery so WebKit doesn't
+  // remeasure this HUD inside the same ResizeObserver notification cycle.
+  let hudResizeFrame = 0;
+  new ResizeObserver(() => {
+    if (hudResizeFrame) return;
+    hudResizeFrame = requestAnimationFrame(() => {
+      hudResizeFrame = 0;
+      publishHudBottom();
+    });
+  }).observe(hudEl);
   window.addEventListener('resize', publishHudBottom);
   // Class flips (show/hide) don't trigger ResizeObserver; catch them too.
   new MutationObserver(publishHudBottom).observe(hudEl, { attributes: true, attributeFilter: ['class'] });
@@ -1428,7 +1443,7 @@ function showPhase() {
         : activeRunCheckpoint.run.phase === 'upgrade_pick'
           ? 'method-choice'
           : 'study-choice',
-    saveAvailable: !persistenceUnavailable,
+    saveAvailable: !browserStorage.temporary && !persistenceUnavailable,
     pendingBank: pendingResearchBank !== null,
     archive: notebookViewForProgression(discoveryProgression).archive,
     friends: { found: currentDexView().found, total: currentDexView().total },

@@ -2536,6 +2536,7 @@ describe('arena ecosystem mode', () => {
   });
 
   it('restocks the bench at a stable ecosystem, then a tool at each further minute of balance', () => {
+    // This exercises two simulated minutes; Vitest 3 also times synchronous tests.
     const arena = createArena({
       LX: 140, LY: 140, seed: 51,
       player: { targetVol: 100, speed: 10, engulfMultiplier: 5, bulletSize: 3, toolCooldownMult: 0 },
@@ -2570,7 +2571,7 @@ describe('arena ecosystem mode', () => {
     const minute = arena.drainRestocks().find((event) => event.reason === 'balance');
     expect(minute?.tools).toContain('water');
     expect(water().charges).toBe(water().maxCharges);
-  });
+  }, 15_000);
 
   it('slides a spare to the emptiest tools for a discovery, never past full', () => {
     const arena = createArena({

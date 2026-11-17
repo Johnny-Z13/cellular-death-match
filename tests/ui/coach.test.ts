@@ -124,7 +124,8 @@ describe('onboarding coach', () => {
 
   it('publishes the HUD bottom edge so the coach never overlaps a wrapped HUD', () => {
     expect(mainSource).toContain("layout.style.setProperty('--hud-bottom'");
-    expect(mainSource).toContain('new ResizeObserver(publishHudBottom)');
+    expect(mainSource).toContain('hudResizeFrame = requestAnimationFrame(');
+    expect(mainSource).toContain('}).observe(hudEl)');
   });
 
   it('persists the precise tutorial and each gradually guided trial', () => {
@@ -330,7 +331,7 @@ describe('onboarding coach', () => {
     expect(elements.get('coach')?.classList.contains('coach-prompt')).toBe(true);
     expect(elements.get('coach')?.classList.contains('coach-welcome')).toBe(false);
     expect(elements.get('coach-title')?.textContent).toBe('Bloom Mass! Friend number one.');
-    expect(elements.get('coach-body')?.textContent).toContain('Finish the trial when ready');
+    expect(elements.get('coach-body')?.textContent).toContain('Finish when ready');
     expect(coach.getCurrentPointerTarget()).toBe('end');
 
     vi.advanceTimersByTime(3600);

@@ -20,16 +20,19 @@
     "audio:manifest": "node scripts/generate-audio-assets.mjs --manifest-only",
     "credits:crazygames": "node scripts/sync-crazygames-attributions.mjs --write",
     "credits:crazygames:check": "node scripts/sync-crazygames-attributions.mjs --check",
-    "test": "vitest run",
+    "test": "npm run test:security && vitest run",
     "test:watch": "vitest",
     "icons:export": "node scripts/export-dre-icons.mjs",
-    "icons:check": "node scripts/audit-app-icons.mjs"
+    "icons:check": "node scripts/audit-app-icons.mjs",
+    "test:security": "node --test scripts/security/vite-file-boundary.mjs",
+    "package:itch": "npm run build && node scripts/package-itch.mjs",
+    "test:itch": "node scripts/test-itch-package.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "sharp": "^0.35.0",
     "typescript": "^5.6.0",
-    "vite": "^5.4.0",
-    "vitest": "^2.1.0"
+    "vite": "^6.4.5",
+    "vitest": "^3.2.7"
   }
 }

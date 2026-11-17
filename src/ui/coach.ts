@@ -475,7 +475,7 @@ function trialSuccessCopy(trialIndex: number): { title: string; body: string } {
   const copy = [
     {
       title: 'Bloom Mass! Friend number one.',
-      body: 'Bonus: feed it beside a Swarmlet, just the two of them, and watch. Finish the trial when ready.',
+      body: 'Feed it beside one Swarmlet. Finish when ready.',
     },
     {
       title: 'Bitter Bloom! Lovely and nasty.',
