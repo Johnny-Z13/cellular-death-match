@@ -1,10 +1,10 @@
 {
-  "version": "Alpha Build 7",
-  "id": "alpha-7",
-  "date": "2026-10-23",
-  "sourceCommit": "efe0fc6acd6c2bbde9ad6406ae7ba748d76ab619",
+  "version": "Alpha Build 8",
+  "id": "alpha-8",
+  "date": "2026-11-18",
+  "sourceCommit": "8b731c154cf2d42ed4304bf7609b6f71005a6dc4",
   "branch": "main",
-  "description": "Flow and discovery, with consistent Dr. E icons and a clearer, centred title screen introducing the cellular-automata inspiration.",
+  "description": "Review fixes and legibility: your own cultures are marked as yours, the Balance clock says why it is paused, refused taps answer back, upgrades add to a tool's stock, and play continues when a browser blocks saving.",
   "play": "/play/",
   "platforms": "Any modern browser: Chrome, Edge, Safari or Firefox, on desktop, tablet or phone."
 }
