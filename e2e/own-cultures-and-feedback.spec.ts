@@ -173,3 +173,30 @@ test('an upgrade card shows the stock before and after, and is not a rack tool',
   runtime.assertClean();
 });
 
+
+test('Sniper shots strike cultures, the screen takes every impact, and none cross the dish wall', async ({ page }) => {
+  const runtime = monitorRuntime(page);
+  await openStagedRun(page, { fightIndex: 2 });
+  const seen = await page.evaluate(async () => {
+    const arena = (window as unknown as { cdmDebug: { arena(): {
+      state: { bullets: Array<{ wraps: number; struck?: Set<number> }> };
+      drainBulletImpacts(): unknown[];
+    } } }).cdmDebug.arena();
+    const struck = new Set<object>();
+    let wrapped = 0;
+    const until = performance.now() + 20_000;
+    while (performance.now() < until && struck.size < 6) {
+      await new Promise(requestAnimationFrame);
+      for (const bullet of arena.state.bullets) {
+        if (bullet.struck) struck.add(bullet);
+        if (bullet.wraps > 0) wrapped += 1;
+      }
+    }
+    return { struck: struck.size, wrapped, undrained: arena.drainBulletImpacts().length };
+  });
+  expect(seen.struck).toBeGreaterThan(0);
+  expect(seen.wrapped).toBe(0);
+  // Left undrained this would be in the dozens by now.
+  expect(seen.undrained).toBeLessThan(6);
+  runtime.assertClean();
+});

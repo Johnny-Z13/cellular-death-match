@@ -45,6 +45,7 @@ import { createEcologyAudio } from './audio/ecologyAudio';
 import { createUiAudio, DROP_SOUND_FOR_TOOL } from './audio/uiAudio';
 import { createFx } from './ui/fx';
 import { createCoach } from './ui/coach';
+import { createBulletFx } from './ui/bulletFx';
 import { createJuice } from './ui/juice';
 import { onboardingIdleNudge } from './ui/onboardingHints';
 import {
@@ -903,6 +904,14 @@ canvas.addEventListener('animationend', () => {
   canvas.classList.remove('dish-shake', 'dish-shake-soft');
 });
 const juice = createJuice(canvas, () => ({ LX, LY }));
+const bulletFx = createBulletFx({
+  spark: (pos, v, victimId, shielded) => {
+    if (!arena) return;
+    const rgb = victimId === PLAYER_ID ? CONTROL_SPARK_RGB : burstColorFor(arena, victimId);
+    juice.impact(pos, v, rgb, shielded);
+  },
+  sound: (shielded) => uiAudio.playBulletHit(shielded),
+});
 const DISH_LABELS_KEY = 'cdm.dish-labels.v1';
 const dishLabelOverlay = createDishLabelOverlay(
   document.getElementById('dish-labels')!,
@@ -1998,7 +2007,7 @@ function loop() {
     // storage is unavailable so Retry cannot overwrite later dish activity.
     simClock.reset(now);
     if (shouldRenderFrame(lastRenderAt, now, visualProfile.targetRenderFps)) {
-      renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds, mergeRingsFor(arena), arena.getOwnCultureIds());
+      renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds, mergeRingsFor(arena), arena.getOwnCultureIds(), bulletFx.flashes(now));
       renderToolEffects(arena);
       juice.draw();
       lastRenderAt = now;
@@ -2055,7 +2064,7 @@ function loop() {
   recoverLostLessonCulture(arena, now);
   dishGoalCellIds = dishLabels.update(arena, run.getObjective(), now);
   if (shouldRenderFrame(lastRenderAt, now, visualProfile.targetRenderFps)) {
-    renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds, mergeRingsFor(arena), arena.getOwnCultureIds());
+    renderer.render(arena.state, arena.archetypes, arena.getDishEvents(), dishGoalCellIds, mergeRingsFor(arena), arena.getOwnCultureIds(), bulletFx.flashes(now));
     renderToolEffects(arena);
     juice.draw();
     lastRenderAt = now;
@@ -3181,6 +3190,7 @@ function createCellFxTracker(): CellFxTracker {
 let cellFxTracker: CellFxTracker = createCellFxTracker();
 
 const FALLBACK_BURST_RGB: [number, number, number] = [140, 220, 255];
+const CONTROL_SPARK_RGB: [number, number, number] = [255, 59, 69];
 
 function burstColorFor(ar: Arena, id: number): [number, number, number] {
   const spawn = ar.archetypes.get(id);
@@ -3194,6 +3204,8 @@ function updateJuiceEvents(ar: Arena): void {
   // seeding doesn't read as a burst storm.
   if (!cellFxTracker.primed) {
     cellFxTracker.primed = true;
+    bulletFx.reset();
+    ar.drainBulletImpacts();
     for (const [id, cell] of ar.state.cells) {
       if (id === PLAYER_ID) continue;
       cellFxTracker.known.set(id, { vol: cell.vol, center: [cell.center[0], cell.center[1]] });
@@ -3203,6 +3215,9 @@ function updateJuiceEvents(ar: Arena): void {
     cellFxTracker.lastDishEventId = maxSeen;
     return;
   }
+
+  // Bullets reaching cultures since the last frame.
+  bulletFx.update(ar.drainBulletImpacts(), performance.now());
 
   // A Membrane stopping a bullet: one soft gel ripple a frame at most.
   const blocked = ar.state.events.find((event) => event.type === 'bulletBlocked');

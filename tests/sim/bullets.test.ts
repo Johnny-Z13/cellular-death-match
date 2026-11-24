@@ -228,3 +228,67 @@ describe('a hatchling on its yolk', () => {
     expect(state.grid.cells[15 * 20 + 10]).toBe(1);
   });
 });
+
+describe('bullet impacts', () => {
+  // A row of two cultures in the bullet's way, at x = 10..14 and x = 20..24.
+  const rowOfTwo = () => {
+    const state = fixture();
+    state.bullets = [];
+    state.grid.cells.fill(0);
+    for (const [id, x0] of [[1, 10], [2, 20]] as const) {
+      const cell = state.cells.get(id)!;
+      cell.vol = 0;
+      for (let x = x0; x < x0 + 5; x++) {
+        for (let y = 8; y < 13; y++) {
+          state.grid.cells[x * state.grid.LY + y] = id;
+          cell.vol += 1;
+        }
+      }
+    }
+    state.wrapBullets = false;
+    addBullet(state, { pos: [2, 10], v: [2, 0], ownerId: 99, size: 3 });
+    const impacts: Array<{ victimId: number; shielded: boolean; v: [number, number] }> = [];
+    for (let i = 0; i < 20; i++) {
+      state.events.length = 0;
+      stepBullets(state);
+      for (const event of state.events) {
+        if (event.type === 'bulletImpact') impacts.push({ victimId: event.victimId, shielded: event.shielded, v: event.v });
+      }
+    }
+    return impacts;
+  };
+
+  it('reports each culture a bullet strikes once, however long it takes to cross', () => {
+    expect(rowOfTwo().map((impact) => impact.victimId)).toEqual([1, 2]);
+    expect(rowOfTwo()[0]!.v).toEqual([2, 0]);
+  });
+
+  it('reports a shielded hatchling it passes through, and takes nothing from it', () => {
+    const state = fixture();
+    state.bullets = [];
+    const before = state.cells.get(2)!.vol;
+    state.shielded = new Set([2]);
+    const [x, y] = pixelOf(state, 2);
+    addBullet(state, { pos: [x, y], v: [0, 0], ownerId: 99, size: 1 });
+    state.events.length = 0;
+    stepBullets(state);
+    expect(state.events.filter((event) => event.type === 'bulletImpact')).toMatchObject([{ victimId: 2, shielded: true }]);
+    expect(state.cells.get(2)!.vol).toBe(before);
+  });
+
+  it('is not struck by the culture that fired it on the way out', () => {
+    const state = fixture();
+    state.bullets = [];
+    const [x, y] = pixelOf(state, 1);
+    addBullet(state, { pos: [x, y], v: [0, 0], ownerId: 1, size: 1 });
+    state.events.length = 0;
+    stepBullets(state);
+    expect(state.events.some((event) => event.type === 'bulletImpact')).toBe(false);
+  });
+});
+
+function pixelOf(state: ReturnType<typeof fixture>, id: number): [number, number] {
+  const at = state.grid.cells.indexOf(id);
+  return [Math.floor(at / state.grid.LY), at % state.grid.LY];
+}
+

@@ -47,12 +47,24 @@ export interface Bullet {
   size: number;                 // bullet width/height in pixels (square footprint)
   age: number;                  // ticks since spawn
   wraps: number;                // count of grid-edge wraps; despawn at >=2
+  struck?: Set<CellId>;         // cultures it has already reported an impact on
+}
+
+/** A bullet reaching a culture: once per bullet and culture, however many
+ *  pixels it goes on to take. `shielded` is a hatchling it passes through. */
+export interface BulletImpact {
+  ownerId: CellId;
+  victimId: CellId;
+  pos: [number, number];
+  v: [number, number];
+  shielded: boolean;
 }
 
 export type SimEvent =
   | { type: 'pixelTransferred'; from: CellId; to: CellId; pos: [number, number] }
   | { type: 'bulletFired';      ownerId: CellId; pos: [number, number]; v: [number, number] }
   | { type: 'bulletHit';        ownerId: CellId; victimId: CellId; pos: [number, number] }
+  | ({ type: 'bulletImpact' } & BulletImpact)
   | { type: 'bulletBlocked';    ownerId: CellId; pos: [number, number] };
 
 export interface SimState {

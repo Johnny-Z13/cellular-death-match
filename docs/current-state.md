@@ -59,6 +59,10 @@ Fixes and legibility from the pre-itch review.
 
 The upgrade pick shows each choice as a slide for the tool it improves (`src/upgrade-pick.css`, markup in `screens.ts` `setPickChoices`): the rack's own icon in a lit orb, the tool's name, and the effect as before and after. Charges read "5 → 6" with a pip per charge and the new ones lit; spread reads as a ring that grows with its percentage. The numbers come from the bench itself (`run.getPlayerConfig` against `run.previewPlayerConfig`, compared by `upgradeEffects` in `src/content/upgrades.ts`), so a card cannot promise what the game would not give. Each card is tinted in its tool's colour and deals in after the last. Phones lay each card out as a row with Choose on the right; a phone on its side gets the same three cards a size down. A tagged card ("arrives next trial") names only the news, since the card already names the tool.
 
+## Bullet Hits (2026-11-24)
+
+Sniper and Needle Swarm bullets pierce and strike every strain alike, but the sim heals most bullet holes within a tick, so hits used to be invisible. The sim now reports one `bulletImpact` per bullet and culture (`src/sim/bullets.ts`); the arena keeps them until drained (`drainBulletImpacts`), so a frame that runs several ticks loses none. `src/ui/bulletFx.ts` turns them into sparks thrown back along the shot, a coral rim flash (never white: a white rim means the player's own) at most every 360 ms per culture, and a soft tick. A hatchling's yolk shield still lets bullets through unhurt; its ring lights and pings. Bullets follow the dish's walls: `wrapBullets` defaults to the dish's `wrap`, where shots used to leave one edge and re-enter the other. That cut Sniper damage by about a quarter; `bulletDrain` stays at 0.2, because 0.3 began wiping out Bruisers in Trial 5.
+
 ## Main Systems
 
 - Simulation: cellular Potts model in `src/sim/`. Cells store generic energy coefficients; breed profile lookup stays outside the low-level sim.

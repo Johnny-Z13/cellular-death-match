@@ -119,6 +119,46 @@ export function spawnBurst(
   while (store.particles.length > MAX_PARTICLES) store.particles.shift();
 }
 
+// A bullet striking a culture: a few quick sparks thrown back the way it came.
+// A yolk shield throws fewer, paler ones. Speed in grid units per second.
+export const IMPACT_TUNING = {
+  hit: { count: 7, speed: 26, duration: 320, size: 1.3, spread: 1.0 },
+  shield: { count: 4, speed: 20, duration: 360, size: 1.1, spread: 1.3 },
+  shieldRgb: [214, 246, 178] as [number, number, number],
+};
+
+export function spawnImpact(
+  store: JuiceStore,
+  pos: [number, number],
+  v: [number, number],
+  rgb: [number, number, number],
+  shielded: boolean,
+  now: number,
+  rand: () => number = Math.random,
+): void {
+  const tune = shielded ? IMPACT_TUNING.shield : IMPACT_TUNING.hit;
+  const back = Math.atan2(-v[1], -v[0]);
+  // Lit toward white so the spark reads over the culture's own colour.
+  const color: [number, number, number] = shielded
+    ? IMPACT_TUNING.shieldRgb
+    : [(rgb[0] + 255) / 2, (rgb[1] + 255) / 2, (rgb[2] + 255) / 2];
+  for (let i = 0; i < tune.count; i++) {
+    const angle = back + (rand() * 2 - 1) * tune.spread;
+    const speed = tune.speed * (0.4 + 0.6 * rand());
+    store.particles.push({
+      x: pos[0],
+      y: pos[1],
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      rgb: color,
+      start: now,
+      duration: tune.duration * (0.7 + 0.3 * rand()),
+      size: tune.size,
+    });
+  }
+  while (store.particles.length > MAX_PARTICLES) store.particles.shift();
+}
+
 export function stepJuice(store: JuiceStore, now: number): void {
   store.ripples = store.ripples.filter((r) => now - r.start < r.duration);
   store.particles = store.particles.filter((p) => now - p.start < p.duration);
@@ -184,6 +224,8 @@ export interface Juice {
   /** Mark a tap the dish refused. */
   deny(pos: [number, number]): void;
   burst(pos: [number, number], rgb: [number, number, number], kind: BurstKind): void;
+  /** A bullet striking a culture (or passing through a yolk shield). */
+  impact(pos: [number, number], v: [number, number], rgb: [number, number, number], shielded: boolean): void;
   shake(intensity: ShakeIntensity): void;
   draw(): void;
 }
@@ -204,6 +246,10 @@ export function createJuice(canvas: HTMLCanvasElement, grid: () => DishGrid): Ju
     burst(pos, rgb, kind) {
       if (reduceMotion) return;
       spawnBurst(store, pos, rgb, kind, performance.now());
+    },
+    impact(pos, v, rgb, shielded) {
+      if (reduceMotion) return;
+      spawnImpact(store, pos, v, rgb, shielded, performance.now());
     },
     shake(intensity) {
       if (reduceMotion) return;

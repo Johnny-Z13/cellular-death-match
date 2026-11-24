@@ -3,6 +3,7 @@ import { type EnemySpawn } from '../content/enemies';
 import type { TraitId } from '../content/ecology';
 import { lifeformIdentityForSpawn } from '../content/lifeformIdentity';
 import type { DishEventMarker } from '../game/arena';
+import { BULLET_FX_TUNING } from './bulletFx';
 
 export interface Renderer {
   render(
@@ -12,6 +13,7 @@ export interface Renderer {
     goalCellIds?: ReadonlySet<CellId>,
     mergeRings?: readonly MergeRing[],
     ownCellIds?: ReadonlySet<CellId>,
+    hitFlashes?: ReadonlyMap<CellId, number>,
   ): void;
 }
 
@@ -172,6 +174,7 @@ export function createRenderer(
       goalCellIds?: ReadonlySet<CellId>,
       mergeRings: readonly MergeRing[] = [],
       ownCellIds?: ReadonlySet<CellId>,
+      hitFlashes?: ReadonlyMap<CellId, number>,
     ) {
       frame += 1;
       const { LX, LY, cells, boundary } = state.grid;
@@ -181,6 +184,19 @@ export function createRenderer(
       const ownRimColors = ownCellIds && ownCellIds.size > 0
         ? base.map((c) => lighten(c, OWN_RIM.lighten))
         : null;
+      // A culture a bullet just struck lights up: its rim most, its body a
+      // little (not at all under reduced motion). A shielded hatchling is not
+      // hurt, so only its ring lights (drawYolkShields).
+      for (const [id, level] of hitFlashes ?? []) {
+        const color = base[id];
+        if (!color || state.shielded?.has(id)) continue;
+        const own = ownRimColors !== null && ownCellIds!.has(id);
+        const rim = own ? ownRimColors![id]! : boundaryColors[id]!;
+        const hot = mixColor(rim, BULLET_FX_TUNING.rimRgb, BULLET_FX_TUNING.rimMix * level);
+        if (own) ownRimColors![id] = hot;
+        else boundaryColors[id] = hot;
+        if (!reduceMotion) base[id] = lighten(color, BULLET_FX_TUNING.bodyLighten * level);
+      }
       // Lazy init when we know the grid size.
       if (!imageData || imageData.width !== LX || imageData.height !== LY) {
         offscreen = document.createElement('canvas');
@@ -261,7 +277,7 @@ export function createRenderer(
         drawGoalRings(ctx, state, goalCellIds, sx, sy, frame, reduceMotion);
       }
       if (mergeRings.length > 0) drawMergeRings(ctx, mergeRings, sx, sy, frame, reduceMotion);
-      if (state.shielded) drawYolkShields(ctx, state, sx, sy);
+      if (state.shielded) drawYolkShields(ctx, state, sx, sy, hitFlashes);
       for (const b of state.bullets) {
         const palette = base[b.ownerId] ?? base[0]!;
         // Lighten by 0.5 for the bullet color (slightly brighter than boundary).
@@ -357,14 +373,22 @@ function agarFor(width: number, height: number): HTMLCanvasElement {
 }
 
 // A hatchling on its yolk wears a faint gel ring: nothing can take it yet.
-function drawYolkShields(ctx: CanvasRenderingContext2D, state: SimState, sx: number, sy: number): void {
+function drawYolkShields(
+  ctx: CanvasRenderingContext2D,
+  state: SimState,
+  sx: number,
+  sy: number,
+  hitFlashes?: ReadonlyMap<CellId, number>,
+): void {
   ctx.save();
-  ctx.strokeStyle = 'rgba(214, 246, 178, 0.42)';
-  ctx.lineWidth = 1.5;
   for (const id of state.shielded ?? []) {
     const cell = state.cells.get(id);
     if (!cell || cell.vol <= 0) continue;
     const r = (Math.sqrt(cell.vol / Math.PI) + 2.5) * ((sx + sy) / 2);
+    // The ring lights when the shield takes a bullet.
+    const lit = hitFlashes?.get(id) ?? 0;
+    ctx.strokeStyle = `rgba(214, 246, 178, ${0.42 + 0.58 * lit})`;
+    ctx.lineWidth = 1.5 + 2.5 * lit;
     ctx.beginPath();
     ctx.arc((cell.center[0] + 0.5) * sx, (cell.center[1] + 0.5) * sy, r, 0, Math.PI * 2);
     ctx.stroke();

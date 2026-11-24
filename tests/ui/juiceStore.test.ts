@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  createJuiceStore, spawnRipple, spawnDeniedRipple, spawnBurst, stepJuice,
+  createJuiceStore, spawnRipple, spawnDeniedRipple, spawnBurst, spawnImpact, stepJuice,
   rippleVisual, staticRippleVisual, particleVisual,
-  DENIED_RIPPLE, MAX_PARTICLES, MAX_RIPPLES, RIPPLE_COLORS,
+  DENIED_RIPPLE, IMPACT_TUNING, MAX_PARTICLES, MAX_RIPPLES, RIPPLE_COLORS,
 } from '../../src/ui/juice';
 
 const fixedRand = () => 0.5;
@@ -44,6 +44,17 @@ describe('juice store', () => {
     expect(late.radius).toBeLessThan(early.radius);
     expect(staticRippleVisual(ripple, 1010)!.color).toBe(DENIED_RIPPLE.color);
     expect(rippleVisual(ripple, 1000 + DENIED_RIPPLE.duration)).toBeNull();
+  });
+
+  it('throws bullet sparks back the way the bullet came, paler off a shield', () => {
+    const store = createJuiceStore();
+    spawnImpact(store, [10, 10], [2, 0], [255, 0, 0], false, 0, fixedRand);
+    expect(store.particles.length).toBe(IMPACT_TUNING.hit.count);
+    for (const p of store.particles) expect(p.vx).toBeLessThan(0);
+    const shield = createJuiceStore();
+    spawnImpact(shield, [10, 10], [2, 0], [255, 0, 0], true, 0, fixedRand);
+    expect(shield.particles.length).toBe(IMPACT_TUNING.shield.count);
+    expect(shield.particles[0]!.rgb).toEqual(IMPACT_TUNING.shieldRgb);
   });
 
   it('ages out expired ripples and particles', () => {

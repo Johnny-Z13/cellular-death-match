@@ -1,4 +1,4 @@
-import { type SimState, type CellId, type Cell } from '../sim/types';
+import { type BulletImpact, type SimState, type CellId, type Cell } from '../sim/types';
 import { createSim, tick as simTick, addCell } from '../sim/sim';
 import { addPixel, removePixel } from '../sim/cell';
 import { getCell, setCell, updateBoundaryAround, xy } from '../sim/grid';
@@ -114,6 +114,8 @@ export interface Arena {
   getOddityStats(): OddityStats;
   /** Restocks since the last call (content/ecologyTuning RESTOCK_TUNING). */
   drainRestocks(): RestockEvent[];
+  /** Bullets that reached a culture since the last call. */
+  drainBulletImpacts(): BulletImpact[];
   /** Merges that locked or came apart since the last call. */
   drainMergeEvents(): MergeEvent[];
   applyTool(tool: LabTool, pos: [number, number], opts?: ApplyToolOpts): boolean;
@@ -278,6 +280,7 @@ const CRISIS_INTERVAL_TICKS = ARENA_TIMING.crisisIntervalTicks;
 // Calm opening window: no hazard (crisis / outbreak / accident) fires for the
 // first stretch of an epoch, so the player can settle in and discover.
 const HAZARD_GRACE_TICKS = 60 * 25;
+const MAX_BULLET_IMPACTS = 64;
 const ECOSYSTEM_MIN_POPULATION = ECOSYSTEM_LIMITS.minPopulation;
 const QUIET_EGG_REFILL_POPULATION = ECOSYSTEM_LIMITS.quietEggRefillPopulation;
 const ECOSYSTEM_MAX_POPULATION = ECOSYSTEM_LIMITS.maxPopulation;
@@ -377,7 +380,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
     targetVol: opts.player.targetVol,
     seed: opts.seed,
     wrap: opts.wrap,
-    wrapBullets: opts.wrapBullets ?? true,
+    // Bullets meet the same edge the cultures do: in a walled dish they leave
+    // at the wall, and only a wrapping dish brings them back round.
+    wrapBullets: opts.wrapBullets ?? opts.wrap,
   });
 
   if (!includeControlSample) removeControlSample(state);
@@ -389,6 +394,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
 
   const archetypes = new Map<CellId, EnemySpawn>();
   const aiStates = new Map<CellId, AiState>();
+  // Read by the screen each frame; capped for dishes nobody drains (the title
+  // dish, headless probes).
+  const bulletImpacts: BulletImpact[] = [];
   let nextCellId = 2 + nEnemies;          // ids beyond initial spawns
   let tickNo = 0;
   let mutationCount = 0;
@@ -878,6 +886,9 @@ export function createArena(opts: CreateArenaOpts): Arena {
     getMerges() {
       return { forming: merges?.forming() ?? [], locked: merges?.locked() ?? [] };
     },
+    drainBulletImpacts() {
+      return bulletImpacts.splice(0);
+    },
     drainMergeEvents() {
       return mergeEvents.splice(0);
     },
@@ -1346,7 +1357,10 @@ export function createArena(opts: CreateArenaOpts): Arena {
         state.shielded = undefined;
       }
       simTick(state, MC_STEPS_PER_TICK);
-      for (const event of state.events) if (event.type === 'bulletBlocked') oddity.bulletsBlocked += 1;
+      for (const event of state.events) {
+        if (event.type === 'bulletBlocked') oddity.bulletsBlocked += 1;
+        else if (event.type === 'bulletImpact' && bulletImpacts.length < MAX_BULLET_IMPACTS) bulletImpacts.push(event);
+      }
 
       if (merges && tickNo % MERGE_DETECTION.scanTicks === 0) {
         // Merges are made from the player's own cultures (planted, or a

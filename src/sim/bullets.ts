@@ -67,6 +67,19 @@ function gelOnPath(wall: Uint8Array, state: SimState, b: Bullet): number {
   return gel;
 }
 
+function reportImpact(state: SimState, b: Bullet, victimId: CellId, shielded: boolean): void {
+  if (b.struck?.has(victimId)) return;
+  (b.struck ??= new Set()).add(victimId);
+  state.events.push({
+    type: 'bulletImpact',
+    ownerId: b.ownerId,
+    victimId,
+    pos: [b.pos[0], b.pos[1]],
+    v: [b.v[0], b.v[1]],
+    shielded,
+  });
+}
+
 export function stepBullets(state: SimState): void {
   const { grid, bullets, cells, wrapBullets, wall } = state;
   const { LX, LY } = grid;
@@ -87,9 +100,13 @@ export function stepBullets(state: SimState): void {
       const id = getCell(grid, x, y) as CellId;
       if (id === 0) continue;
       // A hatchling on its yolk: the bullet passes through.
-      if (state.shielded?.has(id)) continue;
+      if (state.shielded?.has(id)) {
+        if (id !== b.ownerId) reportImpact(state, b, id, true);
+        continue;
+      }
       // Hit if not owner, OR owner but past grace period.
       if (id !== b.ownerId || b.age >= grace) {
+        reportImpact(state, b, id, false);
         const victim = cells.get(id);
         if (victim) {
           // Use the canonical pixel-removal helper so center & vol stay in sync.

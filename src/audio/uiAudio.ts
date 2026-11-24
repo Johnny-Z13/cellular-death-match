@@ -60,6 +60,9 @@ export interface UiAudio {
   playRestock(tools: number): void;
   /** A tap the dish refused: two dull, falling tocks. */
   playDenied(): void;
+  /** A bullet striking a culture: a soft wet tick, or a glassy ping off a
+   *  hatchling's yolk shield. Quiet: they come about once a second. */
+  playBulletHit(shielded: boolean): void;
   startAmbience(): void;
   stopAmbience(): void;
   isMuted(): boolean;
@@ -246,6 +249,19 @@ export function createUiAudio(): UiAudio {
     blip(c, master, now + 0.085, 165, 124, 0.06, 0.11, 'triangle');
   }
 
+  function playBulletHit(shielded: boolean): void {
+    if (muted) return;
+    const c = ensureContext();
+    if (c.state === 'suspended' || !master) return;
+    const now = c.currentTime;
+    if (shielded) {
+      blip(c, master, now, 1680, 1560, 0.016, 0.16, 'sine');
+      blip(c, master, now + 0.01, 2520, 2400, 0.008, 0.12, 'sine');
+      return;
+    }
+    blip(c, master, now, 420, 170, 0.03, 0.07, 'triangle');
+  }
+
   function playCatchCue(cue: 'wobble' | 'crack' | 'burst', step: number): void {
     if (muted) return;
     const c = ensureContext();
@@ -286,6 +302,7 @@ export function createUiAudio(): UiAudio {
     playCatchCue,
     playRestock,
     playDenied,
+    playBulletHit,
     speechBus() {
       if (!ctx || !master) return null;
       if (!speechGain) {
