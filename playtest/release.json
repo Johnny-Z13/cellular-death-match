@@ -1,10 +1,10 @@
 {
-  "version": "Alpha Build 8",
-  "id": "alpha-8",
-  "date": "2026-11-18",
-  "sourceCommit": "8b731c154cf2d42ed4304bf7609b6f71005a6dc4",
+  "version": "Alpha Build 9",
+  "id": "alpha-9",
+  "date": "2026-11-24",
+  "sourceCommit": "7595be9a73ba10ab3bc2f39bc08176994e267bfb",
   "branch": "main",
-  "description": "Review fixes and legibility: your own cultures are marked as yours, the Balance clock says why it is paused, refused taps answer back, upgrades add to a tool's stock, and play continues when a browser blocks saving.",
+  "description": "Bullet hits and upgrade cards: shots spark and flash the culture they hit, ring off an egg's shield and stop at the dish wall, and each upgrade card shows the tool it improves with its stock before and after.",
   "play": "/play/",
   "platforms": "Any modern browser: Chrome, Edge, Safari or Firefox, on desktop, tablet or phone."
 }
