@@ -5,7 +5,7 @@ import { createDebugPanel } from './ui/debug';
 import { createScreens, TOOL_SUMMARIES, type ToolId } from './ui/screens';
 import { AGITATION_TUNING, DISH_LIFE_CYCLE, SIM_SPEED_TUNING, TOOL_TUNING } from './content/ecologyTuning';
 import { renderLoadoutScreen } from './ui/loadoutScreen';
-import { getUpgradeDef, upgradeToolNote } from './content/upgrades';
+import { UPGRADE_TOOLS, getUpgradeDef, upgradeEffects, upgradeToolNote } from './content/upgrades';
 import { balanceStatusLine, goalLineFor } from './content/goalCopy';
 import { balanceBlocker } from './game/balance';
 import { createDishLabelOverlay } from './ui/dishLabelOverlay';
@@ -1473,9 +1473,12 @@ function showPhase() {
       : nextIndex === caseTrials.length
         ? { label: 'Open Lab · you choose every trial', tools: arriving.map(toolDisplayName) }
         : null);
+    const bench = run.getPlayerConfig();
     const choices = state.pendingPickChoices.map((id) => ({
       id,
       def: getUpgradeDef(id)!,
+      tools: UPGRADE_TOOLS[id] ?? [],
+      effects: upgradeEffects(id, bench, run.previewPlayerConfig(id)),
       note: upgradeToolNote(id, unlocked, arriving),
     }));
     screens.setPickChoices(choices, (id) => {

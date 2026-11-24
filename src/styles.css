@@ -8067,31 +8067,6 @@ canvas.dre-face.dre-sneeze {
   #screen-pick .screen-title { margin-bottom: 7px; font-size: 22px; }
   #screen-pick .method-sub { margin-bottom: 4px; }
   #screen-pick .pick-choices { gap: 7px; margin-top: 9px; }
-
-  #screen-pick .pick-card {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "name action"
-      "desc action";
-    gap: 3px 10px;
-    min-height: 68px;
-    padding: 10px 11px;
-    border-radius: 10px;
-  }
-
-  #screen-pick .pick-card-name { grid-area: name; }
-  #screen-pick .pick-card-desc { grid-area: desc; font-size: var(--fs-min); }
-  #screen-pick .pick-card-action {
-    grid-area: action;
-    align-self: center;
-    max-width: 58px;
-    margin: 0;
-    padding: 7px 0 7px 9px;
-    border-left: 1px solid rgba(91, 233, 214, 0.22);
-    line-height: 1.35;
-    text-align: right;
-  }
 }
 
 /* Fullscreen stays in the top-level phone chrome, with the active-state exit

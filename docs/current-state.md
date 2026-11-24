@@ -55,6 +55,10 @@ Fixes and legibility from the pre-itch review.
 - **The title dish waits for a window with a size** (`minGridCells`) instead of building a 0-wide grid.
 - End-to-end cover: `e2e/own-cultures-and-feedback.spec.ts` (its `openStagedRun` opens the game on a saved run at any trial).
 
+## Upgrade Cards (2026-11-18)
+
+The upgrade pick shows each choice as a slide for the tool it improves (`src/upgrade-pick.css`, markup in `screens.ts` `setPickChoices`): the rack's own icon in a lit orb, the tool's name, and the effect as before and after. Charges read "5 → 6" with a pip per charge and the new ones lit; spread reads as a ring that grows with its percentage. The numbers come from the bench itself (`run.getPlayerConfig` against `run.previewPlayerConfig`, compared by `upgradeEffects` in `src/content/upgrades.ts`), so a card cannot promise what the game would not give. Each card is tinted in its tool's colour and deals in after the last. Phones lay each card out as a row with Choose on the right; a phone on its side gets the same three cards a size down. A tagged card ("arrives next trial") names only the news, since the card already names the tool.
+
 ## Main Systems
 
 - Simulation: cellular Potts model in `src/sim/`. Cells store generic energy coefficients; breed profile lookup stays outside the low-level sim.

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { UPGRADES, UPGRADE_TOOLS, applyUpgrades, upgradeToolNote, type PlayerConfig } from '../../src/content/upgrades';
+import { UPGRADES, UPGRADE_TOOLS, applyUpgrades, upgradeEffects, upgradeToolNote, type PlayerConfig } from '../../src/content/upgrades';
 import { AGITATION_TUNING, TOOL_TUNING } from '../../src/content/ecologyTuning';
 
 const BASE: PlayerConfig = {
@@ -149,3 +149,49 @@ describe('upgrade tool notes', () => {
     for (const upgrade of UPGRADES) expect(UPGRADE_TOOLS[upgrade.id], upgrade.id).toBeDefined();
   });
 });
+
+describe('upgrade effects (what the pick card shows)', () => {
+  const effectsOf = (id: string, owned: Array<{ id: string; stacks: number }> = []) => upgradeEffects(
+    id,
+    applyUpgrades(BASE, owned),
+    applyUpgrades(BASE, [...owned, { id, stacks: 1 }]),
+  );
+
+  it('reads a charge upgrade as the stock before and after', () => {
+    expect(effectsOf('water_1')).toEqual([
+      { tool: 'water', stat: 'charges', from: TOOL_TUNING.water.charges, to: TOOL_TUNING.water.charges + 2 },
+    ]);
+    expect(effectsOf('centrifuge_1')).toEqual([
+      { tool: 'agitate', stat: 'charges', from: AGITATION_TUNING.defaultCharges, to: AGITATION_TUNING.defaultCharges + 1 },
+    ]);
+  });
+
+  it('reads a spread upgrade as reach, one entry per tool it widens', () => {
+    const [toxin] = effectsOf('toxin_radius_1');
+    expect(toxin).toMatchObject({ tool: 'toxin', stat: 'reach', from: TOOL_TUNING.toxin.radius });
+    expect(toxin!.to / toxin!.from).toBeCloseTo(1.18, 5);
+    expect(effectsOf('volatile_reagents_1').map((effect) => `${effect.tool}:${effect.stat}`))
+      .toEqual(['water:reach', 'salt:reach', 'acid:reach']);
+  });
+
+  it('starts from what the player already holds', () => {
+    expect(effectsOf('egg_1', [{ id: 'egg_1', stacks: 1 }])[0]).toMatchObject({
+      from: TOOL_TUNING.egg.charges + 2,
+      to: TOOL_TUNING.egg.charges + 4,
+    });
+  });
+
+  it('shows nothing for an upgrade that improves no rack tool', () => {
+    expect(effectsOf('red_buffer_1')).toEqual([]);
+  });
+
+  it('gives every tool upgrade in the catalogue a picture', () => {
+    for (const upgrade of UPGRADES) {
+      if ((UPGRADE_TOOLS[upgrade.id] ?? []).length === 0) continue;
+      const effects = effectsOf(upgrade.id);
+      expect(effects.length, upgrade.id).toBeGreaterThan(0);
+      for (const effect of effects) expect(effect.to, upgrade.id).toBeGreaterThan(effect.from);
+    }
+  });
+});
+

@@ -9,6 +9,8 @@ interface StagedRun {
   chosenObjective?: Record<string, unknown>;
   /** Every strain unlocked, for an Open Lab trial that needs several. */
   allStrains?: boolean;
+  /** Open on the upgrade choice after this trial, offering these upgrades. */
+  pick?: string[];
 }
 
 /** Open the game on a saved run at the start of a given trial. */
@@ -33,13 +35,13 @@ async function openStagedRun(page: Page, run: StagedRun): Promise<void> {
     }
     window.localStorage.setItem('cellular-death-match.run-checkpoint.v1', JSON.stringify({
       run: {
-        phase: 'arena',
+        phase: run.pick ? 'upgrade_pick' : 'arena',
         fightIndex: run.fightIndex,
         upgrades: run.upgrades ?? [],
         outcome: null,
-        pendingPickChoices: [],
+        pendingPickChoices: run.pick ?? [],
         seed: 42,
-        epochResults: Array.from({ length: run.fightIndex }, () => 'completed'),
+        epochResults: Array.from({ length: run.fightIndex + (run.pick ? 1 : 0) }, () => 'completed'),
         chosenObjective: run.chosenObjective,
       },
       loadout: run.allStrains ? ['swarmlet', 'bruiser', 'splitter'] : ['swarmlet'],
@@ -49,6 +51,10 @@ async function openStagedRun(page: Page, run: StagedRun): Promise<void> {
   }, { run, trials: CASE_TRIALS });
   await page.reload();
   await page.locator('#title-start').click();
+  if (run.pick) {
+    await expect(page.locator('#pick-choices .pick-card')).toHaveCount(run.pick.length);
+    return;
+  }
   await expect(page.locator('.layout')).toHaveAttribute('data-screen', 'arena');
 }
 
@@ -131,3 +137,39 @@ test('desktop toasts hang under the HUD, off the middle of the dish', async ({ p
   expect(toasts.top).toBeLessThan(hudBottom + 40);
   expect(toasts.bottom).not.toBe('112px');
 });
+
+test('an upgrade card shows the stock before and after, and is not a rack tool', async ({ page }, testInfo) => {
+  const runtime = monitorRuntime(page);
+  await openStagedRun(page, { fightIndex: 2, upgrades: [{ id: 'food_1', stacks: 1 }], pick: ['food_1', 'toxin_radius_1', 'water_1'] });
+  const cards = page.locator('#pick-choices .upgrade-card');
+
+  // Nutrient is 5 by default and the run already holds one Richer Agar.
+  const nutrient = cards.nth(0);
+  await expect(nutrient.locator('.upgrade-card-tool')).toHaveText('Nutrient');
+  await expect(nutrient.locator('.upgrade-stat-from')).toHaveText('6');
+  await expect(nutrient.locator('.upgrade-stat-to')).toHaveText('7');
+  await expect(nutrient.locator('.upgrade-pips i')).toHaveCount(7);
+  await expect(nutrient.locator('.upgrade-pips i.is-new')).toHaveCount(1);
+  await expect(cards.nth(1).locator('.upgrade-stat-to')).toHaveText('+18%');
+  await expect(cards.nth(2).locator('.upgrade-stat-to')).toHaveText('8');
+
+  // The cards must never answer to the rack's tool selector.
+  await expect(page.locator('#pick-choices [data-tool]')).toHaveCount(0);
+
+  // Every card and its Choose control sit inside the sheet, unscrolled.
+  const fits = await page.evaluate(() => {
+    const sheet = document.querySelector('#screen-pick .method-card')!.getBoundingClientRect();
+    return [...document.querySelectorAll('#pick-choices .pick-card-action')].every((action) => {
+      const r = action.getBoundingClientRect();
+      return r.top >= sheet.top && r.bottom <= sheet.bottom + 1 && r.bottom <= window.innerHeight;
+    });
+  });
+  expect(fits).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath('upgrade-cards.png') });
+
+  await cards.nth(2).click();
+  await expect(page.locator('.layout')).toHaveAttribute('data-screen', 'arena');
+  await expect(page.locator('[data-tool="water"] [data-tool-count]')).toHaveText('8/8');
+  runtime.assertClean();
+});
+

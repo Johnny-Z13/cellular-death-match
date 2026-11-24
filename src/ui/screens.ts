@@ -1,6 +1,6 @@
 import type { AgitationState, EquilibriumInfo, ToolState } from '../game/arena';
 import type { LabReport } from '../game/labReport';
-import type { UpgradeDef } from '../content/upgrades';
+import { upgradeToolName, type UpgradeDef, type UpgradeEffect, type UpgradeTool } from '../content/upgrades';
 import type { EnemyArchetype } from '../content/enemies';
 import type { ObjectiveDef } from '../content/objectives';
 import type { NotebookView, AtlasView, GenomeArchiveProgress, NotebookCategory } from '../content/notebook';
@@ -65,6 +65,10 @@ export interface EndInfo {
 export interface PickChoice {
   id: string;
   def: UpgradeDef;
+  /** The rack tools this upgrade improves (none for a bench-wide one). */
+  tools: readonly UpgradeTool[];
+  /** What it changes, before and after, for the card's picture. */
+  effects: readonly UpgradeEffect[];
   /** Set when the upgrade improves a tool the player has not unlocked yet. */
   note?: string | null;
 }
@@ -1332,37 +1336,67 @@ export function createScreens(): Screens {
     setPickChoices(choices, onPick) {
       pickChoices.replaceChildren();
       let picked = false;
-      for (const c of choices) {
+      choices.forEach((c, index) => {
         const btn = document.createElement('button');
-        btn.className = 'pick-card';
+        btn.className = 'pick-card upgrade-card';
         btn.type = 'button';
-        const name = document.createElement('div');
+        // Not data-tool: that attribute belongs to the rack's tool buttons.
+        btn.dataset.upgradeTool = c.tools[0] ?? 'none';
+        // Cards deal in one after another (upgrade-pick.css).
+        btn.style.setProperty('--deal', String(index));
+
+        // The tool this upgrade improves, drawn with the rack's own icon.
+        const orb = document.createElement('span');
+        orb.className = 'upgrade-card-orb';
+        orb.setAttribute('aria-hidden', 'true');
+        for (const tool of c.tools) {
+          const icon = document.createElement('span');
+          icon.className = `tool-icon ${tool}-icon`;
+          orb.append(icon);
+        }
+        const kicker = document.createElement('span');
+        kicker.className = 'upgrade-card-tool';
+        kicker.textContent = c.tools.length > 0 ? c.tools.map(upgradeToolName).join(' · ') : 'Bench';
+        const name = document.createElement('span');
         name.className = 'pick-card-name';
         name.textContent = c.def.name;
-        const desc = document.createElement('div');
+        const desc = document.createElement('span');
         desc.className = 'pick-card-desc';
         desc.textContent = c.def.description;
         const action = document.createElement('span');
         action.className = 'pick-card-action';
         action.textContent = 'Choose';
-        btn.append(name, desc);
+        btn.append(orb, kicker, name);
+        const stat = upgradeStatNode(c.effects);
+        if (stat) btn.append(stat);
+        btn.append(desc);
         if (c.note) {
-          const note = document.createElement('div');
+          // The card already names its tool, so the tag keeps only the news
+          // ("arrives next trial"); the full sentence stays in the label.
+          const note = document.createElement('span');
           note.className = 'pick-card-note';
-          note.textContent = c.note;
+          note.textContent = c.note.split(' · ').slice(1).join(' · ') || c.note;
+          btn.classList.add('has-note');
           btn.append(note);
         }
         btn.append(action);
+        btn.setAttribute('aria-label', [
+          c.def.name,
+          c.def.description,
+          ...c.effects.map(upgradeEffectSentence),
+          c.note ?? '',
+        ].filter(Boolean).join('. '));
         btn.addEventListener('click', () => {
           if (picked) return;
           picked = true;
           pickChoices.querySelectorAll<HTMLButtonElement>('button').forEach((choice) => {
             choice.disabled = true;
+            choice.classList.add(choice === btn ? 'is-picked' : 'is-passed');
           });
           onPick(c.id);
         });
         pickChoices.append(btn);
-      }
+      });
     },
     setPickNext(next) {
       pickNext.hidden = next === null;
@@ -1760,6 +1794,74 @@ function updateToolSummary(
     paste: 'Membrane - draw a wall cultures can\'t cross, or draw through a culture to pinch it in two. Fades in about 20 seconds.',
   };
   el.textContent = summaries[tool];
+}
+
+/** How an upgrade card draws its effects (upgrade-pick.css sizes the parts). */
+export const UPGRADE_CARD_TUNING = {
+  /** A stock above this shows numbers only; a long row of pips stops reading. */
+  maxPips: 14,
+} as const;
+
+/** What the picture adds to the description, for the card's spoken label.
+ *  A spread upgrade's description already gives its percentage. */
+function upgradeEffectSentence(effect: UpgradeEffect): string {
+  return effect.stat === 'charges'
+    ? `${upgradeToolName(effect.tool)} charges ${effect.from} to ${effect.to}`
+    : '';
+}
+
+function reachGainPercent(effect: UpgradeEffect): number {
+  return Math.round((effect.to / effect.from - 1) * 100);
+}
+
+/** The card's picture of what the upgrade does: charges as before → after
+ *  with a pip for every charge (the new ones lit), reach as a ring that grows.
+ *  An upgrade for several tools shows the one change they share. */
+function upgradeStatNode(effects: readonly UpgradeEffect[]): HTMLElement | null {
+  const effect = effects[0];
+  if (!effect) return null;
+  const stat = document.createElement('span');
+  stat.className = `upgrade-card-stat upgrade-card-stat--${effect.stat}`;
+  stat.setAttribute('aria-hidden', 'true');
+  const value = document.createElement('span');
+  value.className = 'upgrade-stat-value';
+  if (effect.stat === 'charges') {
+    const from = document.createElement('b');
+    from.className = 'upgrade-stat-from';
+    from.textContent = String(effect.from);
+    const arrow = document.createElement('i');
+    arrow.textContent = '→';
+    const to = document.createElement('b');
+    to.className = 'upgrade-stat-to';
+    to.textContent = String(effect.to);
+    value.append(from, arrow, to);
+    stat.append(value);
+    if (effect.to <= UPGRADE_CARD_TUNING.maxPips) {
+      const pips = document.createElement('span');
+      pips.className = 'upgrade-pips';
+      for (let i = 0; i < effect.to; i += 1) {
+        const pip = document.createElement('i');
+        if (i >= effect.from) {
+          pip.className = 'is-new';
+          pip.style.setProperty('--pip', String(i - effect.from));
+        }
+        pips.append(pip);
+      }
+      stat.append(pips);
+    }
+    return stat;
+  }
+  const rings = document.createElement('span');
+  rings.className = 'upgrade-reach';
+  // The inner ring is today's reach as a share of the new one.
+  rings.style.setProperty('--reach-now', (effect.from / effect.to).toFixed(3));
+  rings.append(document.createElement('i'), document.createElement('i'));
+  const gain = document.createElement('b');
+  gain.className = 'upgrade-stat-to';
+  gain.textContent = `+${reachGainPercent(effect)}%`;
+  value.append(gain);
+  stat.append(rings, value);
+  return stat;
 }
 
 export type ToolDenyReason = 'cooling' | 'empty';

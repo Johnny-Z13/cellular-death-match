@@ -257,6 +257,29 @@ describe('restart', () => {
   });
 });
 
+describe('previewPlayerConfig', () => {
+  it('shows the bench with one more of an upgrade, without taking it', () => {
+    const run = createRun(1);
+    run.start();
+    const before = run.getPlayerConfig();
+    const preview = run.previewPlayerConfig('egg_1');
+    expect(preview.eggCharges).toBe(before.eggCharges! + 2);
+    expect(run.getPlayerConfig()).toEqual(before);
+    expect(run.getState().upgrades).toEqual([]);
+  });
+
+  it('stacks on an upgrade the run already holds', () => {
+    const run = createRun(1);
+    run.start();
+    run.completeEpoch();
+    const choice = run.getState().pendingPickChoices[0]!;
+    run.pickUpgrade(choice);
+    const held = run.getState().upgrades.map((upgrade) => ({ ...upgrade }));
+    run.previewPlayerConfig(choice);
+    expect(run.getState().upgrades).toEqual(held);
+  });
+});
+
 describe('getPlayerConfig', () => {
   it('player config reflects accumulated upgrades', () => {
     const run = createRun(42);

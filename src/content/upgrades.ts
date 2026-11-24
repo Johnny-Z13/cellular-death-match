@@ -159,6 +159,56 @@ export function upgradeToolNote(id: string, unlockedTools: readonly string[], ar
   return `For ${list} · not in your rack yet`;
 }
 
+/** One thing an upgrade changes on one tool: its stock of charges, or how
+ *  far its field reaches. */
+export interface UpgradeEffect {
+  tool: UpgradeTool;
+  stat: 'charges' | 'reach';
+  from: number;
+  to: number;
+}
+
+const CHARGES: Record<UpgradeTool, (config: PlayerConfig) => number> = {
+  egg: (config) => config.eggCharges ?? TOOL_TUNING.egg.charges,
+  nutrient: (config) => config.nutrientCharges ?? TOOL_TUNING.nutrient.charges,
+  toxin: (config) => config.toxinCharges ?? TOOL_TUNING.toxin.charges,
+  agitate: (config) => config.agitationCharges ?? AGITATION_TUNING.defaultCharges,
+  water: (config) => config.waterCharges ?? TOOL_TUNING.water.charges,
+  salt: (config) => config.saltCharges ?? TOOL_TUNING.salt.charges,
+  acid: (config) => config.acidCharges ?? TOOL_TUNING.acid.charges,
+};
+
+const REACH: Partial<Record<UpgradeTool, (config: PlayerConfig) => number>> = {
+  nutrient: (config) => config.nutrientRadius ?? TOOL_TUNING.nutrient.radius,
+  toxin: (config) => config.toxinRadius ?? TOOL_TUNING.toxin.radius,
+  water: (config) => config.waterRadius ?? TOOL_TUNING.water.radius,
+  salt: (config) => config.saltRadius ?? TOOL_TUNING.salt.radius,
+  acid: (config) => config.acidRadius ?? TOOL_TUNING.acid.radius,
+};
+
+/** What picking this upgrade changes, read off the bench before and after
+ *  (run.getPlayerConfig and run.previewPlayerConfig), so the card can never
+ *  promise a number the game would not give. */
+export function upgradeEffects(id: string, before: PlayerConfig, after: PlayerConfig): UpgradeEffect[] {
+  const effects: UpgradeEffect[] = [];
+  for (const tool of UPGRADE_TOOLS[id] ?? []) {
+    const charges = CHARGES[tool];
+    if (charges(after) !== charges(before)) {
+      effects.push({ tool, stat: 'charges', from: charges(before), to: charges(after) });
+    }
+    const reach = REACH[tool];
+    if (reach && reach(after) !== reach(before)) {
+      effects.push({ tool, stat: 'reach', from: reach(before), to: reach(after) });
+    }
+  }
+  return effects;
+}
+
+/** The rack name of a tool an upgrade improves. */
+export function upgradeToolName(tool: UpgradeTool): string {
+  return TOOL_NAMES[tool];
+}
+
 const UPGRADES_BY_ID = new Map(UPGRADES.map((u) => [u.id, u]));
 
 export function getUpgradeDef(id: string): UpgradeDef | undefined {

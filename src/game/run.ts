@@ -55,6 +55,9 @@ export interface Run {
   pickUpgrade(id: string): void;
   restart(): void;
   getPlayerConfig(): PlayerConfig;
+  /** The bench as it would be with one more of this upgrade, so the pick
+   *  screen can show each choice as before and after. */
+  previewPlayerConfig(upgradeId: string): PlayerConfig;
   getFightSpawnList(): EnemySpawn[];
   getEpochSpawnList(): EnemySpawn[];
   getOnboardingSpawnList(): EnemySpawn[];
@@ -202,6 +205,13 @@ export function createRun(initialSeed: number): Run {
     },
     getPlayerConfig() {
       return applyUpgrades(PLAYER_BASE, upgrades);
+    },
+    previewPlayerConfig(upgradeId) {
+      const next = upgrades.map((upgrade) => ({ ...upgrade }));
+      const owned = next.find((upgrade) => upgrade.id === upgradeId);
+      if (owned) owned.stacks += 1;
+      else next.push({ id: upgradeId, stacks: 1 });
+      return applyUpgrades(PLAYER_BASE, next);
     },
     getFightSpawnList() {
       // For mid-game epochs, cycle through the schedule.
